@@ -5,12 +5,13 @@ using System.Numerics;
 namespace KardashevAscent.Simulation.Planet
 {
     /// <summary>
-    /// The building slots inside one tile, covering the whole tile edge to edge.
-    /// The slots are laid out on a perfect reference polygon (a regular hexagon, or a regular pentagon for the 12
-    /// pentagon tiles) and then stretched onto the real tile one centre–corner–corner triangle at a time, because the
-    /// tiles of a Goldberg sphere are not quite regular. On a hexagon the reference is sized so each edge runs through
-    /// the centres of the outer row: <c>3R(R+1)+1</c> slots (R = rings), whole hexagons inside, halves along the edges
-    /// and thirds in the corners. Together the slots fill the tile exactly.
+    /// The building slots inside one tile: whole small hexagons that fill the tile exactly, with no half or corner
+    /// pieces. The slots start as a regular hex grid of R rings (<c>3R(R+1)+1</c> slots on a hexagonal tile).
+    /// That grid's outline is jagged, so it is stretched outward until its outline lies on the tile's edges: inside,
+    /// the slots stay regular hexagons; the outer ring leans out a little so its outer sides lie flat along the edge.
+    /// The result is then fitted onto the real tile one centre–corner–corner triangle at a time, because the tiles of
+    /// a Goldberg sphere are not quite regular. The 12 pentagon tiles get the whole hexagons that fit inside a
+    /// pentagon, stretched the same way.
     /// Work is done in the tile's tangent plane (gnomonic projection keeps the tile's straight edges straight).
     /// Slot 0 is the centre; ids grow ring by ring. Every slot shares its tile's sunlight (latitude/longitude).
     /// </summary>
@@ -18,21 +19,24 @@ namespace KardashevAscent.Simulation.Planet
     {
         public const int DefaultRings = 4;
 
-        /// <summary>Pieces smaller than this share of a whole slot are left out (slivers on the pentagons).</summary>
-        public const double MinAreaShare = 0.05;
+        /// <summary>How sharply the stretch fades toward the centre: higher keeps inner slots more regular.</summary>
+        const double StretchFalloff = 6.0;
+        /// <summary>Points per hexagon side when bending slot outlines.</summary>
+        const int EdgeSteps = 4;
 
         static readonly double Sqrt3 = Math.Sqrt(3.0);
 
         readonly Vector3 east, north;
-        readonly Vector2[] reference;                 // regular reference polygon, grid units (slot spacing 1)
+        readonly Vector2[] reference;                     // regular reference polygon, grid units (slot spacing 1)
+        readonly (Vector2 A, Vector2 B)[] gridOutline;     // outline of the unstretched hex grid
         readonly Dictionary<(int Q, int R), int> slotAt;
         readonly Vector2[][] outlines;
         readonly Vector2[] centroids;
         readonly double[] areaShares;
 
         TileSite(int tile, int rings, Vector3 centre, Vector3 east, Vector3 north, Vector2[] reference,
-                 double spacing, Vector2[] tileOutline, Dictionary<(int, int), int> slotAt,
-                 Vector2[][] outlines, Vector2[] centroids, double[] areaShares)
+                 (Vector2, Vector2)[] gridOutline, double spacing, Vector2[] tileOutline,
+                 Dictionary<(int, int), int> slotAt, Vector2[][] outlines, Vector2[] centroids, double[] areaShares)
         {
             Tile = tile;
             Rings = rings;
@@ -40,6 +44,7 @@ namespace KardashevAscent.Simulation.Planet
             this.east = east;
             this.north = north;
             this.reference = reference;
+            this.gridOutline = gridOutline;
             Spacing = spacing;
             TileOutline = tileOutline;
             this.slotAt = slotAt;
@@ -72,7 +77,7 @@ namespace KardashevAscent.Simulation.Planet
         /// <summary>Tangent-plane (east, north) centre of a slot's area.</summary>
         public Vector2 SlotOffset(int slot) => centroids[slot];
 
-        /// <summary>A slot's size as a share of a whole slot (1 inside, ½ on edges, ⅓ in corners on a hexagon).</summary>
+        /// <summary>A slot's size compared with a regular slot of the grid: 1 inside, a little more on the outer ring.</summary>
         public double SlotAreaShare(int slot) => areaShares[slot];
 
         public static TileSite Create(HexSphere sphere, int tile, int rings = DefaultRings)
@@ -101,9 +106,9 @@ namespace KardashevAscent.Simulation.Planet
             if (SignedArea(polygon) < 0.0)
                 Array.Reverse(polygon);
 
-            // Reference polygon in grid units: a corner on the x axis, one every 360°/k, inradius R·√3/2 so each
-            // hexagon edge runs through the centres of row R. Corner i of the reference becomes corner i of the tile.
-            double refInradius = rings * Sqrt3 / 2.0;
+            // Reference polygon in grid units, a corner on the x axis and one every 360°/k. Its inradius reaches the
+            // outermost points of ring R, so R rings of whole hexagons just fit inside a hexagonal one.
+            double refInradius = rings * Sqrt3 / 2.0 + 1.0 / Sqrt3;
             double refCircumradius = refInradius / Math.Cos(Math.PI / k);
             var reference = new Vector2[k];
             for (int i = 0; i < k; i++)
@@ -112,39 +117,43 @@ namespace KardashevAscent.Simulation.Planet
                 reference[i] = new Vector2((float)(refCircumradius * Math.Cos(a)), (float)(refCircumradius * Math.Sin(a)));
             }
 
+            // Whole hexagons that fit inside the reference polygon, ring by ring.
+            var cells = new List<(int Q, int R, Vector2[] Hex)>();
+            for (int ring = 0; ring <= rings + 1; ring++)
+                for (int q = -ring; q <= ring; q++)
+                    for (int r = -ring; r <= ring; r++)
+                    {
+                        if (HexDistance(q, r) != ring)
+                            continue;
+                        Vector2[] hex = Hexagon(q, r);
+                        if (AllInside(hex, reference, 1e-4))
+                            cells.Add((q, r, hex));
+                    }
+            var gridOutline = OuterEdges(cells);
+
             double inradius = 0.0;
             for (int i = 0; i < k; i++)
                 inradius += DistanceToLine(Vector2.Zero, polygon[i], polygon[(i + 1) % k]);
-            double spacing = inradius / k / refInradius;
-            double wholeSlot = Sqrt3 / 2.0;                        // area of one hexagonal slot, grid units
+            double spacing = inradius / k / refInradius;          // one grid unit on the real tile
+            double wholeSlot = Sqrt3 / 2.0;                        // area of one regular slot, grid units
 
             var slotAt = new Dictionary<(int, int), int>();
             var outlines = new List<Vector2[]>();
             var centroids = new List<Vector2>();
             var shares = new List<double>();
-            for (int ring = 0; ring <= rings + 1; ring++)
+            foreach (var cell in cells)
             {
-                for (int q = -ring; q <= ring; q++)
-                {
-                    for (int r = -ring; r <= ring; r++)
-                    {
-                        if (HexDistance(q, r) != ring)
-                            continue;
-                        Vector2[] piece = Clip(Hexagon(q, r), reference);
-                        if (piece.Length < 3)
-                            continue;
-                        double share = SignedArea(piece) / wholeSlot;
-                        if (share < MinAreaShare)
-                            continue;
-                        Vector2[] onTile = WarpPolygon(piece, reference, polygon);
-                        slotAt[(q, r)] = outlines.Count;
-                        outlines.Add(onTile);
-                        centroids.Add(Centroid(onTile));
-                        shares.Add(share);
-                    }
-                }
+                Vector2[] dense = Densify(cell.Hex, EdgeSteps);
+                var stretched = new Vector2[dense.Length];
+                for (int i = 0; i < dense.Length; i++)
+                    stretched[i] = Stretch(dense[i], gridOutline, reference);
+                Vector2[] onTile = WarpPolygon(stretched, reference, polygon);
+                slotAt[(cell.Q, cell.R)] = outlines.Count;
+                outlines.Add(onTile);
+                centroids.Add(Centroid(onTile));
+                shares.Add(SignedArea(stretched) / wholeSlot);
             }
-            return new TileSite(tile, rings, c, e, n, reference, spacing, polygon, slotAt,
+            return new TileSite(tile, rings, c, e, n, reference, gridOutline, spacing, polygon, slotAt,
                                 outlines.ToArray(), centroids.ToArray(), shares.ToArray());
         }
 
@@ -156,11 +165,11 @@ namespace KardashevAscent.Simulation.Planet
                 return -1;
             Vector3 p3 = direction / along - Centre;
             var p = new Vector2(Vector3.Dot(p3, east), Vector3.Dot(p3, north));
-            if (!Inside(p, TileOutline))
+            if (!Inside(p, TileOutline, 1e-12))
                 return -1;
 
-            // Back onto the reference polygon, then axial, then round to the nearest hexagon (cube rounding).
-            Vector2 g = WarpPoint(p, TileOutline, reference);
+            // Back onto the reference polygon, undo the stretch, then round to the nearest hexagon (cube rounding).
+            Vector2 g = Unstretch(WarpPoint(p, TileOutline, reference), gridOutline, reference);
             double rf = g.Y / (Sqrt3 / 2.0);
             double qf = g.X - rf / 2.0;
             double sf = -qf - rf;
@@ -174,6 +183,109 @@ namespace KardashevAscent.Simulation.Planet
         /// <summary>Tangent-plane (east, north) offset from the tile centre → unit direction.</summary>
         public Vector3 DirectionAt(double eastOffset, double northOffset) =>
             Vector3.Normalize(Centre + east * (float)eastOffset + north * (float)northOffset);
+
+        // ---- Stretching the jagged hex grid onto the polygon ----
+
+        /// <summary>
+        /// Pushes a point of the hex grid outward along its direction from the centre so the grid's jagged outline
+        /// lands on the polygon's edges. The push grows as (r / outline)⁶, so inner slots barely move.
+        /// </summary>
+        static Vector2 Stretch(Vector2 p, (Vector2 A, Vector2 B)[] grid, Vector2[] polygon)
+        {
+            float r = p.Length();
+            if (r < 1e-9f)
+                return p;
+            Vector2 d = p / r;
+            double inner = FarthestHit(d, grid), outer = FarthestHit(d, polygon);
+            double t = Math.Min(1.0, r / inner);
+            double scale = 1.0 + (outer / inner - 1.0) * Math.Pow(t, StretchFalloff);
+            return p * (float)scale;
+        }
+
+        /// <summary>Inverse of <see cref="Stretch"/> (the stretch only grows along each ray, so bisection finds it).</summary>
+        static Vector2 Unstretch(Vector2 p, (Vector2 A, Vector2 B)[] grid, Vector2[] polygon)
+        {
+            float target = p.Length();
+            if (target < 1e-9f)
+                return p;
+            Vector2 d = p / target;
+            double inner = FarthestHit(d, grid), outer = FarthestHit(d, polygon);
+            if (target >= outer)
+                return d * (float)inner;
+            double lo = 0.0, hi = inner;
+            for (int i = 0; i < 40; i++)
+            {
+                double mid = 0.5 * (lo + hi);
+                double stretched = mid * (1.0 + (outer / inner - 1.0) * Math.Pow(mid / inner, StretchFalloff));
+                if (stretched < target) lo = mid; else hi = mid;
+            }
+            return d * (float)(0.5 * (lo + hi));
+        }
+
+        /// <summary>Farthest crossing of the ray from the origin along <paramref name="d"/> with a set of edges.</summary>
+        static double FarthestHit(Vector2 d, (Vector2 A, Vector2 B)[] edges)
+        {
+            double best = 0.0;
+            foreach (var (a, b) in edges)
+            {
+                Vector2 ab = b - a;
+                double denom = Cross(d, ab);
+                if (Math.Abs(denom) < 1e-12)
+                    continue;
+                double t = Cross(a, ab) / denom;           // distance along the ray
+                double u = Cross(a, d) / denom;            // position along the edge
+                if (t > 0.0 && u >= -1e-9 && u <= 1.0 + 1e-9 && t > best)
+                    best = t;
+            }
+            return best;
+        }
+
+        static double FarthestHit(Vector2 d, Vector2[] polygon)
+        {
+            var edges = new (Vector2, Vector2)[polygon.Length];
+            for (int i = 0; i < polygon.Length; i++)
+                edges[i] = (polygon[i], polygon[(i + 1) % polygon.Length]);
+            return FarthestHit(d, edges);
+        }
+
+        /// <summary>Edges that belong to only one cell: the outline of the whole grid.</summary>
+        static (Vector2, Vector2)[] OuterEdges(List<(int Q, int R, Vector2[] Hex)> cells)
+        {
+            var seen = new Dictionary<(long, long, long, long), (Vector2 A, Vector2 B, int Count)>();
+            foreach (var cell in cells)
+            {
+                for (int i = 0; i < 6; i++)
+                {
+                    Vector2 a = cell.Hex[i], b = cell.Hex[(i + 1) % 6];
+                    var ka = Key(a);
+                    var kb = Key(b);
+                    var key = ka.CompareTo(kb) < 0 ? (ka.Item1, ka.Item2, kb.Item1, kb.Item2)
+                                                   : (kb.Item1, kb.Item2, ka.Item1, ka.Item2);
+                    seen[key] = seen.TryGetValue(key, out var entry) ? (entry.A, entry.B, entry.Count + 1) : (a, b, 1);
+                }
+            }
+            var outline = new List<(Vector2, Vector2)>();
+            foreach (var entry in seen.Values)
+                if (entry.Count == 1)
+                    outline.Add((entry.A, entry.B));
+            return outline.ToArray();
+        }
+
+        static (long, long) Key(Vector2 p) => ((long)Math.Round(p.X * 1e4), (long)Math.Round(p.Y * 1e4));
+
+        static Vector2[] Densify(Vector2[] polygon, int steps)
+        {
+            var result = new Vector2[polygon.Length * steps];
+            for (int i = 0; i < polygon.Length; i++)
+            {
+                Vector2 a = polygon[i], b = polygon[(i + 1) % polygon.Length];
+                for (int j = 0; j < steps; j++)
+                    result[i * steps + j] = a + (b - a) * (j / (float)steps);
+            }
+            return result;
+        }
+
+        // ---- Fitting the regular polygon onto the real tile ----
 
         /// <summary>Pointy hexagon of the axial grid in grid units (spacing 1): centre (q + r/2, r√3/2).</summary>
         static Vector2[] Hexagon(int q, int r)
@@ -246,45 +358,22 @@ namespace KardashevAscent.Simulation.Planet
             return to[best] * (float)bestU + to[(best + 1) % k] * (float)bestV;
         }
 
-        /// <summary>Sutherland–Hodgman: a polygon clipped by a convex counter-clockwise polygon.</summary>
-        static Vector2[] Clip(Vector2[] subject, Vector2[] convex)
-        {
-            var output = new List<Vector2>(subject);
-            for (int i = 0; i < convex.Length && output.Count > 0; i++)
-            {
-                Vector2 a = convex[i], b = convex[(i + 1) % convex.Length];
-                var input = output;
-                output = new List<Vector2>(input.Count + 2);
-                for (int j = 0; j < input.Count; j++)
-                {
-                    Vector2 p = input[j], prev = input[(j + input.Count - 1) % input.Count];
-                    bool pIn = Side(a, b, p) >= -1e-9, prevIn = Side(a, b, prev) >= -1e-9;
-                    if (pIn)
-                    {
-                        if (!prevIn) output.Add(Intersect(prev, p, a, b));
-                        output.Add(p);
-                    }
-                    else if (prevIn)
-                    {
-                        output.Add(Intersect(prev, p, a, b));
-                    }
-                }
-            }
-            return output.ToArray();
-        }
+        // ---- Geometry helpers ----
 
         static double Side(Vector2 a, Vector2 b, Vector2 p) => Cross(b - a, p - a);
 
-        static Vector2 Intersect(Vector2 p, Vector2 q, Vector2 a, Vector2 b)
-        {
-            double sp = Side(a, b, p), sq = Side(a, b, q);
-            return p + (q - p) * (float)(sp / (sp - sq));
-        }
-
-        static bool Inside(Vector2 p, Vector2[] convex)
+        static bool Inside(Vector2 p, Vector2[] convex, double tolerance)
         {
             for (int i = 0; i < convex.Length; i++)
-                if (Side(convex[i], convex[(i + 1) % convex.Length], p) < -1e-12)
+                if (Side(convex[i], convex[(i + 1) % convex.Length], p) < -tolerance)
+                    return false;
+            return true;
+        }
+
+        static bool AllInside(Vector2[] points, Vector2[] convex, double tolerance)
+        {
+            foreach (Vector2 p in points)
+                if (!Inside(p, convex, tolerance))
                     return false;
             return true;
         }
