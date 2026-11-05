@@ -10,7 +10,7 @@ import unittest
 from convert import AU, EARTH_RADIUS, SOLAR_LUMINOSITY, convert, equilibrium_temperature
 
 SUN_EARTH_ROW = {
-    "pl_name": "Test b", "hostname": "Test", "sy_snum": "1", "sy_pnum": "1",
+    "pl_name": "Test b", "hostname": "Test", "sy_snum": "1", "sy_pnum": "1", "cb_flag": "0",
     "pl_orbper": "365.256", "pl_orbsmax": "1.0", "pl_orbeccen": "0.0167", "pl_insol": "1.0",
     "pl_eqt": "", "pl_rade": "1.0", "pl_bmasse": "1.0",
     "st_teff": "5772", "st_rad": "1.0", "st_mass": "1.0", "st_lum": "0.0", "st_spectype": "G2 V",
@@ -67,11 +67,24 @@ class ConvertTests(unittest.TestCase):
         self.assertEqual(p["solar"]["dayLengthHours"], 0.0)
         self.assertEqual(p["solar"]["obliquityDeg"], 0.0)
 
-    def test_two_star_system_is_flagged(self):
-        row = dict(SUN_EARTH_ROW, sy_snum="2")
+    def test_circumbinary_comes_from_cb_flag(self):
+        row = dict(SUN_EARTH_ROW, sy_snum="2", cb_flag="1")
         p = convert(row, {"id": "t", "archiveName": "Test b"})
         self.assertTrue(p["flags"]["circumbinary"])
-        self.assertTrue(any("2 stars" in w for w in p["_warnings"]))
+        self.assertTrue(any("circumbinary" in w for w in p["_warnings"]))
+
+    def test_wide_companion_is_not_circumbinary(self):
+        # Proxima Cen b: 3 stars in the system, but it orbits Proxima alone.
+        row = dict(SUN_EARTH_ROW, sy_snum="3", cb_flag="0")
+        p = convert(row, {"id": "t", "archiveName": "Test b"})
+        self.assertFalse(p["flags"]["circumbinary"])
+        self.assertEqual(p["star"]["count"], 3)
+        self.assertEqual(p["_warnings"], [])
+
+    def test_surface_class_from_radius(self):
+        for radius, expected in (("1.0", "rocky"), ("1.6", "rocky"), ("1.63", "uncertain"), ("8.45", "gaseous")):
+            p = convert(dict(SUN_EARTH_ROW, pl_rade=radius), {"id": "t", "archiveName": "Test b"})
+            self.assertEqual(p["flags"]["surface"], expected, radius)
 
     def test_insolation_mismatch_warns(self):
         row = dict(SUN_EARTH_ROW, pl_insol="2.0")
