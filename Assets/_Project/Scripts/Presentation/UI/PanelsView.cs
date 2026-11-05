@@ -25,9 +25,9 @@ namespace KardashevAscent.Presentation.UI
         VisualElement hoverBox, siteBox, plannerBox, placedBox, legend, legendBar, dragRect, multiButtons;
         Label hoverText, siteTitle, siteText, plannerTitle, tiltLabel, facingLabel, plannerNumbers, plannerBest,
               plannerReason, placedTitle, placedAngles, placedNumbers, placedBonus, totals, mapHint, help,
-              legendMin, legendMax, legendTile, multiText;
+              legendMin, legendMax, legendTile, multiText, batteryText;
         Slider tilt, facing;
-        Button bestButton, placeButton, removeAllButton, reangleButton;
+        Button bestButton, placeButton, removeAllButton, reangleButton, modePanel, modeBattery;
         float nextText;
 
         void OnEnable()
@@ -49,6 +49,11 @@ namespace KardashevAscent.Presentation.UI
             multiText = root.Q<Label>("multi-text");
             removeAllButton = root.Q<Button>("remove-all-button");
             reangleButton = root.Q<Button>("reangle-button");
+            batteryText = root.Q<Label>("battery-text");
+            modePanel = root.Q<Button>("mode-panel");
+            modeBattery = root.Q<Button>("mode-battery");
+            modePanel.clicked += () => { if (placer != null) placer.Mode = BuildMode.SolarPanel; };
+            modeBattery.clicked += () => { if (placer != null) placer.Mode = BuildMode.Battery; };
             hoverText = root.Q<Label>("hover-text");
             siteTitle = root.Q<Label>("site-title");
             siteText = root.Q<Label>("site-text");
@@ -103,8 +108,8 @@ namespace KardashevAscent.Presentation.UI
             bool siteOpen = siteView != null && siteView.Site != null && placer != null;
             bool multi = siteOpen && placer.MultiSelect;
             int slot = siteOpen && !multi ? placer.Slot : -1;
-            bool hasPanel = siteOpen && slot >= 0 &&
-                            placer.TryGetSelectedPanel(out _, out _, out _, out _);
+            BuildingType building = siteOpen && slot >= 0 ? placer.SelectedBuilding : BuildingType.None;
+            bool hasPanel = building != BuildingType.None;
 
             Show(hoverBox, !siteOpen && picker.HoveredTile >= 0);
             Show(siteBox, siteOpen && slot < 0 && !multi);
@@ -132,6 +137,15 @@ namespace KardashevAscent.Presentation.UI
             bool mapOn = lightMap != null && lightMap.Visible;
             Show(legend, mapOn);
             Show(mapHint, lightMap != null && !mapOn);
+
+            // Panel-only controls hide while building batteries.
+            bool panelMode = !siteOpen || placer.Mode == BuildMode.SolarPanel;
+            foreach (VisualElement e in new VisualElement[] { tiltLabel, tilt, facingLabel, facing, plannerBest, bestButton })
+                Show(e, panelMode);
+            Show(batteryText, !panelMode);
+            Show(reangleButton, panelMode);
+            modePanel.EnableInClassList("selected", panelMode);
+            modeBattery.EnableInClassList("selected", !panelMode);
 
             // Keep the sliders on the planned angles (keys and "best angle" move them too).
             if (siteOpen)
@@ -166,11 +180,20 @@ namespace KardashevAscent.Presentation.UI
         {
             int tile = siteView.Site.Tile;
             siteTitle.text = $"Building site · tile #{tile}";
-            siteText.text = $"{placer.PanelsOnTile} of {siteView.Site.SlotCount} slots used";
+            siteText.text = $"{placer.PanelsOnTile} panels · {placer.BatteriesOnTile} battery yards · " +
+                            $"{placer.PanelsOnTile + placer.BatteriesOnTile} of {siteView.Site.SlotCount} slots used";
             totals.text = placer.PanelCount == 0
                 ? "No panels yet"
                 : $"Panels {placer.PanelCount} ({placer.BestAnglePanels} at best angle) · now {Format.Power(placer.GenerationW)}";
 
+            if (hasPanel && placer.SelectedBuilding == BuildingType.Battery)
+            {
+                placedTitle.text = $"Battery yard · slot {slot}";
+                placedAngles.text = $"Stores {Format.Energy(placer.BatteryUnitWh)}";
+                placedNumbers.text = "Charges from surplus by day and carries the colony through the night.";
+                Show(placedBonus, false);
+                return;
+            }
             if (hasPanel)
             {
                 placer.TryGetSelectedPanel(out double t, out double a, out PanelPreview p, out AngleRating rating);
@@ -183,34 +206,38 @@ namespace KardashevAscent.Presentation.UI
             if (slot < 0 && !multi)
                 return;
 
-            int selected = 0, empty = 0, withPanels = 0;
+            bool panelMode = placer.Mode == BuildMode.SolarPanel;
+            string thing = panelMode ? "panel" : "battery yard";
+            int selected = 0, empty = 0, withPanels = 0, withBatteries = 0;
             if (multi)
             {
-                placer.CountSelection(out selected, out empty, out withPanels);
+                placer.CountSelection(out selected, out empty, out withPanels, out withBatteries);
                 plannerTitle.text = $"{selected} slots selected";
-                multiText.text = $"{empty} empty · {withPanels} with panels" +
-                                 (empty > 0 && placer.Preview.CanPlace
-                                     ? $"\nBuilding on the empty ones adds {Format.Energy(placer.Preview.EnergyPerYearWh * empty)} a year"
-                                     : "");
-                placeButton.text = $"Place {empty} panels (P)";
-                removeAllButton.text = $"Remove {withPanels} (Del)";
+                string adds = !placer.Preview.CanPlace || empty == 0 ? ""
+                    : panelMode ? $"\nBuilding on the empty ones adds {Format.Energy(placer.Preview.EnergyPerYearWh * empty)} a year"
+                    : $"\nBuilding on the empty ones adds {Format.Energy(placer.BatteryUnitWh * empty)} of storage";
+                multiText.text = $"{empty} empty · {withPanels} panels · {withBatteries} battery yards" + adds;
+                placeButton.text = $"Place {empty} {thing}s (P)";
+                removeAllButton.text = $"Remove {withPanels + withBatteries} (Del)";
                 reangleButton.text = $"Set angle on {withPanels}";
-                removeAllButton.SetEnabled(withPanels > 0);
+                removeAllButton.SetEnabled(withPanels + withBatteries > 0);
                 reangleButton.SetEnabled(withPanels > 0);
             }
             else
             {
-                plannerTitle.text = $"Plan a solar panel · slot {slot}";
-                placeButton.text = "Place panel (P)";
+                plannerTitle.text = panelMode ? $"Plan a solar panel · slot {slot}" : $"Plan a battery yard · slot {slot}";
+                placeButton.text = $"Place {thing} (P)";
             }
+            batteryText.text = $"Stores {Format.Energy(placer.BatteryUnitWh)}: charges from surplus by day, " +
+                               "carries the colony through the night so it can keep growing.";
             tiltLabel.text = $"Tilt β  {placer.TiltDeg:0}°  (0° flat, 90° upright)";
             facingLabel.text = $"Facing γ  {placer.AzimuthDeg:0}° {Compass(placer.AzimuthDeg)}";
 
             PanelPreview preview = placer.Preview;
             bool blocked = !preview.CanPlace && !placer.PreviewPending;
             Show(plannerReason, blocked);
-            Show(plannerNumbers, !blocked);
-            Show(plannerBest, !blocked);
+            Show(plannerNumbers, !blocked && panelMode);
+            Show(plannerBest, !blocked && panelMode);
             plannerReason.text = blocked ? $"Can't build here: {preview.Reason}" : "";
             plannerNumbers.text = Numbers(preview);
 

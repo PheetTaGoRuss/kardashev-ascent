@@ -16,6 +16,13 @@ namespace KardashevAscent.Presentation.Planet
     /// view), P builds on every empty one, Delete removes every panel in the selection, and "set angle" re-builds the
     /// selected panels at the planned angles. Keys: P place, B use best angle, Delete remove.
     /// </summary>
+    /// <summary>What the placer builds.</summary>
+    public enum BuildMode
+    {
+        SolarPanel,
+        Battery,
+    }
+
     [RequireComponent(typeof(PlanetView))]
     public sealed class PanelPlacer : MonoBehaviour
     {
@@ -41,6 +48,16 @@ namespace KardashevAscent.Presentation.Planet
         readonly Dictionary<(int Tile, int Slot), Placed> placed = new Dictionary<(int, int), Placed>();
         SolarPanelVisual ghost;
         readonly List<SolarPanelVisual> ghosts = new List<SolarPanelVisual>();   // one per empty selected slot
+        readonly Dictionary<(int Tile, int Slot), BatteryVisual> batteryVisuals = new Dictionary<(int, int), BatteryVisual>();
+        readonly List<BatteryVisual> batteryGhosts = new List<BatteryVisual>();
+        BuildMode mode = BuildMode.SolarPanel;
+
+        /// <summary>What P builds: solar panels or battery yards. Tab switches.</summary>
+        public BuildMode Mode
+        {
+            get => mode;
+            set => mode = value;
+        }
 
         int tile = -1, slot = -1;
         float tiltDeg, azimuthDeg;
@@ -138,8 +155,12 @@ namespace KardashevAscent.Presentation.Planet
             ghost?.Destroy();
             foreach (SolarPanelVisual g in ghosts)
                 g.Destroy();
+            foreach (BatteryVisual g in batteryGhosts)
+                g.Destroy();
             foreach (Placed p in placed.Values)
                 p.Visual.Destroy();
+            foreach (BatteryVisual b in batteryVisuals.Values)
+                b.Destroy();
         }
 
         void OnSimulationCreated()
@@ -148,6 +169,9 @@ namespace KardashevAscent.Presentation.Planet
             foreach (Placed p in placed.Values)
                 p.Visual.Destroy();
             placed.Clear();
+            foreach (BatteryVisual b in batteryVisuals.Values)
+                b.Destroy();
+            batteryVisuals.Clear();
             BestAnglePanels = 0;
             simulation = runner.Simulation;
             OnSiteChanged(siteView.Site != null ? siteView.Site.Tile : -1);
@@ -222,6 +246,9 @@ namespace KardashevAscent.Presentation.Planet
                 bestTask = null;
             }
 
+            if (tile >= 0 && Input.GetKeyDown(KeyCode.Tab))
+                mode = mode == BuildMode.SolarPanel ? BuildMode.Battery : BuildMode.SolarPanel;
+
             if (MultiSelect)
             {
                 if (Input.GetKeyDown(placeKey)) PlaceSelection();
@@ -246,6 +273,14 @@ namespace KardashevAscent.Presentation.Planet
         }
 
         bool SlotHasPanel => placed.ContainsKey((tile, slot));
+        bool Occupied(int s) => placed.ContainsKey((tile, s)) || batteryVisuals.ContainsKey((tile, s));
+
+        /// <summary>What stands in the selected slot (single selection).</summary>
+        public BuildingType SelectedBuilding =>
+            simulation != null && tile >= 0 && slot >= 0 ? simulation.GetBuilding(tile, slot) : BuildingType.None;
+
+        /// <summary>Storage one battery yard adds, Wh.</summary>
+        public double BatteryUnitWh => simulation != null ? simulation.BatteryUnitWh : 0.0;
 
         AngleRating RatingOf(PanelPreview p) => bestReady && best.Found
             ? PanelAngleSearch.Rate(PanelAngleSearch.ShareOfBest(p.EnergyPerYearWh, best.EnergyPerYearWh))
@@ -277,31 +312,57 @@ namespace KardashevAscent.Presentation.Planet
                 return;
             Color tint = preview.CanPlace || previewDirty ? ghostCanPlace : ghostBlocked;
             double tilt = tiltDeg * Mathf.Deg2Rad, azimuth = azimuthDeg * Mathf.Deg2Rad;
+            bool battery = mode == BuildMode.Battery;
 
-            int used = 0;
-            if (MultiSelect && siteView.Site != null)
+            // One ghost per empty slot that P would build on: the whole selection, or the one selected slot.
+            var targets = new List<int>();
+            if (siteView.Site != null && tile >= 0)
             {
-                foreach (int s in siteView.Selection)
+                if (MultiSelect)
                 {
-                    if (placed.ContainsKey((tile, s)))
-                        continue;
-                    if (used == ghosts.Count)
-                        ghosts.Add(new SolarPanelVisual("Panel Ghost", transform, ghostMaterial, ghostMaterial));
-                    ShowOnSlot(ghosts[used], siteView.Site, s, tilt, azimuth);
-                    ghosts[used].SetTint(tint);
-                    used++;
+                    foreach (int s in siteView.Selection)
+                        if (!Occupied(s))
+                            targets.Add(s);
+                }
+                else if (slot >= 0 && !Occupied(slot))
+                {
+                    targets.Add(slot);
                 }
             }
-            for (int i = used; i < ghosts.Count; i++)
-                ghosts[i].Hide();
 
-            if (MultiSelect || tile < 0 || slot < 0 || SlotHasPanel || siteView.Site == null)
+            int panels = 0, yards = 0;
+            foreach (int s in targets)
             {
-                ghost.Hide();
-                return;
+                if (battery)
+                {
+                    if (yards == batteryGhosts.Count)
+                        batteryGhosts.Add(new BatteryVisual("Battery Ghost", transform, ghostMaterial, ghostMaterial));
+                    ShowBattery(batteryGhosts[yards], siteView.Site, s);
+                    batteryGhosts[yards].SetTint(tint);
+                    yards++;
+                }
+                else
+                {
+                    if (panels == ghosts.Count)
+                        ghosts.Add(new SolarPanelVisual("Panel Ghost", transform, ghostMaterial, ghostMaterial));
+                    ShowOnSlot(ghosts[panels], siteView.Site, s, tilt, azimuth);
+                    ghosts[panels].SetTint(tint);
+                    panels++;
+                }
             }
-            ShowOnSlot(ghost, siteView.Site, slot, tilt, azimuth);
-            ghost.SetTint(tint);
+            for (int i = panels; i < ghosts.Count; i++)
+                ghosts[i].Hide();
+            for (int i = yards; i < batteryGhosts.Count; i++)
+                batteryGhosts[i].Hide();
+            ghost.Hide();
+        }
+
+        void ShowBattery(BatteryVisual visual, TileSite site, int s)
+        {
+            System.Numerics.Vector3 d = site.SlotDirections[s];
+            var direction = new Vector3(d.X, d.Y, d.Z);
+            float size = (float)site.Spacing * planet.Radius * panelScale;
+            visual.Show(direction, siteView.GroundRadius(direction), size);
         }
 
         void ShowOnSlot(SolarPanelVisual visual, TileSite site, int s, double tilt, double azimuth)
@@ -313,29 +374,23 @@ namespace KardashevAscent.Presentation.Planet
             visual.Show(direction, siteView.GroundRadius(direction), size, tilt, azimuth);
         }
 
-        /// <summary>Build a panel in the selected slot at the current angles.</summary>
-        public bool Place()
-        {
-            if (!PlaceAt(slot))
-                return false;
-            ghost.Hide();
-            return true;
-        }
+        /// <summary>Build in the selected slot: a panel at the current angles, or a battery yard.</summary>
+        public bool Place() => PlaceAt(slot);
 
-        /// <summary>Remove the panel in the selected slot.</summary>
+        /// <summary>Remove whatever stands in the selected slot.</summary>
         public bool Remove() => RemoveAt(slot);
 
-        /// <summary>Build a panel on every empty selected slot at the planned angles. Returns how many were built.</summary>
+        /// <summary>Build on every empty selected slot (panels at the planned angles, or batteries). Returns how many.</summary>
         public int PlaceSelection()
         {
             int built = 0;
             foreach (int s in new List<int>(siteView.Selection))
-                if (!placed.ContainsKey((tile, s)) && PlaceAt(s))
+                if (!Occupied(s) && PlaceAt(s))
                     built++;
             return built;
         }
 
-        /// <summary>Remove every panel in the selection. Returns how many were removed.</summary>
+        /// <summary>Remove every building in the selection. Returns how many were removed.</summary>
         public int RemoveSelection()
         {
             int removed = 0;
@@ -357,8 +412,17 @@ namespace KardashevAscent.Presentation.Planet
 
         bool PlaceAt(int s)
         {
-            if (simulation == null || tile < 0 || s < 0 || placed.ContainsKey((tile, s)) || siteView.Site == null)
+            if (simulation == null || tile < 0 || s < 0 || Occupied(s) || siteView.Site == null)
                 return false;
+            if (mode == BuildMode.Battery)
+            {
+                if (!simulation.PlaceBattery(tile, s))
+                    return false;
+                var yard = new BatteryVisual($"Battery {tile}.{s}", transform, frameMaterial, cellMaterial);
+                ShowBattery(yard, siteView.Site, s);
+                batteryVisuals[(tile, s)] = yard;
+                return true;
+            }
             double tilt = tiltDeg * Mathf.Deg2Rad, azimuth = azimuthDeg * Mathf.Deg2Rad;
             if (!simulation.PlacePanel(tile, s, tilt, azimuth))
                 return false;
@@ -377,6 +441,14 @@ namespace KardashevAscent.Presentation.Planet
 
         bool RemoveAt(int s)
         {
+            if (simulation != null && s >= 0 && batteryVisuals.TryGetValue((tile, s), out BatteryVisual yard))
+            {
+                if (!simulation.RemoveBuilding(tile, s))
+                    return false;
+                yard.Destroy();
+                batteryVisuals.Remove((tile, s));
+                return true;
+            }
             if (simulation == null || s < 0 || !placed.TryGetValue((tile, s), out Placed p))
                 return false;
             if (!simulation.RemovePanel(tile, s))
@@ -451,18 +523,22 @@ namespace KardashevAscent.Presentation.Planet
         public int PanelsOnTile => simulation != null && tile >= 0 ? simulation.PanelCount(tile) : 0;
 
         /// <summary>Selected slots: how many, how many are empty, how many hold panels.</summary>
-        public void CountSelection(out int selected, out int empty, out int withPanels)
+        public void CountSelection(out int selected, out int empty, out int withPanels, out int withBatteries)
         {
-            selected = empty = withPanels = 0;
+            selected = empty = withPanels = withBatteries = 0;
             if (siteView == null)
                 return;
             foreach (int s in siteView.Selection)
             {
                 selected++;
                 if (placed.ContainsKey((tile, s))) withPanels++;
+                else if (batteryVisuals.ContainsKey((tile, s))) withBatteries++;
                 else empty++;
             }
         }
+
+        /// <summary>Batteries on the open site's tile.</summary>
+        public int BatteriesOnTile => simulation != null && tile >= 0 ? simulation.BatteryCount(tile) : 0;
 
         public KeyCode PlaceKey => placeKey;
         public KeyCode BestKey => bestKey;

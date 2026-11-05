@@ -13,11 +13,17 @@
             <ui:VisualElement name="site-box" class="panel box hidden">
                 <ui:Label name="site-title" class="value" text="Building site" />
                 <ui:Label name="site-text" class="body" text="" />
-                <ui:Label class="caption" text="Click a slot to plan a panel · drag a box to select many · Ctrl+A: all" />
+                <ui:Label class="caption" text="Click a slot to build there · drag a box to select many · Ctrl+A: all" />
             </ui:VisualElement>
 
             <ui:VisualElement name="planner-box" class="panel box hidden">
                 <ui:Label name="planner-title" class="value" text="Plan a solar panel" />
+                <ui:VisualElement class="button-row mode-row">
+                    <ui:Button name="mode-panel" class="action-button mode" text="Solar panel" />
+                    <ui:Button name="mode-battery" class="action-button mode" text="Battery yard" />
+                </ui:VisualElement>
+                <ui:Label class="caption" text="Tab: switch what to build" />
+                <ui:Label name="battery-text" class="body hidden" text="" />
                 <ui:Label name="tilt-label" class="body slider-label" text="Tilt β" />
                 <ui:Slider name="tilt" class="slider" low-value="0" high-value="90" />
                 <ui:Label name="facing-label" class="body slider-label" text="Facing γ" />
@@ -42,7 +48,7 @@
                 <ui:Label name="placed-numbers" class="body numbers" text="" />
                 <ui:Label name="placed-bonus" class="body bonus hidden" text="★ Best-angle bonus" />
                 <ui:VisualElement class="button-row">
-                    <ui:Button name="remove-button" class="action-button" text="Remove panel (Del)" />
+                    <ui:Button name="remove-button" class="action-button" text="Remove (Del)" />
                 </ui:VisualElement>
             </ui:VisualElement>
 

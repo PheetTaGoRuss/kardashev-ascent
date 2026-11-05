@@ -97,11 +97,13 @@ namespace KardashevAscent.Presentation.UI
             season.text = $"Northern {s.ToString().ToLowerInvariant()}";
 
             power.text = Format.Power(sim.GenerationW);
-            demand.text = $"needed {Format.Power(sim.DemandW)}";
-            string flow = sim.BatteryPowerW > 1.0 ? $"charging {Format.Power(sim.BatteryPowerW)}"
-                : sim.BatteryPowerW < -1.0 ? $"draining {Format.Power(-sim.BatteryPowerW)}"
-                : sim.CurtailedW > 1.0 ? $"full, {Format.Power(sim.CurtailedW)} wasted" : "idle";
-            battery.text = $"{soc * 100.0:0} % · {flow}";
+            demand.text = sim.IsColonyGrowing
+                ? $"needed {Format.Power(sim.DemandW)} · growing to {Format.Power(sim.DemandTargetW)}"
+                : $"needed {Format.Power(sim.DemandW)}";
+            string flow = sim.BatteryPowerW > 1.0 ? $"+{Format.Power(sim.BatteryPowerW)}"
+                : sim.BatteryPowerW < -1.0 ? $"−{Format.Power(-sim.BatteryPowerW)}"
+                : sim.CurtailedW > 1.0 ? "full" : "idle";
+            battery.text = $"{soc * 100.0:0} % of {Format.Energy(sim.BatteryCapacityWh)} · {flow}";
             kLabel.text = $"K {sim.KardashevK:0.00} · Type I at K {targetK:0.00} ({progress * 100.0:0} %)";
 
             // The grid updates its brownout state on the next tick; while paused, don't warn once panels cover demand.
@@ -136,7 +138,8 @@ namespace KardashevAscent.Presentation.UI
         {
             double a = Math.Abs(wh);
             if (a >= 1e9) return $"{wh / 1e9:0.00} GWh";
-            if (a >= 1e6) return $"{wh / 1e6:0.00} MWh";
+            if (a >= 1e7) return $"{wh / 1e6:0} MWh";
+            if (a >= 1e6) return $"{wh / 1e6:0.0} MWh";
             return $"{wh / 1e3:0} kWh";
         }
     }
