@@ -1,0 +1,51 @@
+{
+  "_comment": "Which planets the game loads. archiveName must match pl_name in the NASA Exoplanet Archive table pscomppars exactly; null = hand-made planet. 'assumed' holds values the archive cannot give (axial tilt, day length, atmosphere); they are marked as assumed in the output so the game can show players which numbers are real.",
+  "planets": [
+    {
+      "id": "viridia",
+      "displayName": "Viridia",
+      "archiveName": null,
+      "assumed": {
+        "luminositySun": 1.0,
+        "starTeffK": 5772,
+        "starMassSun": 1.0,
+        "semiMajorAxisAu": 1.0,
+        "eccentricity": 0.0167,
+        "yearLengthDays": 365.256,
+        "radiusEarth": 1.0,
+        "massEarth": 1.0,
+        "obliquityDeg": 23.44,
+        "perihelionLongitudeDeg": 282.94,
+        "dayLengthHours": 24.0,
+        "opticalDepth": 0.32,
+        "diffuseK": 0.4,
+        "airTemperatureC": 25.0,
+        "bondAlbedo": 0.306
+      }
+    },
+    {
+      "id": "proxima-cen-b",
+      "displayName": "Proxima Centauri b",
+      "archiveName": "Proxima Cen b",
+      "assumed": { "tidallyLocked": true }
+    },
+    {
+      "id": "trappist-1-e",
+      "displayName": "TRAPPIST-1 e",
+      "archiveName": "TRAPPIST-1 e",
+      "assumed": { "tidallyLocked": true }
+    },
+    {
+      "id": "kepler-16-b",
+      "displayName": "Kepler-16 b",
+      "archiveName": "Kepler-16 b",
+      "assumed": { "obliquityDeg": 0.0, "dayLengthHours": 24.0 }
+    },
+    {
+      "id": "kepler-452-b",
+      "displayName": "Kepler-452 b",
+      "archiveName": "Kepler-452 b",
+      "assumed": { "obliquityDeg": 23.44, "dayLengthHours": 24.0 }
+    }
+  ]
+}
