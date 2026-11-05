@@ -10,8 +10,10 @@ namespace KardashevAscent.Presentation.Planet
 {
     /// <summary>
     /// Zoomed-in building site on one tile. Selecting a tile flies the camera down to it and lays out its
-    /// building slots (<see cref="TileSite"/>) as small pads; the slot under the mouse is outlined and a click
-    /// selects it. Esc (clearing the tile selection) or zooming all the way out flies back to the planet.
+    /// building slots (<see cref="TileSite"/>) as small pads; the slot under the mouse is outlined.
+    /// Selecting slots: click one; drag a box over many (Shift adds to the selection, Ctrl subtracts); Shift+click
+    /// adds or removes one; Ctrl+A selects all. Esc clears the slot selection first, then flies back to the planet,
+    /// as does zooming all the way out.
     /// </summary>
     [RequireComponent(typeof(PlanetView))]
     public sealed class SiteView : MonoBehaviour
@@ -33,17 +35,27 @@ namespace KardashevAscent.Presentation.Planet
         GameObject padsObject, hoverObject, selectedObject;
         Mesh padsMesh, hoverMesh, selectedMesh;
         Vector3 pressPosition;
-        bool pressed;
+        bool pressed, dragging;
+        readonly HashSet<int> selection = new HashSet<int>();
 
         /// <summary>The site being shown, or null in the planet view.</summary>
         public TileSite Site { get; private set; }
         public int HoveredSlot { get; private set; } = -1;
+        /// <summary>The selected slot when exactly one is selected, else −1.</summary>
         public int SelectedSlot { get; private set; } = -1;
+        /// <summary>Every selected slot of the open site.</summary>
+        public IReadOnlyCollection<int> Selection => selection;
+        /// <summary>True while a selection box is being dragged.</summary>
+        public bool IsDragging => dragging;
+        /// <summary>The selection box in GUI coordinates (origin top-left), while dragging.</summary>
+        public Rect DragRect { get; private set; }
         public float PlanetRadius => planet.Radius;
 
         /// <summary>A site was opened (its tile id) or closed (−1).</summary>
         public event Action<int> SiteChanged;
         public event Action<int> SelectedSlotChanged;
+        /// <summary>The set of selected slots changed (one, many or none).</summary>
+        public event Action SelectionChanged;
 
         void Awake()
         {
@@ -64,7 +76,10 @@ namespace KardashevAscent.Presentation.Planet
         void OnEnable()
         {
             if (picker != null)
+            {
                 picker.SelectedTileChanged += OnTileSelected;
+                picker.EscapeHandler = OnEscape;
+            }
             if (orbitCamera != null)
                 orbitCamera.SiteExitRequested += OnExitRequested;
             if (runner != null)
@@ -74,7 +89,11 @@ namespace KardashevAscent.Presentation.Planet
         void OnDisable()
         {
             if (picker != null)
+            {
                 picker.SelectedTileChanged -= OnTileSelected;
+                if (picker.EscapeHandler == OnEscape)
+                    picker.EscapeHandler = null;
+            }
             if (orbitCamera != null)
                 orbitCamera.SiteExitRequested -= OnExitRequested;
             if (runner != null)
@@ -132,6 +151,15 @@ namespace KardashevAscent.Presentation.Planet
             Close();
         }
 
+        /// <summary>Esc clears the slot selection before it leaves the site.</summary>
+        bool OnEscape()
+        {
+            if (Site == null || selection.Count == 0)
+                return false;
+            SetSelection(Array.Empty<int>());
+            return true;
+        }
+
         void OnExitRequested()
         {
             if (picker != null)
@@ -152,7 +180,8 @@ namespace KardashevAscent.Presentation.Planet
                 picker.ShowSelectedOutline = false;
             BuildPads();
             SetHovered(-1);
-            SetSelected(-1);
+            dragging = pressed = false;
+            SetSelection(Array.Empty<int>());
             float siteRadius = (float)(Site.Spacing * (Site.Rings + 1)) * planet.Radius * transform.lossyScale.x;
             orbitCamera?.FocusSite(ToUnity(Site.Centre), siteRadius);
             SiteChanged?.Invoke(tile);
@@ -163,7 +192,8 @@ namespace KardashevAscent.Presentation.Planet
             bool wasOpen = Site != null;
             Site = null;
             SetHovered(-1);
-            SetSelected(-1);
+            dragging = pressed = false;
+            SetSelection(Array.Empty<int>());
             padsObject.SetActive(false);
             if (picker != null)
                 picker.HoldSelection = false;
@@ -190,15 +220,77 @@ namespace KardashevAscent.Presentation.Planet
             if (Input.GetMouseButtonDown(0) && !overUi)
             {
                 pressed = true;
+                dragging = false;
                 pressPosition = Input.mousePosition;
+            }
+            if (pressed && Input.GetMouseButton(0))
+            {
+                Vector3 now = Input.mousePosition;
+                if (!dragging && (now - pressPosition).sqrMagnitude > clickTolerancePixels * clickTolerancePixels)
+                    dragging = true;
+                if (dragging)
+                {
+                    float x0 = Mathf.Min(pressPosition.x, now.x), x1 = Mathf.Max(pressPosition.x, now.x);
+                    float y0 = Mathf.Min(pressPosition.y, now.y), y1 = Mathf.Max(pressPosition.y, now.y);
+                    DragRect = new Rect(x0, Screen.height - y1, x1 - x0, y1 - y0);
+                }
             }
             if (Input.GetMouseButtonUp(0) && pressed)
             {
                 pressed = false;
-                bool click = (Input.mousePosition - pressPosition).sqrMagnitude <= clickTolerancePixels * clickTolerancePixels;
-                if (click && HoveredSlot >= 0)
-                    SetSelected(HoveredSlot);
+                bool add = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+                bool subtract = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+                if (dragging)
+                {
+                    dragging = false;
+                    BoxSelect(cam, DragRect, add, subtract);
+                }
+                else if (HoveredSlot >= 0)
+                {
+                    if (add || subtract)
+                        Toggle(HoveredSlot);
+                    else
+                        SetSelection(new[] { HoveredSlot });
+                }
             }
+
+            bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+            if (ctrl && Input.GetKeyDown(KeyCode.A))
+            {
+                var all = new int[Site.SlotCount];
+                for (int i = 0; i < all.Length; i++)
+                    all[i] = i;
+                SetSelection(all);
+            }
+        }
+
+        /// <summary>Slots whose centres fall inside a screen box (GUI coordinates), facing the camera.</summary>
+        void BoxSelect(Camera cam, Rect guiRect, bool add, bool subtract)
+        {
+            var next = new HashSet<int>(add || subtract ? selection : (IEnumerable<int>)Array.Empty<int>());
+            for (int s = 0; s < Site.SlotCount; s++)
+            {
+                System.Numerics.Vector3 d = Site.SlotDirections[s];
+                Vector3 local = new Vector3(d.X, d.Y, d.Z);
+                Vector3 world = transform.TransformPoint(local * GroundRadius(local));
+                Vector3 screen = cam.WorldToScreenPoint(world);
+                if (screen.z <= 0f)
+                    continue;
+                var gui = new Vector2(screen.x, Screen.height - screen.y);
+                if (!guiRect.Contains(gui))
+                    continue;
+                if (subtract) next.Remove(s);
+                else next.Add(s);
+            }
+            SetSelection(next);
+        }
+
+        void Toggle(int slot)
+        {
+            var next = new HashSet<int>(selection);
+            if (!next.Remove(slot))
+                next.Add(slot);
+            SetSelection(next);
         }
 
         int SlotUnder(Camera cam, Vector3 screenPosition)
@@ -219,15 +311,38 @@ namespace KardashevAscent.Presentation.Planet
             return Site.FindSlot(new System.Numerics.Vector3(hit.x, hit.y, hit.z));
         }
 
-        /// <summary>Select a slot of the open site (−1 clears).</summary>
-        public void SetSelected(int slot)
+        /// <summary>Select one slot of the open site (−1 clears).</summary>
+        public void SetSelected(int slot) => SetSelection(slot >= 0 ? new[] { slot } : Array.Empty<int>());
+
+        /// <summary>Replace the selected slots.</summary>
+        public void SetSelection(IEnumerable<int> slots)
         {
-            if (slot == SelectedSlot)
+            var next = new HashSet<int>();
+            if (Site != null)
+                foreach (int s in slots)
+                    if (s >= 0 && s < Site.SlotCount)
+                        next.Add(s);
+            if (next.SetEquals(selection))
                 return;
-            SelectedSlot = slot;
-            ShowRing(selectedObject, selectedMesh, slot, 0.16f, 1.6f);
-            ShowRing(hoverObject, hoverMesh, HoveredSlot == slot ? -1 : HoveredSlot, 0.1f, 1.2f);
-            SelectedSlotChanged?.Invoke(slot);
+            selection.Clear();
+            selection.UnionWith(next);
+
+            int single = selection.Count == 1 ? First(selection) : -1;
+            ShowRings(selectedObject, selectedMesh, selection, 0.16f, 1.6f);
+            ShowRing(hoverObject, hoverMesh, selection.Contains(HoveredSlot) ? -1 : HoveredSlot, 0.1f, 1.2f);
+            if (single != SelectedSlot)
+            {
+                SelectedSlot = single;
+                SelectedSlotChanged?.Invoke(single);
+            }
+            SelectionChanged?.Invoke();
+        }
+
+        static int First(HashSet<int> set)
+        {
+            foreach (int s in set)
+                return s;
+            return -1;
         }
 
         void SetHovered(int slot)
@@ -235,7 +350,7 @@ namespace KardashevAscent.Presentation.Planet
             if (slot == HoveredSlot)
                 return;
             HoveredSlot = slot;
-            ShowRing(hoverObject, hoverMesh, slot == SelectedSlot ? -1 : slot, 0.1f, 1.2f);
+            ShowRing(hoverObject, hoverMesh, selection.Contains(slot) ? -1 : slot, 0.1f, 1.2f);
         }
 
         // Pads: each slot's shape, shrunk a little so the gaps show, just above the ground. Together they cover the tile.
@@ -257,19 +372,26 @@ namespace KardashevAscent.Presentation.Planet
             padsObject.SetActive(true);
         }
 
-        void ShowRing(GameObject go, Mesh mesh, int slot, float width, float liftFactor)
+        void ShowRing(GameObject go, Mesh mesh, int slot, float width, float liftFactor) =>
+            ShowRings(go, mesh, slot >= 0 ? new[] { slot } : Array.Empty<int>(), width, liftFactor);
+
+        void ShowRings(GameObject go, Mesh mesh, IEnumerable<int> slots, float width, float liftFactor)
         {
-            if (Site == null || slot < 0)
-            {
-                go.SetActive(false);
-                return;
-            }
             var vertices = new List<Vector3>();
             var normals = new List<Vector3>();
             var colors = new List<Color32>();
             var triangles = new List<int>();
-            float lift = (float)Site.Spacing * planet.Radius * 0.02f * liftFactor;
-            AddSlotShape(slot, 1f, width, lift, vertices, normals, colors, triangles, new Color32(255, 255, 255, 255));
+            if (Site != null)
+            {
+                float lift = (float)Site.Spacing * planet.Radius * 0.02f * liftFactor;
+                foreach (int slot in slots)
+                    AddSlotShape(slot, 1f, width, lift, vertices, normals, colors, triangles, new Color32(255, 255, 255, 255));
+            }
+            if (vertices.Count == 0)
+            {
+                go.SetActive(false);
+                return;
+            }
             mesh.Clear();
             mesh.SetVertices(vertices);
             mesh.SetNormals(normals);
