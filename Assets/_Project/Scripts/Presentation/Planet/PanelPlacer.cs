@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using KardashevAscent.Presentation.Game;
-using KardashevAscent.Presentation.UI;
 using KardashevAscent.Simulation.Game;
 using KardashevAscent.Simulation.Planet;
 using UnityEngine;
@@ -36,8 +35,6 @@ namespace KardashevAscent.Presentation.Planet
         [Tooltip("Seconds between live previews while a slider moves.")]
         [Range(0f, 0.5f)] [SerializeField] float previewInterval = 0.05f;
 
-        const float WindowWidth = 290f;
-
         PlanetView planet;
         IPlanetSimulation simulation;
         readonly Dictionary<(int Tile, int Slot), Placed> placed = new Dictionary<(int, int), Placed>();
@@ -53,8 +50,6 @@ namespace KardashevAscent.Presentation.Planet
         int bestTaskTile = -1;
         PanelAngles best;
         bool bestReady;
-
-        GUIStyle boxStyle, labelStyle, smallStyle, buttonStyle;
 
         struct Placed
         {
@@ -312,7 +307,8 @@ namespace KardashevAscent.Presentation.Planet
             return true;
         }
 
-        void UseBestAngle()
+        /// <summary>Set the planned angles to the best ones found for this tile.</summary>
+        public void UseBestAngle()
         {
             if (!bestReady || !best.Found || SlotHasPanel)
                 return;
@@ -322,157 +318,57 @@ namespace KardashevAscent.Presentation.Planet
             lastPreviewTime = float.NegativeInfinity;
         }
 
-        void OnGUI()
+        // ---- For the planner panel (PanelPlannerView) ----
+
+        /// <summary>The selected slot of the open site, or −1.</summary>
+        public int Slot => slot;
+
+        /// <summary>Planned tilt β, degrees (0–90). Setting it updates the preview and the ghost.</summary>
+        public float TiltDeg
         {
-            if (simulation == null || tile < 0 || siteView.Site == null)
-                return;
-            EnsureStyles();
-
-            bool hasPanel = placed.TryGetValue((tile, slot), out Placed current);
-            float height = slot < 0 ? 112f : hasPanel ? 196f : 292f;
-            var rect = new Rect(12f, ScreenInput.TopInset + 112f, WindowWidth, height);
-            ScreenInput.Block(rect);
-            GUI.Box(rect, GUIContent.none, boxStyle);
-
-            GUILayout.BeginArea(new Rect(rect.x + 10f, rect.y + 8f, rect.width - 20f, rect.height - 16f));
-            if (slot < 0)
-                DrawSite();
-            else if (hasPanel)
-                DrawPlaced(current);
-            else
-                DrawPlanner();
-            GUILayout.FlexibleSpace();
-            GUILayout.Label(Totals(), smallStyle);
-            GUILayout.EndArea();
+            get => tiltDeg;
+            set { float v = Mathf.Clamp(Mathf.Round(value), 0f, 90f); if (v != tiltDeg) { tiltDeg = v; previewDirty = true; } }
         }
 
-        void DrawSite()
+        /// <summary>Planned facing γ, degrees clockwise from north (0–359).</summary>
+        public float AzimuthDeg
         {
-            TileSite site = siteView.Site;
-            GUILayout.Label($"<b>Building site</b> · tile #{tile}", labelStyle);
-            GUILayout.Label($"{simulation.PanelCount(tile)} of {site.SlotCount} slots used\n" +
-                            "<size=11>Click a slot to plan a panel · Shift+click builds at once</size>", labelStyle);
+            get => azimuthDeg;
+            set { float v = Mathf.Repeat(Mathf.Round(value), 360f); if (v != azimuthDeg) { azimuthDeg = v; previewDirty = true; } }
         }
 
-        void DrawPlanner()
-        {
-            GUILayout.Label($"<b>Plan a solar panel</b> · slot {slot}", labelStyle);
+        /// <summary>The live preview for the planned angles; <see cref="PreviewPending"/> while it is being redone.</summary>
+        public PanelPreview Preview => preview;
+        public bool PreviewPending => previewDirty;
 
-            GUILayout.Label($"Tilt β  {tiltDeg:0}°  <size=11>(0° flat, 90° upright)</size>", labelStyle);
-            float newTilt = Mathf.Round(GUILayout.HorizontalSlider(tiltDeg, 0f, 90f));
-            GUILayout.Space(4f);
-            GUILayout.Label($"Facing γ  {azimuthDeg:0}° {Compass(azimuthDeg)}", labelStyle);
-            float newAzimuth = Mathf.Round(GUILayout.HorizontalSlider(azimuthDeg, 0f, 359f));
-            if (!Mathf.Approximately(newTilt, tiltDeg) || !Mathf.Approximately(newAzimuth, azimuthDeg))
+        /// <summary>The panel in the selected slot, if there is one.</summary>
+        public bool TryGetSelectedPanel(out double tilt, out double azimuth, out PanelPreview panelPreview, out AngleRating rating)
+        {
+            if (tile >= 0 && slot >= 0 && placed.TryGetValue((tile, slot), out Placed p))
             {
-                tiltDeg = newTilt;
-                azimuthDeg = newAzimuth;
-                previewDirty = true;
+                tilt = p.Tilt;
+                azimuth = p.Azimuth;
+                panelPreview = p.Preview;
+                rating = p.Rating;
+                return true;
             }
-            GUILayout.Space(6f);
-
-            if (!preview.CanPlace && !previewDirty)
-            {
-                GUILayout.Label($"<color=#ff9a8a>Can't build here: {preview.Reason}</color>", labelStyle);
-                return;
-            }
-
-            DrawNumbers(preview);
-            GUILayout.Space(4f);
-            DrawBest(preview.EnergyPerYearWh);
-
-            GUILayout.BeginHorizontal();
-            GUI.enabled = bestReady && best.Found;
-            if (GUILayout.Button("Best angle (B)"))
-                UseBestAngle();
-            GUI.enabled = preview.CanPlace;
-            if (GUILayout.Button("<b>Place panel (P)</b>", buttonStyle))
-                Place();
-            GUI.enabled = true;
-            GUILayout.EndHorizontal();
+            tilt = azimuth = 0.0;
+            panelPreview = default;
+            rating = AngleRating.Off;
+            return false;
         }
 
-        void DrawPlaced(Placed p)
-        {
-            GUILayout.Label($"<b>Solar panel</b> · slot {slot}", labelStyle);
-            GUILayout.Label($"Tilt {p.Tilt * Mathf.Rad2Deg:0}° · facing {p.Azimuth * Mathf.Rad2Deg:0}° {Compass((float)(p.Azimuth * Mathf.Rad2Deg))}", labelStyle);
-            DrawNumbers(p.Preview);
-            if (p.Rating == AngleRating.Optimal)
-                GUILayout.Label("<color=#ffd27a>★ Best-angle bonus</color>", labelStyle);
-            if (GUILayout.Button("Remove panel (Del)"))
-                Remove();
-        }
+        /// <summary>How close the planned angles are to the best (0 when the best is not known yet).</summary>
+        public double PlannedShareOfBest => bestReady && best.Found
+            ? PanelAngleSearch.ShareOfBest(preview.EnergyPerYearWh, best.EnergyPerYearWh) : 0.0;
 
-        void DrawNumbers(PanelPreview p)
-        {
-            GUILayout.Label(
-                $"Energy  <b>{FormatEnergy(p.EnergyPerYearWh)}</b> / year\n" +
-                $"Capacity factor  {p.CapacityFactor * 100.0:0.0} %\n" +
-                $"EROI  {p.Eroi:0.0}  ·  payback  {FormatYears(p.PaybackYears)}", labelStyle);
-        }
+        /// <summary>Total power being generated now (panels and RTGs), W.</summary>
+        public double GenerationW => simulation != null ? simulation.GenerationW : 0.0;
 
-        void DrawBest(double energy)
-        {
-            if (!bestReady)
-            {
-                GUILayout.Label("Finding the best angle…", smallStyle);
-                return;
-            }
-            if (!best.Found)
-                return;
-            double share = PanelAngleSearch.ShareOfBest(energy, best.EnergyPerYearWh);
-            AngleRating rating = PanelAngleSearch.Rate(share);
-            string verdict = rating == AngleRating.Optimal ? "<color=#ffd27a>★ best-angle bonus</color>"
-                : rating == AngleRating.Good ? "close" : "<color=#ff9a8a>far off</color>";
-            GUILayout.Label(
-                $"Best here: β {best.Tilt * Mathf.Rad2Deg:0}°, γ {best.Azimuth * Mathf.Rad2Deg:0}° → {FormatEnergy(best.EnergyPerYearWh)}\n" +
-                $"Yours: <b>{share * 100.0:0} %</b> of best · {verdict}", labelStyle);
-        }
+        /// <summary>Panels on the open site's tile.</summary>
+        public int PanelsOnTile => simulation != null && tile >= 0 ? simulation.PanelCount(tile) : 0;
 
-        string Totals()
-        {
-            if (placed.Count == 0)
-                return "No panels yet";
-            return $"Panels {placed.Count} ({BestAnglePanels} at best angle) · now {FormatPower(simulation.GenerationW)}";
-        }
-
-        void EnsureStyles()
-        {
-            if (boxStyle != null)
-                return;
-            boxStyle = new GUIStyle(GUI.skin.box);
-            labelStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 13,
-                richText = true,
-                wordWrap = true,
-                normal = { textColor = new Color(0.9f, 0.93f, 1f) },
-            };
-            smallStyle = new GUIStyle(labelStyle) { fontSize = 11, normal = { textColor = new Color(0.7f, 0.75f, 0.85f) } };
-            buttonStyle = new GUIStyle(GUI.skin.button) { richText = true };
-        }
-
-        static string Compass(float azimuthDeg)
-        {
-            string[] names = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" };
-            return names[Mathf.RoundToInt(Mathf.Repeat(azimuthDeg, 360f) / 45f) % 8];
-        }
-
-        static string FormatEnergy(double wh)
-        {
-            if (wh >= 1e9) return $"{wh / 1e9:0.00} GWh";
-            if (wh >= 1e6) return $"{wh / 1e6:0.0} MWh";
-            return $"{wh / 1e3:0} kWh";
-        }
-
-        static string FormatPower(double w)
-        {
-            if (w >= 1e9) return $"{w / 1e9:0.00} GW";
-            if (w >= 1e6) return $"{w / 1e6:0.00} MW";
-            return $"{w / 1e3:0} kW";
-        }
-
-        static string FormatYears(double years) =>
-            double.IsInfinity(years) || double.IsNaN(years) ? "never" : $"{years:0.0} years";
+        public KeyCode PlaceKey => placeKey;
+        public KeyCode BestKey => bestKey;
     }
 }

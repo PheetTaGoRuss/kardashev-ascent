@@ -104,8 +104,10 @@ namespace KardashevAscent.Presentation.UI
             battery.text = $"{soc * 100.0:0} % · {flow}";
             kLabel.text = $"K {sim.KardashevK:0.00} · Type I at K {targetK:0.00} ({progress * 100.0:0} %)";
 
-            brownout.EnableInClassList("hidden", !sim.IsBrownout);
-            if (sim.IsBrownout)
+            // The grid updates its brownout state on the next tick; while paused, don't warn once panels cover demand.
+            bool brownoutNow = sim.IsBrownout && sim.GenerationW < sim.DemandW;
+            brownout.EnableInClassList("hidden", !brownoutNow);
+            if (brownoutNow)
             {
                 double shortBy = Math.Max(0.0, sim.DemandW - sim.GenerationW);
                 brownout.text = $"Brownout: the base is {Format.Power(shortBy)} short and the battery is empty. Build more panels.";

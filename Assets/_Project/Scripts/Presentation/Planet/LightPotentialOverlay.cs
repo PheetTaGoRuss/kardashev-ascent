@@ -38,7 +38,6 @@ namespace KardashevAscent.Presentation.Planet
         HexSphere pendingSphere;
         bool visible;
         Texture2D legendTexture;
-        GUIStyle textStyle;
 
         public bool Visible => visible;
 
@@ -144,42 +143,14 @@ namespace KardashevAscent.Presentation.Planet
             return Color32.Lerp(Ramp[i], Ramp[i + 1], x - i);
         }
 
-        void OnGUI()
-        {
-            if (!visible)
-            {
-                GUI.Label(new Rect(12, Screen.height - 124, 300, 20), $"{toggleKey}: light-potential map");
-                return;
-            }
+        /// <summary>True once values are computed.</summary>
+        public bool HasValues => values != null;
+        public double Min => min;
+        public double Max => max;
+        public KeyCode ToggleKey => toggleKey;
 
-            textStyle ??= new GUIStyle(GUI.skin.label) { fontSize = 12, normal = { textColor = new Color(0.9f, 0.93f, 1f) } };
-            if (legendTexture == null)
-                legendTexture = BuildLegendTexture();
-
-            const float width = 280f, height = 118f;
-            var box = new Rect(Screen.width - width - 12, Screen.height - height - 12, width, height);
-            GUI.Box(box, GUIContent.none);
-            float x = box.x + 10, y = box.y + 6;
-            GUI.Label(new Rect(x, y, width - 20, 18), "Solar potential, kWh per m² of panel per year", textStyle);
-
-            if (values == null)
-            {
-                GUI.Label(new Rect(x, y + 22, width - 20, 18), "Calculating…", textStyle);
-                return;
-            }
-
-            GUI.DrawTexture(new Rect(x, y + 24, width - 20, 14), legendTexture);
-            GUI.Label(new Rect(x, y + 40, 80, 18), $"{min:N0}", textStyle);
-            var right = new GUIStyle(textStyle) { alignment = TextAnchor.UpperRight };
-            GUI.Label(new Rect(box.xMax - 90, y + 40, 80, 18), $"{max:N0}", right);
-
-            int tile = picker != null ? (picker.SelectedTile >= 0 ? picker.SelectedTile : picker.HoveredTile) : -1;
-            string tileLine = tile >= 0 ? $"Tile #{tile}: {ValueAt(tile):N0} kWh/m²/yr" : "Point at a tile for its value";
-            GUI.Label(new Rect(x, y + 58, width - 20, 18), tileLine, textStyle);
-            GUI.Label(new Rect(x, y + 76, width - 20, 32),
-                      "<size=10>20 % panel, tilted to latitude, facing the equator, clear sky. M: hide</size>",
-                      new GUIStyle(textStyle) { richText = true, wordWrap = true });
-        }
+        /// <summary>The colour ramp as a 256×1 texture, for a legend.</summary>
+        public Texture2D LegendTexture => legendTexture != null ? legendTexture : (legendTexture = BuildLegendTexture());
 
         static Texture2D BuildLegendTexture()
         {
