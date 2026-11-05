@@ -25,7 +25,7 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _SmoothnessScale: 1
+    - _SmoothnessScale: 0.7
     m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1
