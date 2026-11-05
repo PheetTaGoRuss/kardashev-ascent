@@ -41,7 +41,8 @@
 
 .drag-rect {
     position: absolute;
-    border-width: 1px;
+    border-width: 2px;
     border-color: var(--accent);
-    background-color: rgba(143, 179, 255, 0.12);
+    border-radius: 2px;
+    background-color: rgba(143, 179, 255, 0.18);
 }
