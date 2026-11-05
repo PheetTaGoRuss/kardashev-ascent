@@ -137,7 +137,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         public void Panels_FillEverySlotOfATile_AndAddUp()
         {
             var sim = Create();
-            int tile = sim.BaseTileId, slots = TileSite.SlotCountFor(sim.SiteRings);
+            int tile = sim.BaseTileId, slots = sim.SlotCount(tile);
             double tilt = Math.Abs(sim.GetTile(tile).Latitude);
             Assert.AreEqual(61, slots, "4 rings by default");
 

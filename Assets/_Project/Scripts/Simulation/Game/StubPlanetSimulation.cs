@@ -152,7 +152,7 @@ namespace KardashevAscent.Simulation.Game
 
         public bool PlacePanel(int tileId, int slot, double tilt, double azimuth)
         {
-            if (slot < 0 || slot >= TileSite.SlotCountFor(SiteRings) || HasPanel(tileId, slot)
+            if (tileId < 0 || tileId >= TileCount || slot < 0 || slot >= SlotCount(tileId) || HasPanel(tileId, slot)
                 || !PreviewPanel(tileId, tilt, azimuth).CanPlace)
                 return false;
             panels[(tileId, slot)] = (tilt, azimuth);
@@ -171,6 +171,15 @@ namespace KardashevAscent.Simulation.Game
         }
 
         public bool HasPanel(int tileId, int slot) => panels.ContainsKey((tileId, slot));
+
+        public int SlotCount(int tileId)
+        {
+            if (!sites.TryGetValue(tileId, out TileSite site))
+                sites[tileId] = site = TileSite.Create(Sphere, tileId, SiteRings);
+            return site.SlotCount;
+        }
+
+        readonly Dictionary<int, TileSite> sites = new Dictionary<int, TileSite>();
 
         public int PanelCount(int tileId) => panelsPerTile.TryGetValue(tileId, out int n) ? n : 0;
 

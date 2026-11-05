@@ -84,10 +84,13 @@ namespace KardashevAscent.Simulation.Game
         PanelPreview PreviewPanel(int tileId, double tilt, double azimuth);
 
         /// <summary>
-        /// Rings of building slots on every tile: each tile holds <see cref="TileSite.SlotCountFor"/>(rings) slots,
-        /// laid out by <see cref="TileSite.Create"/>. One panel per slot.
+        /// Rings of building slots on every tile, laid out by <see cref="TileSite.Create"/> to cover the whole tile
+        /// (a hexagonal tile holds 3R(R+1)+1 slots). One panel per slot.
         /// </summary>
         int SiteRings { get; }
+
+        /// <summary>Building slots on a tile (61 on a hexagon with the default 4 rings; pentagons differ).</summary>
+        int SlotCount(int tileId);
 
         /// <summary>Build a panel in one slot of a tile. Returns false (and changes nothing) if the slot cannot take one.</summary>
         bool PlacePanel(int tileId, int slot, double tilt, double azimuth);
