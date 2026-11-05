@@ -7,8 +7,8 @@ namespace KardashevAscent.Presentation.CameraControl
     /// <summary>
     /// Orbits a planet: drag (left or right mouse) or WASD/arrows to rotate, mouse wheel or Q/E to zoom, R to reset.
     /// Moves slower near the surface so close-up control stays precise.
-    /// <para>Site view: <see cref="FocusSite"/> flies down to one tile and looks at it from an angle. There, drag or
-    /// A/D turn around the site, W/S or a vertical drag change the viewing angle, the wheel zooms, and zooming out
+    /// <para>Site view: <see cref="FocusSite"/> flies down to one tile and looks at it from an angle. There, right-drag
+    /// (the left button selects slots) or A/D turn around the site, W/S or a vertical drag change the viewing angle, the wheel zooms, and zooming out
     /// past the limit raises <see cref="SiteExitRequested"/>. <see cref="LeaveSite"/> flies back up.</para>
     /// </summary>
     [RequireComponent(typeof(Camera))]
@@ -209,9 +209,10 @@ namespace KardashevAscent.Presentation.CameraControl
 
         void ReadSiteInput()
         {
-            if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
+            // The left button selects slots here; the right (or middle) button turns the view.
+            if (Input.GetMouseButtonDown(1) || Input.GetMouseButtonDown(2))
                 dragStartedOnUi = ScreenInput.PointerOverUi;
-            if ((Input.GetMouseButton(0) || Input.GetMouseButton(1)) && !dragStartedOnUi)
+            if ((Input.GetMouseButton(1) || Input.GetMouseButton(2)) && !dragStartedOnUi)
             {
                 goalHeading += Input.GetAxisRaw("Mouse X") * 10f * dragSpeed;
                 goalTilt -= Input.GetAxisRaw("Mouse Y") * 10f * dragSpeed;
@@ -301,9 +302,10 @@ namespace KardashevAscent.Presentation.CameraControl
             {
                 if (inSite)
                     return "Site view\n" +
-                           "Drag or A/D: turn · W/S: view angle\n" +
+                           "Click or drag: select slots · Shift: add · Ctrl: remove · Ctrl+A: all\n" +
+                           "Right-drag or A/D: turn · W/S: view angle\n" +
                            "Wheel or Q/E: zoom (zoom out to leave)\n" +
-                           "R: reset · Esc: back to planet · H: hide";
+                           "R: reset · Esc: clear selection, then back to planet · H: hide";
                 string tiles = target != null && target.TryGetComponent(out PlanetView planet) && planet.Sphere != null
                     ? $"Tiles: {planet.Sphere.TileCount:N0} · click one to build there\n"
                     : "";
