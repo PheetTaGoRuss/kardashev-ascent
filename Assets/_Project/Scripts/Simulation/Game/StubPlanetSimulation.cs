@@ -31,7 +31,8 @@ namespace KardashevAscent.Simulation.Game
         readonly double planetRadiusM;
         readonly double tileAreaM2;
         readonly double subStellarLongitudeAtStart;
-        readonly Dictionary<int, (double Tilt, double Azimuth)> panels = new Dictionary<int, (double, double)>();
+        readonly Dictionary<(int Tile, int Slot), (double Tilt, double Azimuth)> panels = new Dictionary<(int, int), (double, double)>();
+        readonly Dictionary<int, int> panelsPerTile = new Dictionary<int, int>();
         bool targetReached;
 
         public StubPlanetSimulation(HexSphere sphere, PlanetSurface surface, PlanetSolarParams planet,
@@ -162,24 +163,31 @@ namespace KardashevAscent.Simulation.Game
             return new PanelPreview(true, "", year.EnergyWh, year.CapacityFactor, eroi, payback);
         }
 
-        public bool PlacePanel(int tileId, double tilt, double azimuth)
+        public int SiteRings { get; set; } = TileSite.DefaultRings;
+
+        public bool PlacePanel(int tileId, int slot, double tilt, double azimuth)
         {
-            if (HasPanel(tileId) || !PreviewPanel(tileId, tilt, azimuth).CanPlace)
+            if (slot < 0 || slot >= TileSite.SlotCountFor(SiteRings) || HasPanel(tileId, slot)
+                || !PreviewPanel(tileId, tilt, azimuth).CanPlace)
                 return false;
-            panels[tileId] = (tilt, azimuth);
+            panels[(tileId, slot)] = (tilt, azimuth);
+            panelsPerTile[tileId] = PanelCount(tileId) + 1;
             GenerationW = ComputeGeneration();
             return true;
         }
 
-        public bool RemovePanel(int tileId)
+        public bool RemovePanel(int tileId, int slot)
         {
-            if (!panels.Remove(tileId))
+            if (!panels.Remove((tileId, slot)))
                 return false;
+            panelsPerTile[tileId] = PanelCount(tileId) - 1;
             GenerationW = ComputeGeneration();
             return true;
         }
 
-        public bool HasPanel(int tileId) => panels.ContainsKey(tileId);
+        public bool HasPanel(int tileId, int slot) => panels.ContainsKey((tileId, slot));
+
+        public int PanelCount(int tileId) => panelsPerTile.TryGetValue(tileId, out int n) ? n : 0;
 
         void UpdateStar()
         {
@@ -201,10 +209,10 @@ namespace KardashevAscent.Simulation.Game
             double total = 0.0;
             foreach (var pair in panels)
             {
-                Double3 sun = SunAt(pair.Key);
+                Double3 sun = SunAt(pair.Key.Tile);
                 if (sun.Up <= 0.0)
                     continue;
-                PanelParams p = MakePanel(pair.Key, pair.Value.Tilt, pair.Value.Azimuth);
+                PanelParams p = MakePanel(pair.Key.Tile, pair.Value.Tilt, pair.Value.Azimuth);
                 double airMass = Atmosphere.AirMassKastenYoung(SunPosition.ZenithDegrees(sun), p.PressureRatio);
                 double dni = Atmosphere.DirectNormal(currentIrradiance, planet.OpticalDepth, airMass);
                 double dhi = Atmosphere.DiffuseHorizontal(currentIrradiance, sun.Up, planet.OpticalDepth, airMass, planet.DiffuseK);

@@ -9,7 +9,7 @@ namespace KardashevAscent.EditorTools
 {
     /// <summary>
     /// Wires the open scene for play: a Simulation object running the planet, the directional light
-    /// following the star, the light-potential map and panel placement on the planet. Safe to run again; it only adds what is missing.
+    /// following the star, the light-potential map, building sites and panel placement on the planet. Safe to run again; it only adds what is missing.
     /// Menu: Kardashev Ascent ▸ Set Up Scene.
     /// </summary>
     public static class MainSceneSetup
@@ -63,11 +63,27 @@ namespace KardashevAscent.EditorTools
             SetReference(map, "picker", planet.GetComponent<TilePicker>());
             SetReference(map, "mapMaterial", LoadOrCreateMaterial(MapMaterial, "KardashevAscent/PlanetTilesUnlit"));
 
+            var picker = planet.GetComponent<TilePicker>();
+            var site = planet.GetComponent<SiteView>();
+            if (site == null)
+                site = Undo.AddComponent<SiteView>(planet.gameObject);
+            SetReference(site, "runner", runner);
+            SetReference(site, "picker", picker);
+            var mainCamera = Camera.main;
+            SetReference(site, "orbitCamera", mainCamera != null ? mainCamera.GetComponent<KardashevAscent.Presentation.CameraControl.OrbitCamera>() : null);
+            SetReference(site, "padMaterial", AssetDatabase.LoadAssetAtPath<Material>(PlanetMaterial));
+            if (picker != null)
+            {
+                var pickerObject = new SerializedObject(picker);
+                SetReference(site, "hoverMaterial", pickerObject.FindProperty("hoverMaterial").objectReferenceValue);
+                SetReference(site, "selectedMaterial", pickerObject.FindProperty("selectedMaterial").objectReferenceValue);
+            }
+
             var placer = planet.GetComponent<PanelPlacer>();
             if (placer == null)
                 placer = Undo.AddComponent<PanelPlacer>(planet.gameObject);
             SetReference(placer, "runner", runner);
-            SetReference(placer, "picker", planet.GetComponent<TilePicker>());
+            SetReference(placer, "siteView", site);
             SetReference(placer, "frameMaterial", LoadOrCreateMaterial(PanelFrameMaterial, "Standard", m =>
             {
                 m.color = new Color(0.55f, 0.59f, 0.64f);
@@ -82,10 +98,11 @@ namespace KardashevAscent.EditorTools
             SetReference(placer, "ghostMaterial", LoadOrCreateMaterial(PanelGhostMaterial, "KardashevAscent/GhostTint"));
 
             EditorSceneManager.MarkSceneDirty(planet.gameObject.scene);
-            Debug.Log("Scene set up: Simulation runner, star light, light-potential map, panel placement. Save the scene to keep it.");
+            Debug.Log("Scene set up: Simulation runner, star light, light-potential map, building sites, panel placement. Save the scene to keep it.");
         }
 
         const string MapMaterial = "Assets/_Project/Materials/PlanetTilesUnlit.mat";
+        const string PlanetMaterial = "Assets/_Project/Materials/PlanetTiles.mat";
         const string PanelFrameMaterial = "Assets/_Project/Materials/PanelFrame.mat";
         const string PanelCellMaterial = "Assets/_Project/Materials/PanelCells.mat";
         const string PanelGhostMaterial = "Assets/_Project/Materials/PanelGhost.mat";
