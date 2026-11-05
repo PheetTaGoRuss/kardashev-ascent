@@ -39,7 +39,7 @@ DEFAULT_ASSUMED = {
     "perihelionLongitudeDeg": 0.0,
     "dayLengthHours": 24.0,
     "opticalDepth": 0.32,
-    "diffuseK": 0.4,
+    "diffuseK": 0.3,
     "airTemperatureC": None,       # None: derive from equilibrium temperature
     "bondAlbedo": 0.3,
     "tidallyLocked": False,
