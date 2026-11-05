@@ -56,20 +56,28 @@ namespace KardashevAscent.Simulation.Tests.Planet
         }
 
         [Test]
-        public void EdgeSlotsAreHalves_AndCornersThirds_OnAHexagon()
+        public void EverySlotIsWhole_NoHalvesOrCornerPieces()
+        {
+            foreach (int tile in SomeTiles())
+            {
+                TileSite site = TileSite.Create(Sphere, tile);
+                // Hexagons: the outer ring grows by under 20 %. Pentagons reach further into their corners.
+                double most = Sphere.IsPentagon(tile) ? 2.2 : 1.2;
+                for (int s = 0; s < site.SlotCount; s++)
+                {
+                    double share = site.SlotAreaShare(s);
+                    Assert.That(share, Is.InRange(0.97, most), $"tile {tile} slot {s}: a whole slot, at most stretched a little");
+                }
+            }
+        }
+
+        [Test]
+        public void InnerSlots_StayRegular_OnlyTheOuterRingStretches()
         {
             TileSite site = TileSite.Create(Sphere, 1805);
-            int whole = 0, halves = 0, thirds = 0;
-            for (int s = 0; s < site.SlotCount; s++)
-            {
-                double share = site.SlotAreaShare(s);
-                if (share > 0.9) whole++;
-                else if (share > 0.4) halves++;
-                else thirds++;
-            }
-            Assert.AreEqual(37, whole);
-            Assert.AreEqual(18, halves);
-            Assert.AreEqual(6, thirds);
+            int inner = TileSite.HexagonSlotCount(site.Rings - 2);       // rings 0..R−2
+            for (int s = 0; s < inner; s++)
+                Assert.AreEqual(1.0, site.SlotAreaShare(s), 0.02, $"slot {s}");
         }
 
         [Test]
