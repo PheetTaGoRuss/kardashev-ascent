@@ -129,6 +129,7 @@ GameObject:
   m_Component:
   - component: {fileID: 123573324}
   - component: {fileID: 123573323}
+  - component: {fileID: 123573325}
   m_Layer: 0
   m_Name: Simulation
   m_TagString: Untagged
@@ -178,6 +179,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &123573325
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 123573322}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70b70c6f86c65374d83e613982ee8d1f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.Game.SaveGameController
+  runner: {fileID: 123573323}
+  saveKey: 286
+  loadKey: 290
 --- !u!1 &124941722
 GameObject:
   m_ObjectHideFlags: 0
@@ -507,6 +523,7 @@ GameObject:
   - component: {fileID: 765499590}
   - component: {fileID: 765499591}
   - component: {fileID: 765499592}
+  - component: {fileID: 765499593}
   m_Layer: 0
   m_Name: Planet
   m_TagString: Untagged
@@ -663,6 +680,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.Planet.PanelPlacer
   runner: {fileID: 123573323}
   siteView: {fileID: 765499592}
+  saveGame: {fileID: 123573325}
   frameMaterial: {fileID: 2100000, guid: dd44a8f0e2333474ba335e3c22c267dc, type: 2}
   cellMaterial: {fileID: 2100000, guid: c19cc231ca76b0546ac8e1e62b967517, type: 2}
   ghostMaterial: {fileID: 2100000, guid: b12e20512b47d544994901cceb50976c, type: 2}
@@ -696,6 +714,27 @@ MonoBehaviour:
     rgba: 680303766
   padScale: 0.86
   clickTolerancePixels: 6
+--- !u!135 &765499593
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 765499584}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 5
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &1525774099
 GameObject:
   m_ObjectHideFlags: 0
@@ -727,6 +766,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.UI.HudView
   runner: {fileID: 123573323}
+  saveGame: {fileID: 123573325}
   textInterval: 0.1
 --- !u!114 &1525774101
 MonoBehaviour:
