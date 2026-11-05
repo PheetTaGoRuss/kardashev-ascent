@@ -5,15 +5,13 @@ using System.Numerics;
 namespace KardashevAscent.Simulation.Planet
 {
     /// <summary>
-    /// The building slots inside one tile: whole slots that fill the tile exactly, with no gaps and no half pieces.
-    /// Slot centres sit on a regular hex lattice of R rings (<c>3R(R+1)+1</c> slots on a hexagonal tile), placed so the
-    /// outer row lies a quarter of a row-step (√3/4 of the spacing) in from each edge. Each slot is everything closer to
-    /// its centre than to any other (a Voronoi cell), clipped to the tile. Inside, that is an exact regular hexagon; on
-    /// the edge row it is a hexagon whose outer point is squared off flat against the edge, with exactly the same area;
-    /// the six corner slots take the corners and come out somewhat bigger.
+    /// The building slots inside one tile: R rings of whole, regular hexagons (<c>3R(R+1)+1</c> slots on a hexagonal
+    /// tile) with an even empty border between them and the tile's edge. The slots sit on a regular hex lattice with one
+    /// more row (R + 1) placed a quarter row-step (√3/4 of the spacing) in from each edge; that outer row holds no slots
+    /// and only shapes the border, so every slot is an exact hexagon (its Voronoi cell among the lattice points).
     /// The layout is made on a regular reference polygon and fitted onto the real tile one centre–corner–corner
     /// triangle at a time, because the tiles of a Goldberg sphere are not quite regular. The 12 pentagon tiles use a
-    /// regular pentagon with the lattice points that fit, so their outer slots are less even.
+    /// regular pentagon and keep the lattice points with all six neighbours inside it.
     /// Work is done in the tile's tangent plane (gnomonic projection keeps the tile's straight edges straight).
     /// Slot 0 is the centre; ids grow ring by ring. Every slot shares its tile's sunlight (latitude/longitude).
     /// </summary>
@@ -22,18 +20,20 @@ namespace KardashevAscent.Simulation.Planet
         public const int DefaultRings = 4;
 
         static readonly double Sqrt3 = Math.Sqrt(3.0);
-        /// <summary>Gap from the outer row of centres to the tile edge, in slot spacings: half a row-step.</summary>
+        /// <summary>Gap from the border row of lattice points to the tile edge, in slot spacings: half a row-step.</summary>
         static readonly double EdgeInset = Sqrt3 / 4.0;
 
         readonly Vector3 east, north;
         readonly Vector2[] reference;                     // regular reference polygon, grid units (slot spacing 1)
-        readonly Vector2[] centres;                       // slot centres on the reference, grid units
+        readonly Vector2[] centres;                       // every lattice point on the reference, grid units
+        readonly int[] slotOf;                            // lattice point → slot id, −1 on the border row
         readonly Vector2[][] outlines;
         readonly Vector2[] centroids;
         readonly double[] areaShares;
 
         TileSite(int tile, int rings, Vector3 centre, Vector3 east, Vector3 north, Vector2[] reference, Vector2[] centres,
-                 double spacing, Vector2[] tileOutline, Vector2[][] outlines, Vector2[] centroids, double[] areaShares)
+                 int[] slotOf, double spacing, Vector2[] tileOutline, Vector2[][] outlines, Vector2[] centroids,
+                 double[] areaShares)
         {
             Tile = tile;
             Rings = rings;
@@ -42,6 +42,7 @@ namespace KardashevAscent.Simulation.Planet
             this.north = north;
             this.reference = reference;
             this.centres = centres;
+            this.slotOf = slotOf;
             Spacing = spacing;
             TileOutline = tileOutline;
             this.outlines = outlines;
@@ -73,7 +74,7 @@ namespace KardashevAscent.Simulation.Planet
         /// <summary>Tangent-plane (east, north) centre of a slot's area.</summary>
         public Vector2 SlotOffset(int slot) => centroids[slot];
 
-        /// <summary>A slot's area compared with a regular slot: 1 inside and along the edges, more in the corners.</summary>
+        /// <summary>A slot's area compared with a regular slot (1: every slot is a whole regular hexagon).</summary>
         public double SlotAreaShare(int slot) => areaShares[slot];
 
         public static TileSite Create(HexSphere sphere, int tile, int rings = DefaultRings)
@@ -103,8 +104,8 @@ namespace KardashevAscent.Simulation.Planet
                 Array.Reverse(polygon);
 
             // Reference polygon in grid units (spacing 1), a corner on the x axis and one every 360°/k. Its edges run
-            // parallel to rows of the lattice, EdgeInset beyond row R.
-            double refInradius = rings * Sqrt3 / 2.0 + EdgeInset;
+            // parallel to rows of the lattice, EdgeInset beyond row R + 1: that outer row is the empty border.
+            double refInradius = (rings + 1) * Sqrt3 / 2.0 + EdgeInset;
             double refCircumradius = refInradius / Math.Cos(Math.PI / k);
             var reference = new Vector2[k];
             for (int i = 0; i < k; i++)
@@ -114,8 +115,9 @@ namespace KardashevAscent.Simulation.Planet
             }
 
             // Lattice points at least (about) EdgeInset inside every edge, ring by ring.
-            var centres = new List<Vector2>();
-            for (int ring = 0; ring <= rings + 1; ring++)
+            var lattice = new List<(int Q, int R, Vector2 P)>();
+            var present = new HashSet<(int, int)>();
+            for (int ring = 0; ring <= rings + 2; ring++)
                 for (int q = -ring; q <= ring; q++)
                     for (int r = -ring; r <= ring; r++)
                     {
@@ -123,8 +125,28 @@ namespace KardashevAscent.Simulation.Planet
                             continue;
                         var point = new Vector2((float)(q + r / 2.0), (float)(r * Sqrt3 / 2.0));
                         if (Inside(point, reference, EdgeInset * 0.95))
-                            centres.Add(point);
+                        {
+                            lattice.Add((q, r, point));
+                            present.Add((q, r));
+                        }
                     }
+
+            // Slots are the points whose six neighbours are all on the lattice: their cells are whole regular
+            // hexagons. The outer points (next to an edge) are only there to shape the border and hold no slot.
+            var centres = new Vector2[lattice.Count];
+            var slotOf = new int[lattice.Count];
+            var slotCentres = new List<Vector2>();
+            for (int i = 0; i < lattice.Count; i++)
+            {
+                var (q, r, point) = lattice[i];
+                centres[i] = point;
+                bool inner = present.Contains((q + 1, r)) && present.Contains((q - 1, r)) &&
+                             present.Contains((q, r + 1)) && present.Contains((q, r - 1)) &&
+                             present.Contains((q + 1, r - 1)) && present.Contains((q - 1, r + 1));
+                slotOf[i] = inner ? slotCentres.Count : -1;
+                if (inner)
+                    slotCentres.Add(point);
+            }
 
             double inradius = 0.0;
             for (int i = 0; i < k; i++)
@@ -132,21 +154,21 @@ namespace KardashevAscent.Simulation.Planet
             double spacing = inradius / k / refInradius;          // one grid unit on the real tile
             double wholeSlot = Sqrt3 / 2.0;                        // area of one regular slot, grid units
 
-            var outlines = new Vector2[centres.Count][];
-            var centroids = new Vector2[centres.Count];
-            var shares = new double[centres.Count];
-            for (int s = 0; s < centres.Count; s++)
+            var outlines = new Vector2[slotCentres.Count][];
+            var centroids = new Vector2[slotCentres.Count];
+            var shares = new double[slotCentres.Count];
+            for (int s = 0; s < slotCentres.Count; s++)
             {
-                // Voronoi cell: the reference polygon, cut by the perpendicular bisector with every nearby centre.
+                // Voronoi cell: cut by the perpendicular bisector with every nearby lattice point (a regular hexagon).
                 Vector2[] cell = reference;
-                for (int o = 0; o < centres.Count; o++)
-                    if (o != s && Vector2.DistanceSquared(centres[s], centres[o]) < 4.5f)
-                        cell = ClipCloserTo(cell, centres[s], centres[o]);
+                foreach (Vector2 other in centres)
+                    if (other != slotCentres[s] && Vector2.DistanceSquared(slotCentres[s], other) < 4.5f)
+                        cell = ClipCloserTo(cell, slotCentres[s], other);
                 shares[s] = SignedArea(cell) / wholeSlot;
                 outlines[s] = WarpPolygon(cell, reference, polygon);
                 centroids[s] = Centroid(outlines[s]);
             }
-            return new TileSite(tile, rings, c, e, n, reference, centres.ToArray(), spacing, polygon,
+            return new TileSite(tile, rings, c, e, n, reference, centres, slotOf, spacing, polygon,
                                 outlines, centroids, shares);
         }
 
@@ -161,20 +183,21 @@ namespace KardashevAscent.Simulation.Planet
             if (!Inside(p, TileOutline, -1e-12))
                 return -1;
 
-            // Back onto the reference polygon; the slot is the nearest centre there (that is what a Voronoi cell is).
+            // Back onto the reference polygon; the nearest lattice point owns the spot (a Voronoi cell). Points of the
+            // border row own no slot.
             Vector2 g = WarpPoint(p, TileOutline, reference);
             int best = -1;
             float bestDistance = float.MaxValue;
-            for (int s = 0; s < centres.Length; s++)
+            for (int i = 0; i < centres.Length; i++)
             {
-                float d = Vector2.DistanceSquared(g, centres[s]);
+                float d = Vector2.DistanceSquared(g, centres[i]);
                 if (d < bestDistance)
                 {
                     bestDistance = d;
-                    best = s;
+                    best = i;
                 }
             }
-            return best;
+            return best >= 0 ? slotOf[best] : -1;
         }
 
         /// <summary>Tangent-plane (east, north) offset from the tile centre → unit direction.</summary>
