@@ -18,7 +18,7 @@
         "perihelionLongitudeDeg": 282.94,
         "dayLengthHours": 24.0,
         "opticalDepth": 0.32,
-        "diffuseK": 0.4,
+        "diffuseK": 0.3,
         "airTemperatureC": 25.0,
         "bondAlbedo": 0.306
       }
