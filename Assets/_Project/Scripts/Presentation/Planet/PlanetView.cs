@@ -40,6 +40,9 @@ namespace KardashevAscent.Presentation.Planet
         public PlanetSurface Surface { get; private set; }
         public float Radius => radius;
 
+        /// <summary>Raised after the tiles are regenerated; tile ids from before are no longer valid.</summary>
+        public event System.Action Rebuilt;
+
         void OnEnable() => dirty = true;
 
         void OnValidate() => dirty = true;
@@ -69,6 +72,14 @@ namespace KardashevAscent.Presentation.Planet
             mesh = PlanetMeshBuilder.Build(Sphere, radius, colors, borderWidth, borderDarken);
             mesh.hideFlags = HideFlags.DontSave;
             GetComponent<MeshFilter>().sharedMesh = mesh;
+            Rebuilt?.Invoke();
+        }
+
+        /// <summary>Makes sure the tiles exist now (they are otherwise built on the first Update).</summary>
+        public void EnsureBuilt()
+        {
+            if (dirty || Sphere == null)
+                Rebuild();
         }
 
         Color32 TileColor(TerrainType terrain, float elevation, int tile)

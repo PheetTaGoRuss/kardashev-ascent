@@ -346,6 +346,7 @@ GameObject:
   - component: {fileID: 765499587}
   - component: {fileID: 765499586}
   - component: {fileID: 765499585}
+  - component: {fileID: 765499589}
   m_Layer: 0
   m_Name: Planet
   m_TagString: Untagged
@@ -452,6 +453,26 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &765499589
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 765499584}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 87991837de52c2945b508c40d34a01d0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.Planet.TilePicker
+  viewCamera: {fileID: 0}
+  hoverMaterial: {fileID: 2100000, guid: 5a33dbaf225e2594aaeb3f31f88053af, type: 2}
+  selectedMaterial: {fileID: 2100000, guid: 3d7a4b5768f8deb43989f284cea27b6a, type: 2}
+  clickTolerancePixels: 6
+  hoverWidth: 0.14
+  selectedWidth: 0.24
+  lift: 0.0015
+  showInfo: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
