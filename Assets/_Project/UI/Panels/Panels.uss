@@ -1,0 +1,39 @@
+.screen { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+
+.left-column { position: absolute; left: 12px; top: 80px; width: 300px; }
+.box { padding: 8px 12px; margin-bottom: 8px; }
+.body { font-size: 13px; white-space: normal; padding: 0; margin: 1px 0; }
+.numbers { margin-top: 6px; }
+.warn { color: var(--critical); }
+.bonus { color: rgb(255, 210, 122); }
+.totals { margin-left: 2px; }
+
+.slider-label { margin-top: 6px; }
+.slider { margin: 2px 0 0 0; }
+.slider .unity-base-slider__tracker { background-color: var(--track); border-color: var(--panel-border); }
+.slider .unity-base-slider__dragger { background-color: var(--accent); border-color: var(--accent); border-radius: 6px; }
+
+.button-row { flex-direction: row; margin-top: 8px; }
+.action-button {
+    flex-grow: 1;
+    margin: 0 4px 0 0;
+    padding: 4px 8px;
+    font-size: 12px;
+    color: var(--text);
+    background-color: rgba(255, 255, 255, 0.08);
+    border-width: 1px;
+    border-color: var(--panel-border);
+    border-radius: 4px;
+}
+.action-button:hover { background-color: rgba(255, 255, 255, 0.16); }
+.action-button.primary { color: rgb(10, 14, 24); background-color: var(--accent); border-color: var(--accent); -unity-font-style: bold; }
+.action-button.primary:hover { background-color: rgb(186, 208, 255); }
+.action-button:disabled { opacity: 0.4; }
+
+.bottom-left { position: absolute; left: 12px; bottom: 12px; width: 320px; }
+.hint { margin-bottom: 4px; }
+.help { font-size: 12px; color: var(--text-muted); margin-bottom: 0; }
+
+.legend { position: absolute; right: 12px; bottom: 12px; width: 290px; }
+.legend-bar { height: 14px; margin-top: 4px; border-radius: 3px; }
+.legend-range { flex-direction: row; justify-content: space-between; }

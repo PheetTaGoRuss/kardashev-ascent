@@ -101,9 +101,10 @@ namespace KardashevAscent.EditorTools
 
             SetUpHud(runner);
             SetUpTileInfo(runner, planet, placer);
+            SetUpPanels(planet, placer, site);
 
             EditorSceneManager.MarkSceneDirty(planet.gameObject.scene);
-            Debug.Log("Scene set up: Simulation runner, star light, light-potential map, building sites, panel placement, HUD, tile info. Save the scene to keep it.");
+            Debug.Log("Scene set up: Simulation runner, star light, light-potential map, building sites, panel placement, HUD, tile info, side panels. Save the scene to keep it.");
         }
 
         const string MapMaterial = "Assets/_Project/Materials/PlanetTilesUnlit.mat";
@@ -181,6 +182,29 @@ namespace KardashevAscent.EditorTools
             SetReference(view, "picker", planet.GetComponent<TilePicker>());
             SetReference(view, "placer", placer);
             SetReference(view, "lightMap", planet.GetComponent<LightPotentialOverlay>());
+        }
+
+        const string PanelsLayoutPath = "Assets/_Project/UI/Panels/Panels.uxml";
+
+        /// <summary>The side panels (tile under the mouse, site and panel planner, light-map legend, help).</summary>
+        static void SetUpPanels(PlanetView planet, PanelPlacer placer, SiteView site)
+        {
+            var view = Object.FindAnyObjectByType<PanelsView>();
+            if (view == null)
+            {
+                var go = new GameObject("Panels");
+                Undo.RegisterCreatedObjectUndo(go, "Add Panels");
+                var document = Undo.AddComponent<UIDocument>(go);
+                document.panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
+                document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(PanelsLayoutPath);
+                view = Undo.AddComponent<PanelsView>(go);
+            }
+            SetReference(view, "picker", planet.GetComponent<TilePicker>());
+            SetReference(view, "siteView", site);
+            SetReference(view, "placer", placer);
+            SetReference(view, "lightMap", planet.GetComponent<LightPotentialOverlay>());
+            var mainCamera = Camera.main;
+            SetReference(view, "orbitCamera", mainCamera != null ? mainCamera.GetComponent<KardashevAscent.Presentation.CameraControl.OrbitCamera>() : null);
         }
 
         static Light FindDirectionalLight()

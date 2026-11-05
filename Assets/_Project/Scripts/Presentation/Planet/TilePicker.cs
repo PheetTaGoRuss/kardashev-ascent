@@ -23,14 +23,10 @@ namespace KardashevAscent.Presentation.Planet
         [Tooltip("Outline height above the surface, as a fraction of the radius.")]
         [Range(0f, 0.01f)] [SerializeField] float lift = 0.0015f;
 
-        [Header("Info box")]
-        [SerializeField] bool showInfo = true;
-
         PlanetView planet;
         Outline hover, selected;
         Vector3 pressPosition;
         bool pressed;
-        GUIStyle infoStyle;
 
         public int HoveredTile { get; private set; } = -1;
         public int SelectedTile { get; private set; } = -1;
@@ -162,30 +158,8 @@ namespace KardashevAscent.Presentation.Planet
             HoveredTileChanged?.Invoke(tile);
         }
 
-        void OnGUI()
-        {
-            if (!showInfo || planet.Sphere == null)
-                return;
-            infoStyle ??= new GUIStyle(GUI.skin.box)
-            {
-                alignment = TextAnchor.UpperLeft,
-                fontSize = 13,
-                richText = true,
-                padding = new RectOffset(10, 10, 8, 8),
-                normal = { textColor = new Color(0.9f, 0.93f, 1f) },
-            };
-
-            string text;
-            if (SelectedTile >= 0)
-                text = "<b>Selected</b>\n" + Describe(SelectedTile) + "\n<size=11>Esc: clear selection</size>";
-            else if (HoveredTile >= 0)
-                text = Describe(HoveredTile) + "\n<size=11>Click to select</size>";
-            else
-                text = "Point at the planet to inspect a tile";
-            GUI.Box(new Rect(12, ScreenInput.TopInset, 250, SelectedTile >= 0 || HoveredTile >= 0 ? 104 : 32), text, infoStyle);
-        }
-
-        string Describe(int tile)
+        /// <summary>Plain description of a tile: id and shape, terrain, latitude/longitude (three lines).</summary>
+        public string Describe(int tile)
         {
             HexSphere sphere = planet.Sphere;
             double lat = sphere.Latitude(tile) * Mathf.Rad2Deg;

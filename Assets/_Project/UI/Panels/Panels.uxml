@@ -1,0 +1,61 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="Panels.uss" />
+    <ui:VisualElement name="screen" class="screen" picking-mode="Ignore">
+
+        <ui:VisualElement name="left" class="left-column" picking-mode="Ignore">
+            <ui:VisualElement name="hover-box" class="panel box hidden">
+                <ui:Label name="hover-text" class="body" text="" />
+                <ui:Label name="hover-hint" class="caption" text="Click to build here" />
+            </ui:VisualElement>
+
+            <ui:VisualElement name="site-box" class="panel box hidden">
+                <ui:Label name="site-title" class="value" text="Building site" />
+                <ui:Label name="site-text" class="body" text="" />
+                <ui:Label class="caption" text="Click a slot to plan a panel · Shift+click builds at once" />
+            </ui:VisualElement>
+
+            <ui:VisualElement name="planner-box" class="panel box hidden">
+                <ui:Label name="planner-title" class="value" text="Plan a solar panel" />
+                <ui:Label name="tilt-label" class="body slider-label" text="Tilt β" />
+                <ui:Slider name="tilt" class="slider" low-value="0" high-value="90" />
+                <ui:Label name="facing-label" class="body slider-label" text="Facing γ" />
+                <ui:Slider name="facing" class="slider" low-value="0" high-value="359" />
+                <ui:Label name="planner-numbers" class="body numbers" text="" />
+                <ui:Label name="planner-best" class="body" text="" />
+                <ui:Label name="planner-reason" class="body warn hidden" text="" />
+                <ui:VisualElement class="button-row">
+                    <ui:Button name="best-button" class="action-button" text="Best angle (B)" />
+                    <ui:Button name="place-button" class="action-button primary" text="Place panel (P)" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <ui:VisualElement name="placed-box" class="panel box hidden">
+                <ui:Label name="placed-title" class="value" text="Solar panel" />
+                <ui:Label name="placed-angles" class="body" text="" />
+                <ui:Label name="placed-numbers" class="body numbers" text="" />
+                <ui:Label name="placed-bonus" class="body bonus hidden" text="★ Best-angle bonus" />
+                <ui:VisualElement class="button-row">
+                    <ui:Button name="remove-button" class="action-button" text="Remove panel (Del)" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <ui:Label name="totals" class="caption totals hidden" text="" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="bottom-left" class="bottom-left" picking-mode="Ignore">
+            <ui:Label name="map-hint" class="caption hint" text="M: light-potential map" />
+            <ui:Label name="help" class="panel box body help" text="" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="legend" class="panel box legend hidden">
+            <ui:Label class="body" text="Solar potential, kWh per m² of panel per year" />
+            <ui:VisualElement name="legend-bar" class="legend-bar" />
+            <ui:VisualElement class="legend-range">
+                <ui:Label name="legend-min" class="caption" text="" />
+                <ui:Label name="legend-max" class="caption" text="" />
+            </ui:VisualElement>
+            <ui:Label name="legend-tile" class="body" text="" />
+            <ui:Label class="caption" text="20 % panel, tilted to latitude, facing the equator, clear sky. M: hide" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
