@@ -1,4 +1,5 @@
 using KardashevAscent.Presentation.Planet;
+using KardashevAscent.Presentation.UI;
 using UnityEngine;
 
 namespace KardashevAscent.Presentation.CameraControl
@@ -99,12 +100,17 @@ namespace KardashevAscent.Presentation.CameraControl
             Apply();
         }
 
+        bool dragStartedOnUi;
+
         void ReadInput()
         {
             // Closer to the surface = slower, so a drag moves the ground about the same amount on screen.
             float speedScale = Mathf.Clamp(goalAltitude / (startDistance - 1f), 0.05f, 2f);
 
-            if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
+            // A drag that starts on an on-screen panel (a slider, say) does not turn the camera.
+            if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
+                dragStartedOnUi = ScreenInput.PointerOverUi;
+            if ((Input.GetMouseButton(0) || Input.GetMouseButton(1)) && !dragStartedOnUi)
             {
                 goalYaw += Input.GetAxisRaw("Mouse X") * 10f * dragSpeed * speedScale;
                 goalPitch -= Input.GetAxisRaw("Mouse Y") * 10f * dragSpeed * speedScale;
