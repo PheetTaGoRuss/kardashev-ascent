@@ -45,3 +45,7 @@ crashlytics-buildid.txt
 # OS
 .DS_Store
 Thumbs.db
+
+# Python prototypes
+prototypes/**/.venv/
+__pycache__/
