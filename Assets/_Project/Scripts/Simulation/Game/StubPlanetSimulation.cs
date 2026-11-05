@@ -19,9 +19,9 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Placeholder farm size for one placed panel, m².</summary>
         public double PanelAreaM2 { get; set; } = 10_000.0;
         public double PanelEfficiency { get; set; } = 0.20;
-        /// <summary>Energy to build 1 m² of panel, Wh (≈ 500 kWh/m² for silicon).</summary>
-        public double EmbodiedWhPerM2 { get; set; } = 500_000.0;
-        public double PanelLifetimeYears { get; set; } = 25.0;
+        /// <summary>Energy to build 1 m² of panel, Wh (modern mono-Si ≈ 266 kWh/m²; see Economics).</summary>
+        public double EmbodiedWhPerM2 { get; set; } = Economics.EmbodiedWhPerM2(PanelTechnology.ModernMonoSi);
+        public double PanelLifetimeYears { get; set; } = Economics.LifetimeYears;
         /// <summary>Placeholder colony demand, W.</summary>
         public double BaseDemandW { get; set; } = 400_000.0;
 
@@ -210,7 +210,8 @@ namespace KardashevAscent.Simulation.Game
                 double ghi = Atmosphere.GlobalHorizontal(dni, dhi, sun.Up);
                 double cosTheta = PanelModel.CosIncidence(PanelModel.Normal(p.Tilt, p.Azimuth), sun);
                 double poa = PanelModel.PlaneOfArray(dni, dhi, ghi, cosTheta, p.Tilt, p.Albedo, p.FShade);
-                double cellT = PanelModel.CellTemperature(planet.AirTemperatureC, poa, p.Noct);
+                double cellT = PanelModel.CellTemperature(planet.AirTemperatureC, poa, p.Noct,
+                                                         planet.SurfacePressureEarth * p.PressureRatio, p.Efficiency);
                 total += PanelModel.Power(poa, p.Area, p.Efficiency, cellT, p.TempCoefficient, p.FSpec, p.FDust);
             }
             return total;
