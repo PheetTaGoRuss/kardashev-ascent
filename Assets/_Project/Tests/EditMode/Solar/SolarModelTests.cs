@@ -139,6 +139,153 @@ namespace KardashevAscent.Simulation.Tests.Solar
             Assert.AreEqual(2.0, Economics.PaybackYears(1000.0, 500.0), 1e-12);
         }
 
+        // Values from docs/physics/physics-verification.md ("ตาราง unit test"), issue #20
+
+        [TestCase(0.0, 0.9997)]
+        [TestCase(30.0, 1.1540)]
+        [TestCase(48.19, 1.4980)]
+        [TestCase(60.0, 1.9943)]
+        [TestCase(70.0, 2.9031)]
+        [TestCase(80.0, 5.5860)]
+        [TestCase(85.0, 10.3058)]
+        [TestCase(88.0, 19.4332)]
+        [TestCase(90.0, 37.9196)]
+        public void Report_AirMass(double zenith, double expected)
+        {
+            Assert.AreEqual(expected, Atmosphere.AirMassKastenYoung(zenith), 1e-4);
+        }
+
+        [TestCase(95.0)]
+        [TestCase(120.0)]
+        [TestCase(180.0)]
+        public void AirMass_BelowHorizon_IsCappedNotNaN(double zenith)
+        {
+            double am = Atmosphere.AirMassKastenYoung(zenith);
+            Assert.IsFalse(double.IsNaN(am));
+            Assert.AreEqual(37.9196, am, 1e-4);
+        }
+
+        // The report prints M as 0.5235988 and 1.5707963, but its expected values are for exactly π/6 and π/2.
+        [TestCase(Math.PI / 6, 0.0167, 0.5320710051, 30.974396, 0.98560864)]
+        [TestCase(Math.PI / 6, 0.5, 0.9220066053, 81.411338, 0.69788876)]
+        [TestCase(Math.PI / 2, 0.9, 2.2634151064, 167.700306, 1.57469925)]
+        [TestCase(1.0, 0.2, 1.1853242039, 79.029260, 0.92480067)]
+        public void Report_Kepler(double meanAnomaly, double e, double eccentric, double trueAnomalyDeg, double rOverA)
+        {
+            double E = Orbit.SolveKepler(meanAnomaly, e);
+            double nu = Orbit.TrueAnomaly(E, e);
+            Assert.AreEqual(eccentric, E, 1e-9, "E");
+            Assert.AreEqual(trueAnomalyDeg, nu / Deg, 1e-5, "ν");
+            Assert.AreEqual(rOverA, Orbit.Distance(1.0, e, nu), 1e-8, "r/a");
+        }
+
+        [TestCase(1.0, 0.0167, 0.0, 1407.6, TestName = "G0 Earth perihelion")]
+        [TestCase(1.0, 0.0167, 180.0, 1316.7, TestName = "G0 Earth aphelion")]
+        [TestCase(1.52371, 0.0934, 0.0, 713.2, TestName = "G0 Mars perihelion")]
+        [TestCase(1.52371, 0.0934, 180.0, 490.3, TestName = "G0 Mars aphelion")]
+        public void Report_ExtraterrestrialIrradiance(double aAu, double e, double trueAnomalyDeg, double expected)
+        {
+            double au = SolarConstants.AstronomicalUnit;
+            double luminosity1361 = 1361.0 * 4.0 * Math.PI * au * au;
+            double r = Orbit.Distance(aAu * au, e, trueAnomalyDeg * Deg);
+            Assert.AreEqual(expected, Orbit.ExtraterrestrialIrradiance(luminosity1361, r), 0.2);
+        }
+
+        [TestCase(1000.0, 25.0, 56.25, 0.875)]
+        [TestCase(800.0, 20.0, 45.00, 0.920)]
+        [TestCase(1000.0, 35.0, 66.25, 0.835)]
+        public void Report_NoctTemperatureAndDerate(double poa, double airC, double cellC, double derate)
+        {
+            double t = PanelModel.CellTemperature(airC, poa, 45.0);
+            Assert.AreEqual(cellC, t, 1e-9);
+            Assert.AreEqual(derate, PanelModel.Power(1.0, 1.0, 1.0, t, -0.004), 1e-9);
+        }
+
+        [Test]
+        public void DiffuseLight_NeverMakesGhiExceedTheLightAboveTheAtmosphere()
+        {
+            const double g0 = 1361.0;
+            foreach (double k in new[] { -0.2, 0.0, 0.3, 1.0, 1.5 })
+            foreach (double tau in new[] { 0.0, 0.3, 2.0, 6.0 })
+            foreach (double z in new[] { 0.0, 60.0, 85.0, 89.9 })
+            {
+                double cosZ = Math.Cos(z * Deg);
+                double am = Atmosphere.AirMassKastenYoung(z);
+                double dni = Atmosphere.DirectNormal(g0, tau, am);
+                double ghi = Atmosphere.GlobalHorizontal(dni, Atmosphere.DiffuseHorizontal(g0, cosZ, tau, am, k), cosZ);
+                Assert.LessOrEqual(ghi, g0 * cosZ + 1e-9, $"k {k}, τ {tau}, z {z}");
+            }
+        }
+
+        [Test]
+        public void Vacuum_HasNoDiffuseLight_AndFullDirectLight()
+        {
+            double am = Atmosphere.AirMassKastenYoung(40.0);
+            Assert.AreEqual(1361.0, Atmosphere.DirectNormal(1361.0, 0.0, am), 1e-12);
+            Assert.AreEqual(0.0, Atmosphere.DiffuseHorizontal(1361.0, Math.Cos(40.0 * Deg), 0.0, am, 0.3), 1e-12);
+        }
+
+        [TestCase(0.0, 0.0, 1.0)]
+        [TestCase(0.0, 60.0, 0.5)]
+        [TestCase(45.0, 0.0, 0.7071)]
+        [TestCase(30.0, 45.0, 0.6124)]
+        [TestCase(0.0, 90.0, 0.0)]
+        [TestCase(60.0, 120.0, 0.0)]
+        public void Report_TidallyLockedCosZenith(double latDeg, double deltaLonDeg, double expected)
+        {
+            // cos z = cos φ cos Δλ with the star over the equator; below the horizon is clamped to 0.
+            double up = SunPosition.Direction(latDeg * Deg, 0.0, deltaLonDeg * Deg).Up;
+            Assert.AreEqual(expected, Math.Max(0.0, up), 1e-4);
+        }
+
+        static readonly PlanetSolarParams LockedPlanet = new PlanetSolarParams(
+            SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0, 0.0, 0.0,
+            0.0, 365.256 * 24.0, 0.3, 0.3, 25.0, tidallyLocked: true);
+
+        [Test]
+        public void TidallyLocked_DaySideIsFinite_NightSideIsZero()
+        {
+            var day = AnnualYield.Calculate(LockedPlanet, Panel(latDeg: 0, tiltDeg: 0, lonDeg: 0));
+            var night = AnnualYield.Calculate(LockedPlanet, Panel(latDeg: 0, tiltDeg: 0, lonDeg: 180));
+            Assert.IsFalse(double.IsNaN(day.EnergyWh) || double.IsInfinity(day.EnergyWh));
+            Assert.Greater(day.EnergyWh, 0.0);
+            Assert.AreEqual(0.0, night.EnergyWh);
+        }
+
+        [Test]
+        public void ZeroDayLength_WithoutTidalLock_Throws()
+        {
+            var broken = new PlanetSolarParams(SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit,
+                                               0.0, 0.0, 0.0, 0.0, 8766.0, 0.3, 0.3, 25.0);
+            Assert.Throws<ArgumentException>(() => AnnualYield.Calculate(broken, Panel(0, 0, 0)));
+        }
+
+        [TestCase(0.2, 24)]
+        [TestCase(0.3, 24)]
+        [TestCase(0.6, 72)]
+        public void SampleDays_RiseForEccentricOrbits(double e, int expected)
+        {
+            var planet = new PlanetSolarParams(1, 1, e, 0, 0, 24, 8766, 0.3, 0.3, 25);
+            Assert.AreEqual(expected, AnnualYield.SampleDays(planet));
+        }
+
+        [TestCase(0.4, 0.3, 2497.0)]
+        [TestCase(0.3, 0.3, 2714.0)]
+        [TestCase(0.3, 0.5, 2967.0)]
+        [TestCase(0.1, 0.3, 3278.0)]
+        public void Report_BangkokClearSkyPlaneOfArray(double tau, double k, double expectedKwh)
+        {
+            var planet = new PlanetSolarParams(SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167,
+                                               23.44 * Deg, 282.94 * Deg, 24.0, 365.256 * 24.0, tau, k, 25.0);
+            // Efficiency 1 and no temperature loss: the "panel" measures plane-of-array light.
+            var meter = new PanelParams(13.75 * Deg, 13.75 * Deg, Math.PI, 1.0, 1.0, 45.0, 0.0, 0.2, 1.0, 1.0, 0.0, 1.0);
+            double kwh = AnnualYield.Calculate(planet, meter).EnergyWh / 1000.0;
+            Assert.AreEqual(expectedKwh, kwh, expectedKwh * 0.01);
+        }
+
+        static PanelParams Panel(double latDeg, double tiltDeg, double lonDeg) =>
+            new PanelParams(latDeg * Deg, tiltDeg * Deg, Math.PI, 1.0, 0.2, 45.0, -0.004, 0.2, 1.0, 1.0, 0.0, 1.0, lonDeg * Deg);
+
         static Double3 SunFrom(double zenithDeg, double azimuthDeg)
         {
             double z = zenithDeg * Deg, a = azimuthDeg * Deg;
