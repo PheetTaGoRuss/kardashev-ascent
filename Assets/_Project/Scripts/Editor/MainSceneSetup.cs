@@ -3,7 +3,9 @@ using KardashevAscent.Presentation.Planet;
 using KardashevAscent.Presentation.Star;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using KardashevAscent.Presentation.UI;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace KardashevAscent.EditorTools
 {
@@ -97,8 +99,10 @@ namespace KardashevAscent.EditorTools
             }));
             SetReference(placer, "ghostMaterial", LoadOrCreateMaterial(PanelGhostMaterial, "KardashevAscent/GhostTint"));
 
+            SetUpHud(runner);
+
             EditorSceneManager.MarkSceneDirty(planet.gameObject.scene);
-            Debug.Log("Scene set up: Simulation runner, star light, light-potential map, building sites, panel placement. Save the scene to keep it.");
+            Debug.Log("Scene set up: Simulation runner, star light, light-potential map, building sites, panel placement, HUD. Save the scene to keep it.");
         }
 
         const string MapMaterial = "Assets/_Project/Materials/PlanetTilesUnlit.mat";
@@ -123,6 +127,38 @@ namespace KardashevAscent.EditorTools
             AssetDatabase.CreateAsset(material, path);
             AssetDatabase.SaveAssets();
             return material;
+        }
+
+        const string ThemePath = "Assets/_Project/UI/KardashevTheme.tss";
+        const string PanelSettingsPath = "Assets/_Project/UI/GamePanelSettings.asset";
+        const string HudLayoutPath = "Assets/_Project/UI/Hud/Hud.uxml";
+
+        /// <summary>The UI Toolkit HUD: one PanelSettings (shared theme) for the whole game, and a HUD document.</summary>
+        static void SetUpHud(SimulationRunner runner)
+        {
+            var panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
+            if (panelSettings == null)
+            {
+                panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+                panelSettings.themeStyleSheet = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(ThemePath);
+                panelSettings.scaleMode = PanelScaleMode.ConstantPixelSize;
+                panelSettings.scale = 1f;
+                AssetDatabase.CreateAsset(panelSettings, PanelSettingsPath);
+                AssetDatabase.SaveAssets();
+            }
+
+            var hud = Object.FindAnyObjectByType<HudView>();
+            GameObject go;
+            if (hud == null)
+            {
+                go = new GameObject("HUD");
+                Undo.RegisterCreatedObjectUndo(go, "Add HUD");
+                var document = Undo.AddComponent<UIDocument>(go);
+                document.panelSettings = panelSettings;
+                document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(HudLayoutPath);
+                hud = Undo.AddComponent<HudView>(go);
+            }
+            SetReference(hud, "runner", runner);
         }
 
         static Light FindDirectionalLight()

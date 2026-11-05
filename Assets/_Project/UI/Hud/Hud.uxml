@@ -1,0 +1,42 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="Hud.uss" />
+    <ui:VisualElement name="hud" class="hud" picking-mode="Ignore">
+        <ui:VisualElement name="top-bar" class="top-bar panel">
+            <ui:VisualElement class="block time-block">
+                <ui:Label name="date" class="value" text="Year 1 · Day 1" />
+                <ui:Label name="time" class="caption" text="07:00 · day" />
+                <ui:Label name="season" class="caption" text="Northern winter" />
+            </ui:VisualElement>
+            <ui:VisualElement class="divider" />
+            <ui:VisualElement class="block power-block">
+                <ui:Label class="heading" text="POWER" />
+                <ui:Label name="power" class="value" text="0 W" />
+                <ui:Label name="demand" class="caption" text="needed 0 W" />
+            </ui:VisualElement>
+            <ui:VisualElement class="divider" />
+            <ui:VisualElement class="block meter-block">
+                <ui:Label class="heading" text="BATTERY" />
+                <ui:VisualElement class="meter"><ui:VisualElement name="battery-fill" class="meter-fill battery-fill" /></ui:VisualElement>
+                <ui:Label name="battery" class="caption" text="0 %" />
+            </ui:VisualElement>
+            <ui:VisualElement class="divider" />
+            <ui:VisualElement class="block meter-block k-block">
+                <ui:Label class="heading" text="KARDASHEV" />
+                <ui:VisualElement class="meter"><ui:VisualElement name="k-fill" class="meter-fill k-fill" /></ui:VisualElement>
+                <ui:Label name="k" class="caption" text="K 0.00" />
+            </ui:VisualElement>
+            <ui:VisualElement class="spacer" picking-mode="Ignore" />
+            <ui:VisualElement class="block speed-block">
+                <ui:Label class="heading" text="TIME" />
+                <ui:VisualElement class="speed-row">
+                    <ui:Button name="speed-paused" class="speed-button" text="Pause" />
+                    <ui:Button name="speed-real" class="speed-button" text="Real" />
+                    <ui:Button name="speed-hour" class="speed-button" text="1 h/s" />
+                    <ui:Button name="speed-day" class="speed-button" text="1 d/s" />
+                    <ui:Button name="speed-year" class="speed-button" text="1 y/min" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:Label name="brownout" class="alert hidden" text="Brownout" />
+    </ui:VisualElement>
+</ui:UXML>

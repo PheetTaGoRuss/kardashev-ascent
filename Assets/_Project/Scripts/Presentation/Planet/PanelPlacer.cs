@@ -306,7 +306,7 @@ namespace KardashevAscent.Presentation.Planet
 
             bool hasPanel = placed.TryGetValue((tile, slot), out Placed current);
             float height = slot < 0 ? 112f : hasPanel ? 196f : 292f;
-            var rect = new Rect(12f, 124f, WindowWidth, height);
+            var rect = new Rect(12f, ScreenInput.TopInset + 112f, WindowWidth, height);
             ScreenInput.Block(rect);
             GUI.Box(rect, GUIContent.none, boxStyle);
 
