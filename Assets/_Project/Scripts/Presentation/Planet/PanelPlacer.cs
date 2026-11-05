@@ -247,7 +247,9 @@ namespace KardashevAscent.Presentation.Planet
         {
             System.Numerics.Vector3 d = site.SlotDirections[s];
             var direction = new Vector3(d.X, d.Y, d.Z);
-            float size = (float)site.Spacing * planet.Radius * panelScale;
+            // Half and corner slots are smaller, so their panels are too.
+            float share = Mathf.Clamp01((float)site.SlotAreaShare(s));
+            float size = (float)site.Spacing * planet.Radius * panelScale * Mathf.Sqrt(share);
             visual.Show(direction, siteView.GroundRadius(direction), size, tilt, azimuth);
         }
 
