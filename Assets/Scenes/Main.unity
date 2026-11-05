@@ -428,6 +428,7 @@ GameObject:
   - component: {fileID: 765499585}
   - component: {fileID: 765499589}
   - component: {fileID: 765499590}
+  - component: {fileID: 765499591}
   m_Layer: 0
   m_Name: Planet
   m_TagString: Untagged
@@ -571,6 +572,29 @@ MonoBehaviour:
   picker: {fileID: 765499589}
   toggleKey: 109
   showOnStart: 0
+--- !u!114 &765499591
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 765499584}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61f8d534e3fd6f746abc37c58ecefbbf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.Planet.PanelPlacer
+  runner: {fileID: 123573323}
+  picker: {fileID: 765499589}
+  frameMaterial: {fileID: 2100000, guid: dd44a8f0e2333474ba335e3c22c267dc, type: 2}
+  cellMaterial: {fileID: 2100000, guid: c19cc231ca76b0546ac8e1e62b967517, type: 2}
+  ghostMaterial: {fileID: 2100000, guid: b12e20512b47d544994901cceb50976c, type: 2}
+  placeKey: 112
+  bestKey: 98
+  removeKey: 127
+  ghostCanPlace: {r: 0.45, g: 0.85, b: 1, a: 0.5}
+  ghostBlocked: {r: 1, g: 0.38, b: 0.3, a: 0.5}
+  previewInterval: 0.05
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

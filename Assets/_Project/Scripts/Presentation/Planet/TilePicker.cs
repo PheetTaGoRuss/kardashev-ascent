@@ -1,4 +1,5 @@
 using System;
+using KardashevAscent.Presentation.UI;
 using KardashevAscent.Simulation.Planet;
 using UnityEngine;
 
@@ -72,9 +73,11 @@ namespace KardashevAscent.Presentation.Planet
             if (cam == null || planet.Sphere == null)
                 return;
 
-            SetHovered(TileUnder(cam, Input.mousePosition));
+            // Over an on-screen panel the mouse belongs to the panel, not the planet.
+            bool overUi = ScreenInput.PointerOverUi;
+            SetHovered(overUi ? -1 : TileUnder(cam, Input.mousePosition));
 
-            if (Input.GetMouseButtonDown(0))
+            if (Input.GetMouseButtonDown(0) && !overUi)
             {
                 pressed = true;
                 pressPosition = Input.mousePosition;
