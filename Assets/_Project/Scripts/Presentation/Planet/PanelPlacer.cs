@@ -64,6 +64,30 @@ namespace KardashevAscent.Presentation.Planet
             public SolarPanelVisual Visual;
         }
 
+        /// <summary>The tile whose site is open, or −1.</summary>
+        public int Tile => tile;
+
+        /// <summary>The best angles for <see cref="Tile"/>, once the background search has found them.</summary>
+        public bool TryGetBest(out PanelAngles angles)
+        {
+            angles = best;
+            return tile >= 0 && bestReady && best.Found;
+        }
+
+        /// <summary>Angles to show for the open site: the selected slot's panel, or the angles being planned (radians).</summary>
+        public bool TryGetAngles(out double tilt, out double azimuth)
+        {
+            if (tile >= 0 && slot >= 0 && placed.TryGetValue((tile, slot), out Placed p))
+            {
+                tilt = p.Tilt;
+                azimuth = p.Azimuth;
+                return true;
+            }
+            tilt = tiltDeg * Mathf.Deg2Rad;
+            azimuth = azimuthDeg * Mathf.Deg2Rad;
+            return tile >= 0;
+        }
+
         /// <summary>Panels placed at 98 % or more of their tile's best yield.</summary>
         public int BestAnglePanels { get; private set; }
         public int PanelCount => placed.Count;
