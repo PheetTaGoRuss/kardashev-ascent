@@ -85,7 +85,7 @@ namespace KardashevAscent.Presentation.Planet
                 if (click && !HoldSelection)
                     Select(HoveredTile);
             }
-            if (Input.GetKeyDown(KeyCode.Escape))
+            if (Input.GetKeyDown(KeyCode.Escape) && !(EscapeHandler != null && EscapeHandler()))
                 Select(-1);
         }
 
@@ -138,6 +138,9 @@ namespace KardashevAscent.Presentation.Planet
         /// mouse is over one of its slots: near a tile corner the nearest tile centre can be the neighbour.
         /// </summary>
         public bool HoldSelection { get; set; }
+
+        /// <summary>Asked first when Esc is pressed; returning true means it was handled (the tile stays selected).</summary>
+        public Func<bool> EscapeHandler { get; set; }
 
         public void Select(int tile)
         {

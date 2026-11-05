@@ -38,3 +38,10 @@
 .legend .caption { white-space: normal; }
 .legend-bar { height: 14px; margin-top: 4px; border-radius: 3px; }
 .legend-range { flex-direction: row; justify-content: space-between; }
+
+.drag-rect {
+    position: absolute;
+    border-width: 1px;
+    border-color: var(--accent);
+    background-color: rgba(143, 179, 255, 0.12);
+}

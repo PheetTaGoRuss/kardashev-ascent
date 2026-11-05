@@ -22,12 +22,12 @@ namespace KardashevAscent.Presentation.UI
         [SerializeField] OrbitCamera orbitCamera;
         [Range(0.02f, 0.5f)] [SerializeField] float textInterval = 0.1f;
 
-        VisualElement hoverBox, siteBox, plannerBox, placedBox, legend, legendBar;
+        VisualElement hoverBox, siteBox, plannerBox, placedBox, legend, legendBar, dragRect, multiButtons;
         Label hoverText, siteTitle, siteText, plannerTitle, tiltLabel, facingLabel, plannerNumbers, plannerBest,
               plannerReason, placedTitle, placedAngles, placedNumbers, placedBonus, totals, mapHint, help,
-              legendMin, legendMax, legendTile;
+              legendMin, legendMax, legendTile, multiText;
         Slider tilt, facing;
-        Button bestButton, placeButton;
+        Button bestButton, placeButton, removeAllButton, reangleButton;
         float nextText;
 
         void OnEnable()
@@ -44,6 +44,11 @@ namespace KardashevAscent.Presentation.UI
             placedBox = root.Q("placed-box");
             legend = root.Q("legend");
             legendBar = root.Q("legend-bar");
+            dragRect = root.Q("drag-rect");
+            multiButtons = root.Q("multi-buttons");
+            multiText = root.Q<Label>("multi-text");
+            removeAllButton = root.Q<Button>("remove-all-button");
+            reangleButton = root.Q<Button>("reangle-button");
             hoverText = root.Q<Label>("hover-text");
             siteTitle = root.Q<Label>("site-title");
             siteText = root.Q<Label>("site-text");
@@ -71,7 +76,14 @@ namespace KardashevAscent.Presentation.UI
             tilt.RegisterValueChangedCallback(e => { if (placer != null) placer.TiltDeg = e.newValue; });
             facing.RegisterValueChangedCallback(e => { if (placer != null) placer.AzimuthDeg = e.newValue; });
             bestButton.clicked += () => placer?.UseBestAngle();
-            placeButton.clicked += () => placer?.Place();
+            placeButton.clicked += () =>
+            {
+                if (placer == null) return;
+                if (placer.MultiSelect) placer.PlaceSelection();
+                else placer.Place();
+            };
+            removeAllButton.clicked += () => placer?.RemoveSelection();
+            reangleButton.clicked += () => placer?.ReangleSelection();
             root.Q<Button>("remove-button").clicked += () => placer?.Remove();
             nextText = 0f;
         }
@@ -89,14 +101,32 @@ namespace KardashevAscent.Presentation.UI
                 return;
 
             bool siteOpen = siteView != null && siteView.Site != null && placer != null;
-            int slot = siteOpen ? placer.Slot : -1;
+            bool multi = siteOpen && placer.MultiSelect;
+            int slot = siteOpen && !multi ? placer.Slot : -1;
             bool hasPanel = siteOpen && slot >= 0 &&
                             placer.TryGetSelectedPanel(out _, out _, out _, out _);
 
             Show(hoverBox, !siteOpen && picker.HoveredTile >= 0);
-            Show(siteBox, siteOpen && slot < 0);
-            Show(plannerBox, siteOpen && slot >= 0 && !hasPanel);
+            Show(siteBox, siteOpen && slot < 0 && !multi);
+            Show(plannerBox, multi || (siteOpen && slot >= 0 && !hasPanel));
             Show(placedBox, hasPanel);
+            Show(multiButtons, multi);
+            Show(multiText, multi);
+
+            // The selection box while dragging.
+            bool dragging = siteOpen && siteView.IsDragging;
+            Show(dragRect, dragging);
+            if (dragging)
+            {
+                Rect r = siteView.DragRect;
+                IPanel panel = dragRect.panel;
+                Vector2 min = panel != null ? RuntimePanelUtils.ScreenToPanel(panel, r.min) : r.min;
+                Vector2 max = panel != null ? RuntimePanelUtils.ScreenToPanel(panel, r.max) : r.max;
+                dragRect.style.left = min.x;
+                dragRect.style.top = min.y;
+                dragRect.style.width = max.x - min.x;
+                dragRect.style.height = max.y - min.y;
+            }
             Show(totals, siteOpen);
             Show(help, orbitCamera != null && orbitCamera.ShowHelp);
             bool mapOn = lightMap != null && lightMap.Visible;
@@ -127,12 +157,12 @@ namespace KardashevAscent.Presentation.UI
             }
 
             if (siteOpen)
-                UpdateSite(slot, hasPanel);
+                UpdateSite(slot, hasPanel, multi);
             if (mapOn)
                 UpdateLegend();
         }
 
-        void UpdateSite(int slot, bool hasPanel)
+        void UpdateSite(int slot, bool hasPanel, bool multi)
         {
             int tile = siteView.Site.Tile;
             siteTitle.text = $"Building site · tile #{tile}";
@@ -150,10 +180,29 @@ namespace KardashevAscent.Presentation.UI
                 Show(placedBonus, rating == AngleRating.Optimal);
                 return;
             }
-            if (slot < 0)
+            if (slot < 0 && !multi)
                 return;
 
-            plannerTitle.text = $"Plan a solar panel · slot {slot}";
+            int selected = 0, empty = 0, withPanels = 0;
+            if (multi)
+            {
+                placer.CountSelection(out selected, out empty, out withPanels);
+                plannerTitle.text = $"{selected} slots selected";
+                multiText.text = $"{empty} empty · {withPanels} with panels" +
+                                 (empty > 0 && placer.Preview.CanPlace
+                                     ? $"\nBuilding on the empty ones adds {Format.Energy(placer.Preview.EnergyPerYearWh * empty)} a year"
+                                     : "");
+                placeButton.text = $"Place {empty} panels (P)";
+                removeAllButton.text = $"Remove {withPanels} (Del)";
+                reangleButton.text = $"Set angle on {withPanels}";
+                removeAllButton.SetEnabled(withPanels > 0);
+                reangleButton.SetEnabled(withPanels > 0);
+            }
+            else
+            {
+                plannerTitle.text = $"Plan a solar panel · slot {slot}";
+                placeButton.text = "Place panel (P)";
+            }
             tiltLabel.text = $"Tilt β  {placer.TiltDeg:0}°  (0° flat, 90° upright)";
             facingLabel.text = $"Facing γ  {placer.AzimuthDeg:0}° {Compass(placer.AzimuthDeg)}";
 
@@ -180,7 +229,7 @@ namespace KardashevAscent.Presentation.UI
                 plannerBest.text = "Finding the best angle…";
                 bestButton.SetEnabled(false);
             }
-            placeButton.SetEnabled(preview.CanPlace);
+            placeButton.SetEnabled(preview.CanPlace && (!multi || empty > 0));
         }
 
         void UpdateLegend()
