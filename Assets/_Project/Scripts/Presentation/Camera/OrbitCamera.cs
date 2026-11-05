@@ -56,7 +56,6 @@ namespace KardashevAscent.Presentation.CameraControl
         float goalYaw, goalPitch, goalAltitude;
         float yawVel, pitchVel, altitudeVel;
         Camera cam;
-        GUIStyle helpStyle;
         bool dragStartedOnUi;
 
         // Site view. The site's direction is kept in the target's local space so it follows the planet.
@@ -288,39 +287,31 @@ namespace KardashevAscent.Presentation.CameraControl
             rotation = Quaternion.LookRotation(focus - position, frame * Vector3.forward);
         }
 
-        void OnGUI()
+        /// <summary>Whether the controls help is shown (H toggles it).</summary>
+        public bool ShowHelp
         {
-            if (!showHelp)
-                return;
-            helpStyle ??= new GUIStyle(GUI.skin.box)
-            {
-                alignment = TextAnchor.UpperLeft,
-                fontSize = 13,
-                padding = new RectOffset(10, 10, 8, 8),
-                normal = { textColor = new Color(0.9f, 0.93f, 1f) },
-            };
+            get => showHelp;
+            set => showHelp = value;
+        }
 
-            string text;
-            if (inSite)
+        /// <summary>Controls help for the current view.</summary>
+        public string HelpText
+        {
+            get
             {
-                text = "Site view\n" +
-                       "Drag or A/D: turn · W/S: view angle\n" +
-                       "Wheel or Q/E: zoom (zoom out to leave)\n" +
-                       "R: reset · Esc: back to planet · H: hide";
-            }
-            else
-            {
+                if (inSite)
+                    return "Site view\n" +
+                           "Drag or A/D: turn · W/S: view angle\n" +
+                           "Wheel or Q/E: zoom (zoom out to leave)\n" +
+                           "R: reset · Esc: back to planet · H: hide";
                 string tiles = target != null && target.TryGetComponent(out PlanetView planet) && planet.Sphere != null
                     ? $"Tiles: {planet.Sphere.TileCount:N0} · click one to build there\n"
                     : "";
-                text = tiles +
+                return tiles +
                        "Drag (mouse) or WASD/arrows: rotate\n" +
                        "Mouse wheel or Q/E: zoom\n" +
                        "R: reset view    H: hide this help";
             }
-            var rect = new Rect(12, Screen.height - 98, 300, 86);
-            ScreenInput.Block(rect);
-            GUI.Box(rect, text, helpStyle);
         }
     }
 }
