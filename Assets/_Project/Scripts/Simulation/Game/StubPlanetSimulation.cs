@@ -172,6 +172,13 @@ namespace KardashevAscent.Simulation.Game
 
         public bool HasPanel(int tileId, int slot) => panels.ContainsKey((tileId, slot));
 
+        public double[] MonthlyEnergyWh(int tileId, double tilt, double azimuth)
+        {
+            if (tileId < 0 || tileId >= TileCount || GetTile(tileId).IsWater || planet.DayLengthHours <= 0.0)
+                return null;
+            return MonthlyYield.Calculate(planet, MakePanel(tileId, tilt, azimuth));
+        }
+
         public int SlotCount(int tileId)
         {
             if (!sites.TryGetValue(tileId, out TileSite site))

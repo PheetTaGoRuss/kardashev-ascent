@@ -1,0 +1,48 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="TileInfo.uss" />
+    <ui:VisualElement name="tile-info" class="tile-info panel hidden">
+        <ui:ScrollView name="scroll" class="tile-scroll" mode="Vertical">
+            <ui:Label name="title" class="value" text="Tile" />
+            <ui:Label name="place" class="caption" text="0° N, 0° E" />
+            <ui:VisualElement class="stat-row">
+                <ui:VisualElement class="stat">
+                    <ui:Label class="heading" text="SUNLIGHT" />
+                    <ui:Label name="sunlight" class="stat-value" text="–" />
+                    <ui:Label class="caption" text="kWh per m² per year" />
+                </ui:VisualElement>
+                <ui:VisualElement class="stat">
+                    <ui:Label class="heading" text="BEST ANGLE" />
+                    <ui:Label name="best" class="stat-value" text="–" />
+                    <ui:Label name="best-caption" class="caption" text="tilt · facing" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <ui:Label class="heading section" text="SUN PATH" />
+            <ui:Label name="sunpath-caption" class="caption" text="How high the star climbs, and where" />
+            <ui:VisualElement name="sunpath" class="chart sunpath-chart" />
+            <ui:VisualElement class="legend">
+                <ui:VisualElement class="legend-item"><ui:VisualElement class="swatch series-1" /><ui:Label name="legend-1" class="caption" text="Dec solstice" /></ui:VisualElement>
+                <ui:VisualElement class="legend-item"><ui:VisualElement class="swatch series-2" /><ui:Label name="legend-2" class="caption" text="Jun solstice" /></ui:VisualElement>
+                <ui:VisualElement class="legend-item"><ui:VisualElement class="swatch series-3" /><ui:Label class="caption" text="Equinox" /></ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="legend">
+                <ui:VisualElement class="legend-item"><ui:VisualElement class="marker-now" /><ui:Label class="caption" text="Star now" /></ui:VisualElement>
+                <ui:VisualElement class="legend-item"><ui:VisualElement class="marker-panel" /><ui:Label class="caption" text="Where the panel faces" /></ui:VisualElement>
+            </ui:VisualElement>
+
+            <ui:Label class="heading section" text="ENERGY BY MONTH" />
+            <ui:Label name="monthly-caption" class="caption" text="This panel" />
+            <ui:VisualElement name="monthly" class="chart monthly-chart" />
+            <ui:VisualElement name="month-labels" class="month-labels" />
+            <ui:Label name="monthly-hover" class="caption hover-line" text=" " />
+
+            <ui:Foldout name="formulas" class="formulas" text="Formulas used" value="false">
+                <ui:Label class="formula" text="cos θ = n · s   light on a panel falls off with the angle θ between the panel's facing n and the star s" />
+                <ui:Label class="formula" text="sin δ = sin ε · sin λ   the star's declination δ swings with the planet's tilt ε through the year (λ = position on the orbit)" />
+                <ui:Label class="formula" text="Noon height = 90° − |latitude − δ|   so a panel tilted by about the latitude, facing the equator, meets the star square-on" />
+                <ui:Label class="formula" text="POA = DNI · cos θ + DHI · (1 + cos β)/2 + ρ · GHI · (1 − cos β)/2   direct + sky + ground light on a panel tilted β" />
+                <ui:Label class="formula" text="K = (log10 P − 6) / 10   the Kardashev level from the power P your colony uses" />
+            </ui:Foldout>
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>
