@@ -7,7 +7,7 @@ archive output.
 import math
 import unittest
 
-from convert import AU, EARTH_RADIUS, SOLAR_LUMINOSITY, convert, equilibrium_temperature
+from convert import AU, EARTH_RADIUS, SOLAR_LUMINOSITY, convert, equilibrium_temperature, solar_day_hours
 
 SUN_EARTH_ROW = {
     "pl_name": "Test b", "hostname": "Test", "sy_snum": "1", "sy_pnum": "1", "cb_flag": "0",
@@ -96,6 +96,23 @@ class ConvertTests(unittest.TestCase):
         p = convert(row, {"id": "t", "archiveName": "Test b"})
         self.assertAlmostEqual(p["solar"]["airTemperatureC"], 255 - 273.15, places=9)
         self.assertEqual(prov(p, "solar.airTemperatureC"), "derived")
+
+    def test_greenhouse_offset_raises_air_temperature(self):
+        row = dict(SUN_EARTH_ROW, pl_eqt="255")
+        p = convert(row, {"id": "t", "archiveName": "Test b", "assumed": {"greenhouseOffsetK": 33.0}})
+        self.assertAlmostEqual(p["solar"]["airTemperatureC"], 255 + 33 - 273.15, places=9)
+
+    def test_solar_day_from_sidereal_rotation(self):
+        self.assertAlmostEqual(solar_day_hours(23.9345, 365.256 * 24.0), 24.0, delta=0.001)
+        self.assertAlmostEqual(solar_day_hours(5832.5, 224.701 * 24.0, retrograde=True) / 24.0, 116.75, delta=0.05)
+        self.assertAlmostEqual(solar_day_hours(24.6229, 686.98 * 24.0), 24.6597, delta=0.001)   # Mars sol
+        with self.assertRaises(ValueError):
+            solar_day_hours(100.0, 100.0)
+
+    def test_rotation_period_sets_derived_day_length(self):
+        p = convert(SUN_EARTH_ROW, {"id": "t", "archiveName": "Test b", "assumed": {"rotationPeriodHours": 23.9345}})
+        self.assertAlmostEqual(p["solar"]["dayLengthHours"], 24.0, delta=0.001)
+        self.assertEqual(prov(p, "solar.dayLengthHours"), "derived")
 
     def test_hand_made_planet_is_all_assumed(self):
         entry = {"id": "v", "archiveName": None, "assumed": {
