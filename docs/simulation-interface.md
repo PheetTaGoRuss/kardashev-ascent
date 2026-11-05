@@ -29,7 +29,7 @@ Presentation (MonoBehaviour)                 Simulation (C# ล้วน)
 | --- | --- |
 | ดาวและช่อง | `Sphere`, `TileCount`, `GetTile(id)` → `TileInfo` (ละติจูด, ลองจิจูด, terrain, ความสูง, พื้นที่ m²), `BaseTileId` |
 | เวลาและดาวฤกษ์ | `TimeHours`, `DayLengthHours` (0 = ล็อกไทดัล), `YearLengthHours`, `StarDirection`, `IsDayAtBase` |
-| ไฟ | `GenerationW`, `DemandW`, `BatteryStoredWh`, `BatteryCapacityWh`, `IsBrownout`, `KardashevK`, `TypeITargetW` |
+| ไฟ | `GenerationW` (แผง + RTG), `RtgW`, `DemandW`, `BatteryStoredWh`, `BatteryCapacityWh`, `BatteryPowerW` (+ ชาร์จ, − ดึง), `CurtailedW`, `IsBrownout`, `KardashevK`, `TypeITargetW` |
 | คำสั่ง | `Tick(hours)`, `PreviewPanel(tileId, tilt, azimuth)` → `PanelPreview` (kWh/ปี, capacity factor, EROI, ระยะคืนทุน, เหตุผลถ้าวางไม่ได้), `SiteRings`, `PlacePanel(tileId, slot, tilt, azimuth)`, `RemovePanel(tileId, slot)`, `HasPanel(tileId, slot)`, `PanelCount(tileId)` |
 | event | `BrownoutChanged(bool)`, `DayNightChanged(bool)` ที่ฐาน, `TargetReached()` |
 
@@ -47,7 +47,7 @@ sim.DayNightChanged += isDay => Debug.Log(isDay ? "Sunrise" : "Sunset");
 | --- | --- |
 | ทิศดาวฤกษ์, กลางวัน/กลางคืน, ฤดู | **จริง** จาก `Simulation/Solar` |
 | ไฟจากแผงตอนนี้, `PreviewPanel` | **จริง** จาก solar model (แผง 1 จุด = ฟาร์ม 10,000 m² ชั่วคราว) |
-| ความต้องการไฟ, แบตเตอรี่ | ค่าชั่วคราว (ต้องการคงที่ 400 kW, แบต 4 MWh) จนกว่า #9 จะแทน |
+| ความต้องการไฟ, แบตเตอรี่ | **จริง** จาก `Simulation/Energy/PowerGrid` (#9) ค่าเริ่มของยานลงจอด: ฐานใช้ 100 kW คงที่, แบต Li-ion 2 MWh เต็ม (ไป-กลับ 90 %, 1C), MMRTG 4 ตัว ≈ 440 W ที่ค่อย ๆ ลดลง แบตอย่างเดียวอยู่ได้ราว 19 ชั่วโมง |
 | ค่า K | จากไฟที่ใช้จริง (ไม่นับไฟที่ทิ้งตอนแบตเต็ม) สูตรเต็มและ UI อยู่ใน #10 |
 
 ข้อจำกัด: ดาวล็อกไทดัลยังทำ `PreviewPanel` ไม่ได้ (ตอบว่าวางไม่ได้พร้อมเหตุผล)
@@ -67,3 +67,10 @@ sim.DayNightChanged += isDay => Debug.Log(isDay ? "Sunrise" : "Sunset");
 `TileSite.Create(sphere, tileId, rings)` จำนวน `3R(R+1)+1` ช่อง ค่าเริ่มต้น R = `SiteRings` = 4 → **61 slot ต่อช่อง** ทั้งหกเหลี่ยมและห้าเหลี่ยม
 slot 0 อยู่กลาง เลขเพิ่มทีละวง แผงหนึ่งแผงต่อหนึ่ง slot ทุก slot ในช่องเดียวกันได้แสงเท่ากัน (ใช้ละติจูด/ลองจิจูดของช่อง)
 `PanelCount(tileId)` บอกจำนวนแผงในช่อง ระบบอื่นที่จะวางสิ่งก่อสร้าง (แบตเตอรี่ ฯลฯ) ควรใช้ slot ชุดเดียวกันนี้
+
+## กริดไฟ (#9)
+
+`PowerGrid.Step(solarW, hours, years)` ทุก step: กำลังผลิต (แผง + RTG) − ความต้องการ ถ้าเหลือชาร์จแบต (`Battery.Charge`) ส่วนที่ชาร์จไม่ได้เป็น `CurtailedW`
+ถ้าขาดดึงจากแบต (`Battery.Discharge`) ถ้ายังไม่พอเป็น brownout แล้วยิง `BrownoutChanged(true)` ครั้งเดียว และ `false` เมื่อไฟกลับมาพอ
+ประสิทธิภาพไป-กลับแบ่งเท่ากันทั้งขาเข้าและขาออก (√RTE) RTG ใช้ $P(t) = P_0 e^{-(\ln 2/87.7 + k_{TE}) t}$ โดย $k_{TE}$ ตั้งให้ 110 W เหลือ 72 W ที่ 17 ปี (2.46 %/ปี)
+ค่า K ยังนับไฟที่ถึงโหลด + ไฟที่ชาร์จเข้าแบตเหมือนเดิม (ไม่นับไฟทิ้ง) ให้ #10 ตัดสินนิยามสุดท้าย
