@@ -119,14 +119,17 @@ namespace KardashevAscent.Presentation.Planet
         }
 
         /// <summary>Distance from the planet centre to the visible ground in a direction inside the site (local units).</summary>
-        public float GroundRadius(Vector3 direction)
+        public float GroundRadius(Vector3 direction) => GroundRadius(Site, direction);
+
+        /// <summary>Distance from the planet centre to the visible ground in a direction inside the given site.</summary>
+        public float GroundRadius(TileSite site, Vector3 direction)
         {
             // Tiles are drawn as a fan from a centre vertex at the radius to corners at the radius, so the ground
             // dips a little between them; follow it so buildings stand on the surface.
-            if (Site == null)
+            if (site == null)
                 return planet.Radius;
-            Vector3 c = ToUnity(Site.Centre);
-            Vector3[] corners = Array.ConvertAll(planet.Sphere.Corners[Site.Tile], ToUnity);
+            Vector3 c = ToUnity(site.Centre);
+            Vector3[] corners = Array.ConvertAll(planet.Sphere.Corners[site.Tile], ToUnity);
             Vector3 d = direction.normalized;
             float best = planet.Radius;
             for (int i = 0; i < corners.Length; i++)

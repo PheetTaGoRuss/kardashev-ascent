@@ -234,6 +234,52 @@ namespace KardashevAscent.Simulation.Game
             return true;
         }
 
+        public SimulationState CaptureState()
+        {
+            var state = new SimulationState
+            {
+                TileCount = TileCount,
+                BaseTileId = BaseTileId,
+                TimeHours = TimeHours,
+                BatteryStoredWh = Grid.Battery.StoredWh,
+                ColonyDemandW = Colony.DemandW,
+                ColonyHoursSinceBrownout = Colony.HoursSinceBrownout,
+                ColonyAverageGenerationW = Colony.AverageGenerationW,
+                ColonyDayEnergyWh = Colony.DayEnergyWh,
+                ColonyDayClockHours = Colony.DayClockHours,
+            };
+            foreach (var kv in panels)
+                state.Buildings.Add(new BuildingRecord { Tile = kv.Key.Tile, Slot = kv.Key.Slot, Type = BuildingType.SolarPanel, Tilt = kv.Value.Tilt, Azimuth = kv.Value.Azimuth });
+            foreach (var b in batteries)
+                state.Buildings.Add(new BuildingRecord { Tile = b.Tile, Slot = b.Slot, Type = BuildingType.Battery });
+            state.Buildings.Sort((a, b) => a.Tile != b.Tile ? a.Tile.CompareTo(b.Tile) : a.Slot.CompareTo(b.Slot));
+            return state;
+        }
+
+        public bool RestoreState(SimulationState state)
+        {
+            if (state == null || state.TileCount != TileCount || state.BaseTileId != BaseTileId)
+                return false;
+            foreach (var key in new List<(int Tile, int Slot)>(panels.Keys))
+                RemoveBuilding(key.Tile, key.Slot);
+            foreach (var key in new List<(int Tile, int Slot)>(batteries))
+                RemoveBuilding(key.Tile, key.Slot);
+            TimeHours = state.TimeHours;
+            UpdateStar();
+            foreach (var r in state.Buildings)
+            {
+                if (r.Type == BuildingType.SolarPanel) PlacePanel(r.Tile, r.Slot, r.Tilt, r.Azimuth);
+                else if (r.Type == BuildingType.Battery) PlaceBattery(r.Tile, r.Slot);
+            }
+            Grid.Battery.SetStored(state.BatteryStoredWh);
+            Colony.Restore(state.ColonyDemandW, state.ColonyHoursSinceBrownout, state.ColonyAverageGenerationW, state.ColonyDayEnergyWh, state.ColonyDayClockHours);
+            Grid.DemandW = Colony.DemandW;
+            DemandW = Colony.DemandW;
+            IsDayAtBase = SunAt(BaseTileId).Up > 0.0;
+            GenerationW = ComputeGeneration() + RtgW;
+            return true;
+        }
+
         void UpdateStar()
         {
             double meanAnomaly = YearLengthHours > 0 ? 2.0 * Math.PI * TimeHours / YearLengthHours : 0.0;

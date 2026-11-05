@@ -100,6 +100,14 @@ namespace KardashevAscent.EditorTools
             SetReference(placer, "ghostMaterial", LoadOrCreateMaterial(PanelGhostMaterial, "KardashevAscent/GhostTint"));
 
             SetUpHud(runner);
+            var saveController = runner.GetComponent<SaveGameController>();
+            if (saveController == null)
+                saveController = Undo.AddComponent<SaveGameController>(runner.gameObject);
+            SetReference(saveController, "runner", runner);
+            SetReference(placer, "saveGame", saveController);
+            var hudView = Object.FindAnyObjectByType<HudView>();
+            if (hudView != null)
+                SetReference(hudView, "saveGame", saveController);
             SetUpTileInfo(runner, planet, placer);
             SetUpPanels(planet, placer, site);
 
