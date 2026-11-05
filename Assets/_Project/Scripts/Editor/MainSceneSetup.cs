@@ -9,7 +9,7 @@ namespace KardashevAscent.EditorTools
 {
     /// <summary>
     /// Wires the open scene for play: a Simulation object running the planet, the directional light
-    /// following the star, and the light-potential map on the planet. Safe to run again; it only adds what is missing.
+    /// following the star, the light-potential map and panel placement on the planet. Safe to run again; it only adds what is missing.
     /// Menu: Kardashev Ascent ▸ Set Up Scene.
     /// </summary>
     public static class MainSceneSetup
@@ -63,13 +63,34 @@ namespace KardashevAscent.EditorTools
             SetReference(map, "picker", planet.GetComponent<TilePicker>());
             SetReference(map, "mapMaterial", LoadOrCreateMaterial(MapMaterial, "KardashevAscent/PlanetTilesUnlit"));
 
+            var placer = planet.GetComponent<PanelPlacer>();
+            if (placer == null)
+                placer = Undo.AddComponent<PanelPlacer>(planet.gameObject);
+            SetReference(placer, "runner", runner);
+            SetReference(placer, "picker", planet.GetComponent<TilePicker>());
+            SetReference(placer, "frameMaterial", LoadOrCreateMaterial(PanelFrameMaterial, "Standard", m =>
+            {
+                m.color = new Color(0.55f, 0.59f, 0.64f);
+                m.SetFloat("_Glossiness", 0.4f);
+            }));
+            SetReference(placer, "cellMaterial", LoadOrCreateMaterial(PanelCellMaterial, "Standard", m =>
+            {
+                m.color = new Color(0.10f, 0.16f, 0.30f);
+                m.SetFloat("_Metallic", 0.3f);
+                m.SetFloat("_Glossiness", 0.85f);
+            }));
+            SetReference(placer, "ghostMaterial", LoadOrCreateMaterial(PanelGhostMaterial, "KardashevAscent/GhostTint"));
+
             EditorSceneManager.MarkSceneDirty(planet.gameObject.scene);
-            Debug.Log("Scene set up: Simulation runner, star light, light-potential map. Save the scene to keep it.");
+            Debug.Log("Scene set up: Simulation runner, star light, light-potential map, panel placement. Save the scene to keep it.");
         }
 
         const string MapMaterial = "Assets/_Project/Materials/PlanetTilesUnlit.mat";
+        const string PanelFrameMaterial = "Assets/_Project/Materials/PanelFrame.mat";
+        const string PanelCellMaterial = "Assets/_Project/Materials/PanelCells.mat";
+        const string PanelGhostMaterial = "Assets/_Project/Materials/PanelGhost.mat";
 
-        static Material LoadOrCreateMaterial(string path, string shaderName)
+        static Material LoadOrCreateMaterial(string path, string shaderName, System.Action<Material> configure = null)
         {
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (material != null)
@@ -81,6 +102,7 @@ namespace KardashevAscent.EditorTools
                 return null;
             }
             material = new Material(shader);
+            configure?.Invoke(material);
             AssetDatabase.CreateAsset(material, path);
             AssetDatabase.SaveAssets();
             return material;
