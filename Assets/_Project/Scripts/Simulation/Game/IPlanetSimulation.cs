@@ -68,16 +68,28 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Advance the simulation by <paramref name="hours"/> of game time.</summary>
         void Tick(double hours);
 
-        /// <summary>Numbers to show while the player drags a panel over a tile; places nothing.</summary>
+        /// <summary>
+        /// Numbers for one panel on a tile (every slot of a tile gets the same sunlight); places nothing.
+        /// Must be read-only and safe to call from a worker thread (the best-angle search runs in the background).
+        /// </summary>
         PanelPreview PreviewPanel(int tileId, double tilt, double azimuth);
 
-        /// <summary>Build a panel. Returns false (and changes nothing) if the tile cannot take one.</summary>
-        bool PlacePanel(int tileId, double tilt, double azimuth);
+        /// <summary>
+        /// Rings of building slots on every tile: each tile holds <see cref="TileSite.SlotCountFor"/>(rings) slots,
+        /// laid out by <see cref="TileSite.Create"/>. One panel per slot.
+        /// </summary>
+        int SiteRings { get; }
 
-        /// <summary>Remove the panel on a tile. Returns false if there was none.</summary>
-        bool RemovePanel(int tileId);
+        /// <summary>Build a panel in one slot of a tile. Returns false (and changes nothing) if the slot cannot take one.</summary>
+        bool PlacePanel(int tileId, int slot, double tilt, double azimuth);
 
-        bool HasPanel(int tileId);
+        /// <summary>Remove the panel in a slot. Returns false if there was none.</summary>
+        bool RemovePanel(int tileId, int slot);
+
+        bool HasPanel(int tileId, int slot);
+
+        /// <summary>Panels built on a tile (all slots).</summary>
+        int PanelCount(int tileId);
 
         // Events (raised during Tick or a command)
 
