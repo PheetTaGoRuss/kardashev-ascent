@@ -25,7 +25,7 @@ namespace KardashevAscent.Presentation.UI
         VisualElement hoverBox, siteBox, plannerBox, placedBox, legend, legendBar, dragRect, multiButtons;
         Label hoverText, siteTitle, siteText, plannerTitle, tiltLabel, facingLabel, plannerNumbers, plannerBest,
               plannerReason, placedTitle, placedAngles, placedNumbers, placedBonus, totals, mapHint, help,
-              legendMin, legendMax, legendTile, multiText, batteryText;
+              legendMin, legendMax, legendTile, multiText, batteryText, plannerCost;
         Slider tilt, facing;
         Button bestButton, placeButton, removeAllButton, reangleButton, modePanel, modeBattery;
         float nextText;
@@ -63,6 +63,7 @@ namespace KardashevAscent.Presentation.UI
             plannerNumbers = root.Q<Label>("planner-numbers");
             plannerBest = root.Q<Label>("planner-best");
             plannerReason = root.Q<Label>("planner-reason");
+            plannerCost = root.Q<Label>("planner-cost");
             placedTitle = root.Q<Label>("placed-title");
             placedAngles = root.Q<Label>("placed-angles");
             placedNumbers = root.Q<Label>("placed-numbers");
@@ -186,20 +187,28 @@ namespace KardashevAscent.Presentation.UI
                 ? "No panels yet"
                 : $"Panels {placer.PanelCount} ({placer.BestAnglePanels} at best angle) · now {Format.Power(placer.GenerationW)}";
 
+            bool isSite = hasPanel && placer.SelectedIsSite;
+            string siteLine = "";
+            if (isSite)
+            {
+                placer.SelectedSiteProgress(out double progress, out double remaining);
+                siteLine = $"Under construction: {progress * 100.0:0} % · needs {Format.Energy(remaining)} more build parts " +
+                           "(made from spare power). Works once finished.\n";
+            }
             if (hasPanel && placer.SelectedBuilding == BuildingType.Battery)
             {
-                placedTitle.text = $"Battery yard · slot {slot}";
+                placedTitle.text = isSite ? $"Battery yard site · slot {slot}" : $"Battery yard · slot {slot}";
                 placedAngles.text = $"Stores {Format.Energy(placer.BatteryUnitWh)}";
-                placedNumbers.text = "Charges from surplus by day and carries the colony through the night.";
+                placedNumbers.text = siteLine + "Charges from surplus by day and carries the colony through the night.";
                 Show(placedBonus, false);
                 return;
             }
             if (hasPanel)
             {
                 placer.TryGetSelectedPanel(out double t, out double a, out PanelPreview p, out AngleRating rating);
-                placedTitle.text = $"Solar panel · slot {slot}";
+                placedTitle.text = isSite ? $"Solar panel site · slot {slot}" : $"Solar panel · slot {slot}";
                 placedAngles.text = $"Tilt {t * Mathf.Rad2Deg:0}° · facing {a * Mathf.Rad2Deg:0}° {Compass((float)(a * Mathf.Rad2Deg))}";
-                placedNumbers.text = Numbers(p);
+                placedNumbers.text = siteLine + Numbers(p);
                 Show(placedBonus, rating == AngleRating.Optimal);
                 return;
             }
@@ -257,6 +266,14 @@ namespace KardashevAscent.Presentation.UI
                 bestButton.SetEnabled(false);
             }
             placeButton.SetEnabled(preview.CanPlace && (!multi || empty > 0));
+
+            int count = multi ? empty : 1;
+            double cost = placer.BuildCostWh * count, stock = placer.BuildStockWh;
+            Show(plannerCost, count > 0 && !blocked);
+            plannerCost.text = cost <= stock
+                ? $"Costs {Format.Energy(cost)} of build parts · {Format.Energy(stock)} on hand"
+                : $"Costs {Format.Energy(cost)} of build parts · {Format.Energy(stock)} on hand: " +
+                  "the rest waits as a construction site until spare power makes it";
         }
 
         void UpdateLegend()

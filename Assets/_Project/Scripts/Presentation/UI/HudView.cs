@@ -21,7 +21,7 @@ namespace KardashevAscent.Presentation.UI
         [Range(0f, 1f)] [SerializeField] float textInterval = 0.1f;
 
         UIDocument document;
-        Label date, time, season, power, demand, battery, kLabel, brownout, toast;
+        Label date, time, season, power, demand, battery, kLabel, brownout, toast, buildStock, buildQueue;
         VisualElement batteryFill, kFill;
         readonly Button[] speedButtons = new Button[5];
         static readonly ClockSpeed[] Speeds =
@@ -47,6 +47,8 @@ namespace KardashevAscent.Presentation.UI
             kLabel = root.Q<Label>("k");
             brownout = root.Q<Label>("brownout");
             toast = root.Q<Label>("toast");
+            buildStock = root.Q<Label>("build-stock");
+            buildQueue = root.Q<Label>("build-queue");
             batteryFill = root.Q("battery-fill");
             kFill = root.Q("k-fill");
 
@@ -112,8 +114,18 @@ namespace KardashevAscent.Presentation.UI
                 : $"needed {Format.Power(sim.DemandW)}";
             string flow = sim.BatteryPowerW > 1.0 ? $"+{Format.Power(sim.BatteryPowerW)}"
                 : sim.BatteryPowerW < -1.0 ? $"−{Format.Power(-sim.BatteryPowerW)}"
-                : sim.CurtailedW > 1.0 ? "full" : "idle";
+                : sim.CurtailedW > 1.0 || sim.BuildPowerW > 1.0 ? "full" : "idle";
             battery.text = $"{soc * 100.0:0} % of {Format.Energy(sim.BatteryCapacityWh)} · {flow}";
+
+            if (buildStock != null)
+            {
+                string making = sim.BuildPowerW > 1.0 ? $"+{Format.Power(sim.BuildPowerW)}" : "no spare power";
+                buildStock.text = Format.Energy(sim.BuildStockWh);
+                buildQueue.text = sim.ConstructionQueueCount == 0
+                    ? making
+                    : $"{making} · {sim.ConstructionQueueCount} site{(sim.ConstructionQueueCount == 1 ? "" : "s")}, " +
+                      $"{Format.Energy(sim.ConstructionRemainingWh)} to go";
+            }
             kLabel.text = $"K {sim.KardashevK:0.00} · Type I at K {targetK:0.00} ({progress * 100.0:0} %)";
 
             // The grid updates its brownout state on the next tick; while paused, don't warn once panels cover demand.

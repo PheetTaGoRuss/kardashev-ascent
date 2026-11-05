@@ -7,7 +7,8 @@ namespace KardashevAscent.Simulation.Game
     [Serializable]
     public sealed class SimulationState
     {
-        public int Version = 1;
+        /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished.</summary>
+        public int Version = 2;
         public int TileCount;
         public int BaseTileId;
         public double TimeHours;
@@ -17,6 +18,8 @@ namespace KardashevAscent.Simulation.Game
         public double ColonyAverageGenerationW;
         public double ColonyDayEnergyWh;
         public double ColonyDayClockHours;
+        /// <summary>Build parts on hand, Wh.</summary>
+        public double BuildStockWh;
         public List<BuildingRecord> Buildings = new List<BuildingRecord>();
     }
 
@@ -29,5 +32,11 @@ namespace KardashevAscent.Simulation.Game
         public BuildingType Type;
         public double Tilt;
         public double Azimuth;
+        /// <summary>True for a construction site still waiting for parts.</summary>
+        public bool UnderConstruction;
+        /// <summary>Parts already put into the site, Wh.</summary>
+        public double PaidWh;
+        /// <summary>The site's place in the construction queue (0 = next to finish).</summary>
+        public int QueueOrder;
     }
 }
