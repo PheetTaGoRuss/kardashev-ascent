@@ -214,7 +214,8 @@ namespace KardashevAscent.Simulation.Solar
             double poa = poaA + poaB;
             if (poa <= 0.0)
                 return 0.0;
-            double cellT = PanelModel.CellTemperature(planet.AirTemperatureC, poa, panel.Noct);
+            double cellT = PanelModel.CellTemperature(planet.AirTemperatureC, poa, panel.Noct,
+                                                       planet.SurfacePressureEarth * panel.PressureRatio, panel.Efficiency);
             double effectiveFSpec = (poaA * fSpecA + poaB * fSpecB) / poa;
             return PanelModel.Power(poa, panel.Area, panel.Efficiency, cellT,
                                     panel.TempCoefficient, effectiveFSpec, panel.FDust);
