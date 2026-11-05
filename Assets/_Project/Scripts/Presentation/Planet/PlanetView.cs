@@ -36,6 +36,11 @@ namespace KardashevAscent.Presentation.Planet
         Mesh mesh;
         bool dirty = true;
 
+        Color32[] terrainColors;
+        Color32[] overlayColors;
+        Material overlayMaterial;
+        Material terrainMaterial;
+
         public HexSphere Sphere { get; private set; }
         public PlanetSurface Surface { get; private set; }
         public float Radius => radius;
@@ -64,15 +69,50 @@ namespace KardashevAscent.Presentation.Planet
             Sphere = HexSphere.Create(frequency);
             Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(seed, oceanFraction, iceLatitude, continentScale));
 
-            var colors = new Color32[Sphere.TileCount];
-            for (int t = 0; t < colors.Length; t++)
-                colors[t] = TileColor(Surface.Terrain[t], Surface.Elevation[t], t);
+            terrainColors = new Color32[Sphere.TileCount];
+            for (int t = 0; t < terrainColors.Length; t++)
+                terrainColors[t] = TileColor(Surface.Terrain[t], Surface.Elevation[t], t);
+
+            // New tiles: any overlay colours from before no longer line up.
+            overlayColors = null;
+            overlayMaterial = null;
+            ApplyColors();
+            Rebuilt?.Invoke();
+        }
+
+        /// <summary>
+        /// Paints the tiles with other colours (one per tile, e.g. a data map), optionally with another
+        /// material such as an unlit one so the night side stays readable. <see cref="ShowTerrain"/> undoes it.
+        /// </summary>
+        public void ShowTileColors(Color32[] colors, Material material = null)
+        {
+            EnsureBuilt();
+            if (colors == null || colors.Length != Sphere.TileCount)
+                throw new System.ArgumentException("Need exactly one colour per tile.", nameof(colors));
+            overlayColors = colors;
+            overlayMaterial = material;
+            ApplyColors();
+        }
+
+        /// <summary>Back to the terrain colours and the planet's own material.</summary>
+        public void ShowTerrain()
+        {
+            overlayColors = null;
+            overlayMaterial = null;
+            ApplyColors();
+        }
+
+        void ApplyColors()
+        {
+            var meshRenderer = GetComponent<MeshRenderer>();
+            if (terrainMaterial == null)
+                terrainMaterial = meshRenderer.sharedMaterial;
 
             ReleaseMesh();
-            mesh = PlanetMeshBuilder.Build(Sphere, radius, colors, borderWidth, borderDarken);
+            mesh = PlanetMeshBuilder.Build(Sphere, radius, overlayColors ?? terrainColors, borderWidth, borderDarken);
             mesh.hideFlags = HideFlags.DontSave;
             GetComponent<MeshFilter>().sharedMesh = mesh;
-            Rebuilt?.Invoke();
+            meshRenderer.sharedMaterial = overlayMaterial != null ? overlayMaterial : terrainMaterial;
         }
 
         /// <summary>Makes sure the tiles exist now (they are otherwise built on the first Update).</summary>
