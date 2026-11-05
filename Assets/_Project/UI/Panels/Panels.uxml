@@ -2,6 +2,8 @@
     <Style src="Panels.uss" />
     <ui:VisualElement name="screen" class="screen" picking-mode="Ignore">
 
+        <ui:VisualElement name="drag-rect" class="drag-rect hidden" picking-mode="Ignore" />
+
         <ui:VisualElement name="left" class="left-column" picking-mode="Ignore">
             <ui:VisualElement name="hover-box" class="panel box hidden">
                 <ui:Label name="hover-text" class="body" text="" />
@@ -11,7 +13,7 @@
             <ui:VisualElement name="site-box" class="panel box hidden">
                 <ui:Label name="site-title" class="value" text="Building site" />
                 <ui:Label name="site-text" class="body" text="" />
-                <ui:Label class="caption" text="Click a slot to plan a panel · Shift+click builds at once" />
+                <ui:Label class="caption" text="Click a slot to plan a panel · drag a box to select many · Ctrl+A: all" />
             </ui:VisualElement>
 
             <ui:VisualElement name="planner-box" class="panel box hidden">
@@ -23,9 +25,14 @@
                 <ui:Label name="planner-numbers" class="body numbers" text="" />
                 <ui:Label name="planner-best" class="body" text="" />
                 <ui:Label name="planner-reason" class="body warn hidden" text="" />
+                <ui:Label name="multi-text" class="body hidden" text="" />
                 <ui:VisualElement class="button-row">
                     <ui:Button name="best-button" class="action-button" text="Best angle (B)" />
                     <ui:Button name="place-button" class="action-button primary" text="Place panel (P)" />
+                </ui:VisualElement>
+                <ui:VisualElement name="multi-buttons" class="button-row hidden">
+                    <ui:Button name="remove-all-button" class="action-button" text="Remove (Del)" />
+                    <ui:Button name="reangle-button" class="action-button" text="Set angle" />
                 </ui:VisualElement>
             </ui:VisualElement>
 

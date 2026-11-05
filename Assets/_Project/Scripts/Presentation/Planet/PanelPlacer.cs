@@ -12,8 +12,9 @@ namespace KardashevAscent.Presentation.Planet
     /// appears on it; set its tilt β and facing γ with the sliders and the energy per year, capacity factor, EROI and
     /// payback update live (from <see cref="IPlanetSimulation.PreviewPanel"/>). The best angle for the tile is searched
     /// in the background (<see cref="PanelAngleSearch"/>); placing within 98 % of it earns the best-angle bonus.
-    /// The angles carry over from slot to slot on the same tile, so a row of panels is click, P, click, P
-    /// (or Shift+click to build straight away). Keys: P place, B use best angle, Delete remove.
+    /// The angles carry over from slot to slot on the same tile. With several slots selected (drag a box in the site
+    /// view), P builds on every empty one, Delete removes every panel in the selection, and "set angle" re-builds the
+    /// selected panels at the planned angles. Keys: P place, B use best angle, Delete remove.
     /// </summary>
     [RequireComponent(typeof(PlanetView))]
     public sealed class PanelPlacer : MonoBehaviour
@@ -39,6 +40,7 @@ namespace KardashevAscent.Presentation.Planet
         IPlanetSimulation simulation;
         readonly Dictionary<(int Tile, int Slot), Placed> placed = new Dictionary<(int, int), Placed>();
         SolarPanelVisual ghost;
+        readonly List<SolarPanelVisual> ghosts = new List<SolarPanelVisual>();   // one per empty selected slot
 
         int tile = -1, slot = -1;
         float tiltDeg, azimuthDeg;
@@ -100,6 +102,7 @@ namespace KardashevAscent.Presentation.Planet
             {
                 siteView.SiteChanged += OnSiteChanged;
                 siteView.SelectedSlotChanged += OnSlotSelected;
+                siteView.SelectionChanged += OnSelectionChanged;
             }
             if (runner != null)
                 runner.SimulationCreated += OnSimulationCreated;
@@ -111,6 +114,7 @@ namespace KardashevAscent.Presentation.Planet
             {
                 siteView.SiteChanged -= OnSiteChanged;
                 siteView.SelectedSlotChanged -= OnSlotSelected;
+                siteView.SelectionChanged -= OnSelectionChanged;
             }
             if (runner != null)
                 runner.SimulationCreated -= OnSimulationCreated;
@@ -132,6 +136,8 @@ namespace KardashevAscent.Presentation.Planet
         void OnDestroy()
         {
             ghost?.Destroy();
+            foreach (SolarPanelVisual g in ghosts)
+                g.Destroy();
             foreach (Placed p in placed.Values)
                 p.Visual.Destroy();
         }
@@ -182,9 +188,19 @@ namespace KardashevAscent.Presentation.Planet
             }
             previewDirty = true;
             lastPreviewTime = float.NegativeInfinity;
-            if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
-                Place();
         }
+
+        void OnSelectionChanged()
+        {
+            if (MultiSelect)
+            {
+                previewDirty = true;
+                lastPreviewTime = float.NegativeInfinity;
+            }
+        }
+
+        /// <summary>True when more than one slot is selected.</summary>
+        public bool MultiSelect => siteView != null && siteView.Selection.Count > 1;
 
         void Update()
         {
@@ -206,7 +222,13 @@ namespace KardashevAscent.Presentation.Planet
                 bestTask = null;
             }
 
-            if (slot >= 0)
+            if (MultiSelect)
+            {
+                if (Input.GetKeyDown(placeKey)) PlaceSelection();
+                if (Input.GetKeyDown(bestKey)) UseBestAngle();
+                if (Input.GetKeyDown(removeKey) || Input.GetKeyDown(KeyCode.Backspace)) RemoveSelection();
+            }
+            else if (slot >= 0)
             {
                 if (Input.GetKeyDown(placeKey)) Place();
                 if (Input.GetKeyDown(bestKey)) UseBestAngle();
@@ -253,13 +275,33 @@ namespace KardashevAscent.Presentation.Planet
         {
             if (ghost == null)
                 return;
-            if (tile < 0 || slot < 0 || SlotHasPanel || siteView.Site == null)
+            Color tint = preview.CanPlace || previewDirty ? ghostCanPlace : ghostBlocked;
+            double tilt = tiltDeg * Mathf.Deg2Rad, azimuth = azimuthDeg * Mathf.Deg2Rad;
+
+            int used = 0;
+            if (MultiSelect && siteView.Site != null)
+            {
+                foreach (int s in siteView.Selection)
+                {
+                    if (placed.ContainsKey((tile, s)))
+                        continue;
+                    if (used == ghosts.Count)
+                        ghosts.Add(new SolarPanelVisual("Panel Ghost", transform, ghostMaterial, ghostMaterial));
+                    ShowOnSlot(ghosts[used], siteView.Site, s, tilt, azimuth);
+                    ghosts[used].SetTint(tint);
+                    used++;
+                }
+            }
+            for (int i = used; i < ghosts.Count; i++)
+                ghosts[i].Hide();
+
+            if (MultiSelect || tile < 0 || slot < 0 || SlotHasPanel || siteView.Site == null)
             {
                 ghost.Hide();
                 return;
             }
-            ShowOnSlot(ghost, siteView.Site, slot, tiltDeg * Mathf.Deg2Rad, azimuthDeg * Mathf.Deg2Rad);
-            ghost.SetTint(preview.CanPlace || previewDirty ? ghostCanPlace : ghostBlocked);
+            ShowOnSlot(ghost, siteView.Site, slot, tilt, azimuth);
+            ghost.SetTint(tint);
         }
 
         void ShowOnSlot(SolarPanelVisual visual, TileSite site, int s, double tilt, double azimuth)
@@ -274,10 +316,51 @@ namespace KardashevAscent.Presentation.Planet
         /// <summary>Build a panel in the selected slot at the current angles.</summary>
         public bool Place()
         {
-            if (simulation == null || tile < 0 || slot < 0 || SlotHasPanel || siteView.Site == null)
+            if (!PlaceAt(slot))
+                return false;
+            ghost.Hide();
+            return true;
+        }
+
+        /// <summary>Remove the panel in the selected slot.</summary>
+        public bool Remove() => RemoveAt(slot);
+
+        /// <summary>Build a panel on every empty selected slot at the planned angles. Returns how many were built.</summary>
+        public int PlaceSelection()
+        {
+            int built = 0;
+            foreach (int s in new List<int>(siteView.Selection))
+                if (!placed.ContainsKey((tile, s)) && PlaceAt(s))
+                    built++;
+            return built;
+        }
+
+        /// <summary>Remove every panel in the selection. Returns how many were removed.</summary>
+        public int RemoveSelection()
+        {
+            int removed = 0;
+            foreach (int s in new List<int>(siteView.Selection))
+                if (RemoveAt(s))
+                    removed++;
+            return removed;
+        }
+
+        /// <summary>Re-build the selected panels at the planned angles. Returns how many were changed.</summary>
+        public int ReangleSelection()
+        {
+            int changed = 0;
+            foreach (int s in new List<int>(siteView.Selection))
+                if (placed.ContainsKey((tile, s)) && RemoveAt(s) && PlaceAt(s))
+                    changed++;
+            return changed;
+        }
+
+        bool PlaceAt(int s)
+        {
+            if (simulation == null || tile < 0 || s < 0 || placed.ContainsKey((tile, s)) || siteView.Site == null)
                 return false;
             double tilt = tiltDeg * Mathf.Deg2Rad, azimuth = azimuthDeg * Mathf.Deg2Rad;
-            if (!simulation.PlacePanel(tile, slot, tilt, azimuth))
+            if (!simulation.PlacePanel(tile, s, tilt, azimuth))
                 return false;
 
             PanelPreview p = simulation.PreviewPanel(tile, tilt, azimuth);
@@ -285,24 +368,23 @@ namespace KardashevAscent.Presentation.Planet
             if (rating == AngleRating.Optimal)
                 BestAnglePanels++;
 
-            var visual = new SolarPanelVisual($"Solar Panel {tile}.{slot}", transform, frameMaterial, cellMaterial);
-            ShowOnSlot(visual, siteView.Site, slot, tilt, azimuth);
-            placed[(tile, slot)] = new Placed { Tilt = tilt, Azimuth = azimuth, Preview = p, Rating = rating, Visual = visual };
+            var visual = new SolarPanelVisual($"Solar Panel {tile}.{s}", transform, frameMaterial, cellMaterial);
+            ShowOnSlot(visual, siteView.Site, s, tilt, azimuth);
+            placed[(tile, s)] = new Placed { Tilt = tilt, Azimuth = azimuth, Preview = p, Rating = rating, Visual = visual };
             preview = p;
-            ghost.Hide();
             return true;
         }
 
-        public bool Remove()
+        bool RemoveAt(int s)
         {
-            if (simulation == null || slot < 0 || !placed.TryGetValue((tile, slot), out Placed p))
+            if (simulation == null || s < 0 || !placed.TryGetValue((tile, s), out Placed p))
                 return false;
-            if (!simulation.RemovePanel(tile, slot))
+            if (!simulation.RemovePanel(tile, s))
                 return false;
             if (p.Rating == AngleRating.Optimal)
                 BestAnglePanels--;
             p.Visual.Destroy();
-            placed.Remove((tile, slot));
+            placed.Remove((tile, s));
             previewDirty = true;
             return true;
         }
@@ -310,7 +392,7 @@ namespace KardashevAscent.Presentation.Planet
         /// <summary>Set the planned angles to the best ones found for this tile.</summary>
         public void UseBestAngle()
         {
-            if (!bestReady || !best.Found || SlotHasPanel)
+            if (!bestReady || !best.Found || (!MultiSelect && SlotHasPanel))
                 return;
             tiltDeg = Mathf.Round((float)(best.Tilt * Mathf.Rad2Deg));
             azimuthDeg = Mathf.Round((float)(best.Azimuth * Mathf.Rad2Deg)) % 360f;
@@ -367,6 +449,20 @@ namespace KardashevAscent.Presentation.Planet
 
         /// <summary>Panels on the open site's tile.</summary>
         public int PanelsOnTile => simulation != null && tile >= 0 ? simulation.PanelCount(tile) : 0;
+
+        /// <summary>Selected slots: how many, how many are empty, how many hold panels.</summary>
+        public void CountSelection(out int selected, out int empty, out int withPanels)
+        {
+            selected = empty = withPanels = 0;
+            if (siteView == null)
+                return;
+            foreach (int s in siteView.Selection)
+            {
+                selected++;
+                if (placed.ContainsKey((tile, s))) withPanels++;
+                else empty++;
+            }
+        }
 
         public KeyCode PlaceKey => placeKey;
         public KeyCode BestKey => bestKey;
