@@ -8,8 +8,8 @@ using UnityEngine;
 namespace KardashevAscent.EditorTools
 {
     /// <summary>
-    /// Wires the open scene for play: a Simulation object running the planet, and the directional light
-    /// following the star. Safe to run again; it only adds what is missing.
+    /// Wires the open scene for play: a Simulation object running the planet, the directional light
+    /// following the star, and the light-potential map on the planet. Safe to run again; it only adds what is missing.
     /// Menu: Kardashev Ascent ▸ Set Up Scene.
     /// </summary>
     public static class MainSceneSetup
@@ -56,8 +56,34 @@ namespace KardashevAscent.EditorTools
             SetReference(star, "runner", runner);
             SetReference(star, "glowMaterial", AssetDatabase.LoadAssetAtPath<Material>(StarGlowMaterial));
 
+            var map = planet.GetComponent<LightPotentialOverlay>();
+            if (map == null)
+                map = Undo.AddComponent<LightPotentialOverlay>(planet.gameObject);
+            SetReference(map, "runner", runner);
+            SetReference(map, "picker", planet.GetComponent<TilePicker>());
+            SetReference(map, "mapMaterial", LoadOrCreateMaterial(MapMaterial, "KardashevAscent/PlanetTilesUnlit"));
+
             EditorSceneManager.MarkSceneDirty(planet.gameObject.scene);
-            Debug.Log("Scene set up: Simulation runner + star light. Save the scene to keep it.");
+            Debug.Log("Scene set up: Simulation runner, star light, light-potential map. Save the scene to keep it.");
+        }
+
+        const string MapMaterial = "Assets/_Project/Materials/PlanetTilesUnlit.mat";
+
+        static Material LoadOrCreateMaterial(string path, string shaderName)
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material != null)
+                return material;
+            var shader = Shader.Find(shaderName);
+            if (shader == null)
+            {
+                Debug.LogError($"Shader {shaderName} not found.");
+                return null;
+            }
+            material = new Material(shader);
+            AssetDatabase.CreateAsset(material, path);
+            AssetDatabase.SaveAssets();
+            return material;
         }
 
         static Light FindDirectionalLight()
