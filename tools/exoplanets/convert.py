@@ -46,7 +46,10 @@ DEFAULT_ASSUMED = {
     "dayLengthHours": 24.0,
     "opticalDepth": 0.32,
     "diffuseK": 0.3,
-    "airTemperatureC": None,       # None: derive from equilibrium temperature
+    "airTemperatureC": None,       # None: derive from equilibrium temperature + greenhouseOffsetK
+    "greenhouseOffsetK": 0.0,      # surface minus equilibrium temperature; Earth ~ 288 - 255 = 33 K
+    "rotationPeriodHours": None,   # sidereal spin; when set, the solar day is derived from it
+    "retrograde": False,           # spins against its orbital motion (like Venus)
     "bondAlbedo": 0.3,
     "tidallyLocked": False,
 }
@@ -106,6 +109,15 @@ def semi_major_axis(row: dict[str, Any]) -> tuple[float, str, str] | None:
     return None
 
 
+def solar_day_hours(rotation_hours: float, orbit_hours: float, retrograde: bool = False) -> float:
+    """Solar day from the sidereal spin: 1/D = 1/P_rot - 1/P_orb (prograde) or + (retrograde).
+    Earth 23.9345 h -> 24.000 h; Venus 5832.5 h retrograde -> 116.75 days."""
+    inverse = 1.0 / rotation_hours + (1.0 if retrograde else -1.0) / orbit_hours
+    if inverse <= 0.0:
+        raise ValueError("spin equals the orbit: the planet is tidally locked (set tidallyLocked instead)")
+    return 1.0 / inverse
+
+
 def equilibrium_temperature(luminosity: float, distance: float, albedo: float) -> float:
     """T_eq = [L (1 - A) / (16 pi sigma d^2)]^(1/4), K. Full heat redistribution."""
     return (luminosity * (1.0 - albedo) / (16.0 * math.pi * SIGMA * distance * distance)) ** 0.25
@@ -149,7 +161,7 @@ def convert(row: dict[str, Any] | None, entry: dict[str, Any], retrieved: str = 
     if circumbinary:
         b.warnings.append(
             f"{entry['id']}: circumbinary (cb_flag = 1). Archive stellar values describe the primary only; "
-            "the solar model is single-star, so the companion needs data from the discovery paper.")
+            "use Simulation.Solar.BinaryStar (Kepler16 holds both stars from Doyle et al. 2011).")
 
     # ---- orbit ------------------------------------------------------------------------
     a = semi_major_axis(row) if row else None
@@ -191,7 +203,13 @@ def convert(row: dict[str, Any] | None, entry: dict[str, Any], retrieved: str = 
         b.put("solar", "dayLengthHours", 0.0, "assumed", "tidally locked: star fixed in the sky, 0 = no solar day")
         b.put("solar", "obliquityDeg", 0.0, "assumed", "tidally locked: obliquity damped to ~0")
     else:
-        b.put("solar", "dayLengthHours", float(assumed["dayLengthHours"]), "assumed", "solar day, game value")
+        if assumed["rotationPeriodHours"] is not None:
+            year_hours = b.values["solar"]["yearLengthHours"]
+            day = solar_day_hours(float(assumed["rotationPeriodHours"]), year_hours, bool(assumed["retrograde"]))
+            b.put("solar", "dayLengthHours", day, "derived",
+                  "1/D = 1/P_rot -/+ 1/P_orb from the assumed sidereal rotation period")
+        else:
+            b.put("solar", "dayLengthHours", float(assumed["dayLengthHours"]), "assumed", "solar day, game value")
         b.put("solar", "obliquityDeg", float(assumed["obliquityDeg"]), "assumed", "axial tilt, game value")
     b.put("solar", "perihelionLongitudeDeg", float(assumed["perihelionLongitudeDeg"]), "assumed",
           "equinox -> periapsis, game value")
@@ -250,8 +268,9 @@ def convert(row: dict[str, Any] | None, entry: dict[str, Any], retrieved: str = 
         b.put("planet", "equilibriumTempK", teq, "derived", "[L(1-A)/(16 pi sigma a^2)]^(1/4)")
 
     if assumed["airTemperatureC"] is None:
-        b.put("solar", "airTemperatureC", teq - 273.15, "derived",
-              "equilibrium temperature as a placeholder; no greenhouse effect")
+        offset = float(assumed["greenhouseOffsetK"])
+        b.put("solar", "airTemperatureC", teq + offset - 273.15, "derived",
+              f"equilibrium temperature + greenhouse offset {offset:g} K (assumed)")
     else:
         b.put("solar", "airTemperatureC", float(assumed["airTemperatureC"]), "assumed", "game value")
 
