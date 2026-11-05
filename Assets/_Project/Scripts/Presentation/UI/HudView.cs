@@ -97,11 +97,13 @@ namespace KardashevAscent.Presentation.UI
             season.text = $"Northern {s.ToString().ToLowerInvariant()}";
 
             power.text = Format.Power(sim.GenerationW);
-            demand.text = $"needed {Format.Power(sim.DemandW)}";
+            demand.text = sim.IsColonyGrowing
+                ? $"needed {Format.Power(sim.DemandW)} · growing to {Format.Power(sim.DemandTargetW)}"
+                : $"needed {Format.Power(sim.DemandW)}";
             string flow = sim.BatteryPowerW > 1.0 ? $"charging {Format.Power(sim.BatteryPowerW)}"
                 : sim.BatteryPowerW < -1.0 ? $"draining {Format.Power(-sim.BatteryPowerW)}"
                 : sim.CurtailedW > 1.0 ? $"full, {Format.Power(sim.CurtailedW)} wasted" : "idle";
-            battery.text = $"{soc * 100.0:0} % · {flow}";
+            battery.text = $"{soc * 100.0:0} % of {Format.Energy(sim.BatteryCapacityWh)} · {flow}";
             kLabel.text = $"K {sim.KardashevK:0.00} · Type I at K {targetK:0.00} ({progress * 100.0:0} %)";
 
             // The grid updates its brownout state on the next tick; while paused, don't warn once panels cover demand.
