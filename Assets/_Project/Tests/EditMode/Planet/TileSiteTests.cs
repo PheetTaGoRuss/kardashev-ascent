@@ -61,23 +61,33 @@ namespace KardashevAscent.Simulation.Tests.Planet
             foreach (int tile in SomeTiles())
             {
                 TileSite site = TileSite.Create(Sphere, tile);
-                // Hexagons: the outer ring grows by under 20 %. Pentagons reach further into their corners.
-                double most = Sphere.IsPentagon(tile) ? 2.2 : 1.2;
+                // Hexagons: every slot within 5 % of a regular one. Pentagons' corner slots reach into their corners.
+                double most = Sphere.IsPentagon(tile) ? 2.3 : 1.001;
                 for (int s = 0; s < site.SlotCount; s++)
                 {
                     double share = site.SlotAreaShare(s);
-                    Assert.That(share, Is.InRange(0.97, most), $"tile {tile} slot {s}: a whole slot, at most stretched a little");
+                    Assert.That(share, Is.InRange(0.95, most), $"tile {tile} slot {s}: a whole slot");
                 }
             }
         }
 
         [Test]
-        public void InnerSlots_StayRegular_OnlyTheOuterRingStretches()
+        public void HexagonTile_InnerSlotsRegular_EdgeSlotsWholeSize_CornersSlightlySmaller()
         {
             TileSite site = TileSite.Create(Sphere, 1805);
-            int inner = TileSite.HexagonSlotCount(site.Rings - 2);       // rings 0..R−2
+            int inner = TileSite.HexagonSlotCount(site.Rings - 1);       // rings 0..R−1: plain hexagons
             for (int s = 0; s < inner; s++)
-                Assert.AreEqual(1.0, site.SlotAreaShare(s), 0.02, $"slot {s}");
+                Assert.AreEqual(1.0, site.SlotAreaShare(s), 1e-4, $"inner slot {s}");
+
+            int edge = 0, corner = 0;
+            for (int s = inner; s < site.SlotCount; s++)
+            {
+                double share = site.SlotAreaShare(s);
+                if (Math.Abs(share - 1.0) < 1e-4) edge++;
+                else if (share > 0.95 && share < 1.0) corner++;
+            }
+            Assert.AreEqual(18, edge, "edge slots: squared off against the edge, exactly a whole slot");
+            Assert.AreEqual(6, corner, "corner slots");
         }
 
         [Test]
