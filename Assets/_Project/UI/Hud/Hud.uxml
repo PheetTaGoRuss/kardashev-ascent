@@ -38,5 +38,6 @@
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:Label name="brownout" class="alert hidden" text="Brownout" />
+    <ui:Label name="toast" class="toast hidden" text="" />
     </ui:VisualElement>
 </ui:UXML>

@@ -26,6 +26,9 @@ namespace KardashevAscent.Simulation.Energy
 
         public double CapacityWh { get; private set; }
         public double StoredWh { get; private set; }
+
+        /// <summary>Set the stored energy (loading a saved game), clamped to 0..capacity.</summary>
+        public void SetStored(double wh) => StoredWh = Math.Max(0.0, Math.Min(CapacityWh, wh));
         public double RoundTripEfficiency { get; }
         public double CRatePerHour { get; }
 

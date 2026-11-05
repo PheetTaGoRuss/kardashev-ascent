@@ -16,11 +16,12 @@ namespace KardashevAscent.Presentation.UI
     public sealed class HudView : MonoBehaviour
     {
         [SerializeField] SimulationRunner runner;
+        [SerializeField] SaveGameController saveGame;
         [Tooltip("Seconds between text updates (the bars move every frame).")]
         [Range(0f, 1f)] [SerializeField] float textInterval = 0.1f;
 
         UIDocument document;
-        Label date, time, season, power, demand, battery, kLabel, brownout;
+        Label date, time, season, power, demand, battery, kLabel, brownout, toast;
         VisualElement batteryFill, kFill;
         readonly Button[] speedButtons = new Button[5];
         static readonly ClockSpeed[] Speeds =
@@ -45,6 +46,7 @@ namespace KardashevAscent.Presentation.UI
             battery = root.Q<Label>("battery");
             kLabel = root.Q<Label>("k");
             brownout = root.Q<Label>("brownout");
+            toast = root.Q<Label>("toast");
             batteryFill = root.Q("battery-fill");
             kFill = root.Q("k-fill");
 
@@ -67,6 +69,14 @@ namespace KardashevAscent.Presentation.UI
 
         void Update()
         {
+            if (toast != null)
+            {
+                bool showToast = saveGame != null && !string.IsNullOrEmpty(saveGame.Message)
+                    && Time.unscaledTime - saveGame.MessageTime < 2.5f;
+                toast.EnableInClassList("hidden", !showToast);
+                if (showToast)
+                    toast.text = saveGame.Message;
+            }
             IPlanetSimulation sim = runner != null ? runner.Simulation : null;
             if (sim == null || date == null)
                 return;
@@ -98,7 +108,7 @@ namespace KardashevAscent.Presentation.UI
 
             power.text = Format.Power(sim.GenerationW);
             demand.text = sim.IsColonyGrowing
-                ? $"needed {Format.Power(sim.DemandW)} · growing to {Format.Power(sim.DemandTargetW)}"
+                ? $"needed {Format.Power(sim.DemandW)} ▲"
                 : $"needed {Format.Power(sim.DemandW)}";
             string flow = sim.BatteryPowerW > 1.0 ? $"+{Format.Power(sim.BatteryPowerW)}"
                 : sim.BatteryPowerW < -1.0 ? $"−{Format.Power(-sim.BatteryPowerW)}"
