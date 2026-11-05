@@ -36,6 +36,20 @@ namespace KardashevAscent.Simulation.Energy
         public double AverageGenerationW { get; private set; }
 
         double dayEnergyWh, dayClockHours;
+
+        public double DayEnergyWh => dayEnergyWh;
+        public double DayClockHours => dayClockHours;
+
+        public void Restore(double demandW, double hoursSinceBrownout, double averageGenerationW, double dayEnergyWh, double dayClockHours)
+        {
+            DemandW = demandW;
+            HoursSinceBrownout = hoursSinceBrownout;
+            AverageGenerationW = averageGenerationW;
+            this.dayEnergyWh = dayEnergyWh;
+            this.dayClockHours = dayClockHours;
+            TargetW = Math.Max(BaseW, UsableShare * AverageGenerationW);
+            DemandW = Math.Max(DemandW, BaseW);
+        }
         public double HoursSinceBrownout { get; private set; }
         /// <summary>Length of the averaging and no-brownout window: one planet day (24 h if tidally locked).</summary>
         public double DayHours { get; }
