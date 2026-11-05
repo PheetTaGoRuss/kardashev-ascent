@@ -175,7 +175,7 @@ namespace KardashevAscent.Presentation.Planet
                 text = Describe(HoveredTile) + "\n<size=11>Click to select</size>";
             else
                 text = "Point at the planet to inspect a tile";
-            GUI.Box(new Rect(12, 12, 250, SelectedTile >= 0 || HoveredTile >= 0 ? 104 : 32), text, infoStyle);
+            GUI.Box(new Rect(12, ScreenInput.TopInset, 250, SelectedTile >= 0 || HoveredTile >= 0 ? 104 : 32), text, infoStyle);
         }
 
         string Describe(int tile)

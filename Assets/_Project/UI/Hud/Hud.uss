@@ -1,0 +1,74 @@
+.hud {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    align-items: stretch;
+}
+
+.top-bar {
+    flex-direction: row;
+    align-items: center;
+    margin: 8px 12px 0 12px;
+    padding: 6px 14px;
+    min-height: 52px;
+}
+
+.block {
+    justify-content: center;
+    padding: 0 4px;
+}
+
+.time-block { width: 170px; }
+.power-block { width: 150px; }
+.meter-block { width: 170px; }
+
+.divider {
+    width: 1px;
+    align-self: stretch;
+    margin: 2px 12px;
+    background-color: var(--panel-border);
+}
+
+.spacer { flex-grow: 1; }
+
+.battery-fill { background-color: var(--good); }
+.battery-fill.warning { background-color: var(--warning); }
+.battery-fill.critical { background-color: var(--critical); }
+.k-fill { background-color: var(--accent); }
+
+.speed-row { flex-direction: row; margin-top: 3px; }
+
+.speed-button {
+    margin: 0 0 0 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+    background-color: rgba(255, 255, 255, 0.06);
+    border-width: 1px;
+    border-color: var(--panel-border);
+    border-radius: 4px;
+}
+
+.speed-button:hover {
+    color: var(--text);
+    background-color: rgba(255, 255, 255, 0.14);
+}
+
+.speed-button.selected {
+    color: rgb(10, 14, 24);
+    background-color: var(--accent);
+    border-color: var(--accent);
+    -unity-font-style: bold;
+}
+
+.alert {
+    align-self: center;
+    margin-top: 8px;
+    padding: 6px 14px;
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: rgb(20, 10, 10);
+    background-color: var(--critical);
+    border-radius: 6px;
+}
