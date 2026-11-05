@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using KardashevAscent.Simulation.Energy;
 using KardashevAscent.Simulation.Planet;
 using KardashevAscent.Simulation.Solar;
+using KardashevAscent.Simulation.Energy;
 
 namespace KardashevAscent.Simulation.Game
 {
@@ -25,15 +25,8 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Energy to build 1 m² of panel, Wh (≈ 500 kWh/m² for silicon).</summary>
         public double EmbodiedWhPerM2 { get; set; } = 500_000.0;
         public double PanelLifetimeYears { get; set; } = 25.0;
-        /// <summary>The colony's grid: battery, RTGs and demand (tune it here).</summary>
-        public PowerGrid Grid { get; } = PowerGrid.Lander();
-
-        /// <summary>Colony demand, W.</summary>
-        public double BaseDemandW
-        {
-            get => Grid.DemandW;
-            set => Grid.DemandW = value;
-        }
+        /// <summary>Placeholder colony demand, W.</summary>
+        public double BaseDemandW { get => Grid.DemandW; set => Grid.DemandW = value; }
 
         readonly PlanetSurface surface;
         readonly PlanetSolarParams planet;
@@ -43,6 +36,9 @@ namespace KardashevAscent.Simulation.Game
         readonly Dictionary<(int Tile, int Slot), (double Tilt, double Azimuth)> panels = new Dictionary<(int, int), (double, double)>();
         readonly Dictionary<int, int> panelsPerTile = new Dictionary<int, int>();
         bool targetReached;
+
+        /// <summary>The colony's grid: battery, RTGs and demand (tune it here). Demand is constant for now.</summary>
+        public PowerGrid Grid { get; } = PowerGrid.Lander();
 
         public StubPlanetSimulation(HexSphere sphere, PlanetSurface surface, PlanetSolarParams planet,
                                     double planetRadiusM = EarthRadiusM, int baseTileId = -1)
