@@ -92,6 +92,12 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Building slots on a tile (61 on a hexagon with the default 4 rings; pentagons differ).</summary>
         int SlotCount(int tileId);
 
+        /// <summary>
+        /// Energy per "month" (twelfths of the year from periapsis, as the game clock counts) of one panel on a tile at
+        /// these angles, Wh; null where <see cref="PreviewPanel"/> could not place one. Read-only like PreviewPanel.
+        /// </summary>
+        double[] MonthlyEnergyWh(int tileId, double tilt, double azimuth);
+
         /// <summary>Build a panel in one slot of a tile. Returns false (and changes nothing) if the slot cannot take one.</summary>
         bool PlacePanel(int tileId, int slot, double tilt, double azimuth);
 

@@ -100,9 +100,10 @@ namespace KardashevAscent.EditorTools
             SetReference(placer, "ghostMaterial", LoadOrCreateMaterial(PanelGhostMaterial, "KardashevAscent/GhostTint"));
 
             SetUpHud(runner);
+            SetUpTileInfo(runner, planet, placer);
 
             EditorSceneManager.MarkSceneDirty(planet.gameObject.scene);
-            Debug.Log("Scene set up: Simulation runner, star light, light-potential map, building sites, panel placement, HUD. Save the scene to keep it.");
+            Debug.Log("Scene set up: Simulation runner, star light, light-potential map, building sites, panel placement, HUD, tile info. Save the scene to keep it.");
         }
 
         const string MapMaterial = "Assets/_Project/Materials/PlanetTilesUnlit.mat";
@@ -159,6 +160,27 @@ namespace KardashevAscent.EditorTools
                 hud = Undo.AddComponent<HudView>(go);
             }
             SetReference(hud, "runner", runner);
+        }
+
+        const string TileInfoLayoutPath = "Assets/_Project/UI/TileInfo/TileInfo.uxml";
+
+        /// <summary>The tile information panel (#13), on the same PanelSettings as the HUD.</summary>
+        static void SetUpTileInfo(SimulationRunner runner, PlanetView planet, PanelPlacer placer)
+        {
+            var view = Object.FindAnyObjectByType<TileInfoView>();
+            if (view == null)
+            {
+                var go = new GameObject("Tile Info");
+                Undo.RegisterCreatedObjectUndo(go, "Add Tile Info");
+                var document = Undo.AddComponent<UIDocument>(go);
+                document.panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
+                document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(TileInfoLayoutPath);
+                view = Undo.AddComponent<TileInfoView>(go);
+            }
+            SetReference(view, "runner", runner);
+            SetReference(view, "picker", planet.GetComponent<TilePicker>());
+            SetReference(view, "placer", placer);
+            SetReference(view, "lightMap", planet.GetComponent<LightPotentialOverlay>());
         }
 
         static Light FindDirectionalLight()
