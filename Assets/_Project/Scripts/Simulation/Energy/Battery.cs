@@ -42,6 +42,14 @@ namespace KardashevAscent.Simulation.Energy
             CapacityWh += wh;
         }
 
+        /// <summary>Take capacity away (a battery demolished); energy above the new capacity is lost.</summary>
+        public void RemoveCapacity(double wh)
+        {
+            if (wh < 0.0) throw new ArgumentOutOfRangeException(nameof(wh));
+            CapacityWh = Math.Max(0.0, CapacityWh - wh);
+            StoredWh = Math.Min(StoredWh, CapacityWh);
+        }
+
         /// <summary>Offer <paramref name="powerW"/> for <paramref name="hours"/>; returns the power actually taken from the grid, W.</summary>
         public double Charge(double powerW, double hours)
         {

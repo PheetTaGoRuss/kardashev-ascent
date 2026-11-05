@@ -46,3 +46,6 @@
     border-radius: 2px;
     background-color: rgba(143, 179, 255, 0.18);
 }
+
+.mode-row { margin-top: 6px; }
+.action-button.mode.selected { color: rgb(10, 14, 24); background-color: var(--accent); border-color: var(--accent); -unity-font-style: bold; }
