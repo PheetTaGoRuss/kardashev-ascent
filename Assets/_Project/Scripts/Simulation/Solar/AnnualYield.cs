@@ -63,15 +63,23 @@ namespace KardashevAscent.Simulation.Solar
         {
             if (sun.Up <= 0.0)
                 return 0.0;
+            double poa = PlaneOfArray(planet, panel, normal, g0, sun);
+            double cellT = PanelModel.CellTemperature(planet.AirTemperatureC, poa, panel.Noct);
+            return PanelModel.Power(poa, panel.Area, panel.Efficiency, cellT,
+                                    panel.TempCoefficient, panel.FSpec, panel.FDust);
+        }
+
+        /// <summary>Light on the panel (W/m²) from one star of above-atmosphere irradiance g0; 0 below the horizon.</summary>
+        public static double PlaneOfArray(in PlanetSolarParams planet, in PanelParams panel, Double3 normal, double g0, Double3 sun)
+        {
+            if (sun.Up <= 0.0 || g0 <= 0.0)
+                return 0.0;
             double airMass = Atmosphere.AirMassKastenYoung(SunPosition.ZenithDegrees(sun), panel.PressureRatio);
             double dni = Atmosphere.DirectNormal(g0, planet.OpticalDepth, airMass);
             double dhi = Atmosphere.DiffuseHorizontal(g0, sun.Up, planet.OpticalDepth, airMass, planet.DiffuseK);
             double ghi = Atmosphere.GlobalHorizontal(dni, dhi, sun.Up);
-            double poa = PanelModel.PlaneOfArray(dni, dhi, ghi, PanelModel.CosIncidence(normal, sun),
-                                                 panel.Tilt, panel.Albedo, panel.FShade);
-            double cellT = PanelModel.CellTemperature(planet.AirTemperatureC, poa, panel.Noct);
-            return PanelModel.Power(poa, panel.Area, panel.Efficiency, cellT,
-                                    panel.TempCoefficient, panel.FSpec, panel.FDust);
+            return PanelModel.PlaneOfArray(dni, dhi, ghi, PanelModel.CosIncidence(normal, sun),
+                                           panel.Tilt, panel.Albedo, panel.FShade);
         }
     }
 }
