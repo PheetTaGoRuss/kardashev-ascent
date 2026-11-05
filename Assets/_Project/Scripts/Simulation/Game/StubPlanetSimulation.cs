@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using KardashevAscent.Simulation.Energy;
 using KardashevAscent.Simulation.Planet;
 using KardashevAscent.Simulation.Solar;
 
@@ -8,8 +9,9 @@ namespace KardashevAscent.Simulation.Game
 {
     /// <summary>
     /// A working stand-in for the real simulation so Presentation can be built against <see cref="IPlanetSimulation"/> now.
-    /// The star's motion, panel output and previews use the real solar model; demand, battery and
-    /// K accounting are simple placeholders until the grid (#9) and K meter (#10) issues replace them.
+    /// The star's motion, panel output and previews use the real solar model, and power flows through the
+    /// colony grid (<see cref="PowerGrid"/>: battery, lander RTGs, base demand). K accounting is a placeholder
+    /// until the K meter (#10).
     /// </summary>
     public sealed class StubPlanetSimulation : IPlanetSimulation
     {
@@ -23,8 +25,15 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Energy to build 1 m² of panel, Wh (≈ 500 kWh/m² for silicon).</summary>
         public double EmbodiedWhPerM2 { get; set; } = 500_000.0;
         public double PanelLifetimeYears { get; set; } = 25.0;
-        /// <summary>Placeholder colony demand, W.</summary>
-        public double BaseDemandW { get; set; } = 400_000.0;
+        /// <summary>The colony's grid: battery, RTGs and demand (tune it here).</summary>
+        public PowerGrid Grid { get; } = PowerGrid.Lander();
+
+        /// <summary>Colony demand, W.</summary>
+        public double BaseDemandW
+        {
+            get => Grid.DemandW;
+            set => Grid.DemandW = value;
+        }
 
         readonly PlanetSurface surface;
         readonly PlanetSolarParams planet;
@@ -47,15 +56,15 @@ namespace KardashevAscent.Simulation.Game
 
             // Start mid-morning at the base: hour angle −0.4π.
             subStellarLongitudeAtStart = Sphere.Longitude(BaseTileId) + 0.4 * Math.PI;
-            BatteryCapacityWh = 4_000_000.0;
-            BatteryStoredWh = BatteryCapacityWh * 0.5;
+            Grid.BrownoutChanged += on => BrownoutChanged?.Invoke(on);
 
             double g0 = Orbit.ExtraterrestrialIrradiance(planet.Luminosity, planet.SemiMajorAxis);
             TypeITargetW = 1e16 * (g0 / EarthIrradiance) * Math.Pow(planetRadiusM / EarthRadiusM, 2.0);
 
             UpdateStar();
             IsDayAtBase = SunAt(BaseTileId).Up > 0.0;
-            GenerationW = ComputeGeneration();
+            GenerationW = ComputeGeneration() + Grid.RtgPowerW(0.0);
+            RtgW = Grid.RtgPowerW(0.0);
             DemandW = BaseDemandW;
             KardashevK = ToK(Math.Min(GenerationW, DemandW));
         }
@@ -70,9 +79,12 @@ namespace KardashevAscent.Simulation.Game
         public bool IsDayAtBase { get; private set; }
         public double GenerationW { get; private set; }
         public double DemandW { get; private set; }
-        public double BatteryStoredWh { get; private set; }
-        public double BatteryCapacityWh { get; }
-        public bool IsBrownout { get; private set; }
+        public double RtgW { get; private set; }
+        public double BatteryStoredWh => Grid.Battery.StoredWh;
+        public double BatteryCapacityWh => Grid.Battery.CapacityWh;
+        public double BatteryPowerW { get; private set; }
+        public double CurtailedW { get; private set; }
+        public bool IsBrownout => Grid.IsBrownout;
         public double KardashevK { get; private set; }
         public double TypeITargetW { get; }
 
@@ -101,37 +113,14 @@ namespace KardashevAscent.Simulation.Game
             TimeHours += dt;
             UpdateStar();
 
-            GenerationW = ComputeGeneration();
-            DemandW = BaseDemandW;
-
-            double net = GenerationW - DemandW;
-            double stored = BatteryStoredWh + net * dt;
-            double usedW;
-            if (stored > BatteryCapacityWh)
-            {
-                // Battery full: the excess is curtailed and not counted as used.
-                usedW = DemandW + (BatteryCapacityWh - BatteryStoredWh) / dt;
-                stored = BatteryCapacityWh;
-            }
-            else if (stored < 0.0)
-            {
-                // Battery empty: only what was generated plus what was left in the battery is used.
-                usedW = GenerationW + BatteryStoredWh / dt;
-                stored = 0.0;
-            }
-            else
-            {
-                usedW = Math.Max(GenerationW, DemandW);
-            }
-            BatteryStoredWh = stored;
-            KardashevK = ToK(usedW);
-
-            bool brownout = usedW < DemandW - 1e-6;
-            if (brownout != IsBrownout)
-            {
-                IsBrownout = brownout;
-                BrownoutChanged?.Invoke(brownout);
-            }
+            GridStep grid = Grid.Step(ComputeGeneration(), dt, TimeHours / Rtg.HoursPerYear);
+            GenerationW = grid.GenerationW;
+            RtgW = grid.RtgW;
+            DemandW = grid.DemandW;
+            BatteryPowerW = grid.ChargeW - grid.DischargeW;
+            CurtailedW = grid.CurtailedW;
+            // Used power: what reached the loads plus what went into the battery; curtailed power is not used.
+            KardashevK = ToK(grid.ServedW + grid.ChargeW);
 
             bool day = SunAt(BaseTileId).Up > 0.0;
             if (day != IsDayAtBase)
@@ -172,7 +161,7 @@ namespace KardashevAscent.Simulation.Game
                 return false;
             panels[(tileId, slot)] = (tilt, azimuth);
             panelsPerTile[tileId] = PanelCount(tileId) + 1;
-            GenerationW = ComputeGeneration();
+            GenerationW = ComputeGeneration() + RtgW;
             return true;
         }
 
@@ -181,7 +170,7 @@ namespace KardashevAscent.Simulation.Game
             if (!panels.Remove((tileId, slot)))
                 return false;
             panelsPerTile[tileId] = PanelCount(tileId) - 1;
-            GenerationW = ComputeGeneration();
+            GenerationW = ComputeGeneration() + RtgW;
             return true;
         }
 
