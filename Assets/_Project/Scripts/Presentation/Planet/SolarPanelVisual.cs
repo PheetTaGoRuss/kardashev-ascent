@@ -37,27 +37,24 @@ namespace KardashevAscent.Presentation.Planet
 
         public bool Visible => root.activeSelf;
 
-        /// <summary>Stand the panel on a tile with tilt β and azimuth γ (radians, γ clockwise from north).</summary>
-        public void Show(HexSphere sphere, int tile, float planetRadius, double tilt, double azimuth)
+        /// <summary>
+        /// Stand the panel on the ground at <paramref name="direction"/> (planet-local, from the centre),
+        /// <paramref name="groundRadius"/> from the centre, <paramref name="size"/> wide, with tilt β and
+        /// azimuth γ (radians, γ clockwise from north) in that spot's east/north/up frame.
+        /// </summary>
+        public void Show(Vector3 direction, float groundRadius, float size, double tilt, double azimuth)
         {
-            if (sphere == null || tile < 0)
-            {
-                Hide();
-                return;
-            }
-            double lat = sphere.Latitude(tile), lon = sphere.Longitude(tile);
+            var d = new System.Numerics.Vector3(direction.x, direction.y, direction.z);
+            double lat = PlanetFrame.Latitude(d), lon = PlanetFrame.Longitude(d);
             Vector3 up = ToUnity(PlanetFrame.FromLocal(new Double3(0, 0, 1), lat, lon));
             Vector3 north = ToUnity(PlanetFrame.FromLocal(new Double3(0, 1, 0), lat, lon));
             Vector3 normal = ToUnity(PlanetFrame.FromLocal(PanelModel.Normal(tilt, azimuth), lat, lon));
             // In the panel's plane, pointing toward where it faces (well defined even when flat).
             Vector3 along = ToUnity(PlanetFrame.FromLocal(PanelModel.Normal(tilt + 0.5 * System.Math.PI, azimuth), lat, lon));
-
-            // Size from the tile: a hexagon's circumradius is about 0.6 √area on the unit sphere.
-            float size = 0.6f * Mathf.Sqrt(4f * Mathf.PI / sphere.TileCount) * planetRadius;
             float height = 0.45f * size;
 
             Quaternion tileRotation = Quaternion.LookRotation(north, up);
-            root.transform.localPosition = up * planetRadius;
+            root.transform.localPosition = up * groundRadius;
             root.transform.localRotation = tileRotation;
             root.transform.localScale = Vector3.one * size;
 

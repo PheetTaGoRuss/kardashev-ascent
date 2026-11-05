@@ -120,12 +120,28 @@ namespace KardashevAscent.Presentation.Planet
         }
 
         /// <summary>Selects a tile (−1 clears the selection).</summary>
+        /// <summary>
+        /// Whether the selected tile gets its thick outline. The site view turns it off: up close the band would
+        /// cover the building slots.
+        /// </summary>
+        public bool ShowSelectedOutline
+        {
+            get => showSelectedOutline;
+            set
+            {
+                showSelectedOutline = value;
+                selected.Show(planet.Sphere, value ? SelectedTile : -1, planet.Radius, selectedWidth, lift * 1.5f);
+            }
+        }
+
+        bool showSelectedOutline = true;
+
         public void Select(int tile)
         {
             if (tile == SelectedTile)
                 return;
             SelectedTile = tile;
-            selected.Show(planet.Sphere, tile, planet.Radius, selectedWidth, lift * 1.5f);
+            selected.Show(planet.Sphere, showSelectedOutline ? tile : -1, planet.Radius, selectedWidth, lift * 1.5f);
             hover.Show(planet.Sphere, HoveredTile == tile ? -1 : HoveredTile, planet.Radius, hoverWidth, lift);
             SelectedTileChanged?.Invoke(tile);
         }

@@ -30,7 +30,7 @@ Presentation (MonoBehaviour)                 Simulation (C# ล้วน)
 | ดาวและช่อง | `Sphere`, `TileCount`, `GetTile(id)` → `TileInfo` (ละติจูด, ลองจิจูด, terrain, ความสูง, พื้นที่ m²), `BaseTileId` |
 | เวลาและดาวฤกษ์ | `TimeHours`, `DayLengthHours` (0 = ล็อกไทดัล), `YearLengthHours`, `StarDirection`, `IsDayAtBase` |
 | ไฟ | `GenerationW`, `DemandW`, `BatteryStoredWh`, `BatteryCapacityWh`, `IsBrownout`, `KardashevK`, `TypeITargetW` |
-| คำสั่ง | `Tick(hours)`, `PreviewPanel(tileId, tilt, azimuth)` → `PanelPreview` (kWh/ปี, capacity factor, EROI, ระยะคืนทุน, เหตุผลถ้าวางไม่ได้), `PlacePanel`, `RemovePanel`, `HasPanel` |
+| คำสั่ง | `Tick(hours)`, `PreviewPanel(tileId, tilt, azimuth)` → `PanelPreview` (kWh/ปี, capacity factor, EROI, ระยะคืนทุน, เหตุผลถ้าวางไม่ได้), `SiteRings`, `PlacePanel(tileId, slot, tilt, azimuth)`, `RemovePanel(tileId, slot)`, `HasPanel(tileId, slot)`, `PanelCount(tileId)` |
 | event | `BrownoutChanged(bool)`, `DayNightChanged(bool)` ที่ฐาน, `TargetReached()` |
 
 ## Stub สำหรับเริ่มงานภาพ
@@ -60,3 +60,10 @@ sim.DayNightChanged += isDay => Debug.Log(isDay ? "Sunrise" : "Sunset");
 
 ข้อตกลง: **`PreviewPanel` ต้องเป็นการอ่านอย่างเดียวและเรียกจาก thread อื่นได้** เพราะ `PanelPlacer` รันการค้นหานี้ใน `Task.Run`
 ระบบจำลองตัวจริงที่มาแทน stub ต้องรักษาข้อนี้ไว้
+
+## ช่องสร้างในแต่ละช่อง (site)
+
+คลิกช่องบนดาวแล้วกล้องจะบินลงไปที่ช่องนั้น (`SiteView` + `OrbitCamera.FocusSite`) ในช่องหนึ่งมีช่องย่อย (slot) เรียงเป็น hex grid
+`TileSite.Create(sphere, tileId, rings)` จำนวน `3R(R+1)+1` ช่อง ค่าเริ่มต้น R = `SiteRings` = 4 → **61 slot ต่อช่อง** ทั้งหกเหลี่ยมและห้าเหลี่ยม
+slot 0 อยู่กลาง เลขเพิ่มทีละวง แผงหนึ่งแผงต่อหนึ่ง slot ทุก slot ในช่องเดียวกันได้แสงเท่ากัน (ใช้ละติจูด/ลองจิจูดของช่อง)
+`PanelCount(tileId)` บอกจำนวนแผงในช่อง ระบบอื่นที่จะวางสิ่งก่อสร้าง (แบตเตอรี่ ฯลฯ) ควรใช้ slot ชุดเดียวกันนี้
