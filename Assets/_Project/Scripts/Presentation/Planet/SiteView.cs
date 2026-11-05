@@ -166,6 +166,8 @@ namespace KardashevAscent.Presentation.Planet
             SetSelected(-1);
             padsObject.SetActive(false);
             if (picker != null)
+                picker.HoldSelection = false;
+            if (picker != null)
                 picker.ShowSelectedOutline = true;
             orbitCamera?.LeaveSite();
             if (wasOpen)
@@ -182,6 +184,8 @@ namespace KardashevAscent.Presentation.Planet
 
             bool overUi = ScreenInput.PointerOverUi;
             SetHovered(overUi ? -1 : SlotUnder(cam, Input.mousePosition));
+            if (picker != null)
+                picker.HoldSelection = HoveredSlot >= 0;
 
             if (Input.GetMouseButtonDown(0) && !overUi)
             {
@@ -234,7 +238,7 @@ namespace KardashevAscent.Presentation.Planet
             ShowRing(hoverObject, hoverMesh, slot == SelectedSlot ? -1 : slot, 0.1f, 1.2f);
         }
 
-        // Pads: one small flat hexagon per slot, pointy-top to match the slot grid, just above the ground.
+        // Pads: each slot's shape, shrunk a little so the gaps show, just above the ground. Together they cover the tile.
         void BuildPads()
         {
             var vertices = new List<Vector3>();
@@ -243,7 +247,7 @@ namespace KardashevAscent.Presentation.Planet
             var triangles = new List<int>();
             float lift = (float)Site.Spacing * planet.Radius * 0.02f;
             for (int s = 0; s < Site.SlotCount; s++)
-                AddHexagon(s, padScale, 0f, lift, vertices, normals, colors, triangles, padColor);
+                AddSlotShape(s, padScale, 0f, lift, vertices, normals, colors, triangles, padColor);
             padsMesh.Clear();
             padsMesh.SetVertices(vertices);
             padsMesh.SetNormals(normals);
@@ -265,7 +269,7 @@ namespace KardashevAscent.Presentation.Planet
             var colors = new List<Color32>();
             var triangles = new List<int>();
             float lift = (float)Site.Spacing * planet.Radius * 0.02f * liftFactor;
-            AddHexagon(slot, 1f, width, lift, vertices, normals, colors, triangles, new Color32(255, 255, 255, 255));
+            AddSlotShape(slot, 1f, width, lift, vertices, normals, colors, triangles, new Color32(255, 255, 255, 255));
             mesh.Clear();
             mesh.SetVertices(vertices);
             mesh.SetNormals(normals);
@@ -275,56 +279,60 @@ namespace KardashevAscent.Presentation.Planet
             go.SetActive(true);
         }
 
-        /// <summary>A filled hexagon (ringWidth 0) or a ring of the given width, as a share of the circumradius.</summary>
-        void AddHexagon(int slot, float scale, float ringWidth, float lift, List<Vector3> vertices, List<Vector3> normals,
-                        List<Color32> colors, List<int> triangles, Color32 color)
+        /// <summary>
+        /// A slot's own shape (whole, half or corner piece), filled (ringWidth 0) or as a ring of the given width.
+        /// <paramref name="scale"/> shrinks it toward its centre, leaving a gap between pads.
+        /// </summary>
+        void AddSlotShape(int slot, float scale, float ringWidth, float lift, List<Vector3> vertices, List<Vector3> normals,
+                          List<Color32> colors, List<int> triangles, Color32 color)
         {
-            System.Numerics.Vector2 offset = Site.SlotOffset(slot);
-            double circumradius = Site.Spacing / Math.Sqrt(3.0) * scale;
+            System.Numerics.Vector2 centre = Site.SlotOffset(slot);
+            System.Numerics.Vector2[] outline = Site.SlotOutline(slot);
+            int n = outline.Length;
             Vector3 up = ToUnity(Site.SlotDirections[slot]);
-            var outer = new Vector3[6];
-            var inner = new Vector3[6];
-            for (int k = 0; k < 6; k++)
+            var outer = new Vector3[n];
+            var inner = new Vector3[n];
+            for (int k = 0; k < n; k++)
             {
-                double angle = (60.0 * k + 30.0) * Math.PI / 180.0;
-                outer[k] = Point(offset, circumradius, angle, lift);
-                inner[k] = Point(offset, circumradius * (1.0 - ringWidth), angle, lift);
+                outer[k] = Point(centre, outline[k], scale, lift);
+                inner[k] = Point(centre, outline[k], scale * (1f - ringWidth), lift);
             }
 
             int start = vertices.Count;
             if (ringWidth <= 0f)
             {
-                vertices.Add(Point(offset, 0.0, 0.0, lift));
+                vertices.Add(Point(centre, centre, 0f, lift));
                 normals.Add(up);
                 colors.Add(color);
-                for (int k = 0; k < 6; k++) { vertices.Add(outer[k]); normals.Add(up); colors.Add(color); }
-                // Corners turn from east toward north (counter-clockwise from outside), wound like the planet mesh.
-                for (int k = 0; k < 6; k++)
+                for (int k = 0; k < n; k++) { vertices.Add(outer[k]); normals.Add(up); colors.Add(color); }
+                // Outlines run counter-clockwise from outside, wound like the planet mesh.
+                for (int k = 0; k < n; k++)
                 {
                     triangles.Add(start);
                     triangles.Add(start + 1 + k);
-                    triangles.Add(start + 1 + (k + 1) % 6);
+                    triangles.Add(start + 1 + (k + 1) % n);
                 }
                 return;
             }
 
-            for (int k = 0; k < 6; k++)
+            for (int k = 0; k < n; k++)
             {
                 vertices.Add(outer[k]); normals.Add(up); colors.Add(color);
                 vertices.Add(inner[k]); normals.Add(up); colors.Add(color);
             }
-            for (int k = 0; k < 6; k++)
+            for (int k = 0; k < n; k++)
             {
                 int o0 = start + 2 * k, i0 = o0 + 1;
-                int o1 = start + 2 * ((k + 1) % 6), i1 = o1 + 1;
+                int o1 = start + 2 * ((k + 1) % n), i1 = o1 + 1;
                 triangles.Add(o0); triangles.Add(o1); triangles.Add(i0);
                 triangles.Add(i0); triangles.Add(o1); triangles.Add(i1);
             }
         }
 
-        Vector3 Point(System.Numerics.Vector2 slotOffset, double radius, double angle, float lift)
+        Vector3 Point(System.Numerics.Vector2 centre, System.Numerics.Vector2 point, float scale, float lift)
         {
-            Vector3 d = ToUnity(Site.DirectionAt(slotOffset.X + radius * Math.Cos(angle), slotOffset.Y + radius * Math.Sin(angle)));
+            System.Numerics.Vector2 p = centre + (point - centre) * scale;
+            Vector3 d = ToUnity(Site.DirectionAt(p.X, p.Y));
             return d * (GroundRadius(d) + lift);
         }
 

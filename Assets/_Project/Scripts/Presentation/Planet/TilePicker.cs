@@ -85,7 +85,8 @@ namespace KardashevAscent.Presentation.Planet
             if (Input.GetMouseButtonUp(0) && pressed)
             {
                 pressed = false;
-                if ((Input.mousePosition - pressPosition).sqrMagnitude <= clickTolerancePixels * clickTolerancePixels)
+                bool click = (Input.mousePosition - pressPosition).sqrMagnitude <= clickTolerancePixels * clickTolerancePixels;
+                if (click && !HoldSelection)
                     Select(HoveredTile);
             }
             if (Input.GetKeyDown(KeyCode.Escape))
@@ -135,6 +136,12 @@ namespace KardashevAscent.Presentation.Planet
         }
 
         bool showSelectedOutline = true;
+
+        /// <summary>
+        /// While true, clicks do not change the selected tile (Esc still clears it). The site view sets it while the
+        /// mouse is over one of its slots: near a tile corner the nearest tile centre can be the neighbour.
+        /// </summary>
+        public bool HoldSelection { get; set; }
 
         public void Select(int tile)
         {

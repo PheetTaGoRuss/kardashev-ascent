@@ -1,49 +1,80 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 
 namespace KardashevAscent.Simulation.Planet
 {
     /// <summary>
-    /// The building slots inside one tile: a small hex grid of <c>3R(R+1)+1</c> slots (R = rings) laid out in the
-    /// tile's tangent plane and pushed back onto the unit sphere. The grid fits inside the tile's inscribed circle,
-    /// so hexagons and the 12 pentagons get the same number of slots.
-    /// Slot 0 is the centre; slot ids grow ring by ring. Every slot shares its tile's sunlight (latitude/longitude).
+    /// The building slots inside one tile: whole slots that fill the tile exactly, with no gaps and no half pieces.
+    /// Slot centres sit on a regular hex lattice of R rings (<c>3R(R+1)+1</c> slots on a hexagonal tile), placed so the
+    /// outer row lies a quarter of a row-step (√3/4 of the spacing) in from each edge. Each slot is everything closer to
+    /// its centre than to any other (a Voronoi cell), clipped to the tile. Inside, that is an exact regular hexagon; on
+    /// the edge row it is a hexagon whose outer point is squared off flat against the edge, with exactly the same area;
+    /// the six corner slots take the corners and come out somewhat bigger.
+    /// The layout is made on a regular reference polygon and fitted onto the real tile one centre–corner–corner
+    /// triangle at a time, because the tiles of a Goldberg sphere are not quite regular. The 12 pentagon tiles use a
+    /// regular pentagon with the lattice points that fit, so their outer slots are less even.
+    /// Work is done in the tile's tangent plane (gnomonic projection keeps the tile's straight edges straight).
+    /// Slot 0 is the centre; ids grow ring by ring. Every slot shares its tile's sunlight (latitude/longitude).
     /// </summary>
     public sealed class TileSite
     {
         public const int DefaultRings = 4;
 
-        readonly Vector3 east, north;
-        readonly int[,] slotAt; // axial (q + R, r + R) → slot id, −1 outside the grid
+        static readonly double Sqrt3 = Math.Sqrt(3.0);
+        /// <summary>Gap from the outer row of centres to the tile edge, in slot spacings: half a row-step.</summary>
+        static readonly double EdgeInset = Sqrt3 / 4.0;
 
-        TileSite(int tile, int rings, Vector3 centre, Vector3 east, Vector3 north, double spacing,
-                 Vector3[] directions, int[] q, int[] r, int[,] slotAt)
+        readonly Vector3 east, north;
+        readonly Vector2[] reference;                     // regular reference polygon, grid units (slot spacing 1)
+        readonly Vector2[] centres;                       // slot centres on the reference, grid units
+        readonly Vector2[][] outlines;
+        readonly Vector2[] centroids;
+        readonly double[] areaShares;
+
+        TileSite(int tile, int rings, Vector3 centre, Vector3 east, Vector3 north, Vector2[] reference, Vector2[] centres,
+                 double spacing, Vector2[] tileOutline, Vector2[][] outlines, Vector2[] centroids, double[] areaShares)
         {
             Tile = tile;
             Rings = rings;
             Centre = centre;
             this.east = east;
             this.north = north;
+            this.reference = reference;
+            this.centres = centres;
             Spacing = spacing;
-            SlotDirections = directions;
-            AxialQ = q;
-            AxialR = r;
-            this.slotAt = slotAt;
+            TileOutline = tileOutline;
+            this.outlines = outlines;
+            this.centroids = centroids;
+            this.areaShares = areaShares;
+            SlotDirections = new Vector3[centroids.Length];
+            for (int s = 0; s < centroids.Length; s++)
+                SlotDirections[s] = DirectionAt(centroids[s].X, centroids[s].Y);
         }
 
         public int Tile { get; }
         public int Rings { get; }
         /// <summary>Unit direction to the tile's centre.</summary>
         public Vector3 Centre { get; }
-        /// <summary>Distance between neighbouring slot centres, in tangent-plane units of the unit sphere (≈ radians).</summary>
+        /// <summary>Typical distance between neighbouring slot centres, in tangent-plane units of the unit sphere (≈ radians).</summary>
         public double Spacing { get; }
-        /// <summary>Unit direction to each slot's centre.</summary>
+        /// <summary>The tile's polygon in the tangent plane, (east, north), counter-clockwise.</summary>
+        public Vector2[] TileOutline { get; }
+        /// <summary>Unit direction to each slot's centre (the centre of its area).</summary>
         public Vector3[] SlotDirections { get; }
-        public int[] AxialQ { get; }
-        public int[] AxialR { get; }
-        public int SlotCount => SlotDirections.Length;
+        public int SlotCount => centroids.Length;
 
-        public static int SlotCountFor(int rings) => 3 * rings * (rings + 1) + 1;
+        /// <summary>Slots on a hexagonal tile: 3R(R+1)+1.</summary>
+        public static int HexagonSlotCount(int rings) => 3 * rings * (rings + 1) + 1;
+
+        /// <summary>A slot's shape in the tangent plane, (east, north), counter-clockwise.</summary>
+        public Vector2[] SlotOutline(int slot) => outlines[slot];
+
+        /// <summary>Tangent-plane (east, north) centre of a slot's area.</summary>
+        public Vector2 SlotOffset(int slot) => centroids[slot];
+
+        /// <summary>A slot's area compared with a regular slot: 1 inside and along the edges, more in the corners.</summary>
+        public double SlotAreaShare(int slot) => areaShares[slot];
 
         public static TileSite Create(HexSphere sphere, int tile, int rings = DefaultRings)
         {
@@ -51,7 +82,7 @@ namespace KardashevAscent.Simulation.Planet
                 throw new ArgumentNullException(nameof(sphere));
             if (tile < 0 || tile >= sphere.TileCount)
                 throw new ArgumentOutOfRangeException(nameof(tile));
-            if (rings < 0)
+            if (rings < 1)
                 throw new ArgumentOutOfRangeException(nameof(rings));
 
             Vector3 c = Vector3.Normalize(sphere.Centers[tile]);
@@ -59,90 +90,217 @@ namespace KardashevAscent.Simulation.Planet
             Vector3 e = PlanetFrame.FromLocal(new Solar.Double3(1, 0, 0), lat, lon);
             Vector3 n = PlanetFrame.FromLocal(new Solar.Double3(0, 1, 0), lat, lon);
 
-            // Inscribed circle of the tile polygon in the tangent plane (gnomonic projection keeps edges straight).
+            // The tile's polygon in the tangent plane, counter-clockwise.
             Vector3[] corners = sphere.Corners[tile];
-            double inradius = double.MaxValue;
-            for (int i = 0; i < corners.Length; i++)
+            int k = corners.Length;
+            var polygon = new Vector2[k];
+            for (int i = 0; i < k; i++)
             {
-                Vector3 a = Project(corners[i], c), b = Project(corners[(i + 1) % corners.Length], c);
-                inradius = Math.Min(inradius, DistanceToLine(Vector3.Zero, a, b));
+                Vector3 p = corners[i] / Vector3.Dot(corners[i], c) - c;
+                polygon[i] = new Vector2(Vector3.Dot(p, e), Vector3.Dot(p, n));
+            }
+            if (SignedArea(polygon) < 0.0)
+                Array.Reverse(polygon);
+
+            // Reference polygon in grid units (spacing 1), a corner on the x axis and one every 360°/k. Its edges run
+            // parallel to rows of the lattice, EdgeInset beyond row R.
+            double refInradius = rings * Sqrt3 / 2.0 + EdgeInset;
+            double refCircumradius = refInradius / Math.Cos(Math.PI / k);
+            var reference = new Vector2[k];
+            for (int i = 0; i < k; i++)
+            {
+                double a = 2.0 * Math.PI * i / k;
+                reference[i] = new Vector2((float)(refCircumradius * Math.Cos(a)), (float)(refCircumradius * Math.Sin(a)));
             }
 
-            // The outer ring's slot pads (circumradius spacing/√3) must stay inside that circle.
-            double spacing = inradius / (rings + 1.0 / Math.Sqrt(3.0) + 0.15);
-            int count = SlotCountFor(rings);
-            var directions = new Vector3[count];
-            var qs = new int[count];
-            var rs = new int[count];
-            var slotAt = new int[2 * rings + 1, 2 * rings + 1];
-            for (int i = 0; i <= 2 * rings; i++)
-                for (int j = 0; j <= 2 * rings; j++)
-                    slotAt[i, j] = -1;
-
-            int id = 0;
-            for (int ring = 0; ring <= rings; ring++)
-            {
+            // Lattice points at least (about) EdgeInset inside every edge, ring by ring.
+            var centres = new List<Vector2>();
+            for (int ring = 0; ring <= rings + 1; ring++)
                 for (int q = -ring; q <= ring; q++)
-                {
                     for (int r = -ring; r <= ring; r++)
                     {
                         if (HexDistance(q, r) != ring)
                             continue;
-                        Vector2 p = AxialToPlane(q, r, spacing);
-                        directions[id] = Vector3.Normalize(c + e * p.X + n * p.Y);
-                        qs[id] = q;
-                        rs[id] = r;
-                        slotAt[q + rings, r + rings] = id;
-                        id++;
+                        var point = new Vector2((float)(q + r / 2.0), (float)(r * Sqrt3 / 2.0));
+                        if (Inside(point, reference, EdgeInset * 0.95))
+                            centres.Add(point);
                     }
-                }
+
+            double inradius = 0.0;
+            for (int i = 0; i < k; i++)
+                inradius += DistanceToLine(Vector2.Zero, polygon[i], polygon[(i + 1) % k]);
+            double spacing = inradius / k / refInradius;          // one grid unit on the real tile
+            double wholeSlot = Sqrt3 / 2.0;                        // area of one regular slot, grid units
+
+            var outlines = new Vector2[centres.Count][];
+            var centroids = new Vector2[centres.Count];
+            var shares = new double[centres.Count];
+            for (int s = 0; s < centres.Count; s++)
+            {
+                // Voronoi cell: the reference polygon, cut by the perpendicular bisector with every nearby centre.
+                Vector2[] cell = reference;
+                for (int o = 0; o < centres.Count; o++)
+                    if (o != s && Vector2.DistanceSquared(centres[s], centres[o]) < 4.5f)
+                        cell = ClipCloserTo(cell, centres[s], centres[o]);
+                shares[s] = SignedArea(cell) / wholeSlot;
+                outlines[s] = WarpPolygon(cell, reference, polygon);
+                centroids[s] = Centroid(outlines[s]);
             }
-            return new TileSite(tile, rings, c, e, n, spacing, directions, qs, rs, slotAt);
+            return new TileSite(tile, rings, c, e, n, reference, centres.ToArray(), spacing, polygon,
+                                outlines, centroids, shares);
         }
 
-        /// <summary>The slot under a direction from the planet's centre, or −1 if it is outside this site's grid.</summary>
+        /// <summary>The slot under a direction from the planet's centre, or −1 if it is outside this tile.</summary>
         public int FindSlot(Vector3 direction)
         {
             float along = Vector3.Dot(direction, Centre);
             if (along <= 0f)
                 return -1;
-            Vector3 p = direction / along - Centre;
-            double x = Vector3.Dot(p, east), y = Vector3.Dot(p, north);
-
-            // Inverse of AxialToPlane, then round to the nearest hex (cube rounding).
-            double rf = y / (Spacing * Math.Sqrt(3.0) / 2.0);
-            double qf = x / Spacing - rf / 2.0;
-            double sf = -qf - rf;
-            double q = Math.Round(qf), r = Math.Round(rf), s = Math.Round(sf);
-            double dq = Math.Abs(q - qf), dr = Math.Abs(r - rf), ds = Math.Abs(s - sf);
-            if (dq > dr && dq > ds) q = -r - s;
-            else if (dr > ds) r = -q - s;
-
-            int qi = (int)q, ri = (int)r;
-            if (HexDistance(qi, ri) > Rings)
+            Vector3 p3 = direction / along - Centre;
+            var p = new Vector2(Vector3.Dot(p3, east), Vector3.Dot(p3, north));
+            if (!Inside(p, TileOutline, -1e-12))
                 return -1;
-            return slotAt[qi + Rings, ri + Rings];
+
+            // Back onto the reference polygon; the slot is the nearest centre there (that is what a Voronoi cell is).
+            Vector2 g = WarpPoint(p, TileOutline, reference);
+            int best = -1;
+            float bestDistance = float.MaxValue;
+            for (int s = 0; s < centres.Length; s++)
+            {
+                float d = Vector2.DistanceSquared(g, centres[s]);
+                if (d < bestDistance)
+                {
+                    bestDistance = d;
+                    best = s;
+                }
+            }
+            return best;
         }
 
-        /// <summary>Position of a point in the tangent plane at the site centre: (east, north) offset → unit direction.</summary>
+        /// <summary>Tangent-plane (east, north) offset from the tile centre → unit direction.</summary>
         public Vector3 DirectionAt(double eastOffset, double northOffset) =>
             Vector3.Normalize(Centre + east * (float)eastOffset + north * (float)northOffset);
 
-        /// <summary>Tangent-plane (east, north) offset of a slot centre.</summary>
-        public Vector2 SlotOffset(int slot) => AxialToPlane(AxialQ[slot], AxialR[slot], Spacing);
+        /// <summary>The part of a convex polygon closer to <paramref name="mine"/> than to <paramref name="other"/>.</summary>
+        static Vector2[] ClipCloserTo(Vector2[] polygon, Vector2 mine, Vector2 other)
+        {
+            Vector2 mid = (mine + other) * 0.5f, away = other - mine;
+            double Value(Vector2 p) => Vector2.Dot(p - mid, away);    // ≤ 0 on my side
 
-        static Vector2 AxialToPlane(int q, int r, double spacing) =>
-            new Vector2((float)(spacing * (q + r / 2.0)), (float)(spacing * r * Math.Sqrt(3.0) / 2.0));
+            var output = new List<Vector2>(polygon.Length + 1);
+            for (int i = 0; i < polygon.Length; i++)
+            {
+                Vector2 a = polygon[i], b = polygon[(i + 1) % polygon.Length];
+                double va = Value(a), vb = Value(b);
+                if (va <= 0.0)
+                    output.Add(a);
+                if ((va < 0.0 && vb > 0.0) || (va > 0.0 && vb < 0.0))
+                    output.Add(a + (b - a) * (float)(va / (va - vb)));
+            }
+            return output.ToArray();
+        }
+
+        /// <summary>
+        /// Moves a polygon from one fan of centre–corner–corner triangles (around the origin) to another with the same
+        /// number of corners, triangle by triangle. Points are added where edges cross a spoke so the result is exact.
+        /// </summary>
+        static Vector2[] WarpPolygon(Vector2[] polygon, Vector2[] from, Vector2[] to)
+        {
+            var dense = new List<Vector2>(polygon.Length * 2);
+            var crossings = new List<(double T, Vector2 P)>();
+            for (int i = 0; i < polygon.Length; i++)
+            {
+                Vector2 a = polygon[i], b = polygon[(i + 1) % polygon.Length];
+                dense.Add(a);
+                crossings.Clear();
+                Vector2 d = b - a;
+                foreach (Vector2 spoke in from)
+                {
+                    // a + t·d = u·spoke
+                    double denom = Cross(d, spoke);
+                    if (Math.Abs(denom) < 1e-12)
+                        continue;
+                    double t = Cross(spoke, a) / denom;
+                    double u = Cross(d, a) / denom;
+                    if (t > 1e-6 && t < 1.0 - 1e-6 && u > 0.0)
+                        crossings.Add((t, a + d * (float)t));
+                }
+                crossings.Sort((x, y) => x.T.CompareTo(y.T));
+                foreach (var cr in crossings)
+                    dense.Add(cr.P);
+            }
+            var result = new Vector2[dense.Count];
+            for (int i = 0; i < dense.Count; i++)
+                result[i] = WarpPoint(dense[i], from, to);
+            return result;
+        }
+
+        /// <summary>One point from the fan of <paramref name="from"/> to the fan of <paramref name="to"/>, barycentric.</summary>
+        static Vector2 WarpPoint(Vector2 p, Vector2[] from, Vector2[] to)
+        {
+            int k = from.Length, best = 0;
+            double bestWorst = double.NegativeInfinity, bestU = 0.0, bestV = 0.0;
+            for (int i = 0; i < k; i++)
+            {
+                Vector2 a = from[i], b = from[(i + 1) % k];
+                double det = Cross(a, b);
+                double u = Cross(p, b) / det, v = Cross(a, p) / det;   // p = u·a + v·b, the centre is the origin
+                double worst = Math.Min(Math.Min(u, v), 1.0 - u - v);
+                if (worst > bestWorst)
+                {
+                    bestWorst = worst;
+                    best = i;
+                    bestU = u;
+                    bestV = v;
+                }
+            }
+            return to[best] * (float)bestU + to[(best + 1) % k] * (float)bestV;
+        }
+
+        /// <summary>True if <paramref name="p"/> is at least <paramref name="margin"/> inside every edge of a convex CCW polygon.</summary>
+        static bool Inside(Vector2 p, Vector2[] convex, double margin)
+        {
+            for (int i = 0; i < convex.Length; i++)
+            {
+                Vector2 a = convex[i], b = convex[(i + 1) % convex.Length];
+                double distance = Cross(b - a, p - a) / (b - a).Length();
+                if (distance < margin)
+                    return false;
+            }
+            return true;
+        }
+
+        static double Cross(Vector2 a, Vector2 b) => (double)a.X * b.Y - (double)a.Y * b.X;
+
+        static double SignedArea(Vector2[] polygon)
+        {
+            double area = 0.0;
+            for (int i = 0; i < polygon.Length; i++)
+                area += Cross(polygon[i], polygon[(i + 1) % polygon.Length]);
+            return area / 2.0;
+        }
+
+        static Vector2 Centroid(Vector2[] polygon)
+        {
+            double cx = 0.0, cy = 0.0, area = 0.0;
+            for (int i = 0; i < polygon.Length; i++)
+            {
+                Vector2 a = polygon[i], b = polygon[(i + 1) % polygon.Length];
+                double cross = Cross(a, b);
+                area += cross;
+                cx += (a.X + b.X) * cross;
+                cy += (a.Y + b.Y) * cross;
+            }
+            area /= 2.0;
+            return new Vector2((float)(cx / (6.0 * area)), (float)(cy / (6.0 * area)));
+        }
 
         static int HexDistance(int q, int r) => Math.Max(Math.Abs(q), Math.Max(Math.Abs(r), Math.Abs(q + r)));
 
-        static Vector3 Project(Vector3 direction, Vector3 centre) =>
-            direction / Vector3.Dot(direction, centre) - centre;
-
-        static double DistanceToLine(Vector3 point, Vector3 a, Vector3 b)
+        static double DistanceToLine(Vector2 point, Vector2 a, Vector2 b)
         {
-            Vector3 ab = b - a;
-            Vector3 t = a + ab * (Vector3.Dot(point - a, ab) / ab.LengthSquared());
+            Vector2 ab = b - a;
+            Vector2 t = a + ab * (Vector2.Dot(point - a, ab) / ab.LengthSquared());
             return (point - t).Length();
         }
     }
