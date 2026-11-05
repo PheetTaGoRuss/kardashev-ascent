@@ -312,6 +312,7 @@ namespace KardashevAscent.Presentation.CameraControl
                 return tiles +
                        "Drag (mouse) or WASD/arrows: rotate\n" +
                        "Mouse wheel or Q/E: zoom\n" +
+                       "F: flashlight cursor on/off\n" +
                        "R: reset view    H: hide this help";
             }
         }
