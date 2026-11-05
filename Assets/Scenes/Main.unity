@@ -427,6 +427,7 @@ GameObject:
   - component: {fileID: 765499586}
   - component: {fileID: 765499585}
   - component: {fileID: 765499589}
+  - component: {fileID: 765499590}
   m_Layer: 0
   m_Name: Planet
   m_TagString: Untagged
@@ -553,6 +554,23 @@ MonoBehaviour:
   selectedWidth: 0.24
   lift: 0.0015
   showInfo: 1
+--- !u!114 &765499590
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 765499584}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 671e783e6c0faba4e80ee982c613adb7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.Planet.LightPotentialOverlay
+  runner: {fileID: 123573323}
+  mapMaterial: {fileID: 2100000, guid: 4551fb14d7967044da8ae4c165c73f6d, type: 2}
+  picker: {fileID: 765499589}
+  toggleKey: 109
+  showOnStart: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
