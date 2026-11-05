@@ -79,10 +79,15 @@ def cos_incidence(normal, sun) -> float:
 
 # Step 5 - atmosphere
 
+MAX_ZENITH_FOR_AIR_MASS = 90.0  # Kasten-Young gives 37.92 here; beyond it the formula breaks down
+
+
 def air_mass_kasten_young(zenith_degrees: float, pressure_ratio: float = 1.0) -> float:
-    """Relative air mass (Kasten & Young 1989) times p/p0 for altitude."""
-    cz = math.cos(math.radians(zenith_degrees))
-    return pressure_ratio / (cz + 0.50572 * (96.07995 - zenith_degrees) ** -1.6364)
+    """Relative air mass (Kasten & Young 1989) times p/p0 for altitude.
+    Zenith is clamped to 90 deg so the result is never NaN; callers set DNI = 0 below the horizon."""
+    z = min(zenith_degrees, MAX_ZENITH_FOR_AIR_MASS)
+    cz = math.cos(math.radians(z))
+    return pressure_ratio / (cz + 0.50572 * (96.07995 - z) ** -1.6364)
 
 
 def direct_normal(g0: float, optical_depth: float, air_mass: float) -> float:
@@ -91,7 +96,8 @@ def direct_normal(g0: float, optical_depth: float, air_mass: float) -> float:
 
 def diffuse_horizontal(g0: float, cos_zenith: float, optical_depth: float,
                        air_mass: float, k: float) -> float:
-    """Game model: DHI = k * G0 * cos z * (1 - exp(-tau * AM))."""
+    """Game model: DHI = k * G0 * cos z * (1 - exp(-tau * AM)). k is clamped to 0..1 so GHI <= G0 cos z."""
+    k = max(0.0, min(1.0, k))
     return k * g0 * cos_zenith * (1.0 - math.exp(-optical_depth * air_mass))
 
 
@@ -144,8 +150,9 @@ class Planet:
     day_length_h: float = 24.0                 # solar day
     year_length_h: float = 365.256 * 24.0
     optical_depth: float = 0.32                # clear-sky broadband tau (game value)
-    diffuse_k: float = 0.4
+    diffuse_k: float = 0.3                     # Earth ~0.3 (0.25-0.4); dusty Mars-like 0.6-0.8 [inference]
     air_temperature_c: float = 25.0
+    tidally_locked: bool = False               # star fixed in the sky; day_length_h is ignored
 
 
 @dataclass
@@ -162,6 +169,7 @@ class Panel:
     f_spec: float = 1.0
     f_dust: float = 0.0
     f_shade: float = 1.0
+    longitude: float = 0.0                     # only matters on tidally locked planets
 
 
 @dataclass
@@ -170,11 +178,37 @@ class AnnualYield:
     capacity_factor: float
 
 
-def annual_yield(planet: Planet, panel: Panel, days: int = 24, slots: int = 48) -> AnnualYield:
-    """Energy per year from `days` representative days x `slots` time steps per day."""
+ECCENTRIC_ORBIT = 0.3   # above this, sample more of the orbit (fast pass near periapsis)
+
+
+def sample_days(planet: Planet) -> int:
+    return 72 if planet.eccentricity > ECCENTRIC_ORBIT else 24
+
+
+def _instant_power(planet: Planet, panel: Panel, normal, g0: float, sun) -> float:
+    """Panel power (W) for one star direction; 0 when the star is below the horizon."""
+    if sun[2] <= 0.0:
+        return 0.0
+    am = air_mass_kasten_young(zenith_deg(sun), panel.pressure_ratio)
+    dni = direct_normal(g0, planet.optical_depth, am)
+    dhi = diffuse_horizontal(g0, sun[2], planet.optical_depth, am, planet.diffuse_k)
+    ghi = global_horizontal(dni, dhi, sun[2])
+    poa = plane_of_array(dni, dhi, ghi, cos_incidence(normal, sun), panel.tilt, panel.albedo, panel.f_shade)
+    t_cell = cell_temperature(planet.air_temperature_c, poa, panel.noct)
+    return panel_power(poa, panel.area, panel.efficiency, t_cell, panel.temp_coeff, panel.f_spec, panel.f_dust)
+
+
+def annual_yield(planet: Planet, panel: Panel, days: int = 0, slots: int = 48) -> AnnualYield:
+    """Energy per orbit from `days` points spread evenly in mean anomaly (0 = 24, or 72 when e > 0.3).
+    Rotating planets: `slots` time steps across each of those days.
+    Tidally locked planets: the star stays put, at hour angle h = panel longitude - sub-stellar
+    longitude (0 here, no libration), so each sample stands for 1/days of the orbit."""
+    if days <= 0:
+        days = sample_days(planet)
+    if not planet.tidally_locked and planet.day_length_h <= 0.0:
+        raise ValueError("day_length_h must be > 0 unless the planet is tidally locked")
+
     normal = panel_normal(panel.tilt, panel.azimuth)
-    dt_h = planet.day_length_h / slots
-    day_weight = (planet.year_length_h / planet.day_length_h) / days
     total_wh = 0.0
     for d in range(days):
         M = 2.0 * math.pi * (d + 0.5) / days
@@ -182,21 +216,15 @@ def annual_yield(planet: Planet, panel: Panel, days: int = 24, slots: int = 48) 
         r = orbital_distance(planet.semi_major_axis, planet.eccentricity, nu)
         g0 = extraterrestrial_irradiance(planet.luminosity, r)
         decl = declination(planet.obliquity, nu + planet.perihelion_longitude)
+        if planet.tidally_locked:
+            sun = sun_direction(panel.latitude, decl, panel.longitude)
+            total_wh += _instant_power(planet, panel, normal, g0, sun) * planet.year_length_h / days
+            continue
+        dt_h = planet.day_length_h / slots
         day_wh = 0.0
         for s in range(slots):
-            h = hour_angle((s + 0.5) * dt_h, planet.day_length_h)
-            sun = sun_direction(panel.latitude, decl, h)
-            if sun[2] <= 0.0:
-                continue
-            am = air_mass_kasten_young(zenith_deg(sun), panel.pressure_ratio)
-            dni = direct_normal(g0, planet.optical_depth, am)
-            dhi = diffuse_horizontal(g0, sun[2], planet.optical_depth, am, planet.diffuse_k)
-            ghi = global_horizontal(dni, dhi, sun[2])
-            poa = plane_of_array(dni, dhi, ghi, cos_incidence(normal, sun),
-                                 panel.tilt, panel.albedo, panel.f_shade)
-            t_cell = cell_temperature(planet.air_temperature_c, poa, panel.noct)
-            day_wh += panel_power(poa, panel.area, panel.efficiency, t_cell,
-                                  panel.temp_coeff, panel.f_spec, panel.f_dust) * dt_h
-        total_wh += day_wh * day_weight
+            sun = sun_direction(panel.latitude, decl, hour_angle((s + 0.5) * dt_h, planet.day_length_h))
+            day_wh += _instant_power(planet, panel, normal, g0, sun) * dt_h
+        total_wh += day_wh * (planet.year_length_h / planet.day_length_h) / days
     rated_w = panel.area * panel.efficiency * STC_IRRADIANCE
     return AnnualYield(total_wh, total_wh / (rated_w * planet.year_length_h))
