@@ -26,12 +26,18 @@ HOURS_PER_DAY = 24.0
 
 # Archive columns the fetcher asks for (table pscomppars).
 COLUMNS = [
-    "pl_name", "hostname", "sy_snum", "sy_pnum",
+    "pl_name", "hostname", "sy_snum", "sy_pnum", "cb_flag",
     "pl_orbper", "pl_orbsmax", "pl_orbeccen", "pl_insol", "pl_eqt",
     "pl_rade", "pl_bmasse",
     "st_teff", "st_rad", "st_mass", "st_lum", "st_spectype", "st_age",
     "sy_dist", "discoverymethod",
 ]
+
+# Radius bins for "does this planet have a surface to build on" (Earth radii).
+# Most planets above ~1.6 R_earth are not rocky (Rogers 2015, ApJ 801:41); the radius
+# valley sits at ~1.5-2.0 R_earth (Fulton et al. 2017, AJ 154:109).
+ROCKY_MAX_REARTH = 1.6
+GASEOUS_MIN_REARTH = 2.0
 
 # Game values that the archive cannot give. planets.json may override any of them per planet.
 DEFAULT_ASSUMED = {
@@ -136,10 +142,14 @@ def convert(row: dict[str, Any] | None, entry: dict[str, Any], retrieved: str = 
         b.put("star", "ageGyr", age, "nasa", "st_age")
     star_count = int(_num(row, "sy_snum") or assumed.get("starCount", 1))
     b.put("star", "count", star_count, "nasa" if row else "assumed", "sy_snum")
-    if star_count > 1:
+    # cb_flag = 1 only when the planet orbits both stars (P-type). A multi-star system with
+    # cb_flag = 0 (e.g. Proxima Cen b) has a distant companion whose light is negligible.
+    cb_flag = _num(row, "cb_flag")
+    circumbinary = bool(cb_flag) if cb_flag is not None else bool(assumed.get("circumbinary", False))
+    if circumbinary:
         b.warnings.append(
-            f"{entry['id']}: {star_count} stars in system. Archive stellar values describe the primary only; "
-            "the solar model is single-star, so a circumbinary planet needs companion data from its discovery paper.")
+            f"{entry['id']}: circumbinary (cb_flag = 1). Archive stellar values describe the primary only; "
+            "the solar model is single-star, so the companion needs data from the discovery paper.")
 
     # ---- orbit ------------------------------------------------------------------------
     a = semi_major_axis(row) if row else None
@@ -174,7 +184,8 @@ def convert(row: dict[str, Any] | None, entry: dict[str, Any], retrieved: str = 
     # ---- rotation (never measured for exoplanets) --------------------------------------
     locked = bool(assumed["tidallyLocked"])
     b.put("flags", "tidallyLocked", locked, "assumed", "rotation is not measured for exoplanets")
-    b.put("flags", "circumbinary", star_count > 1, "nasa" if row else "assumed", "sy_snum > 1")
+    b.put("flags", "circumbinary", circumbinary, "nasa" if cb_flag is not None else "assumed",
+          "cb_flag: planet orbits both stars")
     if locked:
         # A synchronously rotating planet has no solar day; 0 means "infinite" (JsonUtility has no null).
         b.put("solar", "dayLengthHours", 0.0, "assumed", "tidally locked: star fixed in the sky, 0 = no solar day")
@@ -213,6 +224,17 @@ def convert(row: dict[str, Any] | None, entry: dict[str, Any], retrieved: str = 
         b.put("planet", "massKg", mass_e * EARTH_MASS, "assumed", "planets.json")
     elif mass_e is not None:
         b.put("planet", "massKg", mass_e * EARTH_MASS, "nasa", "pl_bmasse (may be M sin i)")
+    if radius_e is not None:
+        if radius_e <= ROCKY_MAX_REARTH:
+            surface = "rocky"
+        elif radius_e < GASEOUS_MIN_REARTH:
+            surface = "uncertain"
+        else:
+            surface = "gaseous"
+            b.warnings.append(f"{entry['id']}: radius {radius_e:.2f} R_earth, almost certainly no solid surface; "
+                              "build on a hypothetical moon or treat the planet as fictional rocky.")
+        b.put("flags", "surface", surface, "derived",
+              f"radius bins: rocky <= {ROCKY_MAX_REARTH}, gaseous >= {GASEOUS_MIN_REARTH} R_earth (Rogers 2015; Fulton 2017)")
     if radius_e is not None and mass_e is not None:
         r, m = radius_e * EARTH_RADIUS, mass_e * EARTH_MASS
         b.put("planet", "surfaceGravityMs2", G * m / (r * r), "derived", "g = GM/R^2")
