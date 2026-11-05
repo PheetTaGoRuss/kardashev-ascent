@@ -10,22 +10,28 @@ namespace KardashevAscent.Simulation.Solar
         public readonly double Eccentricity;
         /// <summary>Axial tilt ε.</summary>
         public readonly double Obliquity;
-        /// <summary>Star's ecliptic longitude at periapsis (equinox → periapsis), so λ = ν + this. Earth ≈ 283°.</summary>
+        /// <summary>
+        /// Star's ecliptic longitude at periapsis as seen from the planet (equinox → periapsis), so λ = ν + this.
+        /// Earth ≈ 282.94°. Not the archive's argument of periastron ω, which is measured differently.
+        /// </summary>
         public readonly double PerihelionLongitude;
-        /// <summary>Solar day, hours.</summary>
+        /// <summary>Solar day, hours. Ignored (may be 0) when <see cref="TidallyLocked"/>.</summary>
         public readonly double DayLengthHours;
         /// <summary>Orbital period, hours.</summary>
         public readonly double YearLengthHours;
         /// <summary>Broadband optical depth τ of the atmosphere.</summary>
         public readonly double OpticalDepth;
-        /// <summary>k in the game's diffuse-light model (≈ 0.3–0.5).</summary>
+        /// <summary>k in the game's diffuse-light model: Earth ≈ 0.3 (0.25–0.4); dusty Mars-like 0.6–0.8 [inference].</summary>
         public readonly double DiffuseK;
         /// <summary>Air temperature used for cell heating, °C (constant for now).</summary>
         public readonly double AirTemperatureC;
+        /// <summary>One face always toward the star: it stays put in the sky and there is no day cycle.</summary>
+        public readonly bool TidallyLocked;
 
         public PlanetSolarParams(double luminosity, double semiMajorAxis, double eccentricity, double obliquity,
                                  double perihelionLongitude, double dayLengthHours, double yearLengthHours,
-                                 double opticalDepth, double diffuseK, double airTemperatureC)
+                                 double opticalDepth, double diffuseK, double airTemperatureC,
+                                 bool tidallyLocked = false)
         {
             Luminosity = luminosity;
             SemiMajorAxis = semiMajorAxis;
@@ -37,6 +43,7 @@ namespace KardashevAscent.Simulation.Solar
             OpticalDepth = opticalDepth;
             DiffuseK = diffuseK;
             AirTemperatureC = airTemperatureC;
+            TidallyLocked = tidallyLocked;
         }
     }
 
@@ -64,11 +71,14 @@ namespace KardashevAscent.Simulation.Solar
         public readonly double FDust;
         /// <summary>Direct-light factor: 0 in shadow, 1 in full sun.</summary>
         public readonly double FShade;
+        /// <summary>Radians, + east. Only matters on tidally locked planets (where the star hangs over longitude 0).</summary>
+        public readonly double Longitude;
 
         public PanelParams(double latitude, double tilt, double azimuth, double area, double efficiency,
                            double noct, double tempCoefficient, double albedo, double pressureRatio,
-                           double fSpec, double fDust, double fShade)
+                           double fSpec, double fDust, double fShade, double longitude = 0.0)
         {
+            Longitude = longitude;
             Latitude = latitude;
             Tilt = tilt;
             Azimuth = azimuth;
