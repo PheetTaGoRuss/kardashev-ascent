@@ -80,6 +80,45 @@ namespace KardashevAscent.Presentation.Planet
             return mesh;
         }
 
+        /// <summary>
+        /// A ring around one tile's edge, raised slightly above the surface, for hover/selection highlights.
+        /// </summary>
+        /// <param name="width">Ring width as a fraction of the centre-to-corner distance.</param>
+        /// <param name="lift">Height above the surface as a fraction of the radius.</param>
+        public static void BuildOutline(Mesh target, HexSphere sphere, int tile, float radius, float width, float lift)
+        {
+            target.Clear();
+            if (tile < 0 || tile >= sphere.TileCount)
+                return;
+
+            var cornerDirs = sphere.Corners[tile];
+            int k = cornerDirs.Length;
+            float r = radius * (1f + lift);
+            Vector3 n = ToUnity(sphere.Centers[tile]);
+            Vector3 center = n * r;
+            var vertices = new Vector3[2 * k];
+            var normals = new Vector3[2 * k];
+            var indices = new int[6 * k];
+            for (int i = 0; i < k; i++)
+            {
+                Vector3 outer = ToUnity(cornerDirs[i]) * r;
+                vertices[i] = outer;
+                vertices[k + i] = Vector3.Lerp(outer, center, width);
+                normals[i] = normals[k + i] = n;
+            }
+            for (int i = 0; i < k; i++)
+            {
+                int j = (i + 1) % k;
+                int o = 6 * i;
+                indices[o] = k + i; indices[o + 1] = i; indices[o + 2] = j;
+                indices[o + 3] = k + i; indices[o + 4] = j; indices[o + 5] = k + j;
+            }
+            target.vertices = vertices;
+            target.normals = normals;
+            target.triangles = indices;
+            target.RecalculateBounds();
+        }
+
         static void Add(List<Vector3> v, List<Vector3> n, List<Color32> c, Vector3 position, Vector3 normal, Color32 color)
         {
             v.Add(position);

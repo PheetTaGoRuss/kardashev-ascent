@@ -64,6 +64,40 @@ namespace KardashevAscent.Simulation.Tests.Planet
             }
         }
 
+        [TestCase(3, 20000)]
+        [TestCase(24, 20000)]
+        [TestCase(48, 5000)]
+        public void FindTile_MatchesFullScan_FromAnyStart(int frequency, int lookups)
+        {
+            var sphere = HexSphere.Create(frequency);
+            var random = new Random(1234);
+            int previous = 0;
+            for (int i = 0; i < lookups; i++)
+            {
+                var dir = new Vector3((float)Gaussian(random), (float)Gaussian(random), (float)Gaussian(random));
+                int start = i % 3 == 0 ? random.Next(sphere.TileCount) : previous;
+                int found = sphere.FindTile(dir * 3.7f, start);
+
+                float bestDot = float.NegativeInfinity;
+                for (int t = 0; t < sphere.TileCount; t++)
+                    bestDot = Math.Max(bestDot, Vector3.Dot(sphere.Centers[t], dir));
+                Assert.AreEqual(bestDot, Vector3.Dot(sphere.Centers[found], dir), 1e-6f,
+                                $"direction {dir} from tile {start} found {found}, not the closest tile");
+                previous = found;
+            }
+        }
+
+        [Test]
+        public void FindTile_TileCentreFindsItself()
+        {
+            var sphere = HexSphere.Create(16);
+            for (int t = 0; t < sphere.TileCount; t++)
+                Assert.AreEqual(t, sphere.FindTile(sphere.Centers[t], (t * 7919) % sphere.TileCount));
+        }
+
+        static double Gaussian(Random r) =>
+            Math.Sqrt(-2.0 * Math.Log(1.0 - r.NextDouble())) * Math.Cos(2.0 * Math.PI * r.NextDouble());
+
         [Test]
         public void Create_RejectsZeroFrequency()
         {

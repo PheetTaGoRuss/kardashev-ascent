@@ -34,6 +34,33 @@ namespace KardashevAscent.Simulation.Planet
         /// <summary>Longitude of a tile's centre, radians (−π..π, 0 toward +Z, + toward +X).</summary>
         public double Longitude(int tile) => Math.Atan2(Centers[tile].X, Centers[tile].Z);
 
+        /// <summary>
+        /// The tile containing a direction from the planet's centre (need not be normalised).
+        /// Walks from <paramref name="startTile"/> toward the direction, so passing the previous answer
+        /// makes repeated lookups (mouse hover) take a few steps instead of a full scan.
+        /// </summary>
+        public int FindTile(Vector3 direction, int startTile = 0)
+        {
+            int current = startTile >= 0 && startTile < Centers.Length ? startTile : 0;
+            float best = Vector3.Dot(Centers[current], direction);
+            while (true)
+            {
+                int next = -1;
+                foreach (int n in Neighbors[current])
+                {
+                    float d = Vector3.Dot(Centers[n], direction);
+                    if (d > best)
+                    {
+                        best = d;
+                        next = n;
+                    }
+                }
+                if (next < 0)
+                    return current;
+                current = next;
+            }
+        }
+
         HexSphere(int frequency, Vector3[] centers, Vector3[][] corners, int[][] neighbors)
         {
             Frequency = frequency;
