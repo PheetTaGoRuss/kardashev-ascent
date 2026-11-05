@@ -1,6 +1,5 @@
 using System;
 using KardashevAscent.Presentation.Planet;
-using KardashevAscent.Presentation.UI;
 using KardashevAscent.Simulation.Game;
 using KardashevAscent.Simulation.Planet;
 using KardashevAscent.Simulation.Solar;
@@ -41,10 +40,8 @@ namespace KardashevAscent.Presentation.Game
 
         [Header("Time")]
         [SerializeField] ClockSpeed startSpeed = ClockSpeed.HourPerSecond;
-        [SerializeField] bool showClock = true;
 
         ClockSpeed speedBeforePause = ClockSpeed.HourPerSecond;
-        GUIStyle clockStyle;
 
         public IPlanetSimulation Simulation { get; private set; }
         public SimClock Clock { get; private set; }
@@ -134,86 +131,6 @@ namespace KardashevAscent.Presentation.Game
                 return double.NaN;
             double subStellar = PlanetFrame.Longitude(Simulation.StarDirection);
             return SimClock.LocalTime24(Simulation.Sphere.Longitude(tileId) - subStellar);
-        }
-
-        void OnGUI()
-        {
-            if (!showClock || Simulation == null)
-                return;
-            clockStyle ??= new GUIStyle(GUI.skin.box)
-            {
-                alignment = TextAnchor.UpperLeft,
-                fontSize = 13,
-                padding = new RectOffset(10, 10, 8, 8),
-                normal = { textColor = new Color(0.9f, 0.93f, 1f) },
-            };
-
-            double t = Simulation.TimeHours;
-            Season season = SimClock.SeasonFromEclipticLongitude(SimClock.EclipticLongitude(SolarParams, t));
-            double local = LocalTimeAt(Simulation.BaseTileId);
-            string timeOfDay = double.IsNaN(local)
-                ? "Star fixed in the sky (tidally locked)"
-                : $"{(int)local:00}:{(int)(local % 1.0 * 60.0):00} at base · {(Simulation.IsDayAtBase ? "day" : "night")}";
-            string text =
-                $"Year {Clock.YearIndex(t) + 1}, day {Clock.DayOfYear(t)}\n" +
-                $"{timeOfDay}\n" +
-                $"Northern {season.ToString().ToLowerInvariant()}\n" +
-                $"Speed: {SpeedLabel(Clock.Speed)}\n" +
-                "<size=11>Space: pause · 1–5: speed</size>";
-            clockStyle.richText = true;
-            var clockRect = new Rect(Screen.width - 262, 12, 250, 104);
-            ScreenInput.Block(clockRect);
-            GUI.Box(clockRect, text, clockStyle);
-
-            // Grid read-out until the HUD (#12) replaces it.
-            var powerRect = new Rect(Screen.width - 262, 122, 250, 88);
-            ScreenInput.Block(powerRect);
-            GUI.Box(powerRect, PowerText(), clockStyle);
-        }
-
-        string PowerText()
-        {
-            IPlanetSimulation sim = Simulation;
-            double soc = sim.BatteryCapacityWh > 0 ? sim.BatteryStoredWh / sim.BatteryCapacityWh : 0.0;
-            int filled = Mathf.Clamp(Mathf.RoundToInt((float)soc * 10f), 0, 10);
-            string bar = new string('█', filled) + new string('░', 10 - filled);
-            string flow = sim.BatteryPowerW > 1.0 ? $"▲ {FormatPower(sim.BatteryPowerW)}"
-                : sim.BatteryPowerW < -1.0 ? $"▼ {FormatPower(-sim.BatteryPowerW)}" : "idle";
-            string status = sim.IsBrownout
-                ? "<color=#ff8a7a><b>⚠ Brownout: not enough power</b></color>"
-                : sim.CurtailedW > 1.0 ? $"<size=11>Wasted (battery full): {FormatPower(sim.CurtailedW)}</size>"
-                : "<size=11>Grid OK</size>";
-            return $"Power  <b>{FormatPower(sim.GenerationW)}</b> made · {FormatPower(sim.DemandW)} needed\n" +
-                   $"Battery {soc * 100.0:0} %  {bar}\n" +
-                   $"<size=11>{FormatEnergy(sim.BatteryStoredWh)} of {FormatEnergy(sim.BatteryCapacityWh)} · {flow}</size>\n" +
-                   status;
-        }
-
-        static string FormatPower(double w)
-        {
-            if (w >= 1e9) return $"{w / 1e9:0.00} GW";
-            if (w >= 1e6) return $"{w / 1e6:0.00} MW";
-            if (w >= 1e3) return $"{w / 1e3:0} kW";
-            return $"{w:0} W";
-        }
-
-        static string FormatEnergy(double wh)
-        {
-            if (wh >= 1e9) return $"{wh / 1e9:0.00} GWh";
-            if (wh >= 1e6) return $"{wh / 1e6:0.00} MWh";
-            return $"{wh / 1e3:0} kWh";
-        }
-
-        static string SpeedLabel(ClockSpeed speed)
-        {
-            switch (speed)
-            {
-                case ClockSpeed.Paused: return "paused";
-                case ClockSpeed.RealTime: return "real time";
-                case ClockSpeed.HourPerSecond: return "1 hour / second";
-                case ClockSpeed.DayPerSecond: return "1 day / second";
-                default: return "1 year / minute";
-            }
         }
     }
 }
