@@ -132,7 +132,5 @@ namespace KardashevAscent.Presentation.Game
             double subStellar = PlanetFrame.Longitude(Simulation.StarDirection);
             return SimClock.LocalTime24(Simulation.Sphere.Longitude(tileId) - subStellar);
         }
-
-        }
     }
 }
