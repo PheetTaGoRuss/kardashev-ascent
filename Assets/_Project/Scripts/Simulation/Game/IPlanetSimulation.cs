@@ -54,6 +54,15 @@ namespace KardashevAscent.Simulation.Game
 
         double BatteryCapacityWh { get; }
 
+        /// <summary>Of <see cref="GenerationW"/>, the part from the lander's RTGs, W.</summary>
+        double RtgW { get; }
+
+        /// <summary>Battery power now: + charging, − discharging, W.</summary>
+        double BatteryPowerW { get; }
+
+        /// <summary>Surplus thrown away because the battery is full or at its power limit, W.</summary>
+        double CurtailedW { get; }
+
         /// <summary>True while demand is not being met (generation + battery fall short).</summary>
         bool IsBrownout { get; }
 

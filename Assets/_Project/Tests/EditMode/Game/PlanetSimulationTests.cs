@@ -93,7 +93,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             var sim = Create();
             Assert.AreEqual(TerrainType.Lowland, sim.GetTile(sim.BaseTileId).Terrain);
             Assert.IsTrue(sim.IsDayAtBase);
-            Assert.AreEqual(0.0, sim.GenerationW);
+            Assert.AreEqual(440.0, sim.RtgW, 1e-9, "four fresh MMRTGs on the lander");
+            Assert.AreEqual(sim.RtgW, sim.GenerationW, 1e-9, "no panels yet: only the RTGs");
             Assert.AreEqual(1e16, sim.TypeITargetW, 1e14, "Earth-like planet's Type I target");
         }
 
@@ -129,7 +130,7 @@ namespace KardashevAscent.Simulation.Tests.Game
 
             Assert.IsTrue(sim.RemovePanel(sim.BaseTileId, 0));
             Assert.IsFalse(sim.RemovePanel(sim.BaseTileId, 0));
-            Assert.AreEqual(0.0, sim.GenerationW);
+            Assert.AreEqual(sim.RtgW, sim.GenerationW, 1e-9, "back to the RTGs alone");
         }
 
         [Test]
@@ -141,9 +142,9 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.AreEqual(61, slots, "4 rings by default");
 
             Assert.IsTrue(sim.PlacePanel(tile, 0, tilt, Math.PI));
-            double one = sim.GenerationW;
+            double one = sim.GenerationW - sim.RtgW;
             Assert.IsTrue(sim.PlacePanel(tile, slots - 1, tilt, Math.PI));
-            Assert.AreEqual(2.0 * one, sim.GenerationW, one * 1e-9, "two equal panels make twice the power");
+            Assert.AreEqual(2.0 * one + sim.RtgW, sim.GenerationW, one * 1e-9, "two equal panels make twice the power");
             Assert.AreEqual(2, sim.PanelCount(tile));
 
             Assert.IsFalse(sim.PlacePanel(tile, slots, tilt, Math.PI), "no slot past the last");
@@ -174,7 +175,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             bool? brownout = null;
             sim.BrownoutChanged += b => brownout = b;
 
-            sim.Tick(12.0);
+            // The lander battery lasts about 19 hours on its own.
+            sim.Tick(24.0);
 
             Assert.AreEqual(true, brownout);
             Assert.IsTrue(sim.IsBrownout);

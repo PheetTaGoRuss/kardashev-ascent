@@ -1,5 +1,6 @@
 using System;
 using KardashevAscent.Presentation.Planet;
+using KardashevAscent.Presentation.UI;
 using KardashevAscent.Simulation.Game;
 using KardashevAscent.Simulation.Planet;
 using KardashevAscent.Simulation.Solar;
@@ -160,7 +161,47 @@ namespace KardashevAscent.Presentation.Game
                 $"Speed: {SpeedLabel(Clock.Speed)}\n" +
                 "<size=11>Space: pause · 1–5: speed</size>";
             clockStyle.richText = true;
-            GUI.Box(new Rect(Screen.width - 262, 12, 250, 104), text, clockStyle);
+            var clockRect = new Rect(Screen.width - 262, 12, 250, 104);
+            ScreenInput.Block(clockRect);
+            GUI.Box(clockRect, text, clockStyle);
+
+            // Grid read-out until the HUD (#12) replaces it.
+            var powerRect = new Rect(Screen.width - 262, 122, 250, 88);
+            ScreenInput.Block(powerRect);
+            GUI.Box(powerRect, PowerText(), clockStyle);
+        }
+
+        string PowerText()
+        {
+            IPlanetSimulation sim = Simulation;
+            double soc = sim.BatteryCapacityWh > 0 ? sim.BatteryStoredWh / sim.BatteryCapacityWh : 0.0;
+            int filled = Mathf.Clamp(Mathf.RoundToInt((float)soc * 10f), 0, 10);
+            string bar = new string('█', filled) + new string('░', 10 - filled);
+            string flow = sim.BatteryPowerW > 1.0 ? $"▲ {FormatPower(sim.BatteryPowerW)}"
+                : sim.BatteryPowerW < -1.0 ? $"▼ {FormatPower(-sim.BatteryPowerW)}" : "idle";
+            string status = sim.IsBrownout
+                ? "<color=#ff8a7a><b>⚠ Brownout: not enough power</b></color>"
+                : sim.CurtailedW > 1.0 ? $"<size=11>Wasted (battery full): {FormatPower(sim.CurtailedW)}</size>"
+                : "<size=11>Grid OK</size>";
+            return $"Power  <b>{FormatPower(sim.GenerationW)}</b> made · {FormatPower(sim.DemandW)} needed\n" +
+                   $"Battery {soc * 100.0:0} %  {bar}\n" +
+                   $"<size=11>{FormatEnergy(sim.BatteryStoredWh)} of {FormatEnergy(sim.BatteryCapacityWh)} · {flow}</size>\n" +
+                   status;
+        }
+
+        static string FormatPower(double w)
+        {
+            if (w >= 1e9) return $"{w / 1e9:0.00} GW";
+            if (w >= 1e6) return $"{w / 1e6:0.00} MW";
+            if (w >= 1e3) return $"{w / 1e3:0} kW";
+            return $"{w:0} W";
+        }
+
+        static string FormatEnergy(double wh)
+        {
+            if (wh >= 1e9) return $"{wh / 1e9:0.00} GWh";
+            if (wh >= 1e6) return $"{wh / 1e6:0.00} MWh";
+            return $"{wh / 1e3:0} kWh";
         }
 
         static string SpeedLabel(ClockSpeed speed)
