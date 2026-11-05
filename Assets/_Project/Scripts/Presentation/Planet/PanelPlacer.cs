@@ -28,6 +28,7 @@ namespace KardashevAscent.Presentation.Planet
     {
         [SerializeField] SimulationRunner runner;
         [SerializeField] SiteView siteView;
+        [SerializeField] SaveGameController saveGame;
         [SerializeField] Material frameMaterial;
         [SerializeField] Material cellMaterial;
         [Tooltip("See-through material for the placement preview (KardashevAscent/GhostTint).")]
@@ -123,6 +124,8 @@ namespace KardashevAscent.Presentation.Planet
             }
             if (runner != null)
                 runner.SimulationCreated += OnSimulationCreated;
+            if (saveGame != null)
+                saveGame.Loaded += RebuildFromSimulation;
         }
 
         void OnDisable()
@@ -135,6 +138,8 @@ namespace KardashevAscent.Presentation.Planet
             }
             if (runner != null)
                 runner.SimulationCreated -= OnSimulationCreated;
+            if (saveGame != null)
+                saveGame.Loaded -= RebuildFromSimulation;
         }
 
         void Start()
@@ -175,6 +180,42 @@ namespace KardashevAscent.Presentation.Planet
             BestAnglePanels = 0;
             simulation = runner.Simulation;
             OnSiteChanged(siteView.Site != null ? siteView.Site.Tile : -1);
+        }
+
+        /// <summary>Re-draw every building from the simulation (after a load).</summary>
+        public void RebuildFromSimulation()
+        {
+            if (runner == null || runner.Simulation == null)
+                return;
+            foreach (Placed p in placed.Values)
+                p.Visual.Destroy();
+            placed.Clear();
+            foreach (BatteryVisual b in batteryVisuals.Values)
+                b.Destroy();
+            batteryVisuals.Clear();
+            BestAnglePanels = 0;
+            simulation = runner.Simulation;
+            foreach (BuildingRecord r in simulation.CaptureState().Buildings)
+            {
+                TileSite site = siteView.SiteFor(r.Tile);
+                if (r.Type == BuildingType.Battery)
+                {
+                    var yard = new BatteryVisual($"Battery {r.Tile}.{r.Slot}", transform, frameMaterial, cellMaterial);
+                    ShowBattery(yard, site, r.Slot);
+                    batteryVisuals[(r.Tile, r.Slot)] = yard;
+                }
+                else if (r.Type == BuildingType.SolarPanel)
+                {
+                    PanelPreview p = simulation.PreviewPanel(r.Tile, r.Tilt, r.Azimuth);
+                    AngleRating rating = r.Tile == tile ? RatingOf(p) : AngleRating.Off;
+                    if (rating == AngleRating.Optimal)
+                        BestAnglePanels++;
+                    var visual = new SolarPanelVisual($"Solar Panel {r.Tile}.{r.Slot}", transform, frameMaterial, cellMaterial);
+                    ShowOnSlot(visual, site, r.Slot, r.Tilt, r.Azimuth);
+                    placed[(r.Tile, r.Slot)] = new Placed { Tilt = r.Tilt, Azimuth = r.Azimuth, Preview = p, Rating = rating, Visual = visual };
+                }
+            }
+            previewDirty = true;
         }
 
         void OnSiteChanged(int newTile)
@@ -362,7 +403,7 @@ namespace KardashevAscent.Presentation.Planet
             System.Numerics.Vector3 d = site.SlotDirections[s];
             var direction = new Vector3(d.X, d.Y, d.Z);
             float size = (float)site.Spacing * planet.Radius * panelScale;
-            visual.Show(direction, siteView.GroundRadius(direction), size);
+            visual.Show(direction, siteView.GroundRadius(site, direction), size);
         }
 
         void ShowOnSlot(SolarPanelVisual visual, TileSite site, int s, double tilt, double azimuth)
@@ -371,7 +412,7 @@ namespace KardashevAscent.Presentation.Planet
             var direction = new Vector3(d.X, d.Y, d.Z);
             // Every slot is a whole one, so every panel is the same size.
             float size = (float)site.Spacing * planet.Radius * panelScale;
-            visual.Show(direction, siteView.GroundRadius(direction), size, tilt, azimuth);
+            visual.Show(direction, siteView.GroundRadius(site, direction), size, tilt, azimuth);
         }
 
         /// <summary>Build in the selected slot: a panel at the current angles, or a battery yard.</summary>

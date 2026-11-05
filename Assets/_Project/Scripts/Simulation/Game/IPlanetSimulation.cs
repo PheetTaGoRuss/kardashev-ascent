@@ -130,6 +130,12 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Remove whatever stands in a slot (panel or battery). Returns false if it was empty.</summary>
         bool RemoveBuilding(int tileId, int slot);
 
+        /// <summary>Everything needed to restore this simulation later (time, buildings, battery, colony).</summary>
+        SimulationState CaptureState();
+
+        /// <summary>Replace this simulation's state with a captured one. Returns false (and changes nothing) if it was captured on a different planet layout (tile count or base tile differ).</summary>
+        bool RestoreState(SimulationState state);
+
         // Events (raised during Tick or a command)
 
         /// <summary>Brownout started (true) or ended (false).</summary>
