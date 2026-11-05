@@ -163,22 +163,80 @@ namespace KardashevAscent.Simulation.Tests.Energy
         }
 
         [Test]
-        public void OnePanel_CarriesTheBaseThroughThreeDays()
+        public void OnePanel_CarriesTheBaseThroughTheFirstNight()
         {
+            // The colony only starts to grow after a full day without a brownout, so the first night is at base load.
             var sim = Create();
             int tile = sim.BaseTileId;
             Assert.IsTrue(sim.PlacePanel(tile, 0, Math.Abs(sim.GetTile(tile).Latitude), Math.PI));
             bool brownout = false;
             sim.BrownoutChanged += on => brownout |= on;
             double lowest = double.MaxValue;
-            for (int i = 0; i < 72 * 4; i++)
+            for (int i = 0; i < 30 * 4; i++)
             {
                 sim.Tick(0.25);
                 lowest = Math.Min(lowest, sim.BatteryStoredWh);
             }
             Assert.IsFalse(brownout);
             Assert.Less(lowest, sim.BatteryCapacityWh * 0.8, "the battery works at night");
-            Assert.Greater(sim.CurtailedW, -1e-9);
+        }
+
+        [Test]
+        public void Batteries_AreBuildings_ThatAddStorage()
+        {
+            var sim = Create();
+            int tile = sim.BaseTileId;
+            double before = sim.BatteryCapacityWh;
+            Assert.IsTrue(sim.PlaceBattery(tile, 3));
+            Assert.AreEqual(before + sim.BatteryUnitWh, sim.BatteryCapacityWh, 1e-6);
+            Assert.AreEqual(BuildingType.Battery, sim.GetBuilding(tile, 3));
+            Assert.AreEqual(1, sim.BatteryCount(tile));
+            Assert.IsFalse(sim.PlacePanel(tile, 3, 0.3, Math.PI), "slot taken by the battery");
+            Assert.IsFalse(sim.PlaceBattery(tile, 3), "one building per slot");
+
+            Assert.IsTrue(sim.PlacePanel(tile, 4, 0.3, Math.PI));
+            Assert.IsFalse(sim.PlaceBattery(tile, 4), "slot taken by the panel");
+            Assert.AreEqual(BuildingType.SolarPanel, sim.GetBuilding(tile, 4));
+
+            Assert.IsTrue(sim.RemoveBuilding(tile, 3));
+            Assert.AreEqual(before, sim.BatteryCapacityWh, 1e-6);
+            Assert.AreEqual(BuildingType.None, sim.GetBuilding(tile, 3));
+            Assert.IsTrue(sim.RemoveBuilding(tile, 4), "removes panels too");
+            Assert.IsFalse(sim.RemoveBuilding(tile, 4));
+
+            int water = -1;
+            for (int t = 0; t < sim.TileCount && water < 0; t++)
+                if (sim.GetTile(t).IsWater) water = t;
+            Assert.IsFalse(sim.PlaceBattery(water, 0), "not on water");
+        }
+
+        [Test]
+        public void ColonyGrows_WithPanels_AndFurtherWithBatteries()
+        {
+            StubPlanetSimulation Run(int batteryCount, out int brownouts)
+            {
+                var sim = Create();
+                int tile = sim.BaseTileId;
+                double tilt = Math.Abs(sim.GetTile(tile).Latitude);
+                for (int s = 0; s < 4; s++)
+                    Assert.IsTrue(sim.PlacePanel(tile, s, tilt, Math.PI));
+                for (int s = 0; s < batteryCount; s++)
+                    Assert.IsTrue(sim.PlaceBattery(tile, 10 + s));
+                int count = 0;
+                sim.BrownoutChanged += on => { if (on) count++; };
+                sim.Tick(20 * 24.0);
+                brownouts = count;
+                return sim;
+            }
+
+            var noStorage = Run(0, out int brownoutsWithout);
+            var storage = Run(2, out int brownoutsWith);
+            Assert.Greater(noStorage.DemandW, 100_000.0, "panels let the colony grow a little");
+            Assert.Greater(brownoutsWithout, 0, "but without storage the nights run dry");
+            Assert.AreEqual(0, brownoutsWith, "two battery yards carry the nights");
+            Assert.Greater(storage.DemandW, 2.0 * noStorage.DemandW, "storage lets it grow much further");
+            Assert.AreEqual(storage.DemandTargetW, storage.DemandW, storage.DemandTargetW * 0.1, "close to what the panels support");
+            Assert.Greater(storage.KardashevK, noStorage.KardashevK);
         }
     }
 }

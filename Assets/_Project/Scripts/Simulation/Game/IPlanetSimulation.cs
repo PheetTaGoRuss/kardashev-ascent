@@ -47,8 +47,14 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Power being generated now, W.</summary>
         double GenerationW { get; }
 
-        /// <summary>Power the colony needs now, W.</summary>
+        /// <summary>Power the colony needs now, W. It grows toward <see cref="DemandTargetW"/> (see ColonyDemand).</summary>
         double DemandW { get; }
+
+        /// <summary>What the colony's demand is growing toward: a share of its average generation, W.</summary>
+        double DemandTargetW { get; }
+
+        /// <summary>True while the colony is growing (a day with no brownout and room to grow).</summary>
+        bool IsColonyGrowing { get; }
 
         double BatteryStoredWh { get; }
 
@@ -109,6 +115,21 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Panels built on a tile (all slots).</summary>
         int PanelCount(int tileId);
 
+        /// <summary>What stands in a slot.</summary>
+        BuildingType GetBuilding(int tileId, int slot);
+
+        /// <summary>Storage added by one battery building, Wh.</summary>
+        double BatteryUnitWh { get; }
+
+        /// <summary>Build a battery in an empty land slot (adds <see cref="BatteryUnitWh"/> to the colony battery).</summary>
+        bool PlaceBattery(int tileId, int slot);
+
+        /// <summary>Batteries built on a tile.</summary>
+        int BatteryCount(int tileId);
+
+        /// <summary>Remove whatever stands in a slot (panel or battery). Returns false if it was empty.</summary>
+        bool RemoveBuilding(int tileId, int slot);
+
         // Events (raised during Tick or a command)
 
         /// <summary>Brownout started (true) or ended (false).</summary>
@@ -119,6 +140,14 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>Generation reached <see cref="TypeITargetW"/>.</summary>
         event Action TargetReached;
+    }
+
+    /// <summary>What a building slot holds.</summary>
+    public enum BuildingType
+    {
+        None,
+        SolarPanel,
+        Battery,
     }
 
     /// <summary>Static facts about one tile.</summary>

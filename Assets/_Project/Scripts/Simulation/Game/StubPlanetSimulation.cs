@@ -37,8 +37,14 @@ namespace KardashevAscent.Simulation.Game
         readonly Dictionary<int, int> panelsPerTile = new Dictionary<int, int>();
         bool targetReached;
 
-        /// <summary>The colony's grid: battery, RTGs and demand (tune it here). Demand is constant for now.</summary>
+        /// <summary>The colony's grid: battery, RTGs and demand (tune it here). Demand comes from <see cref="Colony"/>.</summary>
         public PowerGrid Grid { get; } = PowerGrid.Lander();
+
+        /// <summary>How the colony's demand grows with its power supply.</summary>
+        public ColonyDemand Colony { get; private set; }
+
+        readonly HashSet<(int Tile, int Slot)> batteries = new HashSet<(int, int)>();
+        readonly Dictionary<int, int> batteriesPerTile = new Dictionary<int, int>();
 
         public StubPlanetSimulation(HexSphere sphere, PlanetSurface surface, PlanetSolarParams planet,
                                     double planetRadiusM = EarthRadiusM, int baseTileId = -1)
@@ -53,6 +59,7 @@ namespace KardashevAscent.Simulation.Game
             // Start mid-morning at the base: hour angle −0.4π.
             subStellarLongitudeAtStart = Sphere.Longitude(BaseTileId) + 0.4 * Math.PI;
             Grid.BrownoutChanged += on => BrownoutChanged?.Invoke(on);
+            Colony = new ColonyDemand(Grid.DemandW, planet.DayLengthHours);
 
             double g0 = Orbit.ExtraterrestrialIrradiance(planet.Luminosity, planet.SemiMajorAxis);
             TypeITargetW = 1e16 * (g0 / EarthIrradiance) * Math.Pow(planetRadiusM / EarthRadiusM, 2.0);
@@ -117,6 +124,8 @@ namespace KardashevAscent.Simulation.Game
             CurtailedW = grid.CurtailedW;
             // Used power: what reached the loads plus what went into the battery; curtailed power is not used.
             KardashevK = ToK(grid.ServedW + grid.ChargeW);
+            Colony.Step(dt, grid.GenerationW, grid.ServedW, grid.IsBrownout);
+            Grid.DemandW = Colony.DemandW;
 
             bool day = SunAt(BaseTileId).Up > 0.0;
             if (day != IsDayAtBase)
@@ -152,7 +161,7 @@ namespace KardashevAscent.Simulation.Game
 
         public bool PlacePanel(int tileId, int slot, double tilt, double azimuth)
         {
-            if (tileId < 0 || tileId >= TileCount || slot < 0 || slot >= SlotCount(tileId) || HasPanel(tileId, slot)
+            if (tileId < 0 || tileId >= TileCount || slot < 0 || slot >= SlotCount(tileId) || GetBuilding(tileId, slot) != BuildingType.None
                 || !PreviewPanel(tileId, tilt, azimuth).CanPlace)
                 return false;
             panels[(tileId, slot)] = (tilt, azimuth);
@@ -189,6 +198,41 @@ namespace KardashevAscent.Simulation.Game
         readonly Dictionary<int, TileSite> sites = new Dictionary<int, TileSite>();
 
         public int PanelCount(int tileId) => panelsPerTile.TryGetValue(tileId, out int n) ? n : 0;
+
+        public double DemandTargetW => Colony.TargetW;
+        public bool IsColonyGrowing => Colony.IsGrowing;
+
+        /// <summary>One battery yard: about five grid-scale Li-ion units (≈ 4 MWh each) on a slot, Wh.</summary>
+        public double BatteryUnitWh { get; set; } = 20_000_000.0;
+
+        public BuildingType GetBuilding(int tileId, int slot) =>
+            panels.ContainsKey((tileId, slot)) ? BuildingType.SolarPanel
+            : batteries.Contains((tileId, slot)) ? BuildingType.Battery
+            : BuildingType.None;
+
+        public bool PlaceBattery(int tileId, int slot)
+        {
+            if (tileId < 0 || tileId >= TileCount || slot < 0 || slot >= SlotCount(tileId)
+                || GetTile(tileId).IsWater || GetBuilding(tileId, slot) != BuildingType.None)
+                return false;
+            batteries.Add((tileId, slot));
+            batteriesPerTile[tileId] = BatteryCount(tileId) + 1;
+            Grid.Battery.AddCapacity(BatteryUnitWh);
+            return true;
+        }
+
+        public int BatteryCount(int tileId) => batteriesPerTile.TryGetValue(tileId, out int n) ? n : 0;
+
+        public bool RemoveBuilding(int tileId, int slot)
+        {
+            if (RemovePanel(tileId, slot))
+                return true;
+            if (!batteries.Remove((tileId, slot)))
+                return false;
+            batteriesPerTile[tileId] = BatteryCount(tileId) - 1;
+            Grid.Battery.RemoveCapacity(BatteryUnitWh);
+            return true;
+        }
 
         void UpdateStar()
         {
