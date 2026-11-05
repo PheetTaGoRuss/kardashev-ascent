@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using KardashevAscent.Simulation.Civilization;
 using KardashevAscent.Simulation.Planet;
 using KardashevAscent.Simulation.Solar;
 
@@ -13,8 +14,6 @@ namespace KardashevAscent.Simulation.Game
     /// </summary>
     public sealed class StubPlanetSimulation : IPlanetSimulation
     {
-        const double EarthRadiusM = 6.371e6;
-        const double EarthIrradiance = 1361.0;
         const double MaxStepHours = 0.25;
 
         /// <summary>Placeholder farm size for one placed panel, m².</summary>
@@ -35,7 +34,7 @@ namespace KardashevAscent.Simulation.Game
         bool targetReached;
 
         public StubPlanetSimulation(HexSphere sphere, PlanetSurface surface, PlanetSolarParams planet,
-                                    double planetRadiusM = EarthRadiusM, int baseTileId = -1)
+                                    double planetRadiusM = Kardashev.EarthRadiusM, int baseTileId = -1)
         {
             Sphere = sphere ?? throw new ArgumentNullException(nameof(sphere));
             this.surface = surface ?? throw new ArgumentNullException(nameof(surface));
@@ -50,7 +49,7 @@ namespace KardashevAscent.Simulation.Game
             BatteryStoredWh = BatteryCapacityWh * 0.5;
 
             double g0 = Orbit.ExtraterrestrialIrradiance(planet.Luminosity, planet.SemiMajorAxis);
-            TypeITargetW = 1e16 * (g0 / EarthIrradiance) * Math.Pow(planetRadiusM / EarthRadiusM, 2.0);
+            TypeITargetW = Kardashev.TypeITargetW(g0, planetRadiusM);
 
             UpdateStar();
             IsDayAtBase = SunAt(BaseTileId).Up > 0.0;
@@ -242,6 +241,6 @@ namespace KardashevAscent.Simulation.Game
             return best;
         }
 
-        static double ToK(double watts) => (Math.Log10(Math.Max(watts, 1.0)) - 6.0) / 10.0;
+        static double ToK(double watts) => Kardashev.K(watts);
     }
 }
