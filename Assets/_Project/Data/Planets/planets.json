@@ -43,7 +43,9 @@
         "surface": "rocky"
       },
       "look": {
-        "terrainSeed": 7
+        "terrainSeed": 7,
+        "water": "liquid",
+        "oceanFraction": 0.62
       },
       "provenance": [
         {
@@ -170,6 +172,16 @@
           "field": "look.terrainSeed",
           "origin": "assumed",
           "note": "terrain noise seed, game value"
+        },
+        {
+          "field": "look.water",
+          "origin": "assumed",
+          "note": "surface water is not measurable for exoplanets yet"
+        },
+        {
+          "field": "look.oceanFraction",
+          "origin": "assumed",
+          "note": "share of the surface in low basins (seas, or dry basins), game value"
         }
       ]
     },
@@ -215,7 +227,9 @@
         "surface": "rocky"
       },
       "look": {
-        "terrainSeed": 1697376206
+        "terrainSeed": 1697376206,
+        "water": "none",
+        "oceanFraction": 0.5
       },
       "provenance": [
         {
@@ -357,6 +371,16 @@
           "field": "look.terrainSeed",
           "origin": "assumed",
           "note": "terrain noise seed from the planet id"
+        },
+        {
+          "field": "look.water",
+          "origin": "assumed",
+          "note": "surface water is not measurable for exoplanets yet"
+        },
+        {
+          "field": "look.oceanFraction",
+          "origin": "assumed",
+          "note": "share of the surface in low basins (seas, or dry basins), game value"
         }
       ]
     },
@@ -403,7 +427,9 @@
         "surface": "rocky"
       },
       "look": {
-        "terrainSeed": 1841868279
+        "terrainSeed": 1841868279,
+        "water": "liquid",
+        "oceanFraction": 0.85
       },
       "provenance": [
         {
@@ -550,6 +576,16 @@
           "field": "look.terrainSeed",
           "origin": "assumed",
           "note": "terrain noise seed from the planet id"
+        },
+        {
+          "field": "look.water",
+          "origin": "assumed",
+          "note": "surface water is not measurable for exoplanets yet"
+        },
+        {
+          "field": "look.oceanFraction",
+          "origin": "assumed",
+          "note": "share of the surface in low basins (seas, or dry basins), game value"
         }
       ]
     },
@@ -595,7 +631,9 @@
         "surface": "gaseous"
       },
       "look": {
-        "terrainSeed": 361324997
+        "terrainSeed": 361324997,
+        "water": "liquid",
+        "oceanFraction": 0.62
       },
       "provenance": [
         {
@@ -737,6 +775,16 @@
           "field": "look.terrainSeed",
           "origin": "assumed",
           "note": "terrain noise seed from the planet id"
+        },
+        {
+          "field": "look.water",
+          "origin": "assumed",
+          "note": "surface water is not measurable for exoplanets yet"
+        },
+        {
+          "field": "look.oceanFraction",
+          "origin": "assumed",
+          "note": "share of the surface in low basins (seas, or dry basins), game value"
         }
       ]
     },
@@ -783,7 +831,9 @@
         "surface": "uncertain"
       },
       "look": {
-        "terrainSeed": 543934398
+        "terrainSeed": 543934398,
+        "water": "none",
+        "oceanFraction": 0.45
       },
       "provenance": [
         {
@@ -930,6 +980,16 @@
           "field": "look.terrainSeed",
           "origin": "assumed",
           "note": "terrain noise seed from the planet id"
+        },
+        {
+          "field": "look.water",
+          "origin": "assumed",
+          "note": "surface water is not measurable for exoplanets yet"
+        },
+        {
+          "field": "look.oceanFraction",
+          "origin": "assumed",
+          "note": "share of the surface in low basins (seas, or dry basins), game value"
         }
       ]
     }

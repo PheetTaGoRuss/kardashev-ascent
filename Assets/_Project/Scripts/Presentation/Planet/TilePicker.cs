@@ -192,18 +192,7 @@ namespace KardashevAscent.Presentation.Planet
                    $"{Math.Abs(lat):F1}° {(lat >= 0 ? "N" : "S")}, {Math.Abs(lon):F1}° {(lon >= 0 ? "E" : "W")}";
         }
 
-        static string Pretty(TerrainType terrain)
-        {
-            switch (terrain)
-            {
-                case TerrainType.DeepOcean: return "Deep ocean";
-                case TerrainType.ShallowOcean: return "Shallow ocean";
-                case TerrainType.Lowland: return "Lowland";
-                case TerrainType.Highland: return "Highland";
-                case TerrainType.Mountain: return "Mountain";
-                default: return "Ice";
-            }
-        }
+        static string Pretty(TerrainType terrain) => Terrains.Name(terrain);
 
         /// <summary>A child object drawing one tile outline.</summary>
         sealed class Outline

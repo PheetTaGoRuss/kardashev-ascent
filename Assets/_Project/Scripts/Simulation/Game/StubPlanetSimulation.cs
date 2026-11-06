@@ -558,7 +558,7 @@ namespace KardashevAscent.Simulation.Game
         {
             float elevation = Math.Max(0f, surface.Elevation[tileId]);
             double pressureRatio = Math.Exp(-elevation * 4000.0 / 8400.0); // elevation 1 ≈ 4 km, scale height 8.4 km
-            double albedo = surface.Terrain[tileId] == TerrainType.Ice ? 0.8 : 0.2;
+            double albedo = Terrains.Albedo(surface.Terrain[tileId]);
             return new PanelParams(Sphere.Latitude(tileId), tilt, azimuth, PanelAreaM2, PanelEfficiency,
                                    45.0, -0.004, albedo, pressureRatio, SpectralFactor, 1.0 - cloudFactor, 1.0,
                                    Sphere.Longitude(tileId) - subStellarLongitudeAtStart);
@@ -576,16 +576,18 @@ namespace KardashevAscent.Simulation.Game
 
         int PickBaseTile()
         {
-            // Lowland tile closest to 20° N, longitude 0: a temperate, sunny start.
+            // Flat open ground (lowland, desert or a dry basin; tundra only if there is nothing else) closest to
+            // 20° N, longitude 0: a sunny start, and under the star on a tidally locked planet.
             Vector3 goal = PlanetFrame.FromLatLon(20.0 * Math.PI / 180.0, 0.0);
-            int best = 0;
+            int best = 0, bestRank = 0;
             float bestDot = float.NegativeInfinity;
             for (int t = 0; t < Sphere.TileCount; t++)
             {
-                if (surface.Terrain[t] != TerrainType.Lowland)
+                int rank = Terrains.BaseSiteRank(surface.Terrain[t]);
+                if (rank == 0 || rank < bestRank)
                     continue;
                 float d = Vector3.Dot(Sphere.Centers[t], goal);
-                if (d > bestDot) { bestDot = d; best = t; }
+                if (rank > bestRank || d > bestDot) { bestRank = rank; bestDot = d; best = t; }
             }
             return best;
         }
