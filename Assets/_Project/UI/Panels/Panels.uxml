@@ -32,6 +32,7 @@
                 <ui:Label name="planner-best" class="body" text="" />
                 <ui:Label name="planner-reason" class="body warn hidden" text="" />
                 <ui:Label name="multi-text" class="body hidden" text="" />
+                <ui:Label name="planner-cost" class="body" text="" />
                 <ui:VisualElement class="button-row">
                     <ui:Button name="best-button" class="action-button" text="Best angle (B)" />
                     <ui:Button name="place-button" class="action-button primary" text="Place panel (P)" />

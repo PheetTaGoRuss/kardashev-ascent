@@ -43,6 +43,9 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>How the colony's demand grows with its power supply.</summary>
         public ColonyDemand Colony { get; private set; }
 
+        /// <summary>Build parts and construction sites: what buildings cost and how spare power pays for them.</summary>
+        public Construction Build { get; } = new Construction();
+
         readonly HashSet<(int Tile, int Slot)> batteries = new HashSet<(int, int)>();
         readonly Dictionary<int, int> batteriesPerTile = new Dictionary<int, int>();
 
@@ -94,6 +97,7 @@ namespace KardashevAscent.Simulation.Game
         public event Action<bool> BrownoutChanged;
         public event Action<bool> DayNightChanged;
         public event Action TargetReached;
+        public event Action<int, int> BuildingCompleted;
 
         public TileInfo GetTile(int tileId) =>
             new TileInfo(tileId, Sphere.Latitude(tileId), Sphere.Longitude(tileId),
@@ -121,9 +125,13 @@ namespace KardashevAscent.Simulation.Game
             RtgW = grid.RtgW;
             DemandW = grid.DemandW;
             BatteryPowerW = grid.ChargeW - grid.DischargeW;
-            CurtailedW = grid.CurtailedW;
-            // Used power: what reached the loads plus what went into the battery; curtailed power is not used.
-            KardashevK = ToK(grid.ServedW + grid.ChargeW);
+            // Spare power (battery full or at its limit) is turned into build parts, which then pay the sites.
+            BuildPowerW = grid.CurtailedW;
+            CurtailedW = grid.CurtailedW - BuildPowerW;
+            foreach (var done in Build.Step(BuildPowerW, dt))
+                Finish(done.Tile, done.Slot);
+            // Used power: what reached the loads, went into the battery or made build parts; curtailed power is not used.
+            KardashevK = ToK(grid.ServedW + grid.ChargeW + BuildPowerW);
             Colony.Step(dt, grid.GenerationW, grid.ServedW, grid.IsBrownout);
             Grid.DemandW = Colony.DemandW;
 
@@ -161,19 +169,81 @@ namespace KardashevAscent.Simulation.Game
 
         public bool PlacePanel(int tileId, int slot, double tilt, double azimuth)
         {
-            if (tileId < 0 || tileId >= TileCount || slot < 0 || slot >= SlotCount(tileId) || GetBuilding(tileId, slot) != BuildingType.None
-                || !PreviewPanel(tileId, tilt, azimuth).CanPlace)
+            if (!CanPlacePanel(tileId, slot, tilt, azimuth))
                 return false;
+            Build.Start(tileId, slot, BuildCostWh(BuildingType.SolarPanel));
+            AddPanel(tileId, slot, tilt, azimuth);
+            return true;
+        }
+
+        bool CanPlacePanel(int tileId, int slot, double tilt, double azimuth) =>
+            tileId >= 0 && tileId < TileCount && slot >= 0 && slot < SlotCount(tileId) && GetBuilding(tileId, slot) == BuildingType.None
+            && PreviewPanel(tileId, tilt, azimuth).CanPlace;
+
+        void AddPanel(int tileId, int slot, double tilt, double azimuth)
+        {
             panels[(tileId, slot)] = (tilt, azimuth);
             panelsPerTile[tileId] = PanelCount(tileId) + 1;
+            GenerationW = ComputeGeneration() + RtgW;
+        }
+
+        public bool SetPanelAngles(int tileId, int slot, double tilt, double azimuth)
+        {
+            if (!panels.ContainsKey((tileId, slot)) || !PreviewPanel(tileId, tilt, azimuth).CanPlace)
+                return false;
+            panels[(tileId, slot)] = (tilt, azimuth);
             GenerationW = ComputeGeneration() + RtgW;
             return true;
         }
 
+        // ---- Construction ----
+
+        public double BuildStockWh => Build.StockWh;
+        public double BuildPowerW { get; private set; }
+        public int ConstructionQueueCount => Build.QueueCount;
+        public double ConstructionRemainingWh => Build.RemainingWh;
+        public bool IsUnderConstruction(int tileId, int slot) => Build.IsQueued(tileId, slot);
+        public double ConstructionProgress(int tileId, int slot) => Build.Progress(tileId, slot);
+
+        public double BuildCostWh(BuildingType type)
+        {
+            switch (type)
+            {
+                case BuildingType.SolarPanel: return BuildCosts.Panel(EmbodiedWhPerM2, PanelAreaM2);
+                case BuildingType.Battery: return BuildCosts.Battery(BatteryUnitWh);
+                default: return 0.0;
+            }
+        }
+
+        /// <summary>A site got all its parts: it starts working.</summary>
+        void Finish(int tileId, int slot)
+        {
+            if (batteries.Contains((tileId, slot)))
+                Grid.Battery.AddCapacity(BatteryUnitWh);
+            else
+                GenerationW = ComputeGeneration() + RtgW;
+            BuildingCompleted?.Invoke(tileId, slot);
+        }
+
+        /// <summary>A building is going away: a site gives back its parts, a finished one is salvaged.</summary>
+        void Dismantle(int tileId, int slot, BuildingType type)
+        {
+            if (Build.IsQueued(tileId, slot))
+            {
+                Build.Cancel(tileId, slot);
+                return;
+            }
+            Build.Salvage(BuildCostWh(type));
+            if (type == BuildingType.Battery)
+                Grid.Battery.RemoveCapacity(BatteryUnitWh);
+        }
+
         public bool RemovePanel(int tileId, int slot)
         {
-            if (!panels.Remove((tileId, slot)))
+            if (!panels.ContainsKey((tileId, slot)))
                 return false;
+            Dismantle(tileId, slot, BuildingType.SolarPanel);
+            panels.Remove((tileId, slot));
             panelsPerTile[tileId] = PanelCount(tileId) - 1;
             GenerationW = ComputeGeneration() + RtgW;
             return true;
@@ -215,10 +285,17 @@ namespace KardashevAscent.Simulation.Game
             if (tileId < 0 || tileId >= TileCount || slot < 0 || slot >= SlotCount(tileId)
                 || GetTile(tileId).IsWater || GetBuilding(tileId, slot) != BuildingType.None)
                 return false;
+            bool finished = Build.Start(tileId, slot, BuildCostWh(BuildingType.Battery));
+            AddBattery(tileId, slot);
+            if (finished)
+                Grid.Battery.AddCapacity(BatteryUnitWh);
+            return true;
+        }
+
+        void AddBattery(int tileId, int slot)
+        {
             batteries.Add((tileId, slot));
             batteriesPerTile[tileId] = BatteryCount(tileId) + 1;
-            Grid.Battery.AddCapacity(BatteryUnitWh);
-            return true;
         }
 
         public int BatteryCount(int tileId) => batteriesPerTile.TryGetValue(tileId, out int n) ? n : 0;
@@ -227,10 +304,11 @@ namespace KardashevAscent.Simulation.Game
         {
             if (RemovePanel(tileId, slot))
                 return true;
-            if (!batteries.Remove((tileId, slot)))
+            if (!batteries.Contains((tileId, slot)))
                 return false;
+            Dismantle(tileId, slot, BuildingType.Battery);
+            batteries.Remove((tileId, slot));
             batteriesPerTile[tileId] = BatteryCount(tileId) - 1;
-            Grid.Battery.RemoveCapacity(BatteryUnitWh);
             return true;
         }
 
@@ -247,12 +325,24 @@ namespace KardashevAscent.Simulation.Game
                 ColonyAverageGenerationW = Colony.AverageGenerationW,
                 ColonyDayEnergyWh = Colony.DayEnergyWh,
                 ColonyDayClockHours = Colony.DayClockHours,
+                BuildStockWh = Build.StockWh,
             };
             foreach (var kv in panels)
                 state.Buildings.Add(new BuildingRecord { Tile = kv.Key.Tile, Slot = kv.Key.Slot, Type = BuildingType.SolarPanel, Tilt = kv.Value.Tilt, Azimuth = kv.Value.Azimuth });
             foreach (var b in batteries)
                 state.Buildings.Add(new BuildingRecord { Tile = b.Tile, Slot = b.Slot, Type = BuildingType.Battery });
             state.Buildings.Sort((a, b) => a.Tile != b.Tile ? a.Tile.CompareTo(b.Tile) : a.Slot.CompareTo(b.Slot));
+            int order = 0;
+            var sites = new Dictionary<(int, int), (double Paid, int Order)>();
+            foreach (var site in Build.Sites())
+                sites[(site.Tile, site.Slot)] = (site.PaidWh, order++);
+            foreach (BuildingRecord r in state.Buildings)
+                if (sites.TryGetValue((r.Tile, r.Slot), out var site))
+                {
+                    r.UnderConstruction = true;
+                    r.PaidWh = site.Paid;
+                    r.QueueOrder = site.Order;
+                }
             return state;
         }
 
@@ -266,11 +356,17 @@ namespace KardashevAscent.Simulation.Game
                 RemoveBuilding(key.Tile, key.Slot);
             TimeHours = state.TimeHours;
             UpdateStar();
+            // A version-1 save had no parts: every building in it is finished, and the colony keeps the lander's parts.
+            Build.Reset(state.Version >= 2 ? state.BuildStockWh : BuildCosts.LanderStockWh);
+            var sitesInOrder = new List<BuildingRecord>();
             foreach (var r in state.Buildings)
             {
-                if (r.Type == BuildingType.SolarPanel) PlacePanel(r.Tile, r.Slot, r.Tilt, r.Azimuth);
-                else if (r.Type == BuildingType.Battery) PlaceBattery(r.Tile, r.Slot);
+                if (r.UnderConstruction) sitesInOrder.Add(r);
+                else Restore(r, false);
             }
+            sitesInOrder.Sort((a, b) => a.QueueOrder.CompareTo(b.QueueOrder));
+            foreach (var r in sitesInOrder)
+                Restore(r, true);
             Grid.Battery.SetStored(state.BatteryStoredWh);
             Colony.Restore(state.ColonyDemandW, state.ColonyHoursSinceBrownout, state.ColonyAverageGenerationW, state.ColonyDayEnergyWh, state.ColonyDayClockHours);
             Grid.DemandW = Colony.DemandW;
@@ -278,6 +374,25 @@ namespace KardashevAscent.Simulation.Game
             IsDayAtBase = SunAt(BaseTileId).Up > 0.0;
             GenerationW = ComputeGeneration() + RtgW;
             return true;
+        }
+
+        void Restore(BuildingRecord r, bool site)
+        {
+            if (r.Type == BuildingType.SolarPanel)
+            {
+                if (!CanPlacePanel(r.Tile, r.Slot, r.Tilt, r.Azimuth))
+                    return;
+                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildCostWh(BuildingType.SolarPanel), r.PaidWh);
+                AddPanel(r.Tile, r.Slot, r.Tilt, r.Azimuth);
+            }
+            else if (r.Type == BuildingType.Battery)
+            {
+                if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
+                    return;
+                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildCostWh(BuildingType.Battery), r.PaidWh);
+                else Grid.Battery.AddCapacity(BatteryUnitWh);
+                AddBattery(r.Tile, r.Slot);
+            }
         }
 
         void UpdateStar()
@@ -300,6 +415,8 @@ namespace KardashevAscent.Simulation.Game
             double total = 0.0;
             foreach (var pair in panels)
             {
+                if (Build.QueueCount > 0 && Build.IsQueued(pair.Key.Tile, pair.Key.Slot))
+                    continue;   // a site makes nothing until it is finished
                 Double3 sun = SunAt(pair.Key.Tile);
                 if (sun.Up <= 0.0)
                     continue;

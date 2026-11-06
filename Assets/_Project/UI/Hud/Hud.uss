@@ -22,6 +22,8 @@
 .time-block { width: 170px; }
 .power-block { width: 150px; }
 .meter-block { width: 170px; }
+.build-block { width: 170px; }
+.build-block .caption { white-space: normal; }
 
 .divider {
     width: 1px;
