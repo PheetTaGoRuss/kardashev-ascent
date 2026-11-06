@@ -108,6 +108,12 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Ground the panel in a slot covers, m², or 0. Built panels keep the size they were built at.</summary>
         double PanelAreaAt(int tileId, int slot);
 
+        /// <summary>
+        /// The sky over a tile right now (declination, hour angle, sun altitude and azimuth) and what a new panel at
+        /// these angles (radians) would get: incidence, light and power. Read-only; for the sky view.
+        /// </summary>
+        Solar.SkyReport DescribeSky(int tileId, double tilt, double azimuth);
+
         // Commands
 
         /// <summary>Advance the simulation by <paramref name="hours"/> of game time.</summary>

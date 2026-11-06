@@ -1,0 +1,42 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="Sky.uss" />
+    <ui:VisualElement name="sky-root" class="sky-root" picking-mode="Ignore">
+        <ui:VisualElement name="labels" class="labels" picking-mode="Ignore" />
+        <ui:VisualElement name="sky" class="sky panel hidden">
+            <ui:VisualElement class="title-row">
+                <ui:VisualElement class="title-text">
+                    <ui:Label name="title" class="value" text="Sky over the panel" />
+                    <ui:Label name="subtitle" class="caption" text="V or Esc: back to the site" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:ScrollView name="scroll" class="sky-scroll" mode="Vertical">
+                <ui:VisualElement name="orbit" class="orbit" />
+                <ui:Label name="season" class="caption wrap" text="" />
+
+                <ui:Label class="heading step" text="1 · DATE → DECLINATION δ" />
+                <ui:Label name="date" class="body" text="" />
+                <ui:Label name="decl" class="formula" text="" />
+                <ui:Button name="work-decl" class="action" text="Work out δ from the date" />
+
+                <ui:Label class="heading step" text="2 · WHERE IS THE SUN?" />
+                <ui:Label name="hour" class="body" text="" />
+                <ui:Label name="sun" class="formula" text="" />
+                <ui:Button name="measure-sun" class="action" text="Measure the sun" />
+
+                <ui:Label class="heading step" text="3 · YOUR LATITUDE φ" />
+                <ui:Label name="lat" class="formula" text="" />
+                <ui:Button name="measure-pole" class="action" text="Sight the celestial pole (night)" />
+
+                <ui:Label class="heading step" text="4 · ANGLE ON YOUR PANEL θ" />
+                <ui:Label name="panel" class="body" text="" />
+                <ui:Label name="theta" class="formula" text="" />
+
+                <ui:Label class="heading step" text="5 · LIGHT AND POWER" />
+                <ui:Label name="power" class="formula" text="" />
+
+                <ui:Label class="heading step" text="NOTEBOOK" />
+                <ui:Label name="log" class="caption wrap log" text="" />
+            </ui:ScrollView>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

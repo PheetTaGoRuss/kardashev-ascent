@@ -560,17 +560,49 @@ namespace KardashevAscent.Simulation.Game
                     continue;
                 PanelParams p = MakePanel(pair.Key.Tile, pair.Value.Tilt, pair.Value.Azimuth,
                                           CloudFactor(pair.Key.Tile, meanAnomaly), pair.Value.Area);
-                double airMass = Atmosphere.AirMassKastenYoung(SunPosition.ZenithDegrees(sun), p.PressureRatio);
-                double dni = Atmosphere.DirectNormal(currentIrradiance, planet.OpticalDepth, airMass);
-                double dhi = Atmosphere.DiffuseHorizontal(currentIrradiance, sun.Up, planet.OpticalDepth, airMass, planet.DiffuseK);
-                double ghi = Atmosphere.GlobalHorizontal(dni, dhi, sun.Up);
-                double cosTheta = PanelModel.CosIncidence(PanelModel.Normal(p.Tilt, p.Azimuth), sun);
-                double poa = PanelModel.PlaneOfArray(dni, dhi, ghi, cosTheta, p.Tilt, p.Albedo, p.FShade);
-                double cellT = PanelModel.CellTemperature(planet.AirTemperatureC, poa, p.Noct,
-                                                         planet.SurfacePressureEarth * p.PressureRatio, p.Efficiency);
-                total += PanelModel.Power(poa, p.Area, p.Efficiency, cellT, p.TempCoefficient, p.FSpec, p.FDust);
+                total += PanelPowerNow(p, sun, out _, out _, out _, out _);
             }
             return total;
+        }
+
+        /// <summary>One panel's power under the star right now (sun up), with the light and temperature along the way.</summary>
+        double PanelPowerNow(in PanelParams p, Double3 sun, out double dni, out double dhi, out double poa, out double cellT)
+        {
+            double airMass = Atmosphere.AirMassKastenYoung(SunPosition.ZenithDegrees(sun), p.PressureRatio);
+            dni = Atmosphere.DirectNormal(currentIrradiance, planet.OpticalDepth, airMass);
+            dhi = Atmosphere.DiffuseHorizontal(currentIrradiance, sun.Up, planet.OpticalDepth, airMass, planet.DiffuseK);
+            double ghi = Atmosphere.GlobalHorizontal(dni, dhi, sun.Up);
+            double cosTheta = PanelModel.CosIncidence(PanelModel.Normal(p.Tilt, p.Azimuth), sun);
+            poa = PanelModel.PlaneOfArray(dni, dhi, ghi, cosTheta, p.Tilt, p.Albedo, p.FShade);
+            cellT = PanelModel.CellTemperature(planet.AirTemperatureC, poa, p.Noct,
+                                               planet.SurfacePressureEarth * p.PressureRatio, p.Efficiency);
+            return PanelModel.Power(poa, p.Area, p.Efficiency, cellT, p.TempCoefficient, p.FSpec, p.FDust);
+        }
+
+        /// <summary>The sky over a tile right now and what a new panel at these angles would make (radians in).</summary>
+        public SkyReport DescribeSky(int tileId, double tilt, double azimuth)
+        {
+            if (tileId < 0 || tileId >= TileCount)
+                return default;
+            const double deg = 180.0 / Math.PI;
+            double meanAnomaly = CurrentMeanAnomaly();
+            double nu = Orbit.TrueAnomaly(Orbit.SolveKepler(meanAnomaly, planet.Eccentricity), planet.Eccentricity);
+            double lambda = (nu + planet.PerihelionLongitude) * deg % 360.0;
+            if (lambda < 0.0) lambda += 360.0;
+            double declination = Math.Asin(Math.Max(-1f, Math.Min(1f, StarDirection.Y))) * deg;
+            double hourAngle = (Sphere.Longitude(tileId) - PlanetFrame.Longitude(StarDirection)) * deg;
+            hourAngle = (hourAngle + 540.0) % 360.0 - 180.0;
+            Double3 sun = SunAt(tileId);
+            double cloud = CloudFactor(tileId, meanAnomaly);
+            PanelParams p = MakePanel(tileId, tilt, azimuth, cloud, NewPanelAreaM2(tileId));
+            double dni = 0.0, dhi = 0.0, poa = 0.0, cellT = planet.AirTemperatureC, power = 0.0;
+            if (sun.Up > 0.0)
+                power = PanelPowerNow(p, sun, out dni, out dhi, out poa, out cellT);
+            return new SkyReport(planet.TidallyLocked, Sphere.Latitude(tileId) * deg, planet.Obliquity * deg, lambda,
+                                 declination, hourAngle, planet.TidallyLocked ? double.NaN : SimClock.LocalTime24(hourAngle / deg),
+                                 Math.Asin(Math.Max(-1.0, Math.Min(1.0, sun.Up))) * deg, SunPosition.AzimuthDegrees(sun),
+                                 tilt * deg, azimuth * deg, PanelModel.Normal(tilt, azimuth).Dot(sun),
+                                 currentIrradiance, dni, dhi, poa, cellT, power, SpectralFactor, cloud);
         }
 
         /// <summary>
