@@ -110,9 +110,10 @@ namespace KardashevAscent.EditorTools
                 SetReference(hudView, "saveGame", saveController);
             SetUpTileInfo(runner, planet, placer);
             SetUpPanels(planet, placer, site);
+            SetUpColony(runner);
 
             EditorSceneManager.MarkSceneDirty(planet.gameObject.scene);
-            Debug.Log("Scene set up: Simulation runner, star light, light-potential map, building sites, panel placement, HUD, tile info, side panels. Save the scene to keep it.");
+            Debug.Log("Scene set up: Simulation runner, star light, light-potential map, building sites, panel placement, HUD, tile info, side panels, colony overview. Save the scene to keep it.");
         }
 
         const string MapMaterial = "Assets/_Project/Materials/PlanetTilesUnlit.mat";
@@ -213,6 +214,35 @@ namespace KardashevAscent.EditorTools
             SetReference(view, "lightMap", planet.GetComponent<LightPotentialOverlay>());
             var mainCamera = Camera.main;
             SetReference(view, "orbitCamera", mainCamera != null ? mainCamera.GetComponent<KardashevAscent.Presentation.CameraControl.OrbitCamera>() : null);
+        }
+
+        const string ColonyLayoutPath = "Assets/_Project/UI/Colony/Colony.uxml";
+
+        /// <summary>Draw order of the colony overview: above the HUD, tile info and side panels (all 0).</summary>
+        const float ColonySortingOrder = 10f;
+
+        /// <summary>The colony overview (C), on the same PanelSettings as the HUD.</summary>
+        static void SetUpColony(SimulationRunner runner)
+        {
+            var view = Object.FindAnyObjectByType<ColonyView>();
+            if (view == null)
+            {
+                var go = new GameObject("Colony");
+                Undo.RegisterCreatedObjectUndo(go, "Add Colony");
+                var document = Undo.AddComponent<UIDocument>(go);
+                document.panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
+                document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(ColonyLayoutPath);
+                view = Undo.AddComponent<ColonyView>(go);
+            }
+            SetReference(view, "runner", runner);
+
+            // The overview opens over the other panels; with equal orders their stacking is arbitrary.
+            var colonyDocument = view.GetComponent<UIDocument>();
+            if (colonyDocument.sortingOrder != ColonySortingOrder)
+            {
+                Undo.RecordObject(colonyDocument, "Colony draw order");
+                colonyDocument.sortingOrder = ColonySortingOrder;
+            }
         }
 
         static Light FindDirectionalLight()
