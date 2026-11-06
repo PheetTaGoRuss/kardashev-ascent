@@ -111,9 +111,28 @@ namespace KardashevAscent.EditorTools
             SetUpTileInfo(runner, planet, placer);
             SetUpPanels(planet, placer, site);
             SetUpColony(runner);
+            SetUpCursorLight(planet, picker);
 
             EditorSceneManager.MarkSceneDirty(planet.gameObject.scene);
-            Debug.Log("Scene set up: Simulation runner, star light, light-potential map, building sites, panel placement, HUD, tile info, side panels, colony overview. Save the scene to keep it.");
+            Debug.Log("Scene set up: Simulation runner, star light, light-potential map, building sites, panel placement, HUD, tile info, side panels, colony overview, cursor flashlight. Save the scene to keep it.");
+        }
+
+        /// <summary>The flashlight that follows the mouse over the planet (F toggles it).</summary>
+        static void SetUpCursorLight(PlanetView planet, TilePicker picker)
+        {
+            var cursorLight = Object.FindAnyObjectByType<KardashevAscent.Presentation.CameraControl.CursorLight>(FindObjectsInactive.Include);
+            if (cursorLight == null)
+            {
+                var go = new GameObject("Cursor Light");
+                Undo.RegisterCreatedObjectUndo(go, "Add Cursor Light");
+                var light = Undo.AddComponent<Light>(go);
+                light.type = LightType.Point;
+                light.intensity = 5f;
+                light.range = 0.4f * planet.Radius;
+                light.shadows = LightShadows.None;
+                cursorLight = Undo.AddComponent<KardashevAscent.Presentation.CameraControl.CursorLight>(go);
+            }
+            SetReference(cursorLight, "picker", picker);
         }
 
         const string MapMaterial = "Assets/_Project/Materials/PlanetTilesUnlit.mat";
