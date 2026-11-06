@@ -161,7 +161,7 @@ namespace KardashevAscent.Presentation.UI
             double intercepted = target / Kardashev.TypeIShareOfIntercepted;
             kardashevNotes.text =
                 $"K = (log₁₀ P − 6) / 10, so each +0.1 is ten times the power.\n" +
-                $"Humanity in 2024: K ≈ {Kardashev.K(Kardashev.Humanity2024W):0.00} (≈{Format.Power(Kardashev.Humanity2024W)}).\n" +
+                $"Humanity in 2024: K ≈ {Kardashev.K(Kardashev.Humanity2024W):0.00} (≈{Kardashev.Humanity2024W / 1e12:0} TW).\n" +
                 $"This planet intercepts {Format.Power(intercepted)} of starlight; its target is " +
                 $"{Kardashev.TypeIShareOfIntercepted * 100.0:0.#} % of that, as Sagan's Type I is of Earth's.\n" +
                 "The per-planet target is a game rule, not a scientific definition.";
