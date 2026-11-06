@@ -1,0 +1,51 @@
+.tile-info {
+    position: absolute;
+    top: 80px;
+    right: 12px;
+    width: 340px;
+    max-height: 78%;
+    padding: 10px 12px;
+}
+
+.tile-scroll { flex-grow: 1; }
+
+.stat-row { flex-direction: row; margin-top: 8px; }
+.stat { flex-grow: 1; flex-basis: 0; }
+.stat-value { font-size: 15px; -unity-font-style: bold; padding: 0; margin: 1px 0; }
+
+.section { margin-top: 12px; }
+
+.chart {
+    margin-top: 6px;
+    background-color: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+}
+.sunpath-chart { height: 150px; }
+.monthly-chart { height: 90px; flex-direction: row; align-items: flex-end; padding: 0 2px; }
+
+.month-bar {
+    flex-grow: 1;
+    margin: 0 1px;
+    background-color: rgb(143, 179, 255);
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+}
+.month-bar:hover { background-color: rgb(196, 214, 255); }
+
+.month-labels { flex-direction: row; padding: 0 2px; }
+.month-label { flex-grow: 1; flex-basis: 0; -unity-text-align: middle-center; font-size: 9px; color: var(--text-muted); padding: 0; margin: 0; }
+.hover-line { min-height: 14px; }
+
+.axis-label { position: absolute; font-size: 9px; color: var(--text-muted); padding: 0; margin: 0; }
+
+.legend { flex-direction: row; flex-wrap: wrap; margin-top: 4px; }
+.legend-item { flex-direction: row; align-items: center; margin-right: 10px; }
+.swatch { width: 14px; height: 3px; border-radius: 2px; margin-right: 4px; }
+.series-1 { background-color: rgb(57, 135, 229); }
+.series-2 { background-color: rgb(217, 89, 38); }
+.series-3 { background-color: rgb(25, 158, 112); }
+.marker-now { width: 8px; height: 8px; border-radius: 4px; background-color: rgb(255, 214, 120); margin-right: 4px; }
+.marker-panel { width: 8px; height: 8px; border-width: 2px; border-color: rgb(230, 236, 255); border-radius: 1px; rotate: 45deg; margin-right: 6px; }
+
+.formulas { margin-top: 12px; }
+.formula { white-space: normal; font-size: 11px; color: var(--text-muted); margin: 3px 0; padding: 0; }

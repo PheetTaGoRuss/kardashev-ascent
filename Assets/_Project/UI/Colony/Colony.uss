@@ -1,0 +1,54 @@
+.colony {
+    position: absolute;
+    top: 80px;
+    left: 50%;
+    translate: -50% 0;
+    width: 460px;
+    max-height: 80%;
+    padding: 10px 12px;
+}
+/* Nearly opaque: the overview sits over the tile and side panels, which would show through the usual panel tint. */
+.colony.panel { background-color: rgba(10, 14, 24, 0.97); }
+
+.title-row { flex-direction: row; align-items: flex-start; }
+.title-text { flex-grow: 1; }
+.close-button {
+    width: 24px;
+    height: 24px;
+    margin: 0;
+    padding: 0;
+    font-size: 16px;
+    color: var(--text-muted);
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+}
+.close-button:hover { color: var(--text); }
+
+.colony-scroll { flex-grow: 1; }
+
+.stat-row { flex-direction: row; margin-top: 8px; }
+.stat { flex-grow: 1; flex-basis: 0; margin-right: 8px; }
+.stat-value { font-size: 15px; -unity-font-style: bold; padding: 0; margin: 1px 0; }
+.stat-value.good { color: var(--good); }
+.stat-value.warn { color: var(--warning); }
+.wrap { white-space: normal; }
+
+.section { margin-top: 12px; }
+.body { font-size: 12px; padding: 0; margin: 2px 0 0 0; white-space: normal; }
+.tiles { margin-top: 6px; color: var(--text-muted); }
+
+.chart {
+    margin-top: 6px;
+    background-color: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+}
+.power-chart { height: 150px; }
+.axis-label { position: absolute; font-size: 9px; color: var(--text-muted); padding: 0; margin: 0; }
+
+.legend { flex-direction: row; flex-wrap: wrap; margin-top: 4px; }
+.legend-item { flex-direction: row; align-items: center; margin-right: 10px; }
+.swatch { width: 14px; height: 3px; border-radius: 2px; margin-right: 4px; }
+.swatch.generation { background-color: rgb(143, 179, 255); }
+.swatch.demand { background-color: rgb(242, 190, 80); }
+.swatch.battery { background-color: rgb(95, 211, 141); }
+.swatch.brownout { height: 10px; background-color: rgba(255, 120, 105, 0.35); }

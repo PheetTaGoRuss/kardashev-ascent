@@ -93,7 +93,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             var sim = Create();
             Assert.AreEqual(TerrainType.Lowland, sim.GetTile(sim.BaseTileId).Terrain);
             Assert.IsTrue(sim.IsDayAtBase);
-            Assert.AreEqual(0.0, sim.GenerationW);
+            Assert.AreEqual(440.0, sim.RtgW, 1e-9, "four fresh MMRTGs on the lander");
+            Assert.AreEqual(sim.RtgW, sim.GenerationW, 1e-9, "no panels yet: only the RTGs");
             Assert.AreEqual(1e16, sim.TypeITargetW, 1e14, "Earth-like planet's Type I target");
         }
 
@@ -117,18 +118,40 @@ namespace KardashevAscent.Simulation.Tests.Game
         {
             var sim = Create();
             int water = FindTile(sim, info => info.IsWater);
-            Assert.IsFalse(sim.PlacePanel(water, 0.3, Math.PI));
+            Assert.IsFalse(sim.PlacePanel(water, 0, 0.3, Math.PI));
             Assert.IsFalse(sim.PreviewPanel(water, 0.3, Math.PI).CanPlace);
 
             TileInfo baseTile = sim.GetTile(sim.BaseTileId);
             double tilt = Math.Abs(baseTile.Latitude);
-            Assert.IsTrue(sim.PlacePanel(sim.BaseTileId, tilt, Math.PI));
-            Assert.IsFalse(sim.PlacePanel(sim.BaseTileId, tilt, Math.PI), "second panel on the same tile");
-            Assert.IsTrue(sim.HasPanel(sim.BaseTileId));
+            Assert.IsTrue(sim.PlacePanel(sim.BaseTileId, 0, tilt, Math.PI));
+            Assert.IsFalse(sim.PlacePanel(sim.BaseTileId, 0, tilt, Math.PI), "second panel in the same slot");
+            Assert.IsTrue(sim.HasPanel(sim.BaseTileId, 0));
             Assert.Greater(sim.GenerationW, 0.0, "morning sun on the new panel");
 
-            Assert.IsTrue(sim.RemovePanel(sim.BaseTileId));
-            Assert.AreEqual(0.0, sim.GenerationW);
+            Assert.IsTrue(sim.RemovePanel(sim.BaseTileId, 0));
+            Assert.IsFalse(sim.RemovePanel(sim.BaseTileId, 0));
+            Assert.AreEqual(sim.RtgW, sim.GenerationW, 1e-9, "back to the RTGs alone");
+        }
+
+        [Test]
+        public void Panels_FillEverySlotOfATile_AndAddUp()
+        {
+            var sim = Create();
+            int tile = sim.BaseTileId, slots = sim.SlotCount(tile);
+            double tilt = Math.Abs(sim.GetTile(tile).Latitude);
+            Assert.AreEqual(61, slots, "4 rings by default");
+
+            Assert.IsTrue(sim.PlacePanel(tile, 0, tilt, Math.PI));
+            double one = sim.GenerationW - sim.RtgW;
+            Assert.IsTrue(sim.PlacePanel(tile, slots - 1, tilt, Math.PI));
+            Assert.AreEqual(2.0 * one + sim.RtgW, sim.GenerationW, one * 1e-9, "two equal panels make twice the power");
+            Assert.AreEqual(2, sim.PanelCount(tile));
+
+            Assert.IsFalse(sim.PlacePanel(tile, slots, tilt, Math.PI), "no slot past the last");
+            Assert.IsFalse(sim.PlacePanel(tile, -1, tilt, Math.PI));
+            Assert.IsTrue(sim.RemovePanel(tile, 0));
+            Assert.AreEqual(1, sim.PanelCount(tile));
+            Assert.AreEqual(0, sim.PanelCount(tile + 1));
         }
 
         [Test]
@@ -152,7 +175,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             bool? brownout = null;
             sim.BrownoutChanged += b => brownout = b;
 
-            sim.Tick(12.0);
+            // The lander battery lasts about 19 hours on its own.
+            sim.Tick(24.0);
 
             Assert.AreEqual(true, brownout);
             Assert.IsTrue(sim.IsBrownout);

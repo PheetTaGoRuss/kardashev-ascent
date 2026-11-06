@@ -119,6 +119,195 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &122503631
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 122503634}
+  - component: {fileID: 122503633}
+  - component: {fileID: 122503632}
+  m_Layer: 0
+  m_Name: Cursor Light
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &122503632
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 122503631}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c9191ed60831f84686ef72c0eab3038, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.CameraControl.CursorLight
+  picker: {fileID: 765499589}
+  viewCamera: {fileID: 0}
+  toggleKey: 102
+  height: 0.2
+--- !u!108 &122503633
+Light:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 122503631}
+  m_Enabled: 1
+  serializedVersion: 13
+  m_Type: 2
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Intensity: 5
+  m_Range: 2
+  m_SpotAngle: 30
+  m_InnerSpotAngle: 21.80208
+  m_CookieSize2D: {x: 0.5, y: 0.5}
+  m_Shadows:
+    m_Type: 0
+    m_Resolution: -1
+    m_CustomResolution: -1
+    m_Strength: 1
+    m_Bias: 0.05
+    m_NormalBias: 0.4
+    m_NearPlane: 0.2
+    m_CullingMatrixOverride:
+      e00: 1
+      e01: 0
+      e02: 0
+      e03: 0
+      e10: 0
+      e11: 1
+      e12: 0
+      e13: 0
+      e20: 0
+      e21: 0
+      e22: 1
+      e23: 0
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    m_UseCullingMatrixOverride: 0
+  m_Cookie: {fileID: 0}
+  m_DrawHalo: 0
+  m_Flare: {fileID: 0}
+  m_RenderMode: 0
+  m_CullingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_RenderingLayerMask: 1
+  m_Lightmapping: 4
+  m_LightShadowCasterMode: 0
+  m_AreaSize: {x: 1, y: 1}
+  m_BounceIntensity: 1
+  m_ColorTemperature: 6570
+  m_UseColorTemperature: 0
+  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_UseBoundingSphereOverride: 0
+  m_UseViewFrustumForShadowCasterCull: 1
+  m_ForceVisible: 0
+  m_ShapeRadius: 0.025
+  m_ShadowAngle: 0
+  m_LightUnit: 1
+  m_LuxAtDistance: 1
+  m_EnableSpotReflector: 1
+--- !u!4 &122503634
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 122503631}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &123573322
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 123573324}
+  - component: {fileID: 123573323}
+  - component: {fileID: 123573325}
+  m_Layer: 0
+  m_Name: Simulation
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &123573323
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 123573322}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 12c3e4369a5cfae458718e6fa39769f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.Game.SimulationRunner
+  planet: {fileID: 765499585}
+  luminositySun: 1
+  starTemperatureK: 5772
+  semiMajorAxisAu: 1
+  eccentricity: 0.0167
+  obliquityDeg: 23.44
+  perihelionLongitudeDeg: 282.94
+  dayLengthHours: 24
+  yearLengthDays: 365.256
+  tidallyLocked: 0
+  radiusEarth: 1
+  opticalDepth: 0.32
+  diffuseK: 0.3
+  airTemperatureC: 15
+  startSpeed: 2
+--- !u!4 &123573324
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 123573322}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &123573325
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 123573322}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70b70c6f86c65374d83e613982ee8d1f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.Game.SaveGameController
+  runner: {fileID: 123573323}
+  saveKey: 286
+  loadKey: 290
 --- !u!1 &124941722
 GameObject:
   m_ObjectHideFlags: 0
@@ -236,7 +425,85 @@ MonoBehaviour:
   smoothTime: 0.08
   startYaw: 20
   startPitch: 15
+  siteFlightTime: 0.8
+  siteStartTilt: 48
+  siteStartDistance: 2.4
+  siteMinDistance: 0.5
+  siteMaxDistance: 5
   showHelp: 1
+--- !u!1 &540962804
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 540962807}
+  - component: {fileID: 540962806}
+  - component: {fileID: 540962805}
+  m_Layer: 0
+  m_Name: Tile Info
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &540962805
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 540962804}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f36e2a863762654408eb59d9bcc113c9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.UI.TileInfoView
+  runner: {fileID: 123573323}
+  picker: {fileID: 765499589}
+  placer: {fileID: 765499591}
+  lightMap: {fileID: 765499590}
+  refreshInterval: 0.2
+--- !u!114 &540962806
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 540962804}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
+  m_PanelSettings: {fileID: 11400000, guid: 6d29c777ad8aa8c438b9dcc8c80ed6f5, type: 2}
+  m_ParentUI: {fileID: 0}
+  sourceAsset: {fileID: 9197481963319205126, guid: ee4aede4389a3f4439ea99e9f2842d08, type: 3}
+  m_SortingOrder: 0
+  m_Position: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+  m_PivotReferenceSize: 0
+  m_Pivot: 0
+  m_WorldSpaceCollider: {fileID: 0}
+--- !u!4 &540962807
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 540962804}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &726131408
 GameObject:
   m_ObjectHideFlags: 0
@@ -247,6 +514,7 @@ GameObject:
   m_Component:
   - component: {fileID: 726131410}
   - component: {fileID: 726131409}
+  - component: {fileID: 726131411}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -334,6 +602,25 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!114 &726131411
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 726131408}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71ce587cbe3890540bddc5abec9b9277, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.Star.StarView
+  runner: {fileID: 123573323}
+  glowMaterial: {fileID: 2100000, guid: fea83a150483e254dab03d88f39155c1, type: 2}
+  sizeExaggeration: 4
+  minAngularDiameterDeg: 1.5
+  glowSize: 6
+  lightIntensity: 1.15
+  nightAmbient: {r: 0.035, g: 0.04, b: 0.055, a: 1}
 --- !u!1 &765499584
 GameObject:
   m_ObjectHideFlags: 0
@@ -347,6 +634,10 @@ GameObject:
   - component: {fileID: 765499586}
   - component: {fileID: 765499585}
   - component: {fileID: 765499589}
+  - component: {fileID: 765499590}
+  - component: {fileID: 765499591}
+  - component: {fileID: 765499592}
+  - component: {fileID: 765499593}
   m_Layer: 0
   m_Name: Planet
   m_TagString: Untagged
@@ -472,7 +763,310 @@ MonoBehaviour:
   hoverWidth: 0.14
   selectedWidth: 0.24
   lift: 0.0015
-  showInfo: 1
+--- !u!114 &765499590
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 765499584}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 671e783e6c0faba4e80ee982c613adb7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.Planet.LightPotentialOverlay
+  runner: {fileID: 123573323}
+  mapMaterial: {fileID: 2100000, guid: 4551fb14d7967044da8ae4c165c73f6d, type: 2}
+  picker: {fileID: 765499589}
+  toggleKey: 109
+  showOnStart: 0
+--- !u!114 &765499591
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 765499584}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61f8d534e3fd6f746abc37c58ecefbbf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.Planet.PanelPlacer
+  runner: {fileID: 123573323}
+  siteView: {fileID: 765499592}
+  saveGame: {fileID: 123573325}
+  frameMaterial: {fileID: 2100000, guid: dd44a8f0e2333474ba335e3c22c267dc, type: 2}
+  cellMaterial: {fileID: 2100000, guid: c19cc231ca76b0546ac8e1e62b967517, type: 2}
+  ghostMaterial: {fileID: 2100000, guid: b12e20512b47d544994901cceb50976c, type: 2}
+  placeKey: 112
+  bestKey: 98
+  removeKey: 127
+  ghostCanPlace: {r: 0.45, g: 0.85, b: 1, a: 0.5}
+  ghostBlocked: {r: 1, g: 0.38, b: 0.3, a: 0.5}
+  siteTint: {r: 1, g: 0.72, b: 0.25, a: 0.55}
+  panelScale: 0.78
+  previewInterval: 0.05
+--- !u!114 &765499592
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 765499584}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1daa61fd8ac42b44082449001dcf9084, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.Planet.SiteView
+  runner: {fileID: 123573323}
+  picker: {fileID: 765499589}
+  orbitCamera: {fileID: 124941726}
+  padMaterial: {fileID: 2100000, guid: 2fa10331cd72d4f43a70572f9d880296, type: 2}
+  hoverMaterial: {fileID: 2100000, guid: 5a33dbaf225e2594aaeb3f31f88053af, type: 2}
+  selectedMaterial: {fileID: 2100000, guid: 3d7a4b5768f8deb43989f284cea27b6a, type: 2}
+  padColor:
+    serializedVersion: 2
+    rgba: 680303766
+  padScale: 0.86
+  clickTolerancePixels: 6
+--- !u!135 &765499593
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 765499584}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 5
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &1248001364
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1248001367}
+  - component: {fileID: 1248001366}
+  - component: {fileID: 1248001365}
+  m_Layer: 0
+  m_Name: Colony
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1248001365
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1248001364}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b3709a5c61f4048a7f553585c1f0bd2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.UI.ColonyView
+  runner: {fileID: 123573323}
+  toggleKey: 99
+  refreshInterval: 0.5
+  tilesListed: 5
+--- !u!114 &1248001366
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1248001364}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
+  m_PanelSettings: {fileID: 11400000, guid: 6d29c777ad8aa8c438b9dcc8c80ed6f5, type: 2}
+  m_ParentUI: {fileID: 0}
+  sourceAsset: {fileID: 9197481963319205126, guid: 120783ea1c35482995724e19f18fd5b4, type: 3}
+  m_SortingOrder: 10
+  m_Position: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+  m_PivotReferenceSize: 0
+  m_Pivot: 0
+  m_WorldSpaceCollider: {fileID: 0}
+--- !u!4 &1248001367
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1248001364}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1525774099
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1525774102}
+  - component: {fileID: 1525774101}
+  - component: {fileID: 1525774100}
+  m_Layer: 0
+  m_Name: HUD
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1525774100
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1525774099}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8a514fb82d16654aaf9a46260f4120d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.UI.HudView
+  runner: {fileID: 123573323}
+  saveGame: {fileID: 123573325}
+  textInterval: 0.1
+--- !u!114 &1525774101
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1525774099}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
+  m_PanelSettings: {fileID: 11400000, guid: 6d29c777ad8aa8c438b9dcc8c80ed6f5, type: 2}
+  m_ParentUI: {fileID: 0}
+  sourceAsset: {fileID: 9197481963319205126, guid: 338c1ea4b75598341a4b89d0a807c0f7, type: 3}
+  m_SortingOrder: 0
+  m_Position: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+  m_PivotReferenceSize: 0
+  m_Pivot: 0
+  m_WorldSpaceCollider: {fileID: 0}
+--- !u!4 &1525774102
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1525774099}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2003918873
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2003918876}
+  - component: {fileID: 2003918875}
+  - component: {fileID: 2003918874}
+  m_Layer: 0
+  m_Name: Panels
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2003918874
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2003918873}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0e43b7f1912e0e7448b590b28825f113, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.UI.PanelsView
+  picker: {fileID: 765499589}
+  siteView: {fileID: 765499592}
+  placer: {fileID: 765499591}
+  lightMap: {fileID: 765499590}
+  orbitCamera: {fileID: 124941726}
+  textInterval: 0.1
+--- !u!114 &2003918875
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2003918873}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
+  m_PanelSettings: {fileID: 11400000, guid: 6d29c777ad8aa8c438b9dcc8c80ed6f5, type: 2}
+  m_ParentUI: {fileID: 0}
+  sourceAsset: {fileID: 9197481963319205126, guid: 1c04366acf9973343b53bfc3a3e3c3e5, type: 3}
+  m_SortingOrder: 0
+  m_Position: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+  m_PivotReferenceSize: 0
+  m_Pivot: 0
+  m_WorldSpaceCollider: {fileID: 0}
+--- !u!4 &2003918876
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2003918873}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -480,3 +1074,9 @@ SceneRoots:
   - {fileID: 124941725}
   - {fileID: 726131410}
   - {fileID: 765499588}
+  - {fileID: 123573324}
+  - {fileID: 1525774102}
+  - {fileID: 540962807}
+  - {fileID: 2003918876}
+  - {fileID: 1248001367}
+  - {fileID: 122503634}
