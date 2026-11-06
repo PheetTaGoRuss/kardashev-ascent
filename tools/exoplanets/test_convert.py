@@ -150,6 +150,17 @@ class ConvertTests(unittest.TestCase):
         fixed = convert(SUN_EARTH_ROW, {"id": "t", "archiveName": "Test b", "assumed": {"terrainSeed": 7}})
         self.assertEqual(fixed["look"]["terrainSeed"], 7)
 
+    def test_water_and_basins_are_assumed_with_defaults(self):
+        p = convert(SUN_EARTH_ROW, {"id": "t", "archiveName": "Test b", "assumed": {}})
+        self.assertEqual(p["look"]["water"], "liquid")
+        self.assertEqual(p["look"]["oceanFraction"], 0.62)
+        self.assertEqual(prov(p, "look.water"), "assumed")
+        dry = convert(SUN_EARTH_ROW, {"id": "t", "archiveName": "Test b", "assumed": {"water": "none", "oceanFraction": 0.4}})
+        self.assertEqual(dry["look"]["water"], "none")
+        self.assertEqual(dry["look"]["oceanFraction"], 0.4)
+        with self.assertRaises(ValueError):
+            convert(SUN_EARTH_ROW, {"id": "t", "archiveName": "Test b", "assumed": {"water": "lava"}})
+
     def test_unknown_cloud_model_is_rejected(self):
         with self.assertRaises(ValueError):
             convert(SUN_EARTH_ROW, {"id": "t", "archiveName": "Test b", "assumed": {"clouds": "venus"}})

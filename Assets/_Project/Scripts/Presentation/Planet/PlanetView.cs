@@ -21,6 +21,10 @@ namespace KardashevAscent.Presentation.Planet
         [Range(0.5f, 4f)] [SerializeField] float continentScale = 1.6f;
         [Tooltip("Tidally locked look: ice everywhere except a circle under the star (latitude 0, longitude 0).")]
         [SerializeField] bool iceAroundSubStellar;
+        [Tooltip("Seas in the basins (frozen where cold). Off: dry basins and deserts.")]
+        [SerializeField] bool liquidWater = true;
+        [Tooltip("Air temperature, °C: above 40 the lowlands are desert.")]
+        [SerializeField] float airTemperatureC = 15f;
 
         [Header("Look")]
         [Range(0f, 0.3f)] [SerializeField] float borderWidth = 0.07f;
@@ -31,6 +35,10 @@ namespace KardashevAscent.Presentation.Planet
         [SerializeField] Color highland = new Color(0.55f, 0.50f, 0.32f, 0.1f);
         [SerializeField] Color mountain = new Color(0.45f, 0.42f, 0.40f, 0.15f);
         [SerializeField] Color ice = new Color(0.90f, 0.94f, 0.97f, 0.35f);
+        [SerializeField] Color frozenSea = new Color(0.66f, 0.80f, 0.90f, 0.45f);
+        [SerializeField] Color tundra = new Color(0.47f, 0.47f, 0.42f, 0.1f);
+        [SerializeField] Color desert = new Color(0.78f, 0.62f, 0.38f, 0.08f);
+        [SerializeField] Color dryBasin = new Color(0.55f, 0.35f, 0.25f, 0.05f);
 
         [Header("Motion")]
         [Tooltip("Planet spin while playing, degrees per second (0 = still).")]
@@ -70,7 +78,7 @@ namespace KardashevAscent.Presentation.Planet
         {
             dirty = false;
             Sphere = HexSphere.Create(frequency);
-            Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(seed, oceanFraction, iceLatitude, continentScale, iceAroundSubStellar));
+            Surface = PlanetSurface.Generate(Sphere, Settings);
 
             terrainColors = new Color32[Sphere.TileCount];
             for (int t = 0; t < terrainColors.Length; t++)
@@ -128,7 +136,9 @@ namespace KardashevAscent.Presentation.Planet
                 || !Mathf.Approximately(oceanFraction, (float)settings.OceanFraction)
                 || !Mathf.Approximately(iceLatitude, (float)settings.IceLatitudeDeg)
                 || !Mathf.Approximately(continentScale, (float)settings.NoiseScale)
-                || iceAroundSubStellar != settings.IceAroundSubStellar;
+                || iceAroundSubStellar != settings.IceAroundSubStellar
+                || liquidWater != settings.LiquidWater
+                || !Mathf.Approximately(airTemperatureC, (float)settings.AirTemperatureC);
             if (!changed)
                 return false;
             seed = settings.Seed;
@@ -136,9 +146,15 @@ namespace KardashevAscent.Presentation.Planet
             iceLatitude = (float)settings.IceLatitudeDeg;
             continentScale = (float)settings.NoiseScale;
             iceAroundSubStellar = settings.IceAroundSubStellar;
+            liquidWater = settings.LiquidWater;
+            airTemperatureC = (float)settings.AirTemperatureC;
             dirty = true;
             return true;
         }
+
+        /// <summary>The surface settings the tiles are generated from.</summary>
+        public SurfaceSettings Settings =>
+            new SurfaceSettings(seed, oceanFraction, iceLatitude, continentScale, iceAroundSubStellar, liquidWater, airTemperatureC);
 
         /// <summary>Makes sure the tiles exist now (they are otherwise built on the first Update).</summary>
         public void EnsureBuilt()
@@ -166,6 +182,21 @@ namespace KardashevAscent.Presentation.Planet
                     break;
                 case TerrainType.Mountain:
                     c = Color.Lerp(mountain, ice, Mathf.InverseLerp(0.7f, 1f, elevation) * 0.5f);
+                    break;
+                case TerrainType.FrozenSea:
+                    // Thicker-looking ice over shallower water.
+                    c = Color.Lerp(frozenSea, ice, Mathf.InverseLerp(-1f, 0f, elevation) * 0.35f);
+                    break;
+                case TerrainType.Tundra:
+                    c = Color.Lerp(tundra, mountain, Mathf.InverseLerp(0f, 0.7f, elevation) * 0.4f);
+                    break;
+                case TerrainType.Desert:
+                    c = Color.Lerp(desert, highland, Mathf.InverseLerp(0f, 0.35f, elevation) * 0.35f);
+                    break;
+                case TerrainType.DryBasin:
+                    // Deeper basins darker.
+                    c = Color.Lerp(dryBasin * 0.75f, dryBasin, Mathf.InverseLerp(-1f, 0f, elevation));
+                    c.a = dryBasin.a;
                     break;
                 default:
                     c = ice;

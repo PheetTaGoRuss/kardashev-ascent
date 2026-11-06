@@ -28,7 +28,7 @@ namespace KardashevAscent.Simulation.Tests.Planet
         [TestCase(-8.1, 57.85)]
         [TestCase(-40.0, 10.0)]
         [TestCase(-67.2, 10.0)]
-        [TestCase(45.0, 80.0)]
+        [TestCase(45.0, 90.0)]
         public void IceLine_FollowsAirTemperature(double airC, double iceLatitude)
         {
             Assert.AreEqual(iceLatitude, SurfaceSettings.ForClimate(1, airC, false).IceLatitudeDeg, 1e-9);
@@ -52,8 +52,10 @@ namespace KardashevAscent.Simulation.Tests.Planet
             Assert.AreEqual(openRadius, s.IceLatitudeDeg, 1e-9);
         }
 
+        static bool IsCold(TerrainType t) => t == TerrainType.Ice || t == TerrainType.FrozenSea || t == TerrainType.Tundra;
+
         [Test]
-        public void Eyeball_IceOutsideTheCircleOnly()
+        public void Eyeball_ColdOutsideTheCircle_GlacierOnlyFarOut()
         {
             var settings = new SurfaceSettings(3, 0.62, 50.0, 1.6, true);
             PlanetSurface surface = PlanetSurface.Generate(Sphere, settings);
@@ -61,16 +63,26 @@ namespace KardashevAscent.Simulation.Tests.Planet
             {
                 var c = Sphere.Centers[t];
                 double angle = Math.Acos(Math.Max(-1.0, Math.Min(1.0, c.Z / c.Length()))) * 180.0 / Math.PI;
+                TerrainType terrain = surface.Terrain[t];
                 // The edge moves by ±6° of noise and up to 8° inland on high ground.
                 if (angle < 50.0 - 14.5)
-                    Assert.AreNotEqual(TerrainType.Ice, surface.Terrain[t], $"tile {t} at {angle:0.0}°");
+                    Assert.IsFalse(IsCold(terrain), $"tile {t} at {angle:0.0}°: {terrain}");
                 else if (angle > 50.0 + 6.5)
-                    Assert.AreEqual(TerrainType.Ice, surface.Terrain[t], $"tile {t} at {angle:0.0}°");
+                    Assert.IsTrue(IsCold(terrain), $"tile {t} at {angle:0.0}°: {terrain}");
+                if (terrain == TerrainType.Ice)
+                    Assert.Greater(angle, 50.0 + 45.0 - 14.5, "glacier only well past the edge");
             }
         }
 
+        static int Count(PlanetSurface s, params TerrainType[] types)
+        {
+            int n = 0;
+            foreach (TerrainType t in s.Terrain) if (Array.IndexOf(types, t) >= 0) n++;
+            return n;
+        }
+
         [Test]
-        public void ProximaLook_BaseIsOpenLowlandUnderTheStar()
+        public void ProximaLook_BaseIsOpenLowlandUnderTheStar_AndNotAllIce()
         {
             PlanetRecord r = PlanetRecordTests.ProximaForOtherTests();
             r.look.terrainSeed = 1697376206;
@@ -78,9 +90,54 @@ namespace KardashevAscent.Simulation.Tests.Planet
             var sim = new StubPlanetSimulation(Sphere, surface, r);
             Assert.AreEqual(TerrainType.Lowland, surface.Terrain[sim.BaseTileId]);
             Assert.IsTrue(sim.IsDayAtBase);
-            int ice = 0;
-            foreach (TerrainType t in surface.Terrain) if (t == TerrainType.Ice) ice++;
-            Assert.Greater(ice, Sphere.TileCount / 2, "a cold eyeball is mostly ice");
+            Assert.Greater(Count(surface, TerrainType.Tundra), 0, "cold bare ground");
+            Assert.Greater(Count(surface, TerrainType.FrozenSea), 0, "frozen seas");
+            Assert.Greater(Count(surface, TerrainType.ShallowOcean, TerrainType.DeepOcean), 0, "open sea in the eye");
+            Assert.Less(Count(surface, TerrainType.Ice), Sphere.TileCount * 0.75, "not one sheet of ice");
+        }
+
+        [Test]
+        public void DryWorld_HasNoWaterAnywhere()
+        {
+            PlanetSurface s = PlanetSurface.Generate(Sphere, SurfaceSettings.ForClimate(5, -8.0, false, false, 0.45));
+            Assert.AreEqual(0, Count(s, TerrainType.DeepOcean, TerrainType.ShallowOcean, TerrainType.FrozenSea));
+            Assert.Greater(Count(s, TerrainType.DryBasin), Sphere.TileCount / 4);
+            Assert.Greater(Count(s, TerrainType.Desert), 0);
+            Assert.AreEqual(0, Count(s, TerrainType.Lowland), "dry lowland is desert");
+        }
+
+        [Test]
+        public void WaterWorld_IsMostlySea()
+        {
+            PlanetSurface s = PlanetSurface.Generate(Sphere, SurfaceSettings.ForClimate(5, 15.0, false, true, 0.85));
+            int sea = Count(s, TerrainType.DeepOcean, TerrainType.ShallowOcean, TerrainType.FrozenSea);
+            Assert.AreEqual(0.85, (double)sea / Sphere.TileCount, 0.02);
+        }
+
+        [Test]
+        public void HotPlanet_LowlandsAreDesertBesideItsSeas()
+        {
+            PlanetSurface s = PlanetSurface.Generate(Sphere, SurfaceSettings.ForClimate(5, 60.0, false));
+            Assert.Greater(Count(s, TerrainType.ShallowOcean, TerrainType.DeepOcean), 0);
+            Assert.Greater(Count(s, TerrainType.Desert), 0);
+            Assert.AreEqual(0, Count(s, TerrainType.Lowland));
+            Assert.AreEqual(0, Count(s, TerrainType.Ice, TerrainType.FrozenSea, TerrainType.Tundra), "no cold at 60 °C");
+        }
+
+        [Test]
+        public void Terrains_WaterAlbedoAndNames()
+        {
+            Assert.IsTrue(Terrains.IsWater(TerrainType.ShallowOcean));
+            Assert.IsFalse(Terrains.IsWater(TerrainType.FrozenSea), "frozen seas take buildings");
+            Assert.IsFalse(Terrains.IsWater(TerrainType.DryBasin));
+            Assert.AreEqual(0.8, Terrains.Albedo(TerrainType.Ice));
+            Assert.Greater(Terrains.Albedo(TerrainType.Desert), Terrains.Albedo(TerrainType.Lowland));
+            Assert.AreEqual(2, Terrains.BaseSiteRank(TerrainType.Desert));
+            Assert.AreEqual(1, Terrains.BaseSiteRank(TerrainType.Tundra));
+            Assert.AreEqual(0, Terrains.BaseSiteRank(TerrainType.Mountain));
+            foreach (TerrainType t in (TerrainType[])Enum.GetValues(typeof(TerrainType)))
+                Assert.AreNotEqual(t.ToString(), "", Terrains.Name(t));
+            Assert.AreEqual("Frozen sea", Terrains.Name(TerrainType.FrozenSea));
         }
 
         [Test]

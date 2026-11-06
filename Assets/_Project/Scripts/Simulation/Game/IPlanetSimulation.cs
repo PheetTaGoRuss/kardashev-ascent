@@ -242,7 +242,7 @@ namespace KardashevAscent.Simulation.Game
             AreaM2 = areaM2;
         }
 
-        public bool IsWater => Terrain == TerrainType.DeepOcean || Terrain == TerrainType.ShallowOcean;
+        public bool IsWater => Terrains.IsWater(Terrain);
     }
 
     /// <summary>What one panel on one tile would produce; shown before placing.</summary>

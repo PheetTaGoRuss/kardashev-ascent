@@ -29,13 +29,13 @@
       "id": "proxima-cen-b",
       "displayName": "Proxima Centauri b",
       "archiveName": "Proxima Cen b",
-      "assumed": { "tidallyLocked": true }
+      "assumed": { "tidallyLocked": true, "water": "none", "oceanFraction": 0.5 }
     },
     {
       "id": "trappist-1-e",
       "displayName": "TRAPPIST-1 e",
       "archiveName": "TRAPPIST-1 e",
-      "assumed": { "tidallyLocked": true }
+      "assumed": { "tidallyLocked": true, "oceanFraction": 0.85 }
     },
     {
       "id": "kepler-16-b",
@@ -47,7 +47,7 @@
       "id": "kepler-452-b",
       "displayName": "Kepler-452 b",
       "archiveName": "Kepler-452 b",
-      "assumed": { "obliquityDeg": 23.44, "dayLengthHours": 24.0 }
+      "assumed": { "obliquityDeg": 23.44, "dayLengthHours": 24.0, "water": "none", "oceanFraction": 0.45 }
     }
   ]
 }

@@ -209,18 +209,7 @@ namespace KardashevAscent.Presentation.UI
             return sum;
         }
 
-        static string Pretty(TerrainType terrain)
-        {
-            switch (terrain)
-            {
-                case TerrainType.DeepOcean: return "Deep ocean";
-                case TerrainType.ShallowOcean: return "Shallow ocean";
-                case TerrainType.Lowland: return "Lowland";
-                case TerrainType.Highland: return "Highland";
-                case TerrainType.Mountain: return "Mountain";
-                default: return "Ice";
-            }
-        }
+        static string Pretty(TerrainType terrain) => Terrains.Name(terrain);
     }
 
     /// <summary>

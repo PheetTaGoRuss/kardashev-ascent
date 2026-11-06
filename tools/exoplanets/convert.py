@@ -56,6 +56,8 @@ DEFAULT_ASSUMED = {
     "clouds": "none",              # "earth": NASA POWER cloud climatology (Earth-like planets only); "none": clear sky
     "surfacePressureEarth": 1.0,   # surface pressure in Earth atmospheres; picks how panels cool (wind or radiation)
     "terrainSeed": None,           # noise seed for the planet's continents; None: from the planet id (crc32)
+    "water": "liquid",             # surface water: "liquid" (seas; frozen where it is cold) or "none" (dry basins)
+    "oceanFraction": 0.62,         # share of the surface in low basins (seas, or dry basins on a dry world)
 }
 
 
@@ -294,6 +296,13 @@ def convert(row: dict[str, Any] | None, entry: dict[str, Any], retrieved: str = 
         b.put("look", "terrainSeed", int(assumed["terrainSeed"]), "assumed", "terrain noise seed, game value")
     else:
         b.put("look", "terrainSeed", terrain_seed(entry["id"]), "assumed", "terrain noise seed from the planet id")
+
+    water = str(assumed["water"])
+    if water not in ("liquid", "none"):
+        raise ValueError(f"{entry['id']}: water must be 'liquid' or 'none', not {water!r}")
+    b.put("look", "water", water, "assumed", "surface water is not measurable for exoplanets yet")
+    b.put("look", "oceanFraction", float(assumed["oceanFraction"]), "assumed",
+          "share of the surface in low basins (seas, or dry basins), game value")
 
     out: dict[str, Any] = {
         "id": entry["id"],
