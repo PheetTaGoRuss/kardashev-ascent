@@ -131,7 +131,7 @@ namespace KardashevAscent.Presentation.UI
             }
             kLabel.text = $"K {sim.KardashevK:0.00} · {Format.Power(sim.KardashevPowerW)}";
             if (kPlanetLabel != null)
-                kPlanetLabel.text = $"Planet K {sim.PlanetK:0.00} · {Format.Percent(Kardashev.PlanetCompletion(sim.KardashevPowerW, sim.TypeITargetW))} done";
+                kPlanetLabel.text = $"Planet K {sim.PlanetK:0.00} ({Format.Percent(Kardashev.PlanetCompletion(sim.KardashevPowerW, sim.TypeITargetW))})";
 
             // The grid updates its brownout state on the next tick; while paused, don't warn once panels cover demand.
             bool brownoutNow = sim.IsBrownout && sim.GenerationW < sim.DemandW;
