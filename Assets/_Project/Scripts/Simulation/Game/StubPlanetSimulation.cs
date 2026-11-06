@@ -63,6 +63,8 @@ namespace KardashevAscent.Simulation.Game
             subStellarLongitudeAtStart = Sphere.Longitude(BaseTileId) + 0.4 * Math.PI;
             Grid.BrownoutChanged += on => BrownoutChanged?.Invoke(on);
             Colony = new ColonyDemand(Grid.DemandW, planet.DayLengthHours);
+            // One sample per planet "hour" (a 24th of the day), a week of them.
+            History = new PowerHistory(planet.DayLengthHours > 0.0 ? planet.DayLengthHours / 24.0 : 1.0, 24 * 7);
 
             double g0 = Orbit.ExtraterrestrialIrradiance(planet.Luminosity, planet.SemiMajorAxis);
             TypeITargetW = 1e16 * (g0 / EarthIrradiance) * Math.Pow(planetRadiusM / EarthRadiusM, 2.0);
@@ -134,6 +136,8 @@ namespace KardashevAscent.Simulation.Game
             KardashevK = ToK(grid.ServedW + grid.ChargeW + BuildPowerW);
             Colony.Step(dt, grid.GenerationW, grid.ServedW, grid.IsBrownout);
             Grid.DemandW = Colony.DemandW;
+            double soc = Grid.Battery.CapacityWh > 0.0 ? Grid.Battery.StoredWh / Grid.Battery.CapacityWh : 0.0;
+            History.Add(dt, TimeHours, grid.GenerationW, grid.DemandW, grid.ServedW, BuildPowerW, soc, grid.IsBrownout);
 
             bool day = SunAt(BaseTileId).Up > 0.0;
             if (day != IsDayAtBase)
@@ -271,6 +275,8 @@ namespace KardashevAscent.Simulation.Game
 
         public double DemandTargetW => Colony.TargetW;
         public bool IsColonyGrowing => Colony.IsGrowing;
+        public double HoursSinceBrownout => Colony.HoursSinceBrownout;
+        public PowerHistory History { get; }
 
         /// <summary>One battery yard: about five grid-scale Li-ion units (≈ 4 MWh each) on a slot, Wh.</summary>
         public double BatteryUnitWh { get; set; } = 20_000_000.0;
@@ -326,6 +332,13 @@ namespace KardashevAscent.Simulation.Game
                 ColonyDayEnergyWh = Colony.DayEnergyWh,
                 ColonyDayClockHours = Colony.DayClockHours,
                 BuildStockWh = Build.StockWh,
+                History = History.ToList(),
+                HistoryGeneratedWh = History.TotalGeneratedWh,
+                HistoryDemandWh = History.TotalDemandWh,
+                HistoryServedWh = History.TotalServedWh,
+                HistoryBuildWh = History.TotalBuildWh,
+                HistoryBrownoutHours = History.BrownoutHours,
+                HistoryHours = History.TotalHours,
             };
             foreach (var kv in panels)
                 state.Buildings.Add(new BuildingRecord { Tile = kv.Key.Tile, Slot = kv.Key.Slot, Type = BuildingType.SolarPanel, Tilt = kv.Value.Tilt, Azimuth = kv.Value.Azimuth });
@@ -368,6 +381,8 @@ namespace KardashevAscent.Simulation.Game
             foreach (var r in sitesInOrder)
                 Restore(r, true);
             Grid.Battery.SetStored(state.BatteryStoredWh);
+            History.Restore(state.History, state.HistoryGeneratedWh, state.HistoryDemandWh, state.HistoryServedWh,
+                            state.HistoryBuildWh, state.HistoryBrownoutHours, state.HistoryHours);
             Colony.Restore(state.ColonyDemandW, state.ColonyHoursSinceBrownout, state.ColonyAverageGenerationW, state.ColonyDayEnergyWh, state.ColonyDayClockHours);
             Grid.DemandW = Colony.DemandW;
             DemandW = Colony.DemandW;
