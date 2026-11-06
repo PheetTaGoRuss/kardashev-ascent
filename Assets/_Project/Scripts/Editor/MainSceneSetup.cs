@@ -42,6 +42,7 @@ namespace KardashevAscent.EditorTools
                 runner = Undo.AddComponent<SimulationRunner>(go);
             }
             SetReference(runner, "planet", planet);
+            SetUpPlanets(runner);
 
             Light sun = FindDirectionalLight();
             if (sun == null)
@@ -111,10 +112,29 @@ namespace KardashevAscent.EditorTools
             SetUpTileInfo(runner, planet, placer);
             SetUpPanels(planet, placer, site);
             SetUpColony(runner);
+            SetUpPlanetChooser(runner);
             SetUpCursorLight(planet, picker);
 
             EditorSceneManager.MarkSceneDirty(planet.gameObject.scene);
-            Debug.Log("Scene set up: Simulation runner, star light, light-potential map, building sites, panel placement, HUD, tile info, side panels, colony overview, cursor flashlight. Save the scene to keep it.");
+            Debug.Log("Scene set up: Simulation runner, planets, star light, light-potential map, building sites, panel placement, HUD, tile info, side panels, colony overview, planet chooser, cursor flashlight. Save the scene to keep it.");
+        }
+
+        /// <summary>Import planets.json and give the runner every planet in file order, starting on the first playable one.</summary>
+        static void SetUpPlanets(SimulationRunner runner)
+        {
+            var planets = PlanetImporter.Import();
+            var so = new SerializedObject(runner);
+            SerializedProperty list = so.FindProperty("planets");
+            list.arraySize = planets.Count;
+            int start = -1;
+            for (int i = 0; i < planets.Count; i++)
+            {
+                list.GetArrayElementAtIndex(i).objectReferenceValue = planets[i];
+                if (start < 0 && planets[i].Record.IsPlayable)
+                    start = i;
+            }
+            so.FindProperty("startPlanet").intValue = Mathf.Max(0, start);
+            so.ApplyModifiedProperties();
         }
 
         /// <summary>The flashlight that follows the mouse over the planet (F toggles it).</summary>
@@ -260,6 +280,33 @@ namespace KardashevAscent.EditorTools
             {
                 Undo.RecordObject(colonyDocument, "Colony draw order");
                 colonyDocument.sortingOrder = ColonySortingOrder;
+            }
+        }
+
+        const string PlanetsLayoutPath = "Assets/_Project/UI/Planets/Planets.uxml";
+
+        /// <summary>Draw order of the planet chooser: above everything, the colony overview included.</summary>
+        const float PlanetsSortingOrder = 20f;
+
+        /// <summary>The planet chooser (L, and at start), on the same PanelSettings as the HUD.</summary>
+        static void SetUpPlanetChooser(SimulationRunner runner)
+        {
+            var view = Object.FindAnyObjectByType<PlanetChooserView>();
+            if (view == null)
+            {
+                var go = new GameObject("Planets");
+                Undo.RegisterCreatedObjectUndo(go, "Add Planet Chooser");
+                var document = Undo.AddComponent<UIDocument>(go);
+                document.panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
+                document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(PlanetsLayoutPath);
+                view = Undo.AddComponent<PlanetChooserView>(go);
+            }
+            SetReference(view, "runner", runner);
+            var planetsDocument = view.GetComponent<UIDocument>();
+            if (planetsDocument.sortingOrder != PlanetsSortingOrder)
+            {
+                Undo.RecordObject(planetsDocument, "Planet chooser draw order");
+                planetsDocument.sortingOrder = PlanetsSortingOrder;
             }
         }
 

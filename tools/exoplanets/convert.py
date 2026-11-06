@@ -52,6 +52,8 @@ DEFAULT_ASSUMED = {
     "retrograde": False,           # spins against its orbital motion (like Venus)
     "bondAlbedo": 0.3,
     "tidallyLocked": False,
+    "clouds": "none",              # "earth": NASA POWER cloud climatology (Earth-like planets only); "none": clear sky
+    "surfacePressureEarth": 1.0,   # surface pressure in Earth atmospheres; picks how panels cool (wind or radiation)
 }
 
 
@@ -196,6 +198,11 @@ def convert(row: dict[str, Any] | None, entry: dict[str, Any], retrieved: str = 
     # ---- rotation (never measured for exoplanets) --------------------------------------
     locked = bool(assumed["tidallyLocked"])
     b.put("flags", "tidallyLocked", locked, "assumed", "rotation is not measured for exoplanets")
+    clouds = str(assumed["clouds"])
+    if clouds not in ("none", "earth"):
+        raise ValueError(f"{entry['id']}: clouds must be 'none' or 'earth', not {clouds!r}")
+    b.put("flags", "clouds", clouds, "assumed",
+          "earth = NASA POWER cloud climatology by latitude and month; none = clear sky (cloud cover unknown)")
     b.put("flags", "circumbinary", circumbinary, "nasa" if cb_flag is not None else "assumed",
           "cb_flag: planet orbits both stars")
     if locked:
@@ -216,6 +223,8 @@ def convert(row: dict[str, Any] | None, entry: dict[str, Any], retrieved: str = 
 
     # ---- atmosphere (game values) ------------------------------------------------------
     b.put("solar", "opticalDepth", float(assumed["opticalDepth"]), "assumed", "broadband tau, game value")
+    b.put("solar", "surfacePressureEarth", float(assumed["surfacePressureEarth"]), "assumed",
+          "surface pressure in Earth atmospheres, game value")
     b.put("solar", "diffuseK", float(assumed["diffuseK"]), "assumed", "diffuse-light k, game value")
 
     # ---- planet body -------------------------------------------------------------------

@@ -84,7 +84,15 @@ namespace KardashevAscent.Presentation.Planet
             PlanetSolarParams solar = runner.SolarParams;
             values = null;
             pendingSphere = sphere;
-            pending = Task.Run(() => LightPotential.ForTiles(sphere, solar));
+            // Per orbit → per Earth year, so the numbers compare across planets (and match the panel preview).
+            double perEarthYear = solar.YearLengthHours > 0.0 ? SolarConstants.EarthYearHours / solar.YearLengthHours : 1.0;
+            pending = Task.Run(() =>
+            {
+                double[] kwh = LightPotential.ForTiles(sphere, solar);
+                for (int i = 0; i < kwh.Length; i++)
+                    kwh[i] *= perEarthYear;
+                return kwh;
+            });
             if (visible)
                 planet.ShowTerrain();
         }
