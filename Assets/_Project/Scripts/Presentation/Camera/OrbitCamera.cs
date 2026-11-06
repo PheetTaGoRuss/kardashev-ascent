@@ -139,6 +139,16 @@ namespace KardashevAscent.Presentation.CameraControl
         /// <summary>Fly back up to the planet view.</summary>
         public void LeaveSite() => inSite = false;
 
+        /// <summary>The site view's target angle (degrees from looking straight down) and distance (site radii).</summary>
+        public Vector2 SiteViewGoal => new Vector2(goalTilt, goalSiteDistance);
+
+        /// <summary>Glide the site view to this angle (degrees from straight down) and distance (site radii).</summary>
+        public void SetSiteView(float tiltDeg, float distanceRadii)
+        {
+            goalTilt = Mathf.Clamp(tiltDeg, 0f, 80f);
+            goalSiteDistance = Mathf.Clamp(distanceRadii, siteMinDistance, siteMaxDistance);
+        }
+
         void LateUpdate()
         {
             if (inSite && siteBlend > 0.5f)
@@ -305,7 +315,8 @@ namespace KardashevAscent.Presentation.CameraControl
                            "Click or drag: select slots · Shift: add · Ctrl: remove · Ctrl+A: all\n" +
                            "Right-drag or A/D: turn · W/S: view angle\n" +
                            "Wheel or Q/E: zoom (zoom out to leave)\n" +
-                           "R: reset · Esc: clear selection, then back to planet · H: hide · C: colony · L: planets · F: flashlight · F5/F9: save/load";
+                           "V: sky over the selected panel · R: reset · Esc: clear selection, then back to planet\n" +
+                           "H: hide · C: colony · L: planets · F: flashlight · F5/F9: save/load";
                 string tiles = target != null && target.TryGetComponent(out PlanetView planet) && planet.Sphere != null
                     ? $"Tiles: {planet.Sphere.TileCount:N0} · click one to build there\n"
                     : "";

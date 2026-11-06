@@ -115,6 +115,7 @@ namespace KardashevAscent.EditorTools
             SetUpPlanetChooser(runner);
             SetUpHints(runner, picker, placer);
             SetUpCursorLight(planet, picker);
+            SetUpSky(runner, planet, site, placer);
 
             EditorSceneManager.MarkSceneDirty(planet.gameObject.scene);
             Debug.Log("Scene set up: Simulation runner, planets, star light, light-potential map, building sites, panel placement, HUD, tile info, side panels, colony overview, planet chooser, cursor flashlight. Save the scene to keep it.");
@@ -282,6 +283,35 @@ namespace KardashevAscent.EditorTools
                 Undo.RecordObject(colonyDocument, "Colony draw order");
                 colonyDocument.sortingOrder = ColonySortingOrder;
             }
+        }
+
+        const string SkyLayoutPath = "Assets/_Project/UI/Sky/Sky.uxml";
+        const string SkyLinesMaterial = "Assets/_Project/Materials/SkyLines.mat";
+
+        /// <summary>The sky view: the dome lines on the planet and its panel (above tile info and the side panels).</summary>
+        static void SetUpSky(SimulationRunner runner, PlanetView planet, SiteView site, PanelPlacer placer)
+        {
+            var dome = planet.GetComponent<SkyView>();
+            if (dome == null)
+                dome = Undo.AddComponent<SkyView>(planet.gameObject);
+            SetReference(dome, "runner", runner);
+            SetReference(dome, "siteView", site);
+            SetReference(dome, "placer", placer);
+            SetReference(dome, "lineMaterial", LoadOrCreateMaterial(SkyLinesMaterial, "KardashevAscent/SkyLines"));
+
+            var view = Object.FindAnyObjectByType<SkyPanelView>();
+            if (view == null)
+            {
+                var go = new GameObject("Sky");
+                Undo.RegisterCreatedObjectUndo(go, "Add Sky Panel");
+                var document = Undo.AddComponent<UIDocument>(go);
+                document.panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
+                document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(SkyLayoutPath);
+                document.sortingOrder = 8f;
+                view = Undo.AddComponent<SkyPanelView>(go);
+            }
+            SetReference(view, "sky", dome);
+            SetReference(view, "runner", runner);
         }
 
         const string HintsLayoutPath = "Assets/_Project/UI/Hints/Hints.uxml";
