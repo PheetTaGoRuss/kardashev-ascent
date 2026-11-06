@@ -20,6 +20,14 @@ namespace KardashevAscent.Simulation.Game
         public double ColonyDayClockHours;
         /// <summary>Build parts on hand, Wh.</summary>
         public double BuildStockWh;
+        /// <summary>Recent power samples, oldest first, and the totals since landing (missing in older saves: they start empty).</summary>
+        public List<PowerSample> History = new List<PowerSample>();
+        public double HistoryGeneratedWh;
+        public double HistoryDemandWh;
+        public double HistoryServedWh;
+        public double HistoryBuildWh;
+        public double HistoryBrownoutHours;
+        public double HistoryHours;
         public List<BuildingRecord> Buildings = new List<BuildingRecord>();
     }
 

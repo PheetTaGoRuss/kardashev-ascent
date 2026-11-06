@@ -56,6 +56,12 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>True while the colony is growing (a day with no brownout and room to grow).</summary>
         bool IsColonyGrowing { get; }
 
+        /// <summary>Game hours since the last brownout ended (the colony grows only after a full planet day without one).</summary>
+        double HoursSinceBrownout { get; }
+
+        /// <summary>Recent power samples and totals since landing, for the colony overview.</summary>
+        PowerHistory History { get; }
+
         double BatteryStoredWh { get; }
 
         double BatteryCapacityWh { get; }
