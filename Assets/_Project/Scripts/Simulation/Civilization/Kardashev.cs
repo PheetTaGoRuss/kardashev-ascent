@@ -54,6 +54,16 @@ namespace KardashevAscent.Simulation.Civilization
         public static double PlanetK(double powerW, double targetW) =>
             targetW > 0.0 ? K(Math.Max(powerW, MinimumW) * TypeIW / targetW) : K(powerW);
 
+        /// <summary>Milestones come every 0.1 of planet K: each one is ten times the power of the last (game rule).</summary>
+        public const double MilestoneStep = 0.1;
+
+        /// <summary>Milestones reached at this planet K: n when planet K ≥ n × 0.1 (0 below 0.1). Milestone 10 is the target.</summary>
+        public static int MilestoneFor(double planetK) =>
+            planetK < MilestoneStep - 1e-9 ? 0 : (int)Math.Floor(planetK / MilestoneStep + 1e-9);
+
+        /// <summary>Power at which milestone <paramref name="milestone"/> is reached on a planet with this target: P_I × 10^(n − 10).</summary>
+        public static double PowerForMilestone(int milestone, double targetW) => targetW * Math.Pow(10.0, milestone - 10.0);
+
         /// <summary>
         /// Type I as a share of the starlight a planet intercepts, TypeIW / (S⊕·πR⊕²) ≈ 0.058. The same on every
         /// planet, because the per-planet target scales with S·R². So Type I is not "all of the planet's sunlight".

@@ -144,6 +144,18 @@ namespace KardashevAscent.Presentation.UI
         /// Absolute K and planet K side by side, as docs/physics/physics-verification.md item 10 asks: the per-planet
         /// target is a game rule, and Type I is a small share of the starlight a planet gets, not all of it.
         /// </summary>
+        /// <summary>Milestones reached and what the next one needs (a whole day's average, not a sunny noon).</summary>
+        static string Milestones(IPlanetSimulation sim)
+        {
+            int n = sim.MilestonesReached;
+            string reached = $"Milestones  {n} of 10";
+            if (n >= 10)
+                return reached + " · this planet's Type I reached";
+            double next = Kardashev.PowerForMilestone(n + 1, sim.TypeITargetW);
+            string day = sim.DayAveragePowerW > 0.0 ? $"last day averaged {Format.Power(sim.DayAveragePowerW)}" : "first day not over yet";
+            return $"{reached} · next at {Format.Power(next)} through a whole day ({day})";
+        }
+
         void UpdateKardashev(IPlanetSimulation sim)
         {
             if (kardashev == null)
@@ -154,7 +166,8 @@ namespace KardashevAscent.Presentation.UI
                 $"Absolute K  {sim.KardashevK:0.00} · {Format.Power(p)} used\n" +
                 $"Planet K  {sim.PlanetK:0.00} · {Format.Percent(Kardashev.PlanetCompletion(p, target))} of this planet's target\n" +
                 $"Target  {Format.Power(target)} (absolute K {Kardashev.K(target):0.00})" +
-                (tenfolds > 0.0 ? $" · power must grow 10× about {tenfolds * 10.0:0} more times" : " · reached");
+                (tenfolds > 0.0 ? $" · power must grow 10× about {tenfolds * 10.0:0} more times" : " · reached") + "\n" +
+                Milestones(sim);
 
             if (kardashevNotes == null)
                 return;

@@ -63,23 +63,70 @@ namespace KardashevAscent.Presentation.UI
                     speedButtons[i].clicked += () => runner?.SetSpeed(speed);
             }
             nextText = 0f;
+            if (saveGame != null)
+                saveGame.Loaded += OnLoaded;
         }
 
         void OnDisable()
         {
             if (document != null && document.rootVisualElement != null)
                 ScreenInput.Unregister(document.rootVisualElement.panel);
+            if (saveGame != null)
+                saveGame.Loaded -= OnLoaded;
+        }
+
+        /// <summary>A loaded save brings its own milestones: not news.</summary>
+        void OnLoaded()
+        {
+            watched = runner != null ? runner.Simulation : null;
+            milestonesSeen = watched != null ? watched.MilestonesReached : 0;
+            milestoneMessage = null;
+        }
+
+        // Milestone news: shown longer than save messages, and the newest wins. The count is compared every frame
+        // (not an event), so nothing is missed when a new simulation starts; a new or loaded colony sets the baseline.
+        IPlanetSimulation watched;
+        int milestonesSeen;
+        string milestoneMessage;
+        float milestoneTime = float.NegativeInfinity;
+        const float MilestoneSeconds = 6f;
+
+        void CheckMilestones(IPlanetSimulation sim)
+        {
+            if (sim != watched)
+            {
+                watched = sim;
+                milestonesSeen = sim != null ? sim.MilestonesReached : 0;
+                milestoneMessage = null;
+                return;
+            }
+            if (sim == null || sim.MilestonesReached <= milestonesSeen)
+            {
+                if (sim != null) milestonesSeen = sim.MilestonesReached;   // a loaded save may lower it
+                return;
+            }
+            int n = milestonesSeen = sim.MilestonesReached;
+            double p = Kardashev.PowerForMilestone(n, sim.TypeITargetW);
+            milestoneMessage = n >= 10
+                ? $"Type I for {runner.Record?.displayName ?? "this planet"}: {Format.Power(sim.TypeITargetW)} through a whole day (planet K 1)."
+                : $"Milestone {n} of 10: planet K {n * Kardashev.MilestoneStep:0.0}, {Format.Power(p)} through a whole day. Next: ten times more.";
+            milestoneTime = Time.unscaledTime;
         }
 
         void Update()
         {
+            CheckMilestones(runner != null ? runner.Simulation : null);
             if (toast != null)
             {
-                bool showToast = saveGame != null && !string.IsNullOrEmpty(saveGame.Message)
-                    && Time.unscaledTime - saveGame.MessageTime < 2.5f;
-                toast.EnableInClassList("hidden", !showToast);
-                if (showToast)
+                bool milestone = !string.IsNullOrEmpty(milestoneMessage) && Time.unscaledTime - milestoneTime < MilestoneSeconds;
+                bool save = saveGame != null && !string.IsNullOrEmpty(saveGame.Message)
+                    && Time.unscaledTime - saveGame.MessageTime < 2.5f
+                    && (!milestone || saveGame.MessageTime > milestoneTime);
+                toast.EnableInClassList("hidden", !milestone && !save);
+                if (save)
                     toast.text = saveGame.Message;
+                else if (milestone)
+                    toast.text = milestoneMessage;
             }
             IPlanetSimulation sim = runner != null ? runner.Simulation : null;
             if (sim == null || date == null)
