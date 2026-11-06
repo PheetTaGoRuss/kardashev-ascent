@@ -139,6 +139,28 @@ class ConvertTests(unittest.TestCase):
         self.assertEqual(p["solar"]["surfacePressureEarth"], 1.0)
         self.assertEqual(prov(p, "solar.surfacePressureEarth"), "assumed")
 
+    def test_terrain_seed_is_stable_and_overridable(self):
+        a = convert(SUN_EARTH_ROW, {"id": "t", "archiveName": "Test b", "assumed": {}})
+        b = convert(SUN_EARTH_ROW, {"id": "t", "archiveName": "Test b", "assumed": {}})
+        self.assertEqual(a["look"]["terrainSeed"], b["look"]["terrainSeed"])
+        self.assertTrue(0 <= a["look"]["terrainSeed"] < 2_000_000_000)
+        self.assertEqual(prov(a, "look.terrainSeed"), "assumed")
+        other = convert(SUN_EARTH_ROW, {"id": "u", "archiveName": "Test b", "assumed": {}})
+        self.assertNotEqual(a["look"]["terrainSeed"], other["look"]["terrainSeed"])
+        fixed = convert(SUN_EARTH_ROW, {"id": "t", "archiveName": "Test b", "assumed": {"terrainSeed": 7}})
+        self.assertEqual(fixed["look"]["terrainSeed"], 7)
+
+    def test_water_and_basins_are_assumed_with_defaults(self):
+        p = convert(SUN_EARTH_ROW, {"id": "t", "archiveName": "Test b", "assumed": {}})
+        self.assertEqual(p["look"]["water"], "liquid")
+        self.assertEqual(p["look"]["oceanFraction"], 0.62)
+        self.assertEqual(prov(p, "look.water"), "assumed")
+        dry = convert(SUN_EARTH_ROW, {"id": "t", "archiveName": "Test b", "assumed": {"water": "none", "oceanFraction": 0.4}})
+        self.assertEqual(dry["look"]["water"], "none")
+        self.assertEqual(dry["look"]["oceanFraction"], 0.4)
+        with self.assertRaises(ValueError):
+            convert(SUN_EARTH_ROW, {"id": "t", "archiveName": "Test b", "assumed": {"water": "lava"}})
+
     def test_unknown_cloud_model_is_rejected(self):
         with self.assertRaises(ValueError):
             convert(SUN_EARTH_ROW, {"id": "t", "archiveName": "Test b", "assumed": {"clouds": "venus"}})

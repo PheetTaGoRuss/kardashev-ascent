@@ -213,6 +213,14 @@ namespace KardashevAscent.Presentation.UI
             if (r.planet.equilibriumTempK > 0.0)
                 Row(r, "Equilibrium temp.", $"{r.planet.equilibriumTempK:0} K ({r.planet.equilibriumTempK - 273.15:0} °C)", "planet.equilibriumTempK");
             Row(r, "Air at the panels", $"{r.solar.airTemperatureC:0} °C", "solar.airTemperatureC");
+            SurfaceSettings look = r.ToSurfaceSettings();
+            Row(r, "Surface water", r.HasLiquidWater ? $"seas over {look.OceanFraction * 100.0:0} % of it" : $"none: dry basins over {look.OceanFraction * 100.0:0} %",
+                "look.water");
+            string cold = look.IceAroundSubStellar
+                ? look.IceLatitudeDeg >= 180.0 ? "none" : $"beyond {look.IceLatitudeDeg:0}° from the point under the star (tundra, frozen seas, then glacier)"
+                : look.IceLatitudeDeg >= 90.0 ? "none" : $"from {look.IceLatitudeDeg:0}° latitude (tundra, frozen seas, then glacier)";
+            Row(ValueOrigin.Assumed, "Cold zone", cold,
+                "game rule from the air temperature: Earth-like at 0–35 °C, wider when colder; locked planets are eyeballs");
 
             string why = r.WhyNotPlayable;
             verdict.EnableInClassList("bad", why != null);

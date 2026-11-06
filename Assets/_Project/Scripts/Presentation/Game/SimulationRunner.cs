@@ -67,6 +67,7 @@ namespace KardashevAscent.Presentation.Game
             // Pick the planet before building the tiles: EnsureBuilt raises Rebuilt, which creates the simulation.
             if (record == null)
                 PickRecord(startPlanet);
+            planet.SetSurface(record.ToSurfaceSettings());
             planet.EnsureBuilt();
             if (Simulation == null)
                 CreateSimulation();
@@ -93,7 +94,12 @@ namespace KardashevAscent.Presentation.Game
         void SelectPlanet(int index)
         {
             PickRecord(index);
-            if (planet != null && planet.Sphere != null)
+            if (planet == null)
+                return;
+            // A new surface rebuilds the tiles, and Rebuilt creates the simulation; otherwise create it here.
+            if (planet.SetSurface(record.ToSurfaceSettings()))
+                planet.EnsureBuilt();
+            else if (planet.Sphere != null)
                 CreateSimulation();
         }
 

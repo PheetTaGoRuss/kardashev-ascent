@@ -45,7 +45,27 @@ namespace KardashevAscent.Simulation.Planet
         public StarRecord star = new StarRecord();
         public BodyRecord planet = new BodyRecord();
         public FlagsRecord flags = new FlagsRecord();
+        public LookRecord look = new LookRecord();
         public List<ProvenanceRecord> provenance = new List<ProvenanceRecord>();
+
+        [Serializable]
+        public sealed class LookRecord
+        {
+            /// <summary>Noise seed for the continents (game value; Viridia keeps 7, the editor default).</summary>
+            public int terrainSeed = 7;
+            /// <summary>"liquid" (seas, frozen where cold) or "none" (dry basins). Not measurable yet: assumed.</summary>
+            public string water = "liquid";
+            /// <summary>Share of the surface in low basins (seas or dry basins).</summary>
+            public double oceanFraction = 0.62;
+        }
+
+        /// <summary>Seas on the surface (frozen where it is cold), or none.</summary>
+        public bool HasLiquidWater => look == null || !string.Equals(look.water, "none", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>How the planet's surface is generated: its own continents, water or not, and ice from its air temperature.</summary>
+        public SurfaceSettings ToSurfaceSettings() =>
+            SurfaceSettings.ForClimate(look?.terrainSeed ?? 7, solar.airTemperatureC, flags.tidallyLocked,
+                                       HasLiquidWater, look != null && look.oceanFraction > 0.0 ? look.oceanFraction : 0.62);
 
         [Serializable]
         public sealed class SolarRecord
