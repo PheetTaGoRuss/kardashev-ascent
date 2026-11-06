@@ -1,0 +1,8 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="Hints.uss" />
+    <ui:VisualElement name="hints" class="hints panel hidden">
+        <ui:Label name="step" class="heading" text="FIRST STEPS 1 / 5" />
+        <ui:Label name="text" class="hint-text" text="" />
+        <ui:Button name="skip" class="skip-button" text="Skip hints" />
+    </ui:VisualElement>
+</ui:UXML>

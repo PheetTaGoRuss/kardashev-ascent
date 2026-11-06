@@ -113,6 +113,7 @@ namespace KardashevAscent.EditorTools
             SetUpPanels(planet, placer, site);
             SetUpColony(runner);
             SetUpPlanetChooser(runner);
+            SetUpHints(runner, picker, placer);
             SetUpCursorLight(planet, picker);
 
             EditorSceneManager.MarkSceneDirty(planet.gameObject.scene);
@@ -281,6 +282,29 @@ namespace KardashevAscent.EditorTools
                 Undo.RecordObject(colonyDocument, "Colony draw order");
                 colonyDocument.sortingOrder = ColonySortingOrder;
             }
+        }
+
+        const string HintsLayoutPath = "Assets/_Project/UI/Hints/Hints.uxml";
+
+        /// <summary>First-play hints, under the colony overview and the planet chooser.</summary>
+        static void SetUpHints(SimulationRunner runner, TilePicker picker, PanelPlacer placer)
+        {
+            var view = Object.FindAnyObjectByType<HintsView>();
+            if (view == null)
+            {
+                var go = new GameObject("Hints");
+                Undo.RegisterCreatedObjectUndo(go, "Add Hints");
+                var document = Undo.AddComponent<UIDocument>(go);
+                document.panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
+                document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(HintsLayoutPath);
+                document.sortingOrder = 5f;
+                view = Undo.AddComponent<HintsView>(go);
+            }
+            SetReference(view, "runner", runner);
+            SetReference(view, "picker", picker);
+            SetReference(view, "placer", placer);
+            SetReference(view, "colony", Object.FindAnyObjectByType<ColonyView>());
+            SetReference(view, "chooser", Object.FindAnyObjectByType<PlanetChooserView>());
         }
 
         const string PlanetsLayoutPath = "Assets/_Project/UI/Planets/Planets.uxml";

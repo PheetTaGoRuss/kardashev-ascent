@@ -76,6 +76,16 @@ namespace KardashevAscent.Presentation.Planet
                 r.SetPropertyBlock(block);
         }
 
+        /// <summary>Colour only the cells (bigger installations: farms, parks, arrays get their own colour).</summary>
+        public void SetCellTint(Color color)
+        {
+            var cells = new MaterialPropertyBlock();
+            cells.SetColor("_Color", color);
+            foreach (Renderer r in renderers)
+                if (r.gameObject.name == "Cells")
+                    r.SetPropertyBlock(cells);
+        }
+
         public void Destroy()
         {
             if (root != null)

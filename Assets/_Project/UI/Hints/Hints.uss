@@ -1,0 +1,26 @@
+.hints {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    translate: -50% 0;
+    width: 440px;
+    max-width: 60%;
+    padding: 8px 12px;
+    border-color: var(--accent);
+}
+.hint-text {
+    font-size: 13px;
+    white-space: normal;
+    padding: 0;
+    margin: 4px 0 0 0;
+}
+.skip-button {
+    align-self: flex-end;
+    margin: 4px 0 0 0;
+    padding: 1px 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+}
+.skip-button:hover { color: var(--text); }

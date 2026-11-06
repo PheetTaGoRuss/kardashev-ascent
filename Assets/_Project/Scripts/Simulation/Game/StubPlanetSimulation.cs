@@ -51,7 +51,7 @@ namespace KardashevAscent.Simulation.Game
         readonly double planetRadiusM;
         readonly double tileAreaM2;
         readonly double subStellarLongitudeAtStart;
-        readonly Dictionary<(int Tile, int Slot), (double Tilt, double Azimuth)> panels = new Dictionary<(int, int), (double, double)>();
+        readonly Dictionary<(int Tile, int Slot), (double Tilt, double Azimuth, double Area)> panels = new Dictionary<(int, int), (double, double, double)>();
         readonly Dictionary<int, int> panelsPerTile = new Dictionary<int, int>();
         bool targetReached;
 
@@ -222,7 +222,8 @@ namespace KardashevAscent.Simulation.Game
                 return new PanelPreview(false, "No such tile.", 0, 0, 0, 0);
             if (GetTile(tileId).IsWater)
                 return new PanelPreview(false, "Panels cannot go on water yet.", 0, 0, 0, 0);
-            PanelParams panel = MakePanel(tileId, tilt, azimuth, 1.0);
+            double area = NewPanelAreaM2(tileId);
+            PanelParams panel = MakePanel(tileId, tilt, azimuth, 1.0, area);
             AnnualYieldResult year = AnnualYield.Calculate(planet, panel);
             double energy = year.EnergyWh, capacityFactor = year.CapacityFactor;
             if (Clouds == CloudModel.EarthClimatology && energy > 0.0)
@@ -243,7 +244,7 @@ namespace KardashevAscent.Simulation.Game
             // EROI mean the same on every planet (Proxima b's year is 11 days).
             if (YearLengthHours > 0.0)
                 energy *= SolarConstants.EarthYearHours / YearLengthHours;
-            double embodied = EmbodiedWhPerM2 * PanelAreaM2;
+            double embodied = EmbodiedWhPerM2 * area;
             double eroi = energy > 0 ? Economics.Eroi(energy * PanelLifetimeYears, embodied) : 0.0;
             double payback = energy > 0 ? Economics.PaybackYears(embodied, energy) : double.PositiveInfinity;
             return new PanelPreview(true, "", energy, capacityFactor, eroi, payback);
@@ -255,18 +256,38 @@ namespace KardashevAscent.Simulation.Game
         {
             if (!CanPlacePanel(tileId, slot, tilt, azimuth))
                 return false;
-            Build.Start(tileId, slot, BuildCostWh(BuildingType.SolarPanel));
-            AddPanel(tileId, slot, tilt, azimuth);
+            double area = NewPanelAreaM2(tileId);
+            Build.Start(tileId, slot, PanelCost(area));
+            AddPanel(tileId, slot, tilt, azimuth, area);
             return true;
         }
+
+        // ---- Panel tiers (bigger installations per slot as milestones unlock them) ----
+
+        /// <summary>Index into <see cref="PanelTiers.All"/> of what new panels are built as.</summary>
+        public int PanelTier => PanelTiers.For(MilestonesReached);
+
+        /// <summary>Ground one new panel covers on a tile, m²: the tier's size, capped at the slot's share of the tile.</summary>
+        public double NewPanelAreaM2(int tileId)
+        {
+            double area = PanelAreaM2 * PanelTiers.All[PanelTier].Scale;
+            if (tileId >= 0 && tileId < TileCount)
+                area = Math.Min(area, tileAreaM2 / SlotCount(tileId));
+            return area;
+        }
+
+        /// <summary>Ground the panel in a slot covers, m² (0 if there is none).</summary>
+        public double PanelAreaAt(int tileId, int slot) => panels.TryGetValue((tileId, slot), out var p) ? p.Area : 0.0;
+
+        double PanelCost(double areaM2) => BuildCosts.Panel(EmbodiedWhPerM2, areaM2);
 
         bool CanPlacePanel(int tileId, int slot, double tilt, double azimuth) =>
             tileId >= 0 && tileId < TileCount && slot >= 0 && slot < SlotCount(tileId) && GetBuilding(tileId, slot) == BuildingType.None
             && PreviewPanel(tileId, tilt, azimuth).CanPlace;
 
-        void AddPanel(int tileId, int slot, double tilt, double azimuth)
+        void AddPanel(int tileId, int slot, double tilt, double azimuth, double area)
         {
-            panels[(tileId, slot)] = (tilt, azimuth);
+            panels[(tileId, slot)] = (tilt, azimuth, area);
             panelsPerTile[tileId] = PanelCount(tileId) + 1;
             GenerationW = ComputeGeneration() + RtgW;
         }
@@ -275,7 +296,7 @@ namespace KardashevAscent.Simulation.Game
         {
             if (!panels.ContainsKey((tileId, slot)) || !PreviewPanel(tileId, tilt, azimuth).CanPlace)
                 return false;
-            panels[(tileId, slot)] = (tilt, azimuth);
+            panels[(tileId, slot)] = (tilt, azimuth, panels[(tileId, slot)].Area);
             GenerationW = ComputeGeneration() + RtgW;
             return true;
         }
@@ -293,7 +314,7 @@ namespace KardashevAscent.Simulation.Game
         {
             switch (type)
             {
-                case BuildingType.SolarPanel: return BuildCosts.Panel(EmbodiedWhPerM2, PanelAreaM2);
+                case BuildingType.SolarPanel: return PanelCost(PanelAreaM2 * PanelTiers.All[PanelTier].Scale);
                 case BuildingType.Battery: return BuildCosts.Battery(BatteryUnitWh);
                 default: return 0.0;
             }
@@ -317,7 +338,9 @@ namespace KardashevAscent.Simulation.Game
                 Build.Cancel(tileId, slot);
                 return;
             }
-            Build.Salvage(BuildCostWh(type));
+            // A panel gives back a share of what its own size cost, not the current tier's.
+            Build.Salvage(type == BuildingType.SolarPanel && panels.TryGetValue((tileId, slot), out var p)
+                ? PanelCost(p.Area) : BuildCostWh(type));
             if (type == BuildingType.Battery)
                 Grid.Battery.RemoveCapacity(BatteryUnitWh);
         }
@@ -339,7 +362,7 @@ namespace KardashevAscent.Simulation.Game
         {
             if (tileId < 0 || tileId >= TileCount || GetTile(tileId).IsWater)
                 return null;
-            double[] months = MonthlyYield.Calculate(planet, MakePanel(tileId, tilt, azimuth, 1.0));
+            double[] months = MonthlyYield.Calculate(planet, MakePanel(tileId, tilt, azimuth, 1.0, NewPanelAreaM2(tileId)));
             if (Clouds == CloudModel.EarthClimatology)
                 for (int m = 0; m < months.Length; m++)
                     months[m] *= CloudFactor(tileId, MonthMeanAnomaly(m, months.Length));
@@ -430,7 +453,7 @@ namespace KardashevAscent.Simulation.Game
                 HistoryHours = History.TotalHours,
             };
             foreach (var kv in panels)
-                state.Buildings.Add(new BuildingRecord { Tile = kv.Key.Tile, Slot = kv.Key.Slot, Type = BuildingType.SolarPanel, Tilt = kv.Value.Tilt, Azimuth = kv.Value.Azimuth });
+                state.Buildings.Add(new BuildingRecord { Tile = kv.Key.Tile, Slot = kv.Key.Slot, Type = BuildingType.SolarPanel, Tilt = kv.Value.Tilt, Azimuth = kv.Value.Azimuth, AreaM2 = kv.Value.Area });
             foreach (var b in batteries)
                 state.Buildings.Add(new BuildingRecord { Tile = b.Tile, Slot = b.Slot, Type = BuildingType.Battery });
             state.Buildings.Sort((a, b) => a.Tile != b.Tile ? a.Tile.CompareTo(b.Tile) : a.Slot.CompareTo(b.Slot));
@@ -494,8 +517,10 @@ namespace KardashevAscent.Simulation.Game
             {
                 if (!CanPlacePanel(r.Tile, r.Slot, r.Tilt, r.Azimuth))
                     return;
-                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildCostWh(BuildingType.SolarPanel), r.PaidWh);
-                AddPanel(r.Tile, r.Slot, r.Tilt, r.Azimuth);
+                // Saves before version 5 have no area: their panels are base panel fields.
+                double area = r.AreaM2 > 0.0 ? r.AreaM2 : PanelAreaM2;
+                if (site) Build.RestoreSite(r.Tile, r.Slot, PanelCost(area), r.PaidWh);
+                AddPanel(r.Tile, r.Slot, r.Tilt, r.Azimuth, area);
             }
             else if (r.Type == BuildingType.Battery)
             {
@@ -534,7 +559,7 @@ namespace KardashevAscent.Simulation.Game
                 if (sun.Up <= 0.0)
                     continue;
                 PanelParams p = MakePanel(pair.Key.Tile, pair.Value.Tilt, pair.Value.Azimuth,
-                                          CloudFactor(pair.Key.Tile, meanAnomaly));
+                                          CloudFactor(pair.Key.Tile, meanAnomaly), pair.Value.Area);
                 double airMass = Atmosphere.AirMassKastenYoung(SunPosition.ZenithDegrees(sun), p.PressureRatio);
                 double dni = Atmosphere.DirectNormal(currentIrradiance, planet.OpticalDepth, airMass);
                 double dhi = Atmosphere.DiffuseHorizontal(currentIrradiance, sun.Up, planet.OpticalDepth, airMass, planet.DiffuseK);
@@ -554,12 +579,12 @@ namespace KardashevAscent.Simulation.Game
         /// applied to the panel's light as a whole. Longitude is measured from the sub-stellar point, which only
         /// matters on a tidally locked planet.
         /// </summary>
-        PanelParams MakePanel(int tileId, double tilt, double azimuth, double cloudFactor)
+        PanelParams MakePanel(int tileId, double tilt, double azimuth, double cloudFactor, double area)
         {
             float elevation = Math.Max(0f, surface.Elevation[tileId]);
             double pressureRatio = Math.Exp(-elevation * 4000.0 / 8400.0); // elevation 1 ≈ 4 km, scale height 8.4 km
             double albedo = Terrains.Albedo(surface.Terrain[tileId]);
-            return new PanelParams(Sphere.Latitude(tileId), tilt, azimuth, PanelAreaM2, PanelEfficiency,
+            return new PanelParams(Sphere.Latitude(tileId), tilt, azimuth, area, PanelEfficiency,
                                    45.0, -0.004, albedo, pressureRatio, SpectralFactor, 1.0 - cloudFactor, 1.0,
                                    Sphere.Longitude(tileId) - subStellarLongitudeAtStart);
         }

@@ -206,7 +206,7 @@ namespace KardashevAscent.Presentation.UI
             if (hasPanel)
             {
                 placer.TryGetSelectedPanel(out double t, out double a, out PanelPreview p, out AngleRating rating);
-                placedTitle.text = isSite ? $"Solar panel site · slot {slot}" : $"Solar panel · slot {slot}";
+                placedTitle.text = isSite ? $"{placer.SelectedPanelName} site · slot {slot}" : $"{placer.SelectedPanelName} · slot {slot}";
                 placedAngles.text = $"Tilt {t * Mathf.Rad2Deg:0}° · facing {a * Mathf.Rad2Deg:0}° {Compass((float)(a * Mathf.Rad2Deg))}";
                 placedNumbers.text = siteLine + Numbers(p);
                 Show(placedBonus, rating == AngleRating.Optimal);
@@ -234,7 +234,7 @@ namespace KardashevAscent.Presentation.UI
             }
             else
             {
-                plannerTitle.text = panelMode ? $"Plan a solar panel · slot {slot}" : $"Plan a battery yard · slot {slot}";
+                plannerTitle.text = panelMode ? $"Plan a {placer.NewPanelName} · slot {slot}" : $"Plan a battery yard · slot {slot}";
                 placeButton.text = $"Place {thing} (P)";
             }
             batteryText.text = $"Stores {Format.Energy(placer.BatteryUnitWh)}: charges from surplus by day, " +

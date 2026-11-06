@@ -183,6 +183,7 @@ namespace KardashevAscent.Presentation.UI
         void UpdateBuildings(IPlanetSimulation sim)
         {
             int panels = 0, panelSites = 0, yards = 0, yardSites = 0;
+            double panelArea = 0.0;
             var perTile = new Dictionary<int, (int Panels, int Yards)>();
             foreach (BuildingRecord r in sim.CaptureState().Buildings)
             {
@@ -190,6 +191,7 @@ namespace KardashevAscent.Presentation.UI
                 if (r.Type == BuildingType.SolarPanel)
                 {
                     panels++;
+                    panelArea += r.AreaM2;
                     if (r.UnderConstruction) panelSites++;
                     n.Panels++;
                 }
@@ -203,7 +205,9 @@ namespace KardashevAscent.Presentation.UI
             }
 
             buildings.text =
-                $"Solar panels  {panels}{Sites(panelSites)}\n" +
+                $"Solar panels  {panels}{Sites(panelSites)} · {PanelTiers.FormatArea(panelArea)} of ground\n" +
+                $"New panels are  {PanelTiers.All[sim.PanelTier].Name.ToLowerInvariant()}s ({PanelTiers.FormatArea(sim.NewPanelAreaM2(sim.BaseTileId))} per slot)" +
+                NextTier(sim) + "\n" +
                 $"Battery yards  {yards}{Sites(yardSites)} · storage {Format.Energy(sim.BatteryCapacityWh)}\n" +
                 $"Build parts  {Format.Energy(sim.BuildStockWh)}" +
                 (sim.ConstructionQueueCount > 0 ? $" · {Format.Energy(sim.ConstructionRemainingWh)} still needed" : "");
@@ -229,6 +233,14 @@ namespace KardashevAscent.Presentation.UI
             if (list.Count > tilesListed)
                 lines.Add($"  … and {list.Count - tilesListed} more");
             tiles.text = string.Join("\n", lines);
+        }
+
+        static string NextTier(IPlanetSimulation sim)
+        {
+            int next = sim.PanelTier + 1;
+            return next < PanelTiers.All.Length
+                ? $" · {PanelTiers.All[next].Name.ToLowerInvariant()}s at milestone {PanelTiers.All[next].Milestone}"
+                : "";
         }
 
         static string Sites(int n) => n > 0 ? $" ({n} under construction)" : "";
