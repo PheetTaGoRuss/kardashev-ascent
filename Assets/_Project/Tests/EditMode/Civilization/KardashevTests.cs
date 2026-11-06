@@ -69,6 +69,42 @@ namespace KardashevAscent.Simulation.Tests.Civilization
         }
 
         [Test]
+        public void TypeIShareOfIntercepted_IsTheSameOnEveryPlanet()
+        {
+            Assert.AreEqual(0.0576, Kardashev.TypeIShareOfIntercepted, 5e-4);
+            // Dim cool planet (S = 0.01 S⊕, R = 0.4 R⊕): target and intercepted light shrink together.
+            double s = 13.61, r = 0.4 * Kardashev.EarthRadiusM;
+            Assert.AreEqual(Kardashev.TypeIShareOfIntercepted,
+                Kardashev.TypeITargetW(s, r) / Kardashev.InterceptedStarlightW(s, r), 1e-12);
+        }
+
+        [TestCase(1e6)]
+        [TestCase(1.876e13)]
+        [TestCase(1e16)]
+        public void PlanetK_EqualsAbsoluteKOnEarthlikeTarget(double watts)
+        {
+            Assert.AreEqual(Kardashev.K(watts), Kardashev.PlanetK(watts, 1e16), 1e-12);
+        }
+
+        [Test]
+        public void PlanetK_ReachesOneAtThePlanetsTarget()
+        {
+            // Dim planet target 1.6e13 W: absolute K 0.72, planet K 1.
+            Assert.AreEqual(1.0, Kardashev.PlanetK(1.6e13, 1.6e13), 1e-12);
+            Assert.AreEqual(0.720, Kardashev.K(1.6e13), 1e-3);
+            // Ten times less power is 0.1 lower on both scales.
+            Assert.AreEqual(0.9, Kardashev.PlanetK(1.6e12, 1.6e13), 1e-12);
+            // Super-Earth target 2.25e16 W: Sagan's Type I is below its own target.
+            Assert.AreEqual(1.0 - 0.0352, Kardashev.PlanetK(1e16, 2.25e16), 1e-4);
+        }
+
+        [Test]
+        public void PlanetK_WithoutTargetFallsBackToAbsoluteK()
+        {
+            Assert.AreEqual(Kardashev.K(5e9), Kardashev.PlanetK(5e9, 0.0), 1e-12);
+        }
+
+        [Test]
         public void DysonSwarmAndTypeIII()
         {
             Assert.AreEqual(0.261, 1e26 / SunLuminosityW, 1e-3);
