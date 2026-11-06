@@ -73,7 +73,7 @@ namespace KardashevAscent.Simulation.Game
             GenerationW = ComputeGeneration() + Grid.RtgPowerW(0.0);
             RtgW = Grid.RtgPowerW(0.0);
             DemandW = BaseDemandW;
-            KardashevK = ToK(Math.Min(GenerationW, DemandW));
+            KardashevPowerW = Math.Min(GenerationW, DemandW);
         }
 
         public HexSphere Sphere { get; }
@@ -92,7 +92,9 @@ namespace KardashevAscent.Simulation.Game
         public double BatteryPowerW { get; private set; }
         public double CurtailedW { get; private set; }
         public bool IsBrownout => Grid.IsBrownout;
-        public double KardashevK { get; private set; }
+        public double KardashevPowerW { get; private set; }
+        public double KardashevK => Kardashev.K(KardashevPowerW);
+        public double PlanetK => Kardashev.PlanetK(KardashevPowerW, TypeITargetW);
         public double TypeITargetW { get; }
 
         public event Action<bool> BrownoutChanged;
@@ -132,7 +134,7 @@ namespace KardashevAscent.Simulation.Game
             foreach (var done in Build.Step(BuildPowerW, dt))
                 Finish(done.Tile, done.Slot);
             // Used power: what reached the loads, went into the battery or made build parts; curtailed power is not used.
-            KardashevK = ToK(grid.ServedW + grid.ChargeW + BuildPowerW);
+            KardashevPowerW = grid.ServedW + grid.ChargeW + BuildPowerW;
             Colony.Step(dt, grid.GenerationW, grid.ServedW, grid.IsBrownout);
             Grid.DemandW = Colony.DemandW;
             double soc = Grid.Battery.CapacityWh > 0.0 ? Grid.Battery.StoredWh / Grid.Battery.CapacityWh : 0.0;
@@ -472,7 +474,5 @@ namespace KardashevAscent.Simulation.Game
             }
             return best;
         }
-
-        static double ToK(double watts) => Kardashev.K(watts);
     }
 }

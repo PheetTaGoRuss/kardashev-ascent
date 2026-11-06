@@ -29,7 +29,7 @@ Presentation (MonoBehaviour)                 Simulation (C# ล้วน)
 | --- | --- |
 | ดาวและช่อง | `Sphere`, `TileCount`, `GetTile(id)` → `TileInfo` (ละติจูด, ลองจิจูด, terrain, ความสูง, พื้นที่ m²), `BaseTileId` |
 | เวลาและดาวฤกษ์ | `TimeHours`, `DayLengthHours` (0 = ล็อกไทดัล), `YearLengthHours`, `StarDirection`, `IsDayAtBase` |
-| ไฟ | `GenerationW` (แผง + RTG), `RtgW`, `DemandW`, `BatteryStoredWh`, `BatteryCapacityWh`, `BatteryPowerW` (+ ชาร์จ, − ดึง), `CurtailedW`, `IsBrownout`, `KardashevK`, `TypeITargetW` |
+| ไฟ | `GenerationW` (แผง + RTG), `RtgW`, `DemandW`, `BatteryStoredWh`, `BatteryCapacityWh`, `BatteryPowerW` (+ ชาร์จ, − ดึง), `CurtailedW`, `IsBrownout`, `KardashevPowerW` (ไฟที่ใช้จริง), `KardashevK` (K สัมบูรณ์), `PlanetK` (K ของดาว: นับเป้าของดาวเป็น Type I ถึง 1 ที่ `TypeITargetW`; แสดงคู่กับ K สัมบูรณ์เสมอ), `TypeITargetW` |
 | คำสั่ง | `Tick(hours)`, `PreviewPanel(tileId, tilt, azimuth)` → `PanelPreview` (kWh/ปี, capacity factor, EROI, ระยะคืนทุน, เหตุผลถ้าวางไม่ได้), `SiteRings`, `PlacePanel(tileId, slot, tilt, azimuth)`, `RemovePanel(tileId, slot)`, `HasPanel(tileId, slot)`, `PanelCount(tileId)` |
 | event | `BrownoutChanged(bool)`, `DayNightChanged(bool)` ที่ฐาน, `TargetReached()` |
 
