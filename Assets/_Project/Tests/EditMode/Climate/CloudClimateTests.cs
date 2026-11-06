@@ -36,8 +36,8 @@ namespace KardashevAscent.Simulation.Tests.Climate
         [Test]
         public void Factor_AtMonthCentreMatchesTableRow()
         {
-            // 0° row, March centre.
-            Assert.AreEqual(CloudClimateTable.Factor[8][2], CloudClimate.Factor(0.0, 2.5 / 12.0), 1e-12);
+            // 0° row, March centre: 0.839 in the generated CloudClimateTable (internal to Simulation).
+            Assert.AreEqual(0.839, CloudClimate.Factor(0.0, 2.5 / 12.0), 1e-12);
         }
 
         [Test]
