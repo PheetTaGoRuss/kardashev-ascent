@@ -218,6 +218,9 @@ namespace KardashevAscent.EditorTools
 
         const string ColonyLayoutPath = "Assets/_Project/UI/Colony/Colony.uxml";
 
+        /// <summary>Draw order of the colony overview: above the HUD, tile info and side panels (all 0).</summary>
+        const float ColonySortingOrder = 10f;
+
         /// <summary>The colony overview (C), on the same PanelSettings as the HUD.</summary>
         static void SetUpColony(SimulationRunner runner)
         {
@@ -232,6 +235,14 @@ namespace KardashevAscent.EditorTools
                 view = Undo.AddComponent<ColonyView>(go);
             }
             SetReference(view, "runner", runner);
+
+            // The overview opens over the other panels; with equal orders their stacking is arbitrary.
+            var colonyDocument = view.GetComponent<UIDocument>();
+            if (colonyDocument.sortingOrder != ColonySortingOrder)
+            {
+                Undo.RecordObject(colonyDocument, "Colony draw order");
+                colonyDocument.sortingOrder = ColonySortingOrder;
+            }
         }
 
         static Light FindDirectionalLight()
