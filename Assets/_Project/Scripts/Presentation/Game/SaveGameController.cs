@@ -64,6 +64,16 @@ namespace KardashevAscent.Presentation.Game
                     return;
                 }
                 SimulationState state = JsonUtility.FromJson<SimulationState>(File.ReadAllText(FilePath));
+                // A save from another planet: land there first (version 3 saves name their planet).
+                if (state != null && !string.IsNullOrEmpty(state.PlanetId) && runner.Record != null && state.PlanetId != runner.Record.id)
+                {
+                    int index = runner.IndexOf(state.PlanetId);
+                    if (index < 0 || !runner.ChoosePlanet(index))
+                    {
+                        Show($"That save is from {state.PlanetId}, which this game doesn't have");
+                        return;
+                    }
+                }
                 if (state == null || !runner.Simulation.RestoreState(state))
                 {
                     Show("That save is from a different planet");

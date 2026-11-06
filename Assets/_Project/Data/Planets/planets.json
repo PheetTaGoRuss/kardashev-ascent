@@ -19,6 +19,7 @@
         "obliquityDeg": 23.44,
         "perihelionLongitudeDeg": 282.94,
         "opticalDepth": 0.32,
+        "surfacePressureEarth": 1.0,
         "diffuseK": 0.3,
         "airTemperatureC": 25.0
       },
@@ -37,6 +38,7 @@
       },
       "flags": {
         "tidallyLocked": false,
+        "clouds": "earth",
         "circumbinary": false,
         "surface": "rocky"
       },
@@ -77,6 +79,11 @@
           "note": "rotation is not measured for exoplanets"
         },
         {
+          "field": "flags.clouds",
+          "origin": "assumed",
+          "note": "earth = NASA POWER cloud climatology by latitude and month; none = clear sky (cloud cover unknown)"
+        },
+        {
           "field": "flags.circumbinary",
           "origin": "assumed",
           "note": "cb_flag: planet orbits both stars"
@@ -100,6 +107,11 @@
           "field": "solar.opticalDepth",
           "origin": "assumed",
           "note": "broadband tau, game value"
+        },
+        {
+          "field": "solar.surfacePressureEarth",
+          "origin": "assumed",
+          "note": "surface pressure in Earth atmospheres, game value"
         },
         {
           "field": "solar.diffuseK",
@@ -168,6 +180,7 @@
         "obliquityDeg": 0.0,
         "perihelionLongitudeDeg": 0.0,
         "opticalDepth": 0.32,
+        "surfacePressureEarth": 1.0,
         "diffuseK": 0.3,
         "airTemperatureC": -55.14999999999998
       },
@@ -189,6 +202,7 @@
       },
       "flags": {
         "tidallyLocked": true,
+        "clouds": "none",
         "circumbinary": false,
         "surface": "rocky"
       },
@@ -244,6 +258,11 @@
           "note": "rotation is not measured for exoplanets"
         },
         {
+          "field": "flags.clouds",
+          "origin": "assumed",
+          "note": "earth = NASA POWER cloud climatology by latitude and month; none = clear sky (cloud cover unknown)"
+        },
+        {
           "field": "flags.circumbinary",
           "origin": "nasa",
           "note": "cb_flag: planet orbits both stars"
@@ -267,6 +286,11 @@
           "field": "solar.opticalDepth",
           "origin": "assumed",
           "note": "broadband tau, game value"
+        },
+        {
+          "field": "solar.surfacePressureEarth",
+          "origin": "assumed",
+          "note": "surface pressure in Earth atmospheres, game value"
         },
         {
           "field": "solar.diffuseK",
@@ -335,6 +359,7 @@
         "obliquityDeg": 0.0,
         "perihelionLongitudeDeg": 0.0,
         "opticalDepth": 0.32,
+        "surfacePressureEarth": 1.0,
         "diffuseK": 0.3,
         "airTemperatureC": -23.44999999999999
       },
@@ -357,6 +382,7 @@
       },
       "flags": {
         "tidallyLocked": true,
+        "clouds": "none",
         "circumbinary": false,
         "surface": "rocky"
       },
@@ -417,6 +443,11 @@
           "note": "rotation is not measured for exoplanets"
         },
         {
+          "field": "flags.clouds",
+          "origin": "assumed",
+          "note": "earth = NASA POWER cloud climatology by latitude and month; none = clear sky (cloud cover unknown)"
+        },
+        {
           "field": "flags.circumbinary",
           "origin": "nasa",
           "note": "cb_flag: planet orbits both stars"
@@ -440,6 +471,11 @@
           "field": "solar.opticalDepth",
           "origin": "assumed",
           "note": "broadband tau, game value"
+        },
+        {
+          "field": "solar.surfacePressureEarth",
+          "origin": "assumed",
+          "note": "surface pressure in Earth atmospheres, game value"
         },
         {
           "field": "solar.diffuseK",
@@ -508,6 +544,7 @@
         "obliquityDeg": 0.0,
         "perihelionLongitudeDeg": 0.0,
         "opticalDepth": 0.32,
+        "surfacePressureEarth": 1.0,
         "diffuseK": 0.3,
         "airTemperatureC": -67.24999999999997
       },
@@ -529,6 +566,7 @@
       },
       "flags": {
         "tidallyLocked": false,
+        "clouds": "none",
         "circumbinary": true,
         "surface": "gaseous"
       },
@@ -584,6 +622,11 @@
           "note": "rotation is not measured for exoplanets"
         },
         {
+          "field": "flags.clouds",
+          "origin": "assumed",
+          "note": "earth = NASA POWER cloud climatology by latitude and month; none = clear sky (cloud cover unknown)"
+        },
+        {
           "field": "flags.circumbinary",
           "origin": "nasa",
           "note": "cb_flag: planet orbits both stars"
@@ -607,6 +650,11 @@
           "field": "solar.opticalDepth",
           "origin": "assumed",
           "note": "broadband tau, game value"
+        },
+        {
+          "field": "solar.surfacePressureEarth",
+          "origin": "assumed",
+          "note": "surface pressure in Earth atmospheres, game value"
         },
         {
           "field": "solar.diffuseK",
@@ -675,6 +723,7 @@
         "obliquityDeg": 23.44,
         "perihelionLongitudeDeg": 0.0,
         "opticalDepth": 0.32,
+        "surfacePressureEarth": 1.0,
         "diffuseK": 0.3,
         "airTemperatureC": -8.149999999999977
       },
@@ -697,6 +746,7 @@
       },
       "flags": {
         "tidallyLocked": false,
+        "clouds": "none",
         "circumbinary": false,
         "surface": "uncertain"
       },
@@ -757,6 +807,11 @@
           "note": "rotation is not measured for exoplanets"
         },
         {
+          "field": "flags.clouds",
+          "origin": "assumed",
+          "note": "earth = NASA POWER cloud climatology by latitude and month; none = clear sky (cloud cover unknown)"
+        },
+        {
           "field": "flags.circumbinary",
           "origin": "nasa",
           "note": "cb_flag: planet orbits both stars"
@@ -780,6 +835,11 @@
           "field": "solar.opticalDepth",
           "origin": "assumed",
           "note": "broadband tau, game value"
+        },
+        {
+          "field": "solar.surfacePressureEarth",
+          "origin": "assumed",
+          "note": "surface pressure in Earth atmospheres, game value"
         },
         {
           "field": "solar.diffuseK",

@@ -27,6 +27,25 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Placeholder colony demand, W.</summary>
         public double BaseDemandW { get => Grid.DemandW; set => Grid.DemandW = value; }
 
+        /// <summary>Which planet this is (the id in planets.json); saves remember it.</summary>
+        public string PlanetId { get; set; } = "";
+
+        /// <summary>
+        /// Star's effective temperature, K, for the spectral match f_spec of the panels' cells (P0 item 5).
+        /// 0 means "treat as the Sun" (f_spec = 1).
+        /// </summary>
+        public double StarTemperatureK { get; set; }
+
+        /// <summary>Cell material of every panel; its f_spec depends on the star's temperature.</summary>
+        public CellMaterial PanelMaterial { get; set; } = CellMaterial.Silicon;
+
+        /// <summary>Weather on the panels (P1 item 13): Earth's cloud climatology on Earth-like planets, else clear sky.</summary>
+        public CloudModel Clouds { get; set; } = CloudModel.None;
+
+        /// <summary>f_spec of the panels under this star (1 for a Sun-like star).</summary>
+        public double SpectralFactor =>
+            StarTemperatureK > 0.0 ? SpectralMatch.FSpec(PanelMaterial, StarTemperatureK) : 1.0;
+
         readonly PlanetSurface surface;
         readonly PlanetSolarParams planet;
         readonly double planetRadiusM;
@@ -58,8 +77,9 @@ namespace KardashevAscent.Simulation.Game
             tileAreaM2 = 4.0 * Math.PI * planetRadiusM * planetRadiusM / sphere.TileCount;
             BaseTileId = baseTileId >= 0 ? baseTileId : PickBaseTile();
 
-            // Start mid-morning at the base: hour angle −0.4π.
-            subStellarLongitudeAtStart = Sphere.Longitude(BaseTileId) + 0.4 * Math.PI;
+            // Start mid-morning at the base: hour angle −0.4π. A tidally locked planet has the star fixed over
+            // longitude 0, as in LightPotential and AnnualYield, so the base (picked near longitude 0) is in daylight.
+            subStellarLongitudeAtStart = planet.TidallyLocked ? 0.0 : Sphere.Longitude(BaseTileId) + 0.4 * Math.PI;
             Grid.BrownoutChanged += on => BrownoutChanged?.Invoke(on);
             Colony = new ColonyDemand(Grid.DemandW, planet.DayLengthHours);
             // One sample per planet "hour" (a 24th of the day), a week of them.
@@ -74,6 +94,16 @@ namespace KardashevAscent.Simulation.Game
             RtgW = Grid.RtgPowerW(0.0);
             DemandW = BaseDemandW;
             KardashevPowerW = Math.Min(GenerationW, DemandW);
+        }
+
+        /// <summary>A colony on a planet from planets.json: its orbit and star, size, star colour and weather.</summary>
+        public StubPlanetSimulation(HexSphere sphere, PlanetSurface surface, PlanetRecord record, int baseTileId = -1)
+            : this(sphere, surface, (record ?? throw new ArgumentNullException(nameof(record))).ToSolarParams(),
+                   record.planet.radiusM > 0.0 ? record.planet.radiusM : Kardashev.EarthRadiusM, baseTileId)
+        {
+            PlanetId = record.id ?? "";
+            StarTemperatureK = record.star.teffK;
+            Clouds = record.Clouds;
         }
 
         public HexSphere Sphere { get; }
@@ -160,14 +190,31 @@ namespace KardashevAscent.Simulation.Game
                 return new PanelPreview(false, "No such tile.", 0, 0, 0, 0);
             if (GetTile(tileId).IsWater)
                 return new PanelPreview(false, "Panels cannot go on water yet.", 0, 0, 0, 0);
-            if (planet.DayLengthHours <= 0.0)
-                return new PanelPreview(false, "Tidally locked planets are not supported yet.", 0, 0, 0, 0);
-
-            AnnualYieldResult year = AnnualYield.Calculate(planet, MakePanel(tileId, tilt, azimuth));
+            PanelParams panel = MakePanel(tileId, tilt, azimuth, 1.0);
+            AnnualYieldResult year = AnnualYield.Calculate(planet, panel);
+            double energy = year.EnergyWh, capacityFactor = year.CapacityFactor;
+            if (Clouds == CloudModel.EarthClimatology && energy > 0.0)
+            {
+                // Clouds as a multiplier on output, month by month (weighted by when the panel makes its energy).
+                double[] months = MonthlyYield.Calculate(planet, panel);
+                double clear = 0.0, cloudy = 0.0;
+                for (int m = 0; m < months.Length; m++)
+                {
+                    clear += months[m];
+                    cloudy += months[m] * CloudFactor(tileId, MonthMeanAnomaly(m, months.Length));
+                }
+                double share = clear > 0.0 ? cloudy / clear : 1.0;
+                energy *= share;
+                capacityFactor *= share;
+            }
+            // AnnualYield covers one orbit of this planet; the preview reports Earth years so lifetime, payback and
+            // EROI mean the same on every planet (Proxima b's year is 11 days).
+            if (YearLengthHours > 0.0)
+                energy *= SolarConstants.EarthYearHours / YearLengthHours;
             double embodied = EmbodiedWhPerM2 * PanelAreaM2;
-            double eroi = year.EnergyWh > 0 ? Economics.Eroi(year.EnergyWh * PanelLifetimeYears, embodied) : 0.0;
-            double payback = year.EnergyWh > 0 ? Economics.PaybackYears(embodied, year.EnergyWh) : double.PositiveInfinity;
-            return new PanelPreview(true, "", year.EnergyWh, year.CapacityFactor, eroi, payback);
+            double eroi = energy > 0 ? Economics.Eroi(energy * PanelLifetimeYears, embodied) : 0.0;
+            double payback = energy > 0 ? Economics.PaybackYears(embodied, energy) : double.PositiveInfinity;
+            return new PanelPreview(true, "", energy, capacityFactor, eroi, payback);
         }
 
         public int SiteRings { get; set; } = TileSite.DefaultRings;
@@ -258,9 +305,13 @@ namespace KardashevAscent.Simulation.Game
 
         public double[] MonthlyEnergyWh(int tileId, double tilt, double azimuth)
         {
-            if (tileId < 0 || tileId >= TileCount || GetTile(tileId).IsWater || planet.DayLengthHours <= 0.0)
+            if (tileId < 0 || tileId >= TileCount || GetTile(tileId).IsWater)
                 return null;
-            return MonthlyYield.Calculate(planet, MakePanel(tileId, tilt, azimuth));
+            double[] months = MonthlyYield.Calculate(planet, MakePanel(tileId, tilt, azimuth, 1.0));
+            if (Clouds == CloudModel.EarthClimatology)
+                for (int m = 0; m < months.Length; m++)
+                    months[m] *= CloudFactor(tileId, MonthMeanAnomaly(m, months.Length));
+            return months;
         }
 
         public int SlotCount(int tileId)
@@ -323,6 +374,7 @@ namespace KardashevAscent.Simulation.Game
         {
             var state = new SimulationState
             {
+                PlanetId = PlanetId,
                 TileCount = TileCount,
                 BaseTileId = BaseTileId,
                 TimeHours = TimeHours,
@@ -363,6 +415,9 @@ namespace KardashevAscent.Simulation.Game
         public bool RestoreState(SimulationState state)
         {
             if (state == null || state.TileCount != TileCount || state.BaseTileId != BaseTileId)
+                return false;
+            // Saves before version 3 have no planet id; they load on any planet with the same tiles.
+            if (!string.IsNullOrEmpty(state.PlanetId) && state.PlanetId != PlanetId)
                 return false;
             foreach (var key in new List<(int Tile, int Slot)>(panels.Keys))
                 RemoveBuilding(key.Tile, key.Slot);
@@ -429,6 +484,7 @@ namespace KardashevAscent.Simulation.Game
         double ComputeGeneration()
         {
             double total = 0.0;
+            double meanAnomaly = CurrentMeanAnomaly();
             foreach (var pair in panels)
             {
                 if (Build.QueueCount > 0 && Build.IsQueued(pair.Key.Tile, pair.Key.Slot))
@@ -436,7 +492,8 @@ namespace KardashevAscent.Simulation.Game
                 Double3 sun = SunAt(pair.Key.Tile);
                 if (sun.Up <= 0.0)
                     continue;
-                PanelParams p = MakePanel(pair.Key.Tile, pair.Value.Tilt, pair.Value.Azimuth);
+                PanelParams p = MakePanel(pair.Key.Tile, pair.Value.Tilt, pair.Value.Azimuth,
+                                          CloudFactor(pair.Key.Tile, meanAnomaly));
                 double airMass = Atmosphere.AirMassKastenYoung(SunPosition.ZenithDegrees(sun), p.PressureRatio);
                 double dni = Atmosphere.DirectNormal(currentIrradiance, planet.OpticalDepth, airMass);
                 double dhi = Atmosphere.DiffuseHorizontal(currentIrradiance, sun.Up, planet.OpticalDepth, airMass, planet.DiffuseK);
@@ -450,14 +507,31 @@ namespace KardashevAscent.Simulation.Game
             return total;
         }
 
-        PanelParams MakePanel(int tileId, double tilt, double azimuth)
+        /// <summary>
+        /// One panel on a tile. <paramref name="cloudFactor"/> (share of clear-sky light that gets through) goes into
+        /// the panel's light-loss slot f_dust as 1 − factor: the game has no dust yet, and CloudClimate is meant to be
+        /// applied to the panel's light as a whole. Longitude is measured from the sub-stellar point, which only
+        /// matters on a tidally locked planet.
+        /// </summary>
+        PanelParams MakePanel(int tileId, double tilt, double azimuth, double cloudFactor)
         {
             float elevation = Math.Max(0f, surface.Elevation[tileId]);
             double pressureRatio = Math.Exp(-elevation * 4000.0 / 8400.0); // elevation 1 ≈ 4 km, scale height 8.4 km
             double albedo = surface.Terrain[tileId] == TerrainType.Ice ? 0.8 : 0.2;
             return new PanelParams(Sphere.Latitude(tileId), tilt, azimuth, PanelAreaM2, PanelEfficiency,
-                                   45.0, -0.004, albedo, pressureRatio, 1.0, 0.0, 1.0);
+                                   45.0, -0.004, albedo, pressureRatio, SpectralFactor, 1.0 - cloudFactor, 1.0,
+                                   Sphere.Longitude(tileId) - subStellarLongitudeAtStart);
         }
+
+        double CurrentMeanAnomaly() => YearLengthHours > 0 ? 2.0 * Math.PI * TimeHours / YearLengthHours : 0.0;
+
+        static double MonthMeanAnomaly(int month, int months) => 2.0 * Math.PI * (month + 0.5) / months;
+
+        /// <summary>Share of clear-sky light reaching panels on a tile at this point of the orbit (1 without clouds).</summary>
+        public double CloudFactor(int tileId, double meanAnomaly) =>
+            Clouds == CloudModel.EarthClimatology
+                ? Climate.CloudClimate.Factor(Sphere.Latitude(tileId), Climate.CloudClimate.YearFractionFromMeanAnomaly(meanAnomaly))
+                : 1.0;
 
         int PickBaseTile()
         {
