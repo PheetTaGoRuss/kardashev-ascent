@@ -92,11 +92,31 @@ namespace KardashevAscent.Presentation.Planet
         /// <summary>Tile under a screen position, or −1 if the ray misses the planet.</summary>
         public int TileUnder(Camera cam, Vector3 screenPosition)
         {
-            if (planet.Sphere == null)
+            if (planet.Sphere == null || !TryHitLocal(cam, screenPosition, out Vector3 hit))
                 return -1;
-            Ray ray = cam.ScreenPointToRay(screenPosition);
+            return planet.Sphere.FindTile(new System.Numerics.Vector3(hit.x, hit.y, hit.z),
+                                          HoveredTile >= 0 ? HoveredTile : 0);
+        }
 
-            // Work in the planet's local space, where it is a sphere of radius `Radius` at the origin.
+        /// <summary>
+        /// Where a screen position's ray meets the planet's sphere, in world space, with the outward surface normal.
+        /// False if the ray misses the planet.
+        /// </summary>
+        public bool TryGetSurfacePoint(Camera cam, Vector3 screenPosition, out Vector3 point, out Vector3 normal)
+        {
+            point = normal = Vector3.zero;
+            if (!TryHitLocal(cam, screenPosition, out Vector3 hit))
+                return false;
+            point = transform.TransformPoint(hit);
+            normal = transform.TransformDirection(hit).normalized;
+            return true;
+        }
+
+        /// <summary>Ray from a screen position against the planet, in its local space (a sphere of radius `Radius` at the origin).</summary>
+        bool TryHitLocal(Camera cam, Vector3 screenPosition, out Vector3 hit)
+        {
+            hit = Vector3.zero;
+            Ray ray = cam.ScreenPointToRay(screenPosition);
             Vector3 origin = transform.InverseTransformPoint(ray.origin);
             Vector3 direction = (transform.InverseTransformPoint(ray.origin + ray.direction) - origin).normalized;
             float r = planet.Radius;
@@ -104,16 +124,14 @@ namespace KardashevAscent.Presentation.Planet
             float c = origin.sqrMagnitude - r * r;
             float discriminant = b * b - c;
             if (discriminant < 0f)
-                return -1;
+                return false;
             float t = -b - Mathf.Sqrt(discriminant);
             if (t < 0f)
                 t = -b + Mathf.Sqrt(discriminant); // camera inside the sphere
             if (t < 0f)
-                return -1;
-
-            Vector3 hit = origin + direction * t;
-            return planet.Sphere.FindTile(new System.Numerics.Vector3(hit.x, hit.y, hit.z),
-                                          HoveredTile >= 0 ? HoveredTile : 0);
+                return false;
+            hit = origin + direction * t;
+            return true;
         }
 
         /// <summary>Selects a tile (−1 clears the selection).</summary>
