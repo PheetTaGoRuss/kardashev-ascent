@@ -8,7 +8,7 @@ namespace KardashevAscent.Simulation.Game
     public sealed class SimulationState
     {
         /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished.</summary>
-        public int Version = 4;
+        public int Version = 5;
         /// <summary>Planet id from planets.json (version 3); empty in older saves.</summary>
         public string PlanetId = "";
         /// <summary>Milestones reached and the day-average power behind them (version 4; 0 in older saves).</summary>
@@ -53,5 +53,7 @@ namespace KardashevAscent.Simulation.Game
         public double PaidWh;
         /// <summary>The site's place in the construction queue (0 = next to finish).</summary>
         public int QueueOrder;
+        /// <summary>Ground a panel covers, m² (version 5; 0 in older saves = a base panel field).</summary>
+        public double AreaM2;
     }
 }

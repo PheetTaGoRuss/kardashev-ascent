@@ -105,11 +105,20 @@ namespace KardashevAscent.Presentation.UI
                 if (sim != null) milestonesSeen = sim.MilestonesReached;   // a loaded save may lower it
                 return;
             }
+            int milestonesBefore = milestonesSeen;
             int n = milestonesSeen = sim.MilestonesReached;
             double p = Kardashev.PowerForMilestone(n, sim.TypeITargetW);
             milestoneMessage = n >= 10
                 ? $"Type I for {runner.Record?.displayName ?? "this planet"}: {Format.Power(sim.TypeITargetW)} through a whole day (planet K 1)."
                 : $"Milestone {n} of 10: planet K {n * Kardashev.MilestoneStep:0.0}, {Format.Power(p)} through a whole day. Next: ten times more.";
+            // Any tier unlocked by the milestones since the last message (several can come in one day).
+            for (int m = milestonesBefore + 1; m <= n; m++)
+            {
+                int unlocked = PanelTiers.UnlockedAt(m);
+                if (unlocked > 0)
+                    milestoneMessage += $"\nUnlocked: {PanelTiers.All[unlocked].Name.ToLowerInvariant()}s, " +
+                                        $"{PanelTiers.All[unlocked].Scale:#,0}× the ground per slot. Rebuild old panels to grow them.";
+            }
             milestoneTime = Time.unscaledTime;
         }
 

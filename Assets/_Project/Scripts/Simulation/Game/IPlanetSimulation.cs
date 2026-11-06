@@ -99,6 +99,15 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Highest milestone reached (0–10). Milestone n is planet K n × 0.1; 10 is the target.</summary>
         int MilestonesReached { get; }
 
+        /// <summary>What new panels are built as: an index into <see cref="PanelTiers.All"/> (field, farm, park, array).</summary>
+        int PanelTier { get; }
+
+        /// <summary>Ground one new panel would cover on this tile, m² (the tier's size, capped at the slot's share of the tile).</summary>
+        double NewPanelAreaM2(int tileId);
+
+        /// <summary>Ground the panel in a slot covers, m², or 0. Built panels keep the size they were built at.</summary>
+        double PanelAreaAt(int tileId, int slot);
+
         // Commands
 
         /// <summary>Advance the simulation by <paramref name="hours"/> of game time.</summary>

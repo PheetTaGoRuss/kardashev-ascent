@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using KardashevAscent.Presentation.Game;
@@ -182,13 +183,48 @@ namespace KardashevAscent.Presentation.Planet
             }
         }
 
+        /// <summary>Cell colours of the bigger tiers (farm, park, array); the panel field keeps its material's colour.</summary>
+        static readonly Color[] TierCells =
+        {
+            Color.white,
+            new Color(0.30f, 0.22f, 0.55f),
+            new Color(0.08f, 0.40f, 0.42f),
+            new Color(0.10f, 0.10f, 0.13f),
+        };
+
         SolarPanelVisual MakePanel(int t, int s, bool constructionSite)
         {
             if (!constructionSite)
-                return new SolarPanelVisual($"Solar Panel {t}.{s}", transform, frameMaterial, cellMaterial);
+            {
+                var panel = new SolarPanelVisual($"Solar Panel {t}.{s}", transform, frameMaterial, cellMaterial);
+                int tier = TierAt(t, s);
+                if (tier > 0)
+                    panel.SetCellTint(TierCells[Mathf.Min(tier, TierCells.Length - 1)]);
+                return panel;
+            }
             var visual = new SolarPanelVisual($"Solar Panel Site {t}.{s}", transform, ghostMaterial, ghostMaterial);
             visual.SetTint(siteTint);
             return visual;
+        }
+
+        int TierAt(int t, int s)
+        {
+            double area = simulation != null ? simulation.PanelAreaAt(t, s) : 0.0;
+            double baseArea = simulation != null ? simulation.NewPanelAreaM2(-1) / PanelTiers.All[simulation.PanelTier].Scale : 0.0;
+            return area > 0.0 && baseArea > 0.0 ? PanelTiers.OfScale(area / baseArea) : 0;
+        }
+
+        /// <summary>
+        /// Numbers for the panel in a slot at these angles. The simulation previews a new panel (today's tier), so an
+        /// older, smaller one is scaled to its own area (energy only: the ratios don't depend on size).
+        /// </summary>
+        PanelPreview PreviewBuilt(int t, int s, double tilt, double azimuth)
+        {
+            PanelPreview p = simulation.PreviewPanel(t, tilt, azimuth);
+            double newArea = simulation.NewPanelAreaM2(t), area = simulation.PanelAreaAt(t, s);
+            if (area <= 0.0 || newArea <= 0.0 || Math.Abs(area - newArea) < 1e-6 * newArea)
+                return p;
+            return new PanelPreview(p.CanPlace, p.Reason, p.EnergyPerYearWh * area / newArea, p.CapacityFactor, p.Eroi, p.PaybackYears);
         }
 
         BatteryVisual MakeBattery(int t, int s, bool constructionSite)
@@ -266,7 +302,7 @@ namespace KardashevAscent.Presentation.Planet
                 }
                 else if (r.Type == BuildingType.SolarPanel)
                 {
-                    PanelPreview p = simulation.PreviewPanel(r.Tile, r.Tilt, r.Azimuth);
+                    PanelPreview p = PreviewBuilt(r.Tile, r.Slot, r.Tilt, r.Azimuth);
                     AngleRating rating = r.Tile == tile ? RatingOf(p) : AngleRating.Off;
                     if (rating == AngleRating.Optimal)
                         BestAnglePanels++;
@@ -386,6 +422,21 @@ namespace KardashevAscent.Presentation.Planet
         /// <summary>Build parts one building of the current mode costs, Wh.</summary>
         public double BuildCostWh => simulation != null
             ? simulation.BuildCostWh(mode == BuildMode.Battery ? BuildingType.Battery : BuildingType.SolarPanel) : 0.0;
+
+        /// <summary>What a new solar building here is, e.g. "solar farm (1 km²)".</summary>
+        public string NewPanelName => simulation == null ? "solar panel"
+            : $"{PanelTiers.All[simulation.PanelTier].Name.ToLowerInvariant()} ({PanelTiers.FormatArea(simulation.NewPanelAreaM2(tile))})";
+
+        /// <summary>What the selected solar building is, e.g. "Panel field (1 ha)".</summary>
+        public string SelectedPanelName
+        {
+            get
+            {
+                if (simulation == null || tile < 0 || slot < 0) return "Solar panel";
+                double area = simulation.PanelAreaAt(tile, slot);
+                return $"{PanelTiers.All[TierAt(tile, slot)].Name} ({PanelTiers.FormatArea(area)})";
+            }
+        }
 
         /// <summary>Build parts on hand, Wh.</summary>
         public double BuildStockWh => simulation != null ? simulation.BuildStockWh : 0.0;
@@ -537,7 +588,7 @@ namespace KardashevAscent.Presentation.Planet
                 if (p.Rating == AngleRating.Optimal) BestAnglePanels--;
                 p.Tilt = tilt;
                 p.Azimuth = azimuth;
-                p.Preview = simulation.PreviewPanel(tile, tilt, azimuth);
+                p.Preview = PreviewBuilt(tile, s, tilt, azimuth);
                 p.Rating = RatingOf(p.Preview);
                 if (p.Rating == AngleRating.Optimal) BestAnglePanels++;
                 ShowOnSlot(p.Visual, siteView.Site, s, tilt, azimuth);
