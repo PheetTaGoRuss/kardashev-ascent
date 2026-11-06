@@ -49,6 +49,8 @@ MonoBehaviour:
       circumbinary: 0
       surface: rocky
       clouds: earth
+    look:
+      terrainSeed: 7
     provenance:
     - field: solar.luminosityW
       origin: assumed
@@ -122,3 +124,6 @@ MonoBehaviour:
     - field: solar.airTemperatureC
       origin: assumed
       note: game value
+    - field: look.terrainSeed
+      origin: assumed
+      note: terrain noise seed, game value

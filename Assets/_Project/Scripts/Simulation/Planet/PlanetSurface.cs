@@ -22,13 +22,44 @@ namespace KardashevAscent.Simulation.Planet
         public readonly double IceLatitudeDeg;
         /// <summary>Size of continents: higher = more, smaller land masses.</summary>
         public readonly double NoiseScale;
+        /// <summary>
+        /// Tidally locked "eyeball": ice everywhere except a circle around the sub-stellar point (latitude 0,
+        /// longitude 0); <see cref="IceLatitudeDeg"/> is then that circle's radius in degrees.
+        /// </summary>
+        public readonly bool IceAroundSubStellar;
 
-        public SurfaceSettings(int seed, double oceanFraction = 0.62, double iceLatitudeDeg = 70.0, double noiseScale = 1.6)
+        public SurfaceSettings(int seed, double oceanFraction = 0.62, double iceLatitudeDeg = 70.0, double noiseScale = 1.6,
+                               bool iceAroundSubStellar = false)
         {
             Seed = seed;
             OceanFraction = oceanFraction;
             IceLatitudeDeg = iceLatitudeDeg;
             NoiseScale = noiseScale;
+            IceAroundSubStellar = iceAroundSubStellar;
+        }
+
+        /// <summary>Earth-like ice line and the temperature band where it stays there, °C.</summary>
+        public const double TemperateIceLatitudeDeg = 70.0, TemperateMinC = 0.0, TemperateMaxC = 35.0;
+
+        /// <summary>
+        /// A planet's look from its air temperature (game rules, not climate science):
+        /// 0–35 °C keeps Earth's ice line at 70°; colder planets freeze 1.5° of latitude nearer the equator per °C
+        /// (never past 10°); hotter ones lose their ice caps and dry out (1 % less ocean per °C, down to 10 %).
+        /// A tidally locked planet is an eyeball: open ground within 80° + T (35°–180°) of the point under its star.
+        /// </summary>
+        public static SurfaceSettings ForClimate(int seed, double airTemperatureC, bool tidallyLocked)
+        {
+            double ocean = airTemperatureC > TemperateMaxC
+                ? Math.Max(0.10, 0.62 - 0.01 * (airTemperatureC - TemperateMaxC))
+                : 0.62;
+            if (tidallyLocked)
+                return new SurfaceSettings(seed, ocean, Math.Max(35.0, Math.Min(180.0, 80.0 + airTemperatureC)), 1.6, true);
+            double ice = airTemperatureC < TemperateMinC
+                ? Math.Max(10.0, TemperateIceLatitudeDeg + 1.5 * (airTemperatureC - TemperateMinC))
+                : airTemperatureC > TemperateMaxC
+                    ? TemperateIceLatitudeDeg + (airTemperatureC - TemperateMaxC)
+                    : TemperateIceLatitudeDeg;
+            return new SurfaceSettings(seed, ocean, ice, 1.6);
         }
     }
 
@@ -73,8 +104,11 @@ namespace KardashevAscent.Simulation.Planet
                 double e = raw[t] > seaLevel ? (raw[t] - seaLevel) / maxAbove : (raw[t] - seaLevel) / maxBelow;
                 elevation[t] = (float)e;
 
-                double latDeg = Math.Abs(sphere.Latitude(t)) * 180.0 / Math.PI;
                 var c = sphere.Centers[t];
+                // Rotating planet: distance from the equator. Eyeball: angle from the point under the star (+Z).
+                double latDeg = settings.IceAroundSubStellar
+                    ? Math.Acos(Math.Max(-1.0, Math.Min(1.0, c.Z / c.Length()))) * 180.0 / Math.PI
+                    : Math.Abs(sphere.Latitude(t)) * 180.0 / Math.PI;
                 double iceEdge = settings.IceLatitudeDeg
                                  + 6.0 * Noise3D.Value(c.X * 6.0, c.Y * 6.0, c.Z * 6.0, settings.Seed + 991)
                                  - (e > 0 ? 8.0 * e : 0.0);

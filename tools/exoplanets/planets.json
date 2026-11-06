@@ -21,6 +21,7 @@
         "diffuseK": 0.3,
         "airTemperatureC": 25.0,
         "clouds": "earth",
+        "terrainSeed": 7,
         "bondAlbedo": 0.306
       }
     },

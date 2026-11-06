@@ -45,7 +45,19 @@ namespace KardashevAscent.Simulation.Planet
         public StarRecord star = new StarRecord();
         public BodyRecord planet = new BodyRecord();
         public FlagsRecord flags = new FlagsRecord();
+        public LookRecord look = new LookRecord();
         public List<ProvenanceRecord> provenance = new List<ProvenanceRecord>();
+
+        [Serializable]
+        public sealed class LookRecord
+        {
+            /// <summary>Noise seed for the continents (game value; Viridia keeps 7, the editor default).</summary>
+            public int terrainSeed = 7;
+        }
+
+        /// <summary>How the planet's surface is generated: its own continents, and ice from its air temperature.</summary>
+        public SurfaceSettings ToSurfaceSettings() =>
+            SurfaceSettings.ForClimate(look?.terrainSeed ?? 7, solar.airTemperatureC, flags.tidallyLocked);
 
         [Serializable]
         public sealed class SolarRecord

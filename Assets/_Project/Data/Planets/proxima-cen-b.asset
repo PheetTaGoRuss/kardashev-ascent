@@ -49,6 +49,8 @@ MonoBehaviour:
       circumbinary: 0
       surface: rocky
       clouds: none
+    look:
+      terrainSeed: 1697376206
     provenance:
     - field: solar.luminosityW
       origin: nasa
@@ -131,3 +133,6 @@ MonoBehaviour:
     - field: solar.airTemperatureC
       origin: derived
       note: equilibrium temperature + greenhouse offset 0 K (assumed)
+    - field: look.terrainSeed
+      origin: assumed
+      note: terrain noise seed from the planet id

@@ -16,8 +16,11 @@ namespace KardashevAscent.Presentation.Planet
         [Header("Surface")]
         [SerializeField] int seed = 7;
         [Range(0f, 1f)] [SerializeField] float oceanFraction = 0.62f;
-        [Range(40f, 90f)] [SerializeField] float iceLatitude = 70f;
+        [Tooltip("Where polar ice starts, degrees of latitude (eyeball: radius of the open circle under the star).")]
+        [Range(0f, 180f)] [SerializeField] float iceLatitude = 70f;
         [Range(0.5f, 4f)] [SerializeField] float continentScale = 1.6f;
+        [Tooltip("Tidally locked look: ice everywhere except a circle under the star (latitude 0, longitude 0).")]
+        [SerializeField] bool iceAroundSubStellar;
 
         [Header("Look")]
         [Range(0f, 0.3f)] [SerializeField] float borderWidth = 0.07f;
@@ -67,7 +70,7 @@ namespace KardashevAscent.Presentation.Planet
         {
             dirty = false;
             Sphere = HexSphere.Create(frequency);
-            Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(seed, oceanFraction, iceLatitude, continentScale));
+            Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(seed, oceanFraction, iceLatitude, continentScale, iceAroundSubStellar));
 
             terrainColors = new Color32[Sphere.TileCount];
             for (int t = 0; t < terrainColors.Length; t++)
@@ -113,6 +116,28 @@ namespace KardashevAscent.Presentation.Planet
             mesh.hideFlags = HideFlags.DontSave;
             GetComponent<MeshFilter>().sharedMesh = mesh;
             meshRenderer.sharedMaterial = overlayMaterial != null ? overlayMaterial : terrainMaterial;
+        }
+
+        /// <summary>
+        /// Use another planet's surface (its continents and ice). Returns true if anything changed; the tiles are
+        /// then rebuilt on <see cref="EnsureBuilt"/> or the next Update, which raises <see cref="Rebuilt"/>.
+        /// </summary>
+        public bool SetSurface(in SurfaceSettings settings)
+        {
+            bool changed = seed != settings.Seed
+                || !Mathf.Approximately(oceanFraction, (float)settings.OceanFraction)
+                || !Mathf.Approximately(iceLatitude, (float)settings.IceLatitudeDeg)
+                || !Mathf.Approximately(continentScale, (float)settings.NoiseScale)
+                || iceAroundSubStellar != settings.IceAroundSubStellar;
+            if (!changed)
+                return false;
+            seed = settings.Seed;
+            oceanFraction = (float)settings.OceanFraction;
+            iceLatitude = (float)settings.IceLatitudeDeg;
+            continentScale = (float)settings.NoiseScale;
+            iceAroundSubStellar = settings.IceAroundSubStellar;
+            dirty = true;
+            return true;
         }
 
         /// <summary>Makes sure the tiles exist now (they are otherwise built on the first Update).</summary>
