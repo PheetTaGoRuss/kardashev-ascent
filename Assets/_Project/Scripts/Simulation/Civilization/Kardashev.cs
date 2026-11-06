@@ -45,5 +45,20 @@ namespace KardashevAscent.Simulation.Civilization
         /// <summary>Starlight the planet's disc intercepts, S·πR², W. Earth ≈ 1.74 × 10¹⁷ W.</summary>
         public static double InterceptedStarlightW(double insolationWm2, double planetRadiusM) =>
             insolationWm2 * Math.PI * planetRadiusM * planetRadiusM;
+
+        /// <summary>
+        /// Planet K (the per-planet index, named apart from absolute K): K of the power scaled so that this
+        /// planet's target counts as Type I. Equals absolute K on an Earth-sized planet at 1 AU from a Sun;
+        /// reaches 1 at <paramref name="targetW"/> on any planet.
+        /// </summary>
+        public static double PlanetK(double powerW, double targetW) =>
+            targetW > 0.0 ? K(Math.Max(powerW, MinimumW) * TypeIW / targetW) : K(powerW);
+
+        /// <summary>
+        /// Type I as a share of the starlight a planet intercepts, TypeIW / (S⊕·πR⊕²) ≈ 0.058. The same on every
+        /// planet, because the per-planet target scales with S·R². So Type I is not "all of the planet's sunlight".
+        /// </summary>
+        public static double TypeIShareOfIntercepted =>
+            TypeIW / InterceptedStarlightW(EarthIrradiance, EarthRadiusM);
     }
 }

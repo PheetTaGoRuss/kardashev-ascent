@@ -78,10 +78,19 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>True while demand is not being met (generation + battery fall short).</summary>
         bool IsBrownout { get; }
 
-        /// <summary>Kardashev K = (log₁₀ P − 6) / 10 of the power actually used.</summary>
+        /// <summary>Power actually used (loads, battery charging, build parts; not curtailed), W. K is computed from it.</summary>
+        double KardashevPowerW { get; }
+
+        /// <summary>Absolute Kardashev K = (log₁₀ P − 6) / 10 of <see cref="KardashevPowerW"/>.</summary>
         double KardashevK { get; }
 
-        /// <summary>This planet's Type I target power, W (10¹⁶ W × S·R² / S⊕·R⊕²).</summary>
+        /// <summary>
+        /// Planet K: K with this planet's target counted as Type I (1 at <see cref="TypeITargetW"/>).
+        /// A game index; show it next to absolute K, never instead of it.
+        /// </summary>
+        double PlanetK { get; }
+
+        /// <summary>This planet's Type I target power, W (10¹⁶ W × S·R² / S⊕·R⊕²; a game rule).</summary>
         double TypeITargetW { get; }
 
         // Commands

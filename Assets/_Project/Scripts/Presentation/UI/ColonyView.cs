@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using KardashevAscent.Presentation.Game;
+using KardashevAscent.Simulation.Civilization;
 using KardashevAscent.Simulation.Game;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -23,7 +24,8 @@ namespace KardashevAscent.Presentation.UI
         [Range(1, 10)] [SerializeField] int tilesListed = 5;
 
         VisualElement panelRoot;
-        Label subtitle, demand, demandCaption, growth, growthCaption, supply, supplyCaption, chartCaption, energy, buildings, tiles;
+        Label subtitle, demand, demandCaption, growth, growthCaption, supply, supplyCaption, chartCaption, energy, buildings, tiles,
+              kardashev, kardashevNotes;
         PowerHistoryChart chart;
         float nextRefresh;
 
@@ -51,6 +53,8 @@ namespace KardashevAscent.Presentation.UI
             energy = root.Q<Label>("energy");
             buildings = root.Q<Label>("buildings");
             tiles = root.Q<Label>("tiles");
+            kardashev = root.Q<Label>("kardashev");
+            kardashevNotes = root.Q<Label>("kardashev-notes");
             Button close = root.Q<Button>("close");
             if (close != null)
                 close.clicked += () => SetVisible(false);
@@ -133,6 +137,34 @@ namespace KardashevAscent.Presentation.UI
                 $"Stored or lost in the battery  {Format.Energy(curtailed)}";
 
             UpdateBuildings(sim);
+            UpdateKardashev(sim);
+        }
+
+        /// <summary>
+        /// Absolute K and planet K side by side, as docs/physics/physics-verification.md item 10 asks: the per-planet
+        /// target is a game rule, and Type I is a small share of the starlight a planet gets, not all of it.
+        /// </summary>
+        void UpdateKardashev(IPlanetSimulation sim)
+        {
+            if (kardashev == null)
+                return;
+            double p = sim.KardashevPowerW, target = sim.TypeITargetW;
+            double tenfolds = Kardashev.K(target) - sim.KardashevK;
+            kardashev.text =
+                $"Absolute K  {sim.KardashevK:0.00} · {Format.Power(p)} used\n" +
+                $"Planet K  {sim.PlanetK:0.00} · {Format.Percent(Kardashev.PlanetCompletion(p, target))} of this planet's target\n" +
+                $"Target  {Format.Power(target)} (absolute K {Kardashev.K(target):0.00})" +
+                (tenfolds > 0.0 ? $" · power must grow 10× about {tenfolds * 10.0:0} more times" : " · reached");
+
+            if (kardashevNotes == null)
+                return;
+            double intercepted = target / Kardashev.TypeIShareOfIntercepted;
+            kardashevNotes.text =
+                $"K = (log₁₀ P − 6) / 10, so each +0.1 is ten times the power.\n" +
+                $"Humanity in 2024: K ≈ {Kardashev.K(Kardashev.Humanity2024W):0.00} (≈{Kardashev.Humanity2024W / 1e12:0} TW).\n" +
+                $"This planet intercepts {Format.Power(intercepted)} of starlight; its target is " +
+                $"{Kardashev.TypeIShareOfIntercepted * 100.0:0.#} % of that, as Sagan's Type I is of Earth's.\n" +
+                "The per-planet target is a game rule, not a scientific definition.";
         }
 
         void UpdateBuildings(IPlanetSimulation sim)
