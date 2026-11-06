@@ -49,6 +49,10 @@ MonoBehaviour:
       circumbinary: 0
       surface: rocky
       clouds: earth
+    look:
+      terrainSeed: 7
+      water: liquid
+      oceanFraction: 0.62
     provenance:
     - field: solar.luminosityW
       origin: assumed
@@ -122,3 +126,12 @@ MonoBehaviour:
     - field: solar.airTemperatureC
       origin: assumed
       note: game value
+    - field: look.terrainSeed
+      origin: assumed
+      note: terrain noise seed, game value
+    - field: look.water
+      origin: assumed
+      note: surface water is not measurable for exoplanets yet
+    - field: look.oceanFraction
+      origin: assumed
+      note: share of the surface in low basins (seas, or dry basins), game value
