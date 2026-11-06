@@ -1,4 +1,5 @@
 using System;
+using KardashevAscent.Presentation.UI;
 using KardashevAscent.Simulation.Planet;
 using UnityEngine;
 
@@ -22,14 +23,10 @@ namespace KardashevAscent.Presentation.Planet
         [Tooltip("Outline height above the surface, as a fraction of the radius.")]
         [Range(0f, 0.01f)] [SerializeField] float lift = 0.0015f;
 
-        [Header("Info box")]
-        [SerializeField] bool showInfo = true;
-
         PlanetView planet;
         Outline hover, selected;
         Vector3 pressPosition;
         bool pressed;
-        GUIStyle infoStyle;
 
         public int HoveredTile { get; private set; } = -1;
         public int SelectedTile { get; private set; } = -1;
@@ -72,9 +69,11 @@ namespace KardashevAscent.Presentation.Planet
             if (cam == null || planet.Sphere == null)
                 return;
 
-            SetHovered(TileUnder(cam, Input.mousePosition));
+            // Over an on-screen panel the mouse belongs to the panel, not the planet.
+            bool overUi = ScreenInput.PointerOverUi;
+            SetHovered(overUi ? -1 : TileUnder(cam, Input.mousePosition));
 
-            if (Input.GetMouseButtonDown(0))
+            if (Input.GetMouseButtonDown(0) && !overUi)
             {
                 pressed = true;
                 pressPosition = Input.mousePosition;
@@ -82,21 +81,42 @@ namespace KardashevAscent.Presentation.Planet
             if (Input.GetMouseButtonUp(0) && pressed)
             {
                 pressed = false;
-                if ((Input.mousePosition - pressPosition).sqrMagnitude <= clickTolerancePixels * clickTolerancePixels)
+                bool click = (Input.mousePosition - pressPosition).sqrMagnitude <= clickTolerancePixels * clickTolerancePixels;
+                if (click && !HoldSelection)
                     Select(HoveredTile);
             }
-            if (Input.GetKeyDown(KeyCode.Escape))
+            if (Input.GetKeyDown(KeyCode.Escape) && !(EscapeHandler != null && EscapeHandler()))
                 Select(-1);
         }
 
         /// <summary>Tile under a screen position, or −1 if the ray misses the planet.</summary>
         public int TileUnder(Camera cam, Vector3 screenPosition)
         {
-            if (planet.Sphere == null)
+            if (planet.Sphere == null || !TryHitLocal(cam, screenPosition, out Vector3 hit))
                 return -1;
-            Ray ray = cam.ScreenPointToRay(screenPosition);
+            return planet.Sphere.FindTile(new System.Numerics.Vector3(hit.x, hit.y, hit.z),
+                                          HoveredTile >= 0 ? HoveredTile : 0);
+        }
 
-            // Work in the planet's local space, where it is a sphere of radius `Radius` at the origin.
+        /// <summary>
+        /// Where a screen position's ray meets the planet's sphere, in world space, with the outward surface normal.
+        /// False if the ray misses the planet.
+        /// </summary>
+        public bool TryGetSurfacePoint(Camera cam, Vector3 screenPosition, out Vector3 point, out Vector3 normal)
+        {
+            point = normal = Vector3.zero;
+            if (!TryHitLocal(cam, screenPosition, out Vector3 hit))
+                return false;
+            point = transform.TransformPoint(hit);
+            normal = transform.TransformDirection(hit).normalized;
+            return true;
+        }
+
+        /// <summary>Ray from a screen position against the planet, in its local space (a sphere of radius `Radius` at the origin).</summary>
+        bool TryHitLocal(Camera cam, Vector3 screenPosition, out Vector3 hit)
+        {
+            hit = Vector3.zero;
+            Ray ray = cam.ScreenPointToRay(screenPosition);
             Vector3 origin = transform.InverseTransformPoint(ray.origin);
             Vector3 direction = (transform.InverseTransformPoint(ray.origin + ray.direction) - origin).normalized;
             float r = planet.Radius;
@@ -104,25 +124,48 @@ namespace KardashevAscent.Presentation.Planet
             float c = origin.sqrMagnitude - r * r;
             float discriminant = b * b - c;
             if (discriminant < 0f)
-                return -1;
+                return false;
             float t = -b - Mathf.Sqrt(discriminant);
             if (t < 0f)
                 t = -b + Mathf.Sqrt(discriminant); // camera inside the sphere
             if (t < 0f)
-                return -1;
-
-            Vector3 hit = origin + direction * t;
-            return planet.Sphere.FindTile(new System.Numerics.Vector3(hit.x, hit.y, hit.z),
-                                          HoveredTile >= 0 ? HoveredTile : 0);
+                return false;
+            hit = origin + direction * t;
+            return true;
         }
 
         /// <summary>Selects a tile (−1 clears the selection).</summary>
+        /// <summary>
+        /// Whether the selected tile gets its thick outline. The site view turns it off: up close the band would
+        /// cover the building slots.
+        /// </summary>
+        public bool ShowSelectedOutline
+        {
+            get => showSelectedOutline;
+            set
+            {
+                showSelectedOutline = value;
+                selected.Show(planet.Sphere, value ? SelectedTile : -1, planet.Radius, selectedWidth, lift * 1.5f);
+            }
+        }
+
+        bool showSelectedOutline = true;
+
+        /// <summary>
+        /// While true, clicks do not change the selected tile (Esc still clears it). The site view sets it while the
+        /// mouse is over one of its slots: near a tile corner the nearest tile centre can be the neighbour.
+        /// </summary>
+        public bool HoldSelection { get; set; }
+
+        /// <summary>Asked first when Esc is pressed; returning true means it was handled (the tile stays selected).</summary>
+        public Func<bool> EscapeHandler { get; set; }
+
         public void Select(int tile)
         {
             if (tile == SelectedTile)
                 return;
             SelectedTile = tile;
-            selected.Show(planet.Sphere, tile, planet.Radius, selectedWidth, lift * 1.5f);
+            selected.Show(planet.Sphere, showSelectedOutline ? tile : -1, planet.Radius, selectedWidth, lift * 1.5f);
             hover.Show(planet.Sphere, HoveredTile == tile ? -1 : HoveredTile, planet.Radius, hoverWidth, lift);
             SelectedTileChanged?.Invoke(tile);
         }
@@ -136,30 +179,8 @@ namespace KardashevAscent.Presentation.Planet
             HoveredTileChanged?.Invoke(tile);
         }
 
-        void OnGUI()
-        {
-            if (!showInfo || planet.Sphere == null)
-                return;
-            infoStyle ??= new GUIStyle(GUI.skin.box)
-            {
-                alignment = TextAnchor.UpperLeft,
-                fontSize = 13,
-                richText = true,
-                padding = new RectOffset(10, 10, 8, 8),
-                normal = { textColor = new Color(0.9f, 0.93f, 1f) },
-            };
-
-            string text;
-            if (SelectedTile >= 0)
-                text = "<b>Selected</b>\n" + Describe(SelectedTile) + "\n<size=11>Esc: clear selection</size>";
-            else if (HoveredTile >= 0)
-                text = Describe(HoveredTile) + "\n<size=11>Click to select</size>";
-            else
-                text = "Point at the planet to inspect a tile";
-            GUI.Box(new Rect(12, 12, 250, SelectedTile >= 0 || HoveredTile >= 0 ? 104 : 32), text, infoStyle);
-        }
-
-        string Describe(int tile)
+        /// <summary>Plain description of a tile: id and shape, terrain, latitude/longitude (three lines).</summary>
+        public string Describe(int tile)
         {
             HexSphere sphere = planet.Sphere;
             double lat = sphere.Latitude(tile) * Mathf.Rad2Deg;

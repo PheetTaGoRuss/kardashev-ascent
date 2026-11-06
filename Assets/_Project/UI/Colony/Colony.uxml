@@ -1,0 +1,48 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="Colony.uss" />
+    <ui:VisualElement name="colony" class="colony panel hidden">
+        <ui:VisualElement class="title-row">
+            <ui:VisualElement class="title-text">
+                <ui:Label class="value" text="Colony" />
+                <ui:Label name="subtitle" class="caption" text="Day 1" />
+            </ui:VisualElement>
+            <ui:Button name="close" class="close-button" text="×" />
+        </ui:VisualElement>
+        <ui:ScrollView name="scroll" class="colony-scroll" mode="Vertical">
+            <ui:VisualElement class="stat-row">
+                <ui:VisualElement class="stat">
+                    <ui:Label class="heading" text="DEMAND" />
+                    <ui:Label name="demand" class="stat-value" text="–" />
+                    <ui:Label name="demand-caption" class="caption" text="target –" />
+                </ui:VisualElement>
+                <ui:VisualElement class="stat">
+                    <ui:Label class="heading" text="GROWTH" />
+                    <ui:Label name="growth" class="stat-value" text="–" />
+                    <ui:Label name="growth-caption" class="caption wrap" text="" />
+                </ui:VisualElement>
+                <ui:VisualElement class="stat">
+                    <ui:Label class="heading" text="SUPPLY" />
+                    <ui:Label name="supply" class="stat-value" text="–" />
+                    <ui:Label name="supply-caption" class="caption wrap" text="" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <ui:Label class="heading section" text="POWER" />
+            <ui:VisualElement name="chart" class="chart power-chart" />
+            <ui:VisualElement class="legend">
+                <ui:VisualElement class="legend-item"><ui:VisualElement class="swatch generation" /><ui:Label class="caption" text="made" /></ui:VisualElement>
+                <ui:VisualElement class="legend-item"><ui:VisualElement class="swatch demand" /><ui:Label class="caption" text="needed" /></ui:VisualElement>
+                <ui:VisualElement class="legend-item"><ui:VisualElement class="swatch battery" /><ui:Label class="caption" text="battery %" /></ui:VisualElement>
+                <ui:VisualElement class="legend-item"><ui:VisualElement class="swatch brownout" /><ui:Label class="caption" text="brownout" /></ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Label name="chart-caption" class="caption" text="" />
+
+            <ui:Label class="heading section" text="ENERGY SINCE LANDING" />
+            <ui:Label name="energy" class="body" text="" />
+
+            <ui:Label class="heading section" text="BUILDINGS" />
+            <ui:Label name="buildings" class="body" text="" />
+            <ui:Label name="tiles" class="body tiles" text="" />
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>

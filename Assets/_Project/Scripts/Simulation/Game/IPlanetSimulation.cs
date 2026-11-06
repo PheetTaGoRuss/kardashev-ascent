@@ -47,12 +47,33 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Power being generated now, W.</summary>
         double GenerationW { get; }
 
-        /// <summary>Power the colony needs now, W.</summary>
+        /// <summary>Power the colony needs now, W. It grows toward <see cref="DemandTargetW"/> (see ColonyDemand).</summary>
         double DemandW { get; }
+
+        /// <summary>What the colony's demand is growing toward: a share of its average generation, W.</summary>
+        double DemandTargetW { get; }
+
+        /// <summary>True while the colony is growing (a day with no brownout and room to grow).</summary>
+        bool IsColonyGrowing { get; }
+
+        /// <summary>Game hours since the last brownout ended (the colony grows only after a full planet day without one).</summary>
+        double HoursSinceBrownout { get; }
+
+        /// <summary>Recent power samples and totals since landing, for the colony overview.</summary>
+        PowerHistory History { get; }
 
         double BatteryStoredWh { get; }
 
         double BatteryCapacityWh { get; }
+
+        /// <summary>Of <see cref="GenerationW"/>, the part from the lander's RTGs, W.</summary>
+        double RtgW { get; }
+
+        /// <summary>Battery power now: + charging, − discharging, W.</summary>
+        double BatteryPowerW { get; }
+
+        /// <summary>Surplus thrown away because the battery is full or at its power limit, W.</summary>
+        double CurtailedW { get; }
 
         /// <summary>True while demand is not being met (generation + battery fall short).</summary>
         bool IsBrownout { get; }
@@ -68,16 +89,90 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Advance the simulation by <paramref name="hours"/> of game time.</summary>
         void Tick(double hours);
 
-        /// <summary>Numbers to show while the player drags a panel over a tile; places nothing.</summary>
+        /// <summary>
+        /// Numbers for one panel on a tile (every slot of a tile gets the same sunlight); places nothing.
+        /// Must be read-only and safe to call from a worker thread (the best-angle search runs in the background).
+        /// </summary>
         PanelPreview PreviewPanel(int tileId, double tilt, double azimuth);
 
-        /// <summary>Build a panel. Returns false (and changes nothing) if the tile cannot take one.</summary>
-        bool PlacePanel(int tileId, double tilt, double azimuth);
+        /// <summary>
+        /// Rings of building slots on every tile, laid out by <see cref="TileSite.Create"/> to cover the whole tile
+        /// (a hexagonal tile holds 3R(R+1)+1 slots). One panel per slot.
+        /// </summary>
+        int SiteRings { get; }
 
-        /// <summary>Remove the panel on a tile. Returns false if there was none.</summary>
-        bool RemovePanel(int tileId);
+        /// <summary>Building slots on a tile (61 on a hexagon with the default 4 rings; pentagons differ).</summary>
+        int SlotCount(int tileId);
 
-        bool HasPanel(int tileId);
+        /// <summary>
+        /// Energy per "month" (twelfths of the year from periapsis, as the game clock counts) of one panel on a tile at
+        /// these angles, Wh; null where <see cref="PreviewPanel"/> could not place one. Read-only like PreviewPanel.
+        /// </summary>
+        double[] MonthlyEnergyWh(int tileId, double tilt, double azimuth);
+
+        /// <summary>
+        /// Build a panel in one slot of a tile. Returns false (and changes nothing) if the slot cannot take one.
+        /// The panel takes <see cref="BuildCostWh"/> from the parts in stock; without enough it starts as a construction site.
+        /// </summary>
+        bool PlacePanel(int tileId, int slot, double tilt, double azimuth);
+
+        /// <summary>Remove the panel in a slot. Returns false if there was none.</summary>
+        bool RemovePanel(int tileId, int slot);
+
+        bool HasPanel(int tileId, int slot);
+
+        /// <summary>Panels built on a tile (all slots).</summary>
+        int PanelCount(int tileId);
+
+        /// <summary>What stands in a slot.</summary>
+        BuildingType GetBuilding(int tileId, int slot);
+
+        /// <summary>Storage added by one battery building, Wh.</summary>
+        double BatteryUnitWh { get; }
+
+        /// <summary>Build a battery in an empty land slot (adds <see cref="BatteryUnitWh"/> to the colony battery).</summary>
+        bool PlaceBattery(int tileId, int slot);
+
+        /// <summary>Batteries built on a tile.</summary>
+        int BatteryCount(int tileId);
+
+        /// <summary>
+        /// Remove whatever stands in a slot (panel or battery). Returns false if it was empty.
+        /// A site gives back the parts put into it; a finished building gives back half its cost.
+        /// </summary>
+        bool RemoveBuilding(int tileId, int slot);
+
+        /// <summary>Turn a built panel (or a panel site) to new angles; free, nothing is rebuilt. Returns false if no panel is there or the angles are not allowed.</summary>
+        bool SetPanelAngles(int tileId, int slot, double tilt, double azimuth);
+
+        // Construction (see Construction and BuildCosts)
+
+        /// <summary>Build parts on hand, Wh. Spare power is turned into parts; new buildings take their cost from them.</summary>
+        double BuildStockWh { get; }
+
+        /// <summary>Spare power going into build parts now, W.</summary>
+        double BuildPowerW { get; }
+
+        /// <summary>Parts one building of this type costs, Wh.</summary>
+        double BuildCostWh(BuildingType type);
+
+        /// <summary>Construction sites waiting for parts.</summary>
+        int ConstructionQueueCount { get; }
+
+        /// <summary>Parts still needed to finish every site, Wh.</summary>
+        double ConstructionRemainingWh { get; }
+
+        /// <summary>True while the building in a slot is a site waiting for parts (it does nothing yet).</summary>
+        bool IsUnderConstruction(int tileId, int slot);
+
+        /// <summary>How much of the site in a slot is paid for, 0–1; 1 for a finished building or an empty slot.</summary>
+        double ConstructionProgress(int tileId, int slot);
+
+        /// <summary>Everything needed to restore this simulation later (time, buildings, battery, colony).</summary>
+        SimulationState CaptureState();
+
+        /// <summary>Replace this simulation's state with a captured one. Returns false (and changes nothing) if it was captured on a different planet layout (tile count or base tile differ).</summary>
+        bool RestoreState(SimulationState state);
 
         // Events (raised during Tick or a command)
 
@@ -89,6 +184,17 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>Generation reached <see cref="TypeITargetW"/>.</summary>
         event Action TargetReached;
+
+        /// <summary>A construction site (tile, slot) got all its parts and now works.</summary>
+        event Action<int, int> BuildingCompleted;
+    }
+
+    /// <summary>What a building slot holds.</summary>
+    public enum BuildingType
+    {
+        None,
+        SolarPanel,
+        Battery,
     }
 
     /// <summary>Static facts about one tile.</summary>
