@@ -104,7 +104,10 @@ namespace KardashevAscent.Simulation.Game
         /// </summary>
         double[] MonthlyEnergyWh(int tileId, double tilt, double azimuth);
 
-        /// <summary>Build a panel in one slot of a tile. Returns false (and changes nothing) if the slot cannot take one.</summary>
+        /// <summary>
+        /// Build a panel in one slot of a tile. Returns false (and changes nothing) if the slot cannot take one.
+        /// The panel takes <see cref="BuildCostWh"/> from the parts in stock; without enough it starts as a construction site.
+        /// </summary>
         bool PlacePanel(int tileId, int slot, double tilt, double azimuth);
 
         /// <summary>Remove the panel in a slot. Returns false if there was none.</summary>
@@ -127,8 +130,37 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Batteries built on a tile.</summary>
         int BatteryCount(int tileId);
 
-        /// <summary>Remove whatever stands in a slot (panel or battery). Returns false if it was empty.</summary>
+        /// <summary>
+        /// Remove whatever stands in a slot (panel or battery). Returns false if it was empty.
+        /// A site gives back the parts put into it; a finished building gives back half its cost.
+        /// </summary>
         bool RemoveBuilding(int tileId, int slot);
+
+        /// <summary>Turn a built panel (or a panel site) to new angles; free, nothing is rebuilt. Returns false if no panel is there or the angles are not allowed.</summary>
+        bool SetPanelAngles(int tileId, int slot, double tilt, double azimuth);
+
+        // Construction (see Construction and BuildCosts)
+
+        /// <summary>Build parts on hand, Wh. Spare power is turned into parts; new buildings take their cost from them.</summary>
+        double BuildStockWh { get; }
+
+        /// <summary>Spare power going into build parts now, W.</summary>
+        double BuildPowerW { get; }
+
+        /// <summary>Parts one building of this type costs, Wh.</summary>
+        double BuildCostWh(BuildingType type);
+
+        /// <summary>Construction sites waiting for parts.</summary>
+        int ConstructionQueueCount { get; }
+
+        /// <summary>Parts still needed to finish every site, Wh.</summary>
+        double ConstructionRemainingWh { get; }
+
+        /// <summary>True while the building in a slot is a site waiting for parts (it does nothing yet).</summary>
+        bool IsUnderConstruction(int tileId, int slot);
+
+        /// <summary>How much of the site in a slot is paid for, 0–1; 1 for a finished building or an empty slot.</summary>
+        double ConstructionProgress(int tileId, int slot);
 
         /// <summary>Everything needed to restore this simulation later (time, buildings, battery, colony).</summary>
         SimulationState CaptureState();
@@ -146,6 +178,9 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>Generation reached <see cref="TypeITargetW"/>.</summary>
         event Action TargetReached;
+
+        /// <summary>A construction site (tile, slot) got all its parts and now works.</summary>
+        event Action<int, int> BuildingCompleted;
     }
 
     /// <summary>What a building slot holds.</summary>

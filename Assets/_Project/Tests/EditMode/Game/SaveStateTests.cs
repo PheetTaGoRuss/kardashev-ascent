@@ -43,7 +43,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             Near(a.TimeHours, b.TimeHours);
             Near(a.BatteryStoredWh, b.BatteryStoredWh);
             Near(a.BatteryCapacityWh, b.BatteryCapacityWh);
-            Near(a.DemandW, b.DemandW, 1e-2); // A reports the pre-step demand of its last Tick
+            Near(a.Colony.DemandW, b.Colony.DemandW); // a.DemandW is the pre-step demand of its last Tick (a brownout trims it within the step)
             Near(a.GenerationW, b.GenerationW, 1e-2); // A reports the last step's value, B recomputes at the restored time
             Near(a.StarDirection.X, b.StarDirection.X, 1e-5);
             Near(a.StarDirection.Y, b.StarDirection.Y, 1e-5);
