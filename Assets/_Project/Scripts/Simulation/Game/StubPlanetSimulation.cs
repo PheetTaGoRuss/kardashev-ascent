@@ -165,6 +165,16 @@ namespace KardashevAscent.Simulation.Game
                 Finish(done.Tile, done.Slot);
             // Used power: what reached the loads, went into the battery or made build parts; curtailed power is not used.
             KardashevPowerW = grid.ServedW + grid.ChargeW + BuildPowerW;
+            // Milestones are judged on a whole day's average, so a sunny noon doesn't count.
+            dayEnergyWh += KardashevPowerW * dt;
+            dayHours += dt;
+            if (dayHours >= MilestoneDayHours - 1e-9)
+            {
+                DayAveragePowerW = dayEnergyWh / dayHours;
+                dayEnergyWh = 0.0;
+                dayHours = 0.0;
+                CheckMilestones();
+            }
             Colony.Step(dt, grid.GenerationW, grid.ServedW, grid.IsBrownout);
             Grid.DemandW = Colony.DemandW;
             double soc = Grid.Battery.CapacityWh > 0.0 ? Grid.Battery.StoredWh / Grid.Battery.CapacityWh : 0.0;
@@ -176,8 +186,30 @@ namespace KardashevAscent.Simulation.Game
                 IsDayAtBase = day;
                 DayNightChanged?.Invoke(day);
             }
+        }
 
-            if (!targetReached && GenerationW >= TypeITargetW)
+        double dayEnergyWh, dayHours;
+
+        /// <summary>The averaging window for milestones: the planet's day, or 24 h on a tidally locked planet.</summary>
+        double MilestoneDayHours => DayLengthHours > 0.0 ? DayLengthHours : 24.0;
+
+        /// <summary>Used power averaged over the last full day (see <see cref="MilestoneDayHours"/>), W.</summary>
+        public double DayAveragePowerW { get; private set; }
+
+        /// <summary>Highest milestone reached so far (0–10; 10 is this planet's Type I target).</summary>
+        public int MilestonesReached { get; private set; }
+
+        public event Action<int> MilestoneReached;
+
+        void CheckMilestones()
+        {
+            int now = Kardashev.MilestoneFor(Kardashev.PlanetK(DayAveragePowerW, TypeITargetW));
+            while (MilestonesReached < now)
+            {
+                MilestonesReached++;
+                MilestoneReached?.Invoke(MilestonesReached);
+            }
+            if (!targetReached && DayAveragePowerW >= TypeITargetW)
             {
                 targetReached = true;
                 TargetReached?.Invoke();
@@ -375,6 +407,10 @@ namespace KardashevAscent.Simulation.Game
             var state = new SimulationState
             {
                 PlanetId = PlanetId,
+                MilestonesReached = MilestonesReached,
+                DayAveragePowerW = DayAveragePowerW,
+                DayEnergyWh = dayEnergyWh,
+                DayHours = dayHours,
                 TileCount = TileCount,
                 BaseTileId = BaseTileId,
                 TimeHours = TimeHours,
@@ -424,6 +460,11 @@ namespace KardashevAscent.Simulation.Game
             foreach (var key in new List<(int Tile, int Slot)>(batteries))
                 RemoveBuilding(key.Tile, key.Slot);
             TimeHours = state.TimeHours;
+            MilestonesReached = Math.Max(0, Math.Min(10, state.MilestonesReached));
+            DayAveragePowerW = Math.Max(0.0, state.DayAveragePowerW);
+            dayEnergyWh = Math.Max(0.0, state.DayEnergyWh);
+            dayHours = Math.Max(0.0, state.DayHours);
+            targetReached = MilestonesReached >= 10;
             UpdateStar();
             // A version-1 save had no parts: every building in it is finished, and the colony keeps the lander's parts.
             Build.Reset(state.Version >= 2 ? state.BuildStockWh : BuildCosts.LanderStockWh);
