@@ -93,6 +93,12 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>This planet's Type I target power, W (10¹⁶ W × S·R² / S⊕·R⊕²; a game rule).</summary>
         double TypeITargetW { get; }
 
+        /// <summary>Used power averaged over the last full day (24 h on a tidally locked planet), W. Milestones use it.</summary>
+        double DayAveragePowerW { get; }
+
+        /// <summary>Highest milestone reached (0–10). Milestone n is planet K n × 0.1; 10 is the target.</summary>
+        int MilestonesReached { get; }
+
         // Commands
 
         /// <summary>Advance the simulation by <paramref name="hours"/> of game time.</summary>
@@ -191,8 +197,14 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Sunrise (true) or sunset (false) at <see cref="BaseTileId"/>.</summary>
         event Action<bool> DayNightChanged;
 
-        /// <summary>Generation reached <see cref="TypeITargetW"/>.</summary>
+        /// <summary>A day's average used power reached <see cref="TypeITargetW"/> (planet K 1, milestone 10).</summary>
         event Action TargetReached;
+
+        /// <summary>
+        /// A new milestone (1–10): a day's average used power reached planet K n × 0.1, ten times the power of the
+        /// one before. Raised once per milestone, in order.
+        /// </summary>
+        event Action<int> MilestoneReached;
 
         /// <summary>A construction site (tile, slot) got all its parts and now works.</summary>
         event Action<int, int> BuildingCompleted;
