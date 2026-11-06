@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using KardashevAscent.Simulation.Civilization;
 using KardashevAscent.Simulation.Planet;
 using KardashevAscent.Simulation.Solar;
 using KardashevAscent.Simulation.Energy;
@@ -15,16 +16,14 @@ namespace KardashevAscent.Simulation.Game
     /// </summary>
     public sealed class StubPlanetSimulation : IPlanetSimulation
     {
-        const double EarthRadiusM = 6.371e6;
-        const double EarthIrradiance = 1361.0;
         const double MaxStepHours = 0.25;
 
         /// <summary>Placeholder farm size for one placed panel, m².</summary>
         public double PanelAreaM2 { get; set; } = 10_000.0;
         public double PanelEfficiency { get; set; } = 0.20;
-        /// <summary>Energy to build 1 m² of panel, Wh (≈ 500 kWh/m² for silicon).</summary>
-        public double EmbodiedWhPerM2 { get; set; } = 500_000.0;
-        public double PanelLifetimeYears { get; set; } = 25.0;
+        /// <summary>Energy to build 1 m² of panel, Wh (modern mono-Si ≈ 266 kWh/m²; see Economics).</summary>
+        public double EmbodiedWhPerM2 { get; set; } = Economics.EmbodiedWhPerM2(PanelTechnology.ModernMonoSi);
+        public double PanelLifetimeYears { get; set; } = Economics.LifetimeYears;
         /// <summary>Placeholder colony demand, W.</summary>
         public double BaseDemandW { get => Grid.DemandW; set => Grid.DemandW = value; }
 
@@ -50,7 +49,7 @@ namespace KardashevAscent.Simulation.Game
         readonly Dictionary<int, int> batteriesPerTile = new Dictionary<int, int>();
 
         public StubPlanetSimulation(HexSphere sphere, PlanetSurface surface, PlanetSolarParams planet,
-                                    double planetRadiusM = EarthRadiusM, int baseTileId = -1)
+                                    double planetRadiusM = Kardashev.EarthRadiusM, int baseTileId = -1)
         {
             Sphere = sphere ?? throw new ArgumentNullException(nameof(sphere));
             this.surface = surface ?? throw new ArgumentNullException(nameof(surface));
@@ -67,7 +66,7 @@ namespace KardashevAscent.Simulation.Game
             History = new PowerHistory(planet.DayLengthHours > 0.0 ? planet.DayLengthHours / 24.0 : 1.0, 24 * 7);
 
             double g0 = Orbit.ExtraterrestrialIrradiance(planet.Luminosity, planet.SemiMajorAxis);
-            TypeITargetW = 1e16 * (g0 / EarthIrradiance) * Math.Pow(planetRadiusM / EarthRadiusM, 2.0);
+            TypeITargetW = Kardashev.TypeITargetW(g0, planetRadiusM);
 
             UpdateStar();
             IsDayAtBase = SunAt(BaseTileId).Up > 0.0;
@@ -442,7 +441,8 @@ namespace KardashevAscent.Simulation.Game
                 double ghi = Atmosphere.GlobalHorizontal(dni, dhi, sun.Up);
                 double cosTheta = PanelModel.CosIncidence(PanelModel.Normal(p.Tilt, p.Azimuth), sun);
                 double poa = PanelModel.PlaneOfArray(dni, dhi, ghi, cosTheta, p.Tilt, p.Albedo, p.FShade);
-                double cellT = PanelModel.CellTemperature(planet.AirTemperatureC, poa, p.Noct);
+                double cellT = PanelModel.CellTemperature(planet.AirTemperatureC, poa, p.Noct,
+                                                         planet.SurfacePressureEarth * p.PressureRatio, p.Efficiency);
                 total += PanelModel.Power(poa, p.Area, p.Efficiency, cellT, p.TempCoefficient, p.FSpec, p.FDust);
             }
             return total;
@@ -473,6 +473,6 @@ namespace KardashevAscent.Simulation.Game
             return best;
         }
 
-        static double ToK(double watts) => (Math.Log10(Math.Max(watts, 1.0)) - 6.0) / 10.0;
+        static double ToK(double watts) => Kardashev.K(watts);
     }
 }

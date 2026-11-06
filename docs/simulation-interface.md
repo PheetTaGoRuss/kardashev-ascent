@@ -94,9 +94,9 @@ slot 0 อยู่กลาง เลขเพิ่มทีละวง แ�
 สิ่งก่อสร้างไม่ฟรีแล้ว ใช้ **ชิ้นส่วนก่อสร้าง (build parts)** นับเป็น Wh ของพลังงานที่ใช้ทำชิ้นส่วน (`Construction`, `BuildCosts` ใน `Simulation/Game/Construction.cs`)
 
 - **ราคา** = ส่วนที่จ่ายบนดาว `BuildCosts.OnSiteShare` = 1 % (กฎเกม) ของพลังงานแฝง (embodied energy) ส่วนวัสดุที่กลั่นแล้วมากับยานลงจอด
-  - แผง: `EmbodiedWhPerM2 × PanelAreaM2 × 1 %` (ตอนนี้ 500 kWh/m² × 10 000 m² → 50 MWh ถ้า #23 เปลี่ยนค่า embodied ราคาจะตามไปเอง)
+  - แผง: `EmbodiedWhPerM2 × PanelAreaM2 × 1 %` (ตอนนี้ใช้ `Economics.EmbodiedWhPerM2(ModernMonoSi)` ≈ 266 kWh/m² × 10 000 m² → ≈ 26.6 MWh)
   - ลานแบต: `BatteryUnitWh × 100 Wh/Wh × 1 %` = 20 MWh (Li-ion ราว 100 Wh ไฟฟ้าต่อ 1 Wh ความจุ)
-- **ยานลงจอดให้ชิ้นส่วน** `BuildCosts.LanderStockWh` = 200 MWh พอสร้างได้ทันทีราว 4 แผง
+- **ยานลงจอดให้ชิ้นส่วน** `BuildCosts.LanderStockWh` = 200 MWh พอสร้างได้ทันทีราว 7 แผง
 - **ไฟเหลือทำชิ้นส่วน**: ไฟที่เหลือหลังอาณานิคมใช้และแบตชาร์จเต็มแล้ว (เดิมเป็น `CurtailedW`) กลายเป็นชิ้นส่วนทั้งหมด (`BuildPowerW`) และนับเป็นไฟที่ใช้ใน K
 - **วางเมื่อชิ้นส่วนไม่พอ**: สิ่งก่อสร้างเป็น *ไซต์ก่อสร้าง* (`IsUnderConstruction`, `ConstructionProgress`) ยังไม่ผลิตไฟ/ไม่เพิ่มความจุ ไซต์เสร็จตามลำดับที่วาง (FIFO) แล้วยิง `BuildingCompleted(tile, slot)`
 - **รื้อ**: ไซต์คืนชิ้นส่วนที่ใส่ไปทั้งหมด สิ่งก่อสร้างที่เสร็จแล้วคืน `SalvageShare` = 50 % ของราคา

@@ -118,13 +118,46 @@ def plane_of_array(dni: float, dhi: float, ghi: float, cos_theta: float,
 # Step 7 - heat, spectrum and dust
 
 def cell_temperature(t_air: float, poa: float, noct: float = 45.0) -> float:
+    """NOCT model: Earth-like air, 1 m/s wind."""
     return t_air + (noct - 20.0) / 800.0 * poa
+
+
+SIGMA = 5.670374419e-8
+VACUUM_PRESSURE_EARTH = 0.01   # below: radiation only
+AIR_PRESSURE_EARTH = 0.1       # above: NOCT only
+
+
+def radiative_cell_temperature(poa: float, efficiency: float, absorptance: float = 0.9,
+                               emissivity_front: float = 0.85, emissivity_back: float = 0.85) -> float:
+    """No air: alpha*G*(1-eta) = (eps_f + eps_b)*sigma*T^4, degC. 1361 W/m^2 -> 317.5 K."""
+    absorbed = max(0.0, absorptance * poa * (1.0 - efficiency))
+    return (absorbed / ((emissivity_front + emissivity_back) * SIGMA)) ** 0.25 - 273.15
+
+
+def convective_weight(surface_pressure_earth: float) -> float:
+    """Share of the NOCT model: 0 at <= 0.01 x Earth, 1 at >= 0.1, linear in log10 between [inference]."""
+    if surface_pressure_earth <= VACUUM_PRESSURE_EARTH:
+        return 0.0
+    if surface_pressure_earth >= AIR_PRESSURE_EARTH:
+        return 1.0
+    return (math.log10(surface_pressure_earth / VACUUM_PRESSURE_EARTH)
+            / math.log10(AIR_PRESSURE_EARTH / VACUUM_PRESSURE_EARTH))
+
+
+def cell_temperature_any(t_air: float, poa: float, noct: float,
+                         surface_pressure_earth: float, efficiency: float) -> float:
+    """NOCT in thick air, radiative balance in vacuum, blended in thin air."""
+    w = convective_weight(surface_pressure_earth)
+    if w >= 1.0:
+        return cell_temperature(t_air, poa, noct)
+    rad = radiative_cell_temperature(poa, efficiency)
+    return rad if w <= 0.0 else w * cell_temperature(t_air, poa, noct) + (1.0 - w) * rad
 
 
 def panel_power(poa: float, area: float, efficiency: float, t_cell: float,
                 temp_coeff: float = -0.004, f_spec: float = 1.0, f_dust: float = 0.0) -> float:
     """f_dust is the fraction of light blocked by dust (0 = clean)."""
-    return (poa * area * efficiency * (1.0 + temp_coeff * (t_cell - 25.0))
+    return (poa * area * efficiency * max(0.0, 1.0 + temp_coeff * (t_cell - 25.0))
             * f_spec * (1.0 - f_dust))
 
 
@@ -153,6 +186,7 @@ class Planet:
     diffuse_k: float = 0.3                     # Earth ~0.3 (0.25-0.4); dusty Mars-like 0.6-0.8 [inference]
     air_temperature_c: float = 25.0
     tidally_locked: bool = False               # star fixed in the sky; day_length_h is ignored
+    surface_pressure_earth: float = 1.0        # x Earth's; picks wind (NOCT) or radiative cooling
 
 
 @dataclass
@@ -194,7 +228,8 @@ def _instant_power(planet: Planet, panel: Panel, normal, g0: float, sun) -> floa
     dhi = diffuse_horizontal(g0, sun[2], planet.optical_depth, am, planet.diffuse_k)
     ghi = global_horizontal(dni, dhi, sun[2])
     poa = plane_of_array(dni, dhi, ghi, cos_incidence(normal, sun), panel.tilt, panel.albedo, panel.f_shade)
-    t_cell = cell_temperature(planet.air_temperature_c, poa, panel.noct)
+    t_cell = cell_temperature_any(planet.air_temperature_c, poa, panel.noct,
+                                  planet.surface_pressure_earth * panel.pressure_ratio, panel.efficiency)
     return panel_power(poa, panel.area, panel.efficiency, t_cell, panel.temp_coeff, panel.f_spec, panel.f_dust)
 
 
