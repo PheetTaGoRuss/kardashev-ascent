@@ -130,6 +130,18 @@ class ConvertTests(unittest.TestCase):
         p = convert(None, viridia)
         self.assertAlmostEqual(p["planet"]["insolationWm2"], 1361.0, delta=2.0)
         self.assertTrue(math.isclose(p["solar"]["obliquityDeg"], 23.44))
+        self.assertEqual(p["flags"]["clouds"], "earth")
+
+    def test_clouds_and_pressure_default_to_assumed_clear_sky_at_one_atmosphere(self):
+        p = convert(SUN_EARTH_ROW, {"id": "t", "archiveName": "Test b", "assumed": {}})
+        self.assertEqual(p["flags"]["clouds"], "none")
+        self.assertEqual(prov(p, "flags.clouds"), "assumed")
+        self.assertEqual(p["solar"]["surfacePressureEarth"], 1.0)
+        self.assertEqual(prov(p, "solar.surfacePressureEarth"), "assumed")
+
+    def test_unknown_cloud_model_is_rejected(self):
+        with self.assertRaises(ValueError):
+            convert(SUN_EARTH_ROW, {"id": "t", "archiveName": "Test b", "assumed": {"clouds": "venus"}})
 
 
 if __name__ == "__main__":

@@ -20,6 +20,7 @@
         "opticalDepth": 0.32,
         "diffuseK": 0.3,
         "airTemperatureC": 25.0,
+        "clouds": "earth",
         "bondAlbedo": 0.306
       }
     },

@@ -108,8 +108,14 @@ namespace KardashevAscent.Presentation.UI
             time.text = double.IsNaN(local)
                 ? "Star fixed in the sky"
                 : $"{(int)local:00}:{(int)(local % 1.0 * 60.0):00} at base · {(sim.IsDayAtBase ? "day" : "night")}";
-            Season s = SimClock.SeasonFromEclipticLongitude(SimClock.EclipticLongitude(runner.SolarParams, t));
-            season.text = $"Northern {s.ToString().ToLowerInvariant()}";
+            string planetName = runner.Record != null && !string.IsNullOrEmpty(runner.Record.displayName) ? runner.Record.displayName + " · " : "";
+            if (runner.SolarParams.Obliquity < 0.5 * Math.PI / 180.0)
+                season.text = planetName + "no seasons";
+            else
+            {
+                Season s = SimClock.SeasonFromEclipticLongitude(SimClock.EclipticLongitude(runner.SolarParams, t));
+                season.text = $"{planetName}northern {s.ToString().ToLowerInvariant()}";
+            }
 
             power.text = Format.Power(sim.GenerationW);
             demand.text = sim.IsColonyGrowing

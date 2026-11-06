@@ -1,0 +1,133 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18aab5c6bb6a5ac4293377f0a5f3a5cf, type: 3}
+  m_Name: proxima-cen-b
+  m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.Game.PlanetDNA
+  record:
+    id: proxima-cen-b
+    displayName: Proxima Centauri b
+    archiveName: Proxima Cen b
+    source: NASA Exoplanet Archive, table pscomppars
+    retrieved: 2026-11-05
+    solar:
+      luminosityW: 5.780320630408608e+23
+      semiMajorAxisM: 7252504771.536
+      eccentricity: 0
+      yearLengthHours: 268.4316
+      dayLengthHours: 0
+      obliquityDeg: 0
+      perihelionLongitudeDeg: 0
+      opticalDepth: 0.32
+      diffuseK: 0.3
+      airTemperatureC: -55.14999999999998
+      surfacePressureEarth: 1
+    star:
+      teffK: 2900
+      radiusM: 98093700
+      massKg: 2.42792187e+29
+      spectralType: M5.5 V
+      count: 3
+    planet:
+      insolationWm2: 872.4010000000001
+      radiusM: 6505662
+      massKg: 6.300671e+24
+      surfaceGravityMs2: 9.935953142172949
+      escapeVelocityMs: 11370.13217080744
+      bondAlbedo: 0.3
+      equilibriumTempK: 218
+    flags:
+      tidallyLocked: 1
+      circumbinary: 0
+      surface: rocky
+      clouds: none
+    provenance:
+    - field: solar.luminosityW
+      origin: nasa
+      note: st_lum = log10(L/Lsun)
+    - field: star.teffK
+      origin: nasa
+      note: st_teff
+    - field: star.radiusM
+      origin: nasa
+      note: st_rad
+    - field: star.massKg
+      origin: nasa
+      note: st_mass
+    - field: star.spectralType
+      origin: nasa
+      note: st_spectype
+    - field: star.count
+      origin: nasa
+      note: sy_snum
+    - field: solar.semiMajorAxisM
+      origin: nasa
+      note: pl_orbsmax (au)
+    - field: solar.eccentricity
+      origin: nasa
+      note: pl_orbeccen
+    - field: solar.yearLengthHours
+      origin: nasa
+      note: pl_orbper (days)
+    - field: flags.tidallyLocked
+      origin: assumed
+      note: rotation is not measured for exoplanets
+    - field: flags.clouds
+      origin: assumed
+      note: earth = NASA POWER cloud climatology by latitude and month; none = clear sky (cloud cover unknown)
+    - field: flags.circumbinary
+      origin: nasa
+      note: 'cb_flag: planet orbits both stars'
+    - field: solar.dayLengthHours
+      origin: assumed
+      note: 'tidally locked: star fixed in the sky, 0 = no solar day'
+    - field: solar.obliquityDeg
+      origin: assumed
+      note: 'tidally locked: obliquity damped to ~0'
+    - field: solar.perihelionLongitudeDeg
+      origin: assumed
+      note: equinox -> periapsis, game value
+    - field: solar.opticalDepth
+      origin: assumed
+      note: broadband tau, game value
+    - field: solar.surfacePressureEarth
+      origin: assumed
+      note: surface pressure in Earth atmospheres, game value
+    - field: solar.diffuseK
+      origin: assumed
+      note: diffuse-light k, game value
+    - field: planet.insolationWm2
+      origin: nasa
+      note: pl_insol (Earth flux) x 1361 W/m^2
+    - field: planet.radiusM
+      origin: nasa
+      note: pl_rade
+    - field: planet.massKg
+      origin: nasa
+      note: pl_bmasse (may be M sin i)
+    - field: flags.surface
+      origin: derived
+      note: 'radius bins: rocky <= 1.6, gaseous >= 2.0 R_earth (Rogers 2015; Fulton 2017)'
+    - field: planet.surfaceGravityMs2
+      origin: derived
+      note: g = GM/R^2
+    - field: planet.escapeVelocityMs
+      origin: derived
+      note: v = sqrt(2GM/R)
+    - field: planet.bondAlbedo
+      origin: assumed
+      note: game value
+    - field: planet.equilibriumTempK
+      origin: nasa
+      note: pl_eqt (albedo assumption varies by paper)
+    - field: solar.airTemperatureC
+      origin: derived
+      note: equilibrium temperature + greenhouse offset 0 K (assumed)
