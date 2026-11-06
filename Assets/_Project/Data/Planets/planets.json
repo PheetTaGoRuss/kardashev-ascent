@@ -42,6 +42,9 @@
         "circumbinary": false,
         "surface": "rocky"
       },
+      "look": {
+        "terrainSeed": 7
+      },
       "provenance": [
         {
           "field": "solar.luminosityW",
@@ -162,6 +165,11 @@
           "field": "solar.airTemperatureC",
           "origin": "assumed",
           "note": "game value"
+        },
+        {
+          "field": "look.terrainSeed",
+          "origin": "assumed",
+          "note": "terrain noise seed, game value"
         }
       ]
     },
@@ -205,6 +213,9 @@
         "clouds": "none",
         "circumbinary": false,
         "surface": "rocky"
+      },
+      "look": {
+        "terrainSeed": 1697376206
       },
       "provenance": [
         {
@@ -341,6 +352,11 @@
           "field": "solar.airTemperatureC",
           "origin": "derived",
           "note": "equilibrium temperature + greenhouse offset 0 K (assumed)"
+        },
+        {
+          "field": "look.terrainSeed",
+          "origin": "assumed",
+          "note": "terrain noise seed from the planet id"
         }
       ]
     },
@@ -386,6 +402,9 @@
         "circumbinary": false,
         "surface": "rocky"
       },
+      "look": {
+        "terrainSeed": 1841868279
+      },
       "provenance": [
         {
           "field": "solar.luminosityW",
@@ -526,6 +545,11 @@
           "field": "solar.airTemperatureC",
           "origin": "derived",
           "note": "equilibrium temperature + greenhouse offset 0 K (assumed)"
+        },
+        {
+          "field": "look.terrainSeed",
+          "origin": "assumed",
+          "note": "terrain noise seed from the planet id"
         }
       ]
     },
@@ -569,6 +593,9 @@
         "clouds": "none",
         "circumbinary": true,
         "surface": "gaseous"
+      },
+      "look": {
+        "terrainSeed": 361324997
       },
       "provenance": [
         {
@@ -705,6 +732,11 @@
           "field": "solar.airTemperatureC",
           "origin": "derived",
           "note": "equilibrium temperature + greenhouse offset 0 K (assumed)"
+        },
+        {
+          "field": "look.terrainSeed",
+          "origin": "assumed",
+          "note": "terrain noise seed from the planet id"
         }
       ]
     },
@@ -749,6 +781,9 @@
         "clouds": "none",
         "circumbinary": false,
         "surface": "uncertain"
+      },
+      "look": {
+        "terrainSeed": 543934398
       },
       "provenance": [
         {
@@ -890,6 +925,11 @@
           "field": "solar.airTemperatureC",
           "origin": "derived",
           "note": "equilibrium temperature + greenhouse offset 0 K (assumed)"
+        },
+        {
+          "field": "look.terrainSeed",
+          "origin": "assumed",
+          "note": "terrain noise seed from the planet id"
         }
       ]
     }

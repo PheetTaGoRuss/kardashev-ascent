@@ -213,6 +213,12 @@ namespace KardashevAscent.Presentation.UI
             if (r.planet.equilibriumTempK > 0.0)
                 Row(r, "Equilibrium temp.", $"{r.planet.equilibriumTempK:0} K ({r.planet.equilibriumTempK - 273.15:0} °C)", "planet.equilibriumTempK");
             Row(r, "Air at the panels", $"{r.solar.airTemperatureC:0} °C", "solar.airTemperatureC");
+            SurfaceSettings look = r.ToSurfaceSettings();
+            string ice = look.IceAroundSubStellar
+                ? look.IceLatitudeDeg >= 180.0 ? "no ice" : $"ice beyond {look.IceLatitudeDeg:0}° from the point under the star"
+                : look.IceLatitudeDeg >= 90.0 ? "no ice caps" : $"ice from {look.IceLatitudeDeg:0}° latitude";
+            Row(ValueOrigin.Assumed, "Ice", ice,
+                "game rule from the air temperature (Earth-like ice line at 0–35 °C, more ice when colder; locked planets are eyeballs)");
 
             string why = r.WhyNotPlayable;
             verdict.EnableInClassList("bad", why != null);

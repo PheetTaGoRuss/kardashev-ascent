@@ -9,6 +9,7 @@ Every output value records where it came from:
 from __future__ import annotations
 
 import math
+import zlib
 import re
 from typing import Any
 
@@ -54,6 +55,7 @@ DEFAULT_ASSUMED = {
     "tidallyLocked": False,
     "clouds": "none",              # "earth": NASA POWER cloud climatology (Earth-like planets only); "none": clear sky
     "surfacePressureEarth": 1.0,   # surface pressure in Earth atmospheres; picks how panels cool (wind or radiation)
+    "terrainSeed": None,           # noise seed for the planet's continents; None: from the planet id (crc32)
 }
 
 
@@ -118,6 +120,11 @@ def solar_day_hours(rotation_hours: float, orbit_hours: float, retrograde: bool 
     if inverse <= 0.0:
         raise ValueError("spin equals the orbit: the planet is tidally locked (set tidallyLocked instead)")
     return 1.0 / inverse
+
+
+def terrain_seed(planet_id: str) -> int:
+    """Stable seed for a planet's terrain noise (crc32 of its id, kept in int32 range for C#)."""
+    return zlib.crc32(planet_id.encode("utf-8")) % 2_000_000_000
 
 
 def equilibrium_temperature(luminosity: float, distance: float, albedo: float) -> float:
@@ -283,6 +290,11 @@ def convert(row: dict[str, Any] | None, entry: dict[str, Any], retrieved: str = 
     else:
         b.put("solar", "airTemperatureC", float(assumed["airTemperatureC"]), "assumed", "game value")
 
+    if assumed["terrainSeed"] is not None:
+        b.put("look", "terrainSeed", int(assumed["terrainSeed"]), "assumed", "terrain noise seed, game value")
+    else:
+        b.put("look", "terrainSeed", terrain_seed(entry["id"]), "assumed", "terrain noise seed from the planet id")
+
     out: dict[str, Any] = {
         "id": entry["id"],
         "displayName": entry.get("displayName") or name or entry["id"],
@@ -293,6 +305,7 @@ def convert(row: dict[str, Any] | None, entry: dict[str, Any], retrieved: str = 
         "star": b.values.get("star", {}),
         "planet": b.values.get("planet", {}),
         "flags": b.values.get("flags", {}),
+        "look": b.values.get("look", {}),
         "provenance": b.provenance,
     }
     out["_warnings"] = b.warnings
