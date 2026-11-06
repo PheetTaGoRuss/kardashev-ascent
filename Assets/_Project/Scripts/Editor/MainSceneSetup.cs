@@ -125,13 +125,12 @@ namespace KardashevAscent.EditorTools
             {
                 var go = new GameObject("Cursor Light");
                 Undo.RegisterCreatedObjectUndo(go, "Add Cursor Light");
-                var light = Undo.AddComponent<Light>(go);
-                light.type = LightType.Point;
-                light.intensity = 5f;
-                light.range = 0.4f * planet.Radius;
-                light.shadows = LightShadows.None;
                 cursorLight = Undo.AddComponent<KardashevAscent.Presentation.CameraControl.CursorLight>(go);
             }
+            // CursorLight makes its own hidden light at runtime; a Light here would only add an editor icon.
+            var oldLight = cursorLight.GetComponent<Light>();
+            if (oldLight != null)
+                Undo.DestroyObjectImmediate(oldLight);
             SetReference(cursorLight, "picker", picker);
         }
 
