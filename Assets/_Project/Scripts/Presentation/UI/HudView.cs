@@ -1,5 +1,6 @@
 using System;
 using KardashevAscent.Presentation.Game;
+using KardashevAscent.Simulation.Civilization;
 using KardashevAscent.Simulation.Game;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -21,7 +22,7 @@ namespace KardashevAscent.Presentation.UI
         [Range(0f, 1f)] [SerializeField] float textInterval = 0.1f;
 
         UIDocument document;
-        Label date, time, season, power, demand, battery, kLabel, brownout, toast, buildStock, buildQueue;
+        Label date, time, season, power, demand, battery, kLabel, kPlanetLabel, brownout, toast, buildStock, buildQueue;
         VisualElement batteryFill, kFill;
         readonly Button[] speedButtons = new Button[5];
         static readonly ClockSpeed[] Speeds =
@@ -45,6 +46,7 @@ namespace KardashevAscent.Presentation.UI
             demand = root.Q<Label>("demand");
             battery = root.Q<Label>("battery");
             kLabel = root.Q<Label>("k");
+            kPlanetLabel = root.Q<Label>("k-planet");
             brownout = root.Q<Label>("brownout");
             toast = root.Q<Label>("toast");
             buildStock = root.Q<Label>("build-stock");
@@ -88,9 +90,10 @@ namespace KardashevAscent.Presentation.UI
             batteryFill.EnableInClassList("warning", soc < 0.4 && soc >= 0.15);
             batteryFill.EnableInClassList("critical", soc < 0.15);
 
-            double targetK = Kardashev(sim.TypeITargetW);
-            double progress = targetK > 0.0 ? Math.Max(0.0, Math.Min(1.0, sim.KardashevK / targetK)) : 0.0;
-            kFill.style.width = Length.Percent((float)(progress * 100.0));
+            // The bar is planet K on 0..1 (log scale: each tenth is ten times the power), not P / P_I, which stays
+            // near zero for most of the game.
+            double planetK = Math.Max(0.0, Math.Min(1.0, sim.PlanetK));
+            kFill.style.width = Length.Percent((float)(planetK * 100.0));
 
             for (int i = 0; i < speedButtons.Length; i++)
                 speedButtons[i]?.EnableInClassList("selected", runner.Clock != null && runner.Clock.Speed == Speeds[i]);
@@ -126,7 +129,9 @@ namespace KardashevAscent.Presentation.UI
                     : $"{making} · {sim.ConstructionQueueCount} site{(sim.ConstructionQueueCount == 1 ? "" : "s")}, " +
                       $"{Format.Energy(sim.ConstructionRemainingWh)} to go";
             }
-            kLabel.text = $"K {sim.KardashevK:0.00} · Type I at K {targetK:0.00} ({progress * 100.0:0} %)";
+            kLabel.text = $"K {sim.KardashevK:0.00} · {Format.Power(sim.KardashevPowerW)}";
+            if (kPlanetLabel != null)
+                kPlanetLabel.text = $"Planet K {sim.PlanetK:0.00} · {Format.Percent(Kardashev.PlanetCompletion(sim.KardashevPowerW, sim.TypeITargetW))} done";
 
             // The grid updates its brownout state on the next tick; while paused, don't warn once panels cover demand.
             bool brownoutNow = sim.IsBrownout && sim.GenerationW < sim.DemandW;
@@ -137,9 +142,6 @@ namespace KardashevAscent.Presentation.UI
                 brownout.text = $"Brownout: the base is {Format.Power(shortBy)} short and the battery is empty. Build more panels.";
             }
         }
-
-        /// <summary>K = (log₁₀ P − 6) / 10.</summary>
-        static double Kardashev(double watts) => (Math.Log10(Math.Max(watts, 1.0)) - 6.0) / 10.0;
     }
 
     /// <summary>Number formats shared by the UI.</summary>
@@ -154,6 +156,32 @@ namespace KardashevAscent.Presentation.UI
             if (a >= 1e6) return $"{w / 1e6:0.00} MW";
             if (a >= 1e3) return $"{w / 1e3:0} kW";
             return $"{w:0} W";
+        }
+
+        /// <summary>
+        /// A share as a percentage. Below 0.01 % it switches to powers of ten (2.1×10⁻⁷ %), because K progress
+        /// spans many orders of magnitude and "0.00 %" would hide that the colony is growing.
+        /// </summary>
+        public static string Percent(double share)
+        {
+            double p = share * 100.0;
+            if (p <= 0.0) return "0 %";
+            if (p >= 10.0) return $"{p:0} %";
+            if (p >= 0.01) return $"{p:0.##} %";
+            int exponent = (int)Math.Floor(Math.Log10(p));
+            double mantissa = p / Math.Pow(10.0, exponent);
+            if (mantissa >= 9.95) { mantissa = 1.0; exponent++; }
+            return $"{mantissa:0.0}×10{Superscript(exponent)} %";
+        }
+
+        static string Superscript(int n)
+        {
+            const string digits = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+            var s = new System.Text.StringBuilder();
+            if (n < 0) s.Append('⁻');
+            foreach (char c in Math.Abs(n).ToString())
+                s.Append(digits[c - '0']);
+            return s.ToString();
         }
 
         public static string Energy(double wh)

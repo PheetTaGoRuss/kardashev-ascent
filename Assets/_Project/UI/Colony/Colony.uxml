@@ -27,6 +27,10 @@
                 </ui:VisualElement>
             </ui:VisualElement>
 
+            <ui:Label class="heading section" text="KARDASHEV SCALE" />
+            <ui:Label name="kardashev" class="body" text="" />
+            <ui:Label name="kardashev-notes" class="body tiles" text="" />
+
             <ui:Label class="heading section" text="POWER" />
             <ui:VisualElement name="chart" class="chart power-chart" />
             <ui:VisualElement class="legend">

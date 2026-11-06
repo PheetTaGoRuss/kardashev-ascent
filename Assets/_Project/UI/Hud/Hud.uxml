@@ -30,6 +30,7 @@
                 <ui:Label class="heading" text="KARDASHEV" />
                 <ui:VisualElement class="meter"><ui:VisualElement name="k-fill" class="meter-fill k-fill" /></ui:VisualElement>
                 <ui:Label name="k" class="caption" text="K 0.00" />
+                <ui:Label name="k-planet" class="caption" text="Planet K 0.00" />
             </ui:VisualElement>
             <ui:VisualElement class="spacer" picking-mode="Ignore" />
             <ui:VisualElement class="block speed-block">
