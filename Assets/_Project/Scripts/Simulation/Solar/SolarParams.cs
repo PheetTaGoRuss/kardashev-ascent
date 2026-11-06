@@ -27,12 +27,18 @@ namespace KardashevAscent.Simulation.Solar
         public readonly double AirTemperatureC;
         /// <summary>One face always toward the star: it stays put in the sky and there is no day cycle.</summary>
         public readonly bool TidallyLocked;
+        /// <summary>
+        /// Surface pressure in multiples of Earth's (Earth 1, Mars ≈ 0.006, Moon 0). Picks how panels cool:
+        /// wind (NOCT) in thick air, radiation only in vacuum (see <see cref="PanelModel.ConvectiveWeight"/>).
+        /// </summary>
+        public readonly double SurfacePressureEarth;
 
         public PlanetSolarParams(double luminosity, double semiMajorAxis, double eccentricity, double obliquity,
                                  double perihelionLongitude, double dayLengthHours, double yearLengthHours,
                                  double opticalDepth, double diffuseK, double airTemperatureC,
-                                 bool tidallyLocked = false)
+                                 bool tidallyLocked = false, double surfacePressureEarth = 1.0)
         {
+            SurfacePressureEarth = surfacePressureEarth;
             Luminosity = luminosity;
             SemiMajorAxis = semiMajorAxis;
             Eccentricity = eccentricity;

@@ -213,8 +213,11 @@ namespace KardashevAscent.Simulation.Tests.Game
             int first = FillStock(a);
             Assert.IsTrue(a.PlacePanel(t, first + 1, Tilt(a), Math.PI));
             Assert.IsTrue(a.PlaceBattery(t, first + 2));
-            a.Tick(6.0);
-            Assert.Greater(a.ConstructionQueueCount, 1, "still waiting after 6 h");
+            // Run until the first site is part paid (a fixed time breaks whenever panel cost or output changes).
+            for (int i = 0; i < 96 && a.ConstructionProgress(t, first) <= 0.0; i++)
+                a.Tick(0.25);
+            Assert.Greater(a.ConstructionProgress(t, first), 0.0, "spare power within a day");
+            Assert.Greater(a.ConstructionQueueCount, 1, "later sites still waiting");
 
             var b = Create();
             Assert.IsTrue(b.RestoreState(a.CaptureState()));
