@@ -188,7 +188,10 @@ namespace KardashevAscent.Presentation.UI
             }
             if (months == null)
                 monthlyCaption.text = "No panels here";
-            monthlyHover.text = months != null ? $"Best month {Format.Energy(max)} · year {Format.Energy(Sum(months))}" : " ";
+            // Months split this planet's own year; say how long that is when it isn't Earth's.
+            double yearDays = runner != null ? runner.SolarParams.YearLengthHours / 24.0 : 365.256;
+            string year = Math.Abs(yearDays - 365.256) < 1.0 ? "year" : $"planet year ({yearDays:0.#} days)";
+            monthlyHover.text = months != null ? $"Best month {Format.Energy(max)} · {year} {Format.Energy(Sum(months))}" : " ";
         }
 
         void ShowMonth(int month)

@@ -239,6 +239,7 @@ namespace KardashevAscent.Simulation.Game
         public readonly bool CanPlace;
         /// <summary>Why the panel cannot be placed (empty when it can).</summary>
         public readonly string Reason;
+        /// <summary>Energy per Earth year (365.256 days, <see cref="Solar.SolarConstants.EarthYearHours"/>), Wh, on any planet.</summary>
         public readonly double EnergyPerYearWh;
         public readonly double CapacityFactor;
         public readonly double Eroi;

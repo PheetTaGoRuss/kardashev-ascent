@@ -1,0 +1,124 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18aab5c6bb6a5ac4293377f0a5f3a5cf, type: 3}
+  m_Name: viridia
+  m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.Game.PlanetDNA
+  record:
+    id: viridia
+    displayName: Viridia
+    archiveName: 
+    source: hand-made game planet
+    retrieved: 
+    solar:
+      luminosityW: 3.8279999999999994e+26
+      semiMajorAxisM: 149597870700
+      eccentricity: 0.0167
+      yearLengthHours: 8766.144
+      dayLengthHours: 24
+      obliquityDeg: 23.44
+      perihelionLongitudeDeg: 282.94
+      opticalDepth: 0.32
+      diffuseK: 0.3
+      airTemperatureC: 25
+      surfacePressureEarth: 1
+    star:
+      teffK: 5772
+      radiusM: 0
+      massKg: 0
+      spectralType: 
+      count: 1
+    planet:
+      insolationWm2: 1361.1664654085753
+      radiusM: 6378100
+      massKg: 5.9722e+24
+      surfaceGravityMs2: 9.79845085224335
+      escapeVelocityMs: 11179.937332623407
+      bondAlbedo: 0.306
+      equilibriumTempK: 254.0386205814548
+    flags:
+      tidallyLocked: 0
+      circumbinary: 0
+      surface: rocky
+      clouds: earth
+    provenance:
+    - field: solar.luminosityW
+      origin: assumed
+      note: planets.json luminositySun
+    - field: star.teffK
+      origin: assumed
+      note: planets.json
+    - field: star.count
+      origin: assumed
+      note: sy_snum
+    - field: solar.semiMajorAxisM
+      origin: assumed
+      note: planets.json semiMajorAxisAu
+    - field: solar.eccentricity
+      origin: assumed
+      note: not in archive; circular orbit assumed
+    - field: solar.yearLengthHours
+      origin: assumed
+      note: planets.json
+    - field: flags.tidallyLocked
+      origin: assumed
+      note: rotation is not measured for exoplanets
+    - field: flags.clouds
+      origin: assumed
+      note: earth = NASA POWER cloud climatology by latitude and month; none = clear sky (cloud cover unknown)
+    - field: flags.circumbinary
+      origin: assumed
+      note: 'cb_flag: planet orbits both stars'
+    - field: solar.dayLengthHours
+      origin: assumed
+      note: solar day, game value
+    - field: solar.obliquityDeg
+      origin: assumed
+      note: axial tilt, game value
+    - field: solar.perihelionLongitudeDeg
+      origin: assumed
+      note: equinox -> periapsis, game value
+    - field: solar.opticalDepth
+      origin: assumed
+      note: broadband tau, game value
+    - field: solar.surfacePressureEarth
+      origin: assumed
+      note: surface pressure in Earth atmospheres, game value
+    - field: solar.diffuseK
+      origin: assumed
+      note: diffuse-light k, game value
+    - field: planet.insolationWm2
+      origin: derived
+      note: L / (4 pi a^2)
+    - field: planet.radiusM
+      origin: assumed
+      note: planets.json
+    - field: planet.massKg
+      origin: assumed
+      note: planets.json
+    - field: flags.surface
+      origin: derived
+      note: 'radius bins: rocky <= 1.6, gaseous >= 2.0 R_earth (Rogers 2015; Fulton 2017)'
+    - field: planet.surfaceGravityMs2
+      origin: derived
+      note: g = GM/R^2
+    - field: planet.escapeVelocityMs
+      origin: derived
+      note: v = sqrt(2GM/R)
+    - field: planet.bondAlbedo
+      origin: assumed
+      note: game value
+    - field: planet.equilibriumTempK
+      origin: derived
+      note: '[L(1-A)/(16 pi sigma a^2)]^(1/4)'
+    - field: solar.airTemperatureC
+      origin: assumed
+      note: game value

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using KardashevAscent.Presentation.Planet;
 using KardashevAscent.Simulation.Game;
 using KardashevAscent.Simulation.Planet;
@@ -8,48 +9,39 @@ using UnityEngine;
 namespace KardashevAscent.Presentation.Game
 {
     /// <summary>
-    /// Owns the planet's simulation and its clock: builds a <see cref="StubPlanetSimulation"/> from the
-    /// planet and star settings below, then ticks it with game time every frame.
+    /// Owns the planet's simulation and its clock: builds a <see cref="StubPlanetSimulation"/> for the chosen
+    /// <see cref="PlanetDNA"/> (real NASA planets or hand-made ones, #11), then ticks it with game time every frame.
     /// Keys: Space pause/resume, 1–5 speed (pause, real time, 1 hour/s, 1 day/s, 1 year/min).
     /// </summary>
     public sealed class SimulationRunner : MonoBehaviour
     {
         [SerializeField] PlanetView planet;
 
-        [Header("Star")]
-        [Tooltip("Luminosity in Suns.")]
-        [Min(1e-6f)] [SerializeField] float luminositySun = 1f;
-        [Tooltip("Effective temperature, K (sets the light colour and the star's size).")]
-        [Range(2000f, 12000f)] [SerializeField] float starTemperatureK = 5772f;
-
-        [Header("Orbit and spin")]
-        [Min(0.001f)] [SerializeField] float semiMajorAxisAu = 1f;
-        [Range(0f, 0.95f)] [SerializeField] float eccentricity = 0.0167f;
-        [Range(0f, 90f)] [SerializeField] float obliquityDeg = 23.44f;
-        [Tooltip("Star's longitude at periapsis seen from the planet (Earth 282.94°).")]
-        [SerializeField] float perihelionLongitudeDeg = 282.94f;
-        [Min(0.1f)] [SerializeField] float dayLengthHours = 24f;
-        [Min(0.1f)] [SerializeField] float yearLengthDays = 365.256f;
-        [SerializeField] bool tidallyLocked;
-
-        [Header("Planet and atmosphere")]
-        [Min(0.01f)] [SerializeField] float radiusEarth = 1f;
-        [Range(0f, 6f)] [SerializeField] float opticalDepth = 0.32f;
-        [Range(0f, 1f)] [SerializeField] float diffuseK = 0.3f;
-        [SerializeField] float airTemperatureC = 15f;
+        [Header("Planets")]
+        [Tooltip("Planets the colony can land on, in the order the chooser lists them (Set Up Scene fills this).")]
+        [SerializeField] PlanetDNA[] planets = Array.Empty<PlanetDNA>();
+        [Tooltip("Index into Planets of the planet loaded at start.")]
+        [Min(0)] [SerializeField] int startPlanet;
 
         [Header("Time")]
         [SerializeField] ClockSpeed startSpeed = ClockSpeed.HourPerSecond;
 
         ClockSpeed speedBeforePause = ClockSpeed.HourPerSecond;
+        PlanetRecord record;
 
         public IPlanetSimulation Simulation { get; private set; }
         public SimClock Clock { get; private set; }
         public PlanetSolarParams SolarParams { get; private set; }
         public PlanetView Planet => planet;
-        public double StarTemperatureK => starTemperatureK;
 
-        /// <summary>Raised when a new simulation is built (at start and whenever the planet's tiles are rebuilt).</summary>
+        /// <summary>The planet being played (its NASA, derived and assumed values).</summary>
+        public PlanetRecord Record => record;
+        public double StarTemperatureK => record != null ? record.star.teffK : 5772.0;
+        public IReadOnlyList<PlanetDNA> Planets => planets;
+        /// <summary>Index of the current planet in <see cref="Planets"/>, or −1 for the built-in fallback.</summary>
+        public int CurrentIndex { get; private set; } = -1;
+
+        /// <summary>Raised when a new simulation is built (at start, on a new planet, and whenever the tiles are rebuilt).</summary>
         public event Action SimulationCreated;
 
         void OnEnable()
@@ -72,25 +64,74 @@ namespace KardashevAscent.Presentation.Game
                 enabled = false;
                 return;
             }
+            // Pick the planet before building the tiles: EnsureBuilt raises Rebuilt, which creates the simulation.
+            if (record == null)
+                PickRecord(startPlanet);
             planet.EnsureBuilt();
             if (Simulation == null)
                 CreateSimulation();
         }
 
+        /// <summary>Start a new colony on planet <paramref name="index"/> of <see cref="Planets"/>. False if it cannot be landed on.</summary>
+        public bool ChoosePlanet(int index)
+        {
+            if (index < 0 || index >= planets.Length || planets[index] == null || !planets[index].Record.IsPlayable)
+                return false;
+            SelectPlanet(index);
+            return true;
+        }
+
+        /// <summary>Index of the planet with this id, or −1.</summary>
+        public int IndexOf(string planetId)
+        {
+            for (int i = 0; i < planets.Length; i++)
+                if (planets[i] != null && planets[i].Id == planetId)
+                    return i;
+            return -1;
+        }
+
+        void SelectPlanet(int index)
+        {
+            PickRecord(index);
+            if (planet != null && planet.Sphere != null)
+                CreateSimulation();
+        }
+
+        void PickRecord(int index)
+        {
+            if (index >= 0 && index < planets.Length && planets[index] != null && planets[index].Record.IsPlayable)
+            {
+                CurrentIndex = index;
+                record = planets[index].Record;
+            }
+            else
+            {
+                // No planet assets yet (run Set Up Scene): an Earth twin so the scene still plays.
+                CurrentIndex = -1;
+                record = Fallback();
+            }
+        }
+
+        static PlanetRecord Fallback()
+        {
+            var r = new PlanetRecord { id = "viridia", displayName = "Viridia", source = "built-in fallback" };
+            r.solar.eccentricity = 0.0167;
+            r.solar.obliquityDeg = 23.44;
+            r.solar.perihelionLongitudeDeg = 282.94;
+            r.solar.airTemperatureC = 25.0;
+            r.flags.clouds = "earth";
+            return r;
+        }
+
         void CreateSimulation()
         {
-            const double deg = Math.PI / 180.0;
-            double yearHours = yearLengthDays * (tidallyLocked ? 24.0 : dayLengthHours);
-            SolarParams = new PlanetSolarParams(
-                luminositySun * SolarConstants.SolarLuminosity,
-                semiMajorAxisAu * SolarConstants.AstronomicalUnit,
-                eccentricity, obliquityDeg * deg, perihelionLongitudeDeg * deg,
-                tidallyLocked ? 0.0 : dayLengthHours, yearHours,
-                opticalDepth, diffuseK, airTemperatureC, tidallyLocked);
-
-            Simulation = new StubPlanetSimulation(planet.Sphere, planet.Surface, SolarParams, radiusEarth * 6.371e6);
+            if (record == null)
+                PickRecord(startPlanet);
+            Simulation = new StubPlanetSimulation(planet.Sphere, planet.Surface, record);
+            SolarParams = record.ToSolarParams();
             ClockSpeed speed = Clock?.Speed ?? startSpeed;
-            Clock = new SimClock(SolarParams.DayLengthHours, SolarParams.YearLengthHours) { Speed = speed };
+            double yearHours = SolarParams.YearLengthHours;
+            Clock = new SimClock(SolarParams.DayLengthHours, yearHours) { Speed = speed };
             SimulationCreated?.Invoke();
         }
 

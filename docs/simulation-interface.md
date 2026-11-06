@@ -38,10 +38,19 @@ Presentation (MonoBehaviour)                 Simulation (C# ล้วน)
 `StubPlanetSimulation` ใช้ได้เลยตอนนี้:
 
 ```csharp
-var sim = new StubPlanetSimulation(planetView.Sphere, planetView.Surface, planetParams);
+var sim = new StubPlanetSimulation(planetView.Sphere, planetView.Surface, planetDna.Record);   // หรือ PlanetSolarParams ตรง ๆ
 sim.DayNightChanged += isDay => Debug.Log(isDay ? "Sunrise" : "Sunset");
 // ทุกเฟรม: sim.Tick(Time.deltaTime * hoursPerSecond);
 ```
+
+### ดาวจาก planets.json (#11)
+
+- `PlanetRecord` (`Simulation/Planet`) คือหนึ่งดาวใน `Assets/_Project/Data/Planets/planets.json` ชื่อฟิลด์ตรงกับ JSON
+  `ToSolarParams()` แปลงองศาเป็นเรเดียน, `OriginOf("solar.luminosityW")` บอกที่มา (`Nasa` / `Derived` / `Assumed`), `WhyNotPlayable` บอกเหตุผลที่ลงจอดไม่ได้ (ดาวแก๊ส, ดาวคู่)
+- `PlanetDNA` (ScriptableObject) ห่อ `PlanetRecord` หนึ่งดวง สร้างด้วย Kardashev Ascent ▸ Import Planets (Set Up Scene เรียกให้เอง) อย่าแก้ asset ตรง ๆ ให้แก้ `tools/exoplanets/planets.json` แล้ว import ใหม่
+- stub ที่สร้างจาก record ใช้ `StarTemperatureK` → `f_spec` ของเซลล์ (`SpectralMatch`), `Clouds` → `CloudClimate` (เฉพาะ `flags.clouds = "earth"`) ใส่ในช่อง `f_dust` เป็น 1 − cloud factor, และดาวล็อกไทดัลวางดาวฤกษ์ไว้เหนือลองจิจูด 0 ตรงกับ `LightPotential`
+- `PanelPreview.EnergyPerYearWh` เป็น **ต่อปีโลก** (`SolarConstants.EarthYearHours`) บนทุกดาว เพื่อให้ payback และ EROI เทียบกันได้ (ปีของ Proxima b ยาว 11 วัน) ส่วน `MonthlyEnergyWh` แบ่งปีของดาวเองเป็น 12 ส่วน
+- เซฟ version 3 มี `PlanetId` โหลดเซฟของดาวอื่นจะพาไปดาวนั้นก่อน
 
 | ส่วน | ใน stub |
 | --- | --- |
