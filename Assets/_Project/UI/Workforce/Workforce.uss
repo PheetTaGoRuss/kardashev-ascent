@@ -25,6 +25,8 @@
 .close-button:hover { color: var(--text); }
 
 .workforce-scroll { flex-grow: 1; flex-shrink: 1; margin-top: 4px; }
+.workforce-scroll .unity-scroll-view__content-container { width: 100%; }
+.robot-line, .robot-name, .job-text { max-width: 100%; }
 .body { font-size: 12px; padding: 0; margin: 2px 0 0 0; white-space: normal; }
 .wrap { white-space: normal; }
 .notes { margin-top: 10px; }
@@ -46,8 +48,9 @@
     margin: 0;
 }
 .name-field .unity-text-element { color: var(--text); }
-.task-row { flex-direction: row; align-items: center; margin-top: 2px; }
-.task-text { flex-grow: 1; font-size: 11px; padding: 0; margin: 0; white-space: normal; }
+.task-row { flex-direction: row; flex-wrap: wrap; align-items: center; margin-top: 2px; }
+.task-text { flex-grow: 1; flex-shrink: 1; flex-basis: 60%; min-width: 0; font-size: 11px; padding: 0; margin: 0; white-space: normal; }
+.task-text.blocked { color: var(--warning); }
 .small-button.locked { color: var(--text-muted); background-color: rgba(255, 255, 255, 0.08); }
 
 .group {

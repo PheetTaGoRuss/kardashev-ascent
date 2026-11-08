@@ -373,6 +373,7 @@ namespace KardashevAscent.Simulation.Game
         {
             if (!surveyOrders.Remove(tileId))
                 return false;
+            Workforce.Tasks.MarkCancelled(SurveyTask(tileId));
             fieldWork.Remove(SurveyTask(tileId));
             Settle(null);
             return true;
@@ -403,6 +404,7 @@ namespace KardashevAscent.Simulation.Game
         {
             if (!miningOrders.Remove((tileId, material)))
                 return false;
+            Workforce.Tasks.MarkCancelled(MineTask(tileId, material));
             fieldWork.Remove(MineTask(tileId, material));
             Settle(null);
             return true;
@@ -418,7 +420,7 @@ namespace KardashevAscent.Simulation.Game
             foreach (int tile in surveyOrders)
             {
                 WorkTask st = SurveyTask(tile);
-                if (fieldWork.ContainsKey(st) && !Workforce.IsWorkedOnSite(st))
+                if (!TaskPolicy.For(TaskKind.Survey).KeepsProgress && fieldWork.ContainsKey(st) && !Workforce.IsWorkedOnSite(st))
                     fieldWork.Remove(st);
             }
             foreach (Robot r in Workforce.Robots)
@@ -748,6 +750,7 @@ namespace KardashevAscent.Simulation.Game
             {
                 Workforce.Movement = CurrentMovement();
                 Workforce.Milestones = MilestonesReached;
+                Workforce.NowHours = TimeHours;
                 Workforce.Assign(OpenTasks(), Needs());
                 bool any = false;
                 foreach (var done in Build.Pay(key => Workforce.IsWorkedOnSite(new WorkTask(TaskKind.Build, key.Tile, key.Slot))))
@@ -799,6 +802,7 @@ namespace KardashevAscent.Simulation.Game
         {
             if (!salvageOrders.Remove((tileId, slot)))
                 return false;
+            Workforce.Tasks.MarkCancelled(new WorkTask(TaskKind.Salvage, tileId, slot));
             Settle(null);
             return true;
         }
@@ -810,6 +814,7 @@ namespace KardashevAscent.Simulation.Game
             if (Build.IsQueued(tileId, slot))
             {
                 Build.Cancel(tileId, slot);
+                Workforce.Tasks.MarkCancelled(new WorkTask(TaskKind.Build, tileId, slot));
                 return;
             }
             // A panel gives back a share of what its own size cost, not the current tier's.
@@ -1060,6 +1065,7 @@ namespace KardashevAscent.Simulation.Game
             Workforce.GroupCapacity = Math.Max(Workforce.GroupCapacity, RobotTech.GroupCapacity(MilestonesReached));
             Workforce.Movement = CurrentMovement();
             Workforce.Milestones = MilestonesReached;
+            Workforce.NowHours = TimeHours;
             Workforce.Assign(OpenTasks(), Needs());
             GenerationW = ComputeGeneration() + RtgW;
             return true;
