@@ -32,6 +32,19 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>True while it does a temporary task its group was interrupted for (spec §5).</summary>
         public bool OnTemporaryTask { get; internal set; }
 
+        /// <summary>Upgrades fitted at the Workshop.</summary>
+        public RobotModule Modules { get; internal set; }
+
+        /// <summary>True if it was built with a Na-ion battery (less capacity: <see cref="RobotTech.SodiumCapacityRatio"/>).</summary>
+        public bool SodiumBattery { get; internal set; }
+
+        public bool Has(RobotModule m) => (Modules & m) != 0;
+
+        /// <summary>Battery capacity when new for this robot's chemistry and upgrades, Wh.</summary>
+        public double DesignBatteryWh =>
+            RobotSpecs.BatteryCapacityWh * (SodiumBattery ? RobotTech.SodiumCapacityRatio : 1.0)
+            * (Has(RobotModule.BigBattery) ? RobotTech.BigBatteryFactor : 1.0);
+
         /// <summary>Its own battery: charge and, separately, health.</summary>
         public RobotBattery Battery { get; internal set; } = new RobotBattery();
 
