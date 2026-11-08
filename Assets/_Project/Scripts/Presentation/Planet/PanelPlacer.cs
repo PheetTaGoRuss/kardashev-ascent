@@ -93,8 +93,19 @@ namespace KardashevAscent.Presentation.Planet
         public bool TryGetBest(out PanelAngles angles)
         {
             angles = best;
-            return tile >= 0 && bestReady && best.Found;
+            return tile >= 0 && bestReady && best.Found && BestAngleUnlocked;
         }
+
+        /// <summary>
+        /// Best-angle advice needs this tile's latitude: measured in the sky view (V), or surveyed after the
+        /// colony's first latitude fix. Until then the search still runs, but nothing about it is shown.
+        /// </summary>
+        public bool BestAngleUnlocked => simulation != null && tile >= 0 && simulation.Notebook.CanUseBestAngle(tile);
+
+        /// <summary>This tile's latitude as the colony knows it (degrees), or NaN before it is found.</summary>
+        public double KnownLatitudeDeg => simulation != null && tile >= 0
+            ? simulation.Notebook.LatitudeDeg(tile, simulation.Sphere.Latitude(tile) * 180.0 / Math.PI)
+            : double.NaN;
 
         /// <summary>Angles to show for the open site: the selected slot's panel, or the angles being planned (radians).</summary>
         public bool TryGetAngles(out double tilt, out double azimuth)
@@ -652,7 +663,7 @@ namespace KardashevAscent.Presentation.Planet
         /// <summary>Set the planned angles to the best ones found for this tile.</summary>
         public void UseBestAngle()
         {
-            if (!bestReady || !best.Found || (!MultiSelect && SlotHasPanel))
+            if (!bestReady || !best.Found || !BestAngleUnlocked || (!MultiSelect && SlotHasPanel))
                 return;
             tiltDeg = Mathf.Round((float)(best.Tilt * Mathf.Rad2Deg));
             azimuthDeg = Mathf.Round((float)(best.Azimuth * Mathf.Rad2Deg)) % 360f;

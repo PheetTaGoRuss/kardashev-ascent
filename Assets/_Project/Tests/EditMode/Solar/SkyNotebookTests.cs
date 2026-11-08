@@ -21,7 +21,9 @@ namespace KardashevAscent.Simulation.Tests.Solar
             Assert.IsFalse(n.KnowsDeclination);
             Assert.IsFalse(n.TracksSun);
             Assert.IsFalse(n.KnowsLatitude(5));
-            Assert.IsNaN(n.LatitudeDeg(5));
+            Assert.IsFalse(n.CanUseBestAngle(5));
+            Assert.IsFalse(n.Surveyed);
+            Assert.IsNaN(n.LatitudeDeg(5, 20.0));
         }
 
         [Test]
@@ -52,8 +54,9 @@ namespace KardashevAscent.Simulation.Tests.Solar
             n.WorkOutDeclination(sky);
             n.MeasureSun(3, sky);
             Assert.IsTrue(n.KnowsLatitude(3));
-            Assert.AreEqual(lat, n.LatitudeDeg(3), 0.6, "a sighting within a quarter hour of noon is close");
-            Assert.IsFalse(n.KnowsLatitude(4), "latitude belongs to the tile it was measured on");
+            Assert.IsTrue(n.MeasuredLatitude(3));
+            Assert.AreEqual(lat, n.LatitudeDeg(3, double.NaN), 0.6, "a sighting within a quarter hour of noon is close");
+            Assert.IsFalse(n.MeasuredLatitude(4), "the measurement belongs to the tile it was taken on");
         }
 
         [Test]
@@ -73,8 +76,48 @@ namespace KardashevAscent.Simulation.Tests.Solar
             StringAssert.Contains("Too bright", n.MeasurePole(1, Sky(-33, 0, 0)));
             Assert.IsFalse(n.KnowsLatitude(1));
             n.MeasurePole(1, Sky(-33, 0, 170));
-            Assert.AreEqual(-33.0, n.LatitudeDeg(1), 1e-9);
+            Assert.AreEqual(-33.0, n.LatitudeDeg(1, double.NaN), 1e-9);
             StringAssert.Contains("pole", n.LatitudeMethod(1));
+        }
+
+        [Test]
+        public void FirstFix_SurveysEveryTile_AndUnlocksBestAngles()
+        {
+            var n = new SkyNotebook();
+            n.MeasurePole(7, Sky(20, 0, 170));
+            Assert.IsTrue(n.Surveyed);
+            Assert.AreEqual(7, n.SurveyAnchor);
+            Assert.IsTrue(n.KnowsLatitude(99), "other tiles come from the survey map");
+            Assert.IsTrue(n.CanUseBestAngle(99));
+            Assert.IsFalse(n.MeasuredLatitude(99));
+            Assert.AreEqual(-41.5, n.LatitudeDeg(99, -41.5), "a surveyed tile reads the map");
+            StringAssert.Contains("surveyed", n.LatitudeMethod(99));
+            StringAssert.Contains("pole", n.LatitudeMethod(7));
+        }
+
+        [Test]
+        public void CaptureRestore_KeepsEverything()
+        {
+            var a = new SkyNotebook();
+            SkyReport noon = Sky(20, 5, 1);
+            a.WorkOutDeclination(noon);
+            a.MeasureSun(4, noon);
+            a.MeasurePole(9, Sky(20, 5, 170));
+            SkyNotebookState state = a.Capture();
+
+            var b = new SkyNotebook();
+            b.Restore(state);
+            Assert.IsTrue(b.KnowsDeclination);
+            Assert.IsTrue(b.TracksSun);
+            Assert.AreEqual(4, b.SurveyAnchor);
+            Assert.AreEqual(a.LatitudeDeg(4, 0), b.LatitudeDeg(4, 0), 1e-12);
+            Assert.AreEqual(a.LatitudeMethod(9), b.LatitudeMethod(9));
+            CollectionAssert.AreEqual(a.Log, b.Log);
+
+            b.Restore(null);
+            Assert.IsFalse(b.KnowsDeclination);
+            Assert.IsFalse(b.Surveyed);
+            Assert.AreEqual(0, b.Log.Count);
         }
 
         [Test]

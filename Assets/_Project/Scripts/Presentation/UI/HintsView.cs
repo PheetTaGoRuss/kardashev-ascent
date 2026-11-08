@@ -105,7 +105,8 @@ namespace KardashevAscent.Presentation.UI
                     return "Click a land tile near your base to open its building site. M shows where sunlight is best.";
                 case 1:
                     string key = placer != null ? placer.PlaceKey.ToString() : "P";
-                    return $"Click a slot, then press {key} to build a solar panel. B sets the best angle; Tab switches to battery yards for the night.";
+                    return $"Click a slot, then press {key} to build a solar panel. V opens the sky over it: measure the noon sun to find " +
+                           "your latitude, which unlocks the best angle (B). Tab switches to battery yards for the night.";
                 case 2:
                     return "Press 4 to run a day per second. Watch POWER at night: the battery has to carry the colony until sunrise.";
                 case 3:

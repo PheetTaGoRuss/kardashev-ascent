@@ -162,7 +162,7 @@ namespace KardashevAscent.Presentation.UI
                 sunLabel.text = "h = ?   A_s = ?   Measure the sun to find where it is.";
             else if (knowLat && book.KnowsDeclination)
                 sunLabel.text = $"sin h = sin φ · sin δ + cos φ · cos δ · cos H\n" +
-                                $"= sin {Signed(book.LatitudeDeg(tile), 1)}° · sin {Signed(r.DeclinationDeg, 1)}° + cos {Signed(book.LatitudeDeg(tile), 1)}° · cos {Signed(r.DeclinationDeg, 1)}° · cos {Signed(r.HourAngleDeg, 1)}°\n" +
+                                $"= sin {Signed(book.LatitudeDeg(tile, r.LatitudeDeg), 1)}° · sin {Signed(r.DeclinationDeg, 1)}° + cos {Signed(book.LatitudeDeg(tile, r.LatitudeDeg), 1)}° · cos {Signed(r.DeclinationDeg, 1)}° · cos {Signed(r.HourAngleDeg, 1)}°\n" +
                                 $"→ h = {r.SunAltitudeDeg:0.0}°, azimuth A_s = {r.SunAzimuthDeg:0}°";
             else
                 sunLabel.text = $"Measured: altitude h = {r.SunAltitudeDeg:0.0}°, azimuth A_s = {r.SunAzimuthDeg:0}° (clockwise from north).";
@@ -170,8 +170,8 @@ namespace KardashevAscent.Presentation.UI
 
             // 3. Latitude
             lat.text = knowLat
-                ? $"φ = {Signed(book.LatitudeDeg(tile), 1)}°  ({book.LatitudeMethod(tile)})\n" +
-                  $"Rule of thumb: a fixed panel works best tilted β ≈ |φ| = {SkyMath.RuleOfThumbTiltDeg(book.LatitudeDeg(tile)):0}°, facing the equator."
+                ? $"φ = {Signed(book.LatitudeDeg(tile, r.LatitudeDeg), 1)}°  ({book.LatitudeMethod(tile)})\n" +
+                  $"Rule of thumb: a fixed panel works best tilted β ≈ |φ| = {SkyMath.RuleOfThumbTiltDeg(book.LatitudeDeg(tile, r.LatitudeDeg)):0}°, facing the equator."
                 : "φ = ?   Measure the sun within 15 minutes of noon (H ≈ 0°) once you know δ: φ = 90° − h + δ.\nOr sight the celestial pole at night: it stands φ above the horizon.";
             lat.EnableInClassList("unknown", !knowLat);
 
