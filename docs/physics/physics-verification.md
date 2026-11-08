@@ -338,6 +338,26 @@ NASA POWER **ถูกต้องในฐานะแหล่งตรวจ�
 | Tidal cap | P_tidal ทั้งโลก | ≤ 3.7e12 W (K = 0.657) | exact | ([Egbert & Ray](https://www.doi.org/10.1038/35015531)) |
 | Cryocooler Carnot | 77 K จาก 300 K / จาก 94 K | 2.9 / 0.22 W/W | 0.01 | [คำนวณ] |
 
+## แบตเตอรี่ของหุ่นยนต์: ความจุจาก Perseverance และการเสื่อมแบบนับรอบ (เพิ่ม 8 พ.ย. 2026)
+
+หุ่นยนต์รุ่น General ใช้แบตเตอรี่ขนาดเดียวกับรถ Perseverance คือ Li-ion สองก้อน ก้อนละ 43 Ah ที่ 28 V ([JPL Mars 2020 power](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/power), [EaglePicher](https://www.eaglepicher.com/node/2466)) ความจุจึงเป็น $2 \times 43 \times 28 = 2408$ Wh [คำนวณ] round-trip efficiency ใช้ค่า Li-ion 90 % ตัวเดียวกับ `Battery` ของกริด (หัวข้อ storage ข้างบน)
+
+แบบจำลองการเสื่อมรุ่นแรกนับแค่จำนวนรอบเทียบเท่าเต็ม (equivalent full cycles, EFC) ซึ่งเป็นทางเลือก fallback ที่ระบุไว้ใน `docs/design/robotic-workforce.md` ข้อ D5
+
+$$EFC = \frac{E_{\text{จ่ายออกสะสม}}}{C_0},\qquad H = \max\!\left(0,\ 1 - (1 - H_{EOL})\,\frac{EFC}{N_{\text{life}}}\right),\qquad C = C_0 H$$
+
+- $N_{\text{life}} = 3000$ รอบ คือค่าล่างของช่วง 3000–8000 รอบของ LFP/NMC ในตาราง storage ของ `notes/energy_sources.md` ข้อ 13 ตารางนั้นระบุว่าเป็นค่าทั่วไปของอุตสาหกรรมที่ยังไม่ได้ตรวจซ้ำ [ประมาณได้]
+- $H_{EOL} = 0.8$ เพราะ cycle life นิยามที่ความจุเหลือ 80 % [ความรู้พื้นฐาน] เมื่อ $H < H_{EOL}$ หุ่นยนต์จะไปเปลี่ยนแบตเตอรี่ ค่าใช้จ่ายคิดด้วยกติกาเดียวกับ battery yard: `BuildCosts.Battery(2408 Wh)` = 2408 Wh ของ build parts
+- **ยังไม่รวม** การเสื่อมตามเวลา (calendar ageing) ผลของอุณหภูมิ และความเสียหายพิเศษจากการคายจนหมด แบบที่ควรใช้ต่อไปคือแบบลดรูปของ NREL ($Q = b_0 - b_1\sqrt{t} - b_2 N$, ชุดพารามิเตอร์ LFP ใน BLAST-Lite) ([NREL 66708](https://www.nrel.gov/docs/fy16osti/66708.pdf)) แต่ยังไม่ได้อ่านสมการและค่าพารามิเตอร์จากต้นฉบับ [ช่องว่าง]
+
+| เทสต์ | อินพุต | ค่าที่คาดหวัง | tol | ที่มา |
+|---|---|---|---|---|
+| ความจุ Perseverance | 2 × 43 Ah × 28 V | 2408 Wh | exact | [คำนวณ] |
+| health ตาม EFC | EFC 0 / 1500 / 3000 / 6000 | 1.0 / 0.9 / 0.8 / 0.6 | 1e-9 | [คำนวณ] |
+| ความจุที่ health 0.9 | $C_0$ 2408 Wh | 2167.2 Wh | 1e-6 | [คำนวณ] |
+| EFC จากพลังงานที่จ่าย | จ่าย 2408 Wh × 10 | 10 รอบ | 1e-9 | [คำนวณ] |
+| ค่าเปลี่ยนแบตเตอรี่ | 0.01 × 100 Wh/Wh × 2408 Wh | 2408 Wh | exact | [คำนวณ] |
+
 ## แหล่งข้อมูลที่เข้าถึงไม่ได้และช่องว่างที่ยังเปิดอยู่
 
 ระหว่างการวิจัย นโยบายเครือข่ายของ session บล็อกหลายโฮสต์ ตัวเลขที่อ้างจากโฮสต์เหล่านี้จึงมาจาก snippet ของผลค้นหา จาก mirror หรือจากซอร์สโค้ดที่ติดตั้งไว้ในเครื่อง ไม่ได้อ่านจากต้นฉบับเต็ม สองงานที่ค้างสำหรับ MVP ทำเสร็จแล้วหลังเปิดโฮสต์ (5 พ.ย. 2026): ข้อมูล Exoplanet Archive อยู่ใน `tools/exoplanets/cache/` และ `Assets/_Project/Data/Planets/planets.json` ส่วนผลเทียบ NASA POWER อยู่ในหัวข้อ "ผลเทียบกับ NASA POWER"

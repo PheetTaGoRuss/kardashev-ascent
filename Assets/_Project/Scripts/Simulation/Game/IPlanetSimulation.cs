@@ -209,6 +209,9 @@ namespace KardashevAscent.Simulation.Game
         /// </summary>
         Robots.Workforce Workforce { get; }
 
+        /// <summary>Power going into robot batteries now, W (it counts as used power).</summary>
+        double RobotChargingW { get; }
+
         /// <summary>Hand out work now (after changing workforce settings), instead of waiting for the next tick.</summary>
         void RefreshWork();
 
