@@ -11,8 +11,8 @@ namespace KardashevAscent.Presentation.UI
 {
     /// <summary>
     /// The workforce overview (G): groups, their state and task priorities, and each robot's task (spec §5).
-    /// Pause/Resume per group; click a priority to step it (Critical → … → Disabled). Battery and condition are
-    /// phase 2 and show as "—". UI Toolkit: UI/Workforce/Workforce.uxml + .uss.
+    /// Pause/Resume per group; click a priority to step it (Critical → … → Disabled). Each robot shows its charge,
+    /// battery health and condition. UI Toolkit: UI/Workforce/Workforce.uxml + .uss.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     public sealed class WorkforceView : MonoBehaviour
@@ -27,6 +27,7 @@ namespace KardashevAscent.Presentation.UI
         float nextRefresh;
         string shownShape;
         readonly Dictionary<int, Label> taskLabels = new Dictionary<int, Label>();
+        readonly Dictionary<int, Label> vitalLabels = new Dictionary<int, Label>();
 
         public bool Visible { get; private set; }
         public KeyCode ToggleKey => toggleKey;
@@ -90,8 +91,12 @@ namespace KardashevAscent.Presentation.UI
                 "Robots build construction sites (a site only takes build parts while a robot works on it) and take down " +
                 "buildings you mark with Del. Each robot takes the most urgent task it can do; only Critical tasks pull a " +
                 "busy robot off its work.\n" +
-                $"Not yet: movement, battery, wear, charging (phase 2), making new robots (phase 3). Group capacity " +
-                $"{w.GroupCapacity} is a placeholder value.";
+                "Robots run on their own battery: below 20 % they charge at the lander or a battery yard until 80 %, or go " +
+                "back to work sooner if no spare power reaches a battery yard. Work " +
+                "wears them; below 30 % condition they are repaired at the lander with build parts, and a worn-out battery " +
+                "is replaced there. At 0 % condition a robot shuts down until it is repaired.\n" +
+                $"Not yet: movement, making new robots (phase 3). Group capacity {w.GroupCapacity}, power use, wear and " +
+                "repair rates are placeholder values.";
 
             string shape = Shape(w);
             if (shape != shownShape)
@@ -100,8 +105,12 @@ namespace KardashevAscent.Presentation.UI
                 shownShape = shape;
             }
             foreach (Robot r in w.Robots)
+            {
                 if (taskLabels.TryGetValue(r.Id, out Label l))
                     l.text = TaskText(sim, r);
+                if (vitalLabels.TryGetValue(r.Id, out Label v))
+                    v.text = Vitals(r);
+            }
         }
 
         /// <summary>Everything the buttons and rows depend on; the list is rebuilt only when it changes.</summary>
@@ -129,6 +138,7 @@ namespace KardashevAscent.Presentation.UI
         {
             groupsHolder.Clear();
             taskLabels.Clear();
+            vitalLabels.Clear();
             foreach (RobotGroup g in w.Groups)
             {
                 if (g.Count == 0 && g.Automatic)
@@ -198,25 +208,45 @@ namespace KardashevAscent.Presentation.UI
             if (r.ProgramOverride.HasValue) own.Add($"program {r.ProgramOverride.Value}");
             if (own.Count > 0)
                 row.Add(MakeLabel("Own settings: " + string.Join(", ", own), "robot-line"));
-            Label vitals = MakeLabel("Battery — · Condition —  (phase 2)", "robot-line");
+            Label vitals = MakeLabel(Vitals(r), "robot-line");
             vitals.AddToClassList("muted");
+            vitalLabels[r.Id] = vitals;
             row.Add(vitals);
             return row;
         }
 
+        static string Vitals(Robot r) =>
+            $"Battery {r.Battery.StateOfCharge * 100.0:0} % · health {r.Battery.Health * 100.0:0} % " +
+            $"({r.Battery.EquivalentFullCycles:0} cycles) · condition {r.Condition * 100.0:0} %";
+
         static string TaskText(IPlanetSimulation sim, Robot r)
         {
+            string at = !r.Facility.HasValue ? ""
+                : r.Facility.Value.Slot < 0 ? "at the lander" : $"at the battery yard in slot {r.Facility.Value.Slot}";
+            if (r.State == RobotState.Shutdown)
+                return "Shut down (condition 0 %): waiting for a place at the lander to be repaired";
+            if (r.Activity == RobotActivity.Charging)
+                return $"Charging {at} until 80 %";
+            if (r.Activity == RobotActivity.Maintenance)
+                return r.Battery.WornOut
+                    ? $"Maintenance {at}: new battery ({Format.Energy(BuildCosts.Battery(r.Battery.NominalWh))} of build parts)"
+                    : $"Maintenance {at}: repairs use build parts";
+            if (r.NeedsCharge)
+                return "Battery below 20 %: waiting for a free charger";
+            string repairNote = !r.NeedsMaintenance ? ""
+                : r.Battery.WornOut ? " · battery worn out: waits for a place at the lander"
+                : " · needs repair: waits for a place at the lander";
             if (!r.Task.HasValue)
-                return "No task: waiting for work";
+                return "No task: waiting for work" + repairNote;
             WorkTask t = r.Task.Value;
             string what = BuildingName(sim.GetBuilding(t.Tile, t.Slot));
             if (t.Kind == TaskKind.Build)
             {
                 double progress = sim.ConstructionProgress(t.Tile, t.Slot);
                 string waiting = sim.BuildStockWh <= 0.0 && sim.BuildPowerW <= 0.0 ? " · waiting for spare power" : "";
-                return $"Building a {what} · tile {t.Tile}, slot {t.Slot} · {progress * 100.0:0} %{waiting}";
+                return $"Building a {what} · tile {t.Tile}, slot {t.Slot} · {progress * 100.0:0} %{waiting}{repairNote}";
             }
-            return $"Taking down a {what} · tile {t.Tile}, slot {t.Slot}";
+            return $"Taking down a {what} · tile {t.Tile}, slot {t.Slot}{repairNote}";
         }
 
         static string BuildingName(BuildingType type) =>

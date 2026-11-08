@@ -158,7 +158,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         }
 
         [Test]
-        public void Save_Version7_RoundTripsRobotsAndOrders()
+        public void Save_RoundTripsRobotsAndOrders()
         {
             var a = Create();
             int t = a.BaseTileId;
@@ -170,7 +170,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             a.Workforce.Pause(a.Workforce.GetGroup(a.Workforce.Robots[0].GroupId).Id);
             a.OrderSalvage(t, 0);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(7, state.Version);
+            Assert.AreEqual(8, state.Version);
 
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));
@@ -211,6 +211,105 @@ namespace KardashevAscent.Simulation.Tests.Game
             sim.OrderSalvage(t, 0);
             Assert.IsTrue(sim.RemoveBuilding(t, 0));
             Assert.IsFalse(sim.IsSalvageOrdered(t, 0));
+        }
+
+        // ---- Phase 2: batteries, charging, wear ----
+
+        [Test]
+        public void OverTenDays_TheRobotChargesAtTheLander_AndNeverRunsFlat()
+        {
+            var sim = Create();
+            Robot r = sim.Workforce.Robots[0];
+            bool charged = false;
+            double lowest = 1.0;
+            for (int h = 0; h < 240; h++)
+            {
+                sim.Tick(1.0);
+                charged |= r.State == RobotState.Charging;
+                lowest = Math.Min(lowest, r.Battery.StateOfCharge);
+            }
+            Assert.IsTrue(charged, "idle draw empties the battery to 20 % within days");
+            Assert.Greater(lowest, 0.15, "it goes to charge at 20 %");
+        }
+
+        [Test]
+        public void RobotCharging_CountsAsUsedPower()
+        {
+            var sim = Create();
+            Robot r = sim.Workforce.Robots[0];
+            r.Battery.Restore(0.0, 0.1 * RobotSpecs.BatteryCapacityWh);
+            sim.Tick(0.25);
+            Assert.AreEqual(RobotState.Charging, r.State);
+            Assert.Greater(sim.RobotChargingW, 0.0);
+            Assert.Greater(r.Battery.StateOfCharge, 0.1);
+        }
+
+        [Test]
+        public void NoPanels_EmptyBattery_TheRobotStillRecovers_AndCanBuild()
+        {
+            var sim = Create();
+            sim.Grid.Battery.SetStored(0.0);
+            Robot r = sim.Workforce.Robots[0];
+            r.Battery.Restore(0.0, 0.15 * RobotSpecs.BatteryCapacityWh);
+            double highest = 0.0;
+            for (int h = 0; h < 12; h++)
+            {
+                sim.Tick(1.0);
+                highest = System.Math.Max(highest, r.Battery.StateOfCharge);
+            }
+            Assert.IsTrue(sim.IsBrownout, "the colony has nothing to spare");
+            Assert.GreaterOrEqual(highest, RobotSpecs.ResumeWorkFraction - 0.01, "the lander's RTGs charged it to 80 %");
+            Assert.IsTrue(r.Available);
+            Assert.IsTrue(sim.PlacePanel(sim.BaseTileId, 0, 0.3, Math.PI));
+            Assert.IsFalse(sim.IsUnderConstruction(sim.BaseTileId, 0));
+        }
+
+        [Test]
+        public void BatteryYards_BecomeChargers_OnceFinished()
+        {
+            var sim = Create();
+            int t = sim.BaseTileId;
+            Assert.AreEqual(1, sim.RobotFacilities().Count, "the lander");
+            sim.PlaceBattery(t, 0);
+            var list = sim.RobotFacilities();
+            Assert.AreEqual(2, list.Count);
+            Assert.AreEqual((t, 0), (list[1].Tile, list[1].Slot));
+            sim.Workforce.Pause(GroupOf(sim).Id);
+            sim.PlaceBattery(t, 1);
+            Assert.AreEqual(2, sim.RobotFacilities().Count, "a site doesn't charge anything");
+        }
+
+        [Test]
+        public void FlaringStar_IsAnMDwarf()
+        {
+            var sim = Create();
+            Assert.IsFalse(sim.IsFlaringStar, "0 K means the Sun");
+            sim.StarTemperatureK = 2900.0;
+            Assert.IsTrue(sim.IsFlaringStar);
+            sim.StarTemperatureK = 5772.0;
+            Assert.IsFalse(sim.IsFlaringStar);
+        }
+
+        [Test]
+        public void Save_KeepsBatteryAndCondition_Version7LoadsCharged()
+        {
+            var a = Create();
+            Robot r = a.Workforce.Robots[0];
+            r.Battery.Restore(50.0 * RobotSpecs.BatteryCapacityWh, 1000.0);
+            r.Condition = 0.6;
+            SimulationState state = a.CaptureState();
+
+            var b = Create();
+            Assert.IsTrue(b.RestoreState(state));
+            Assert.AreEqual(1000.0, b.Workforce.Robots[0].Battery.StoredWh, 1e-9);
+            Assert.AreEqual(0.6, b.Workforce.Robots[0].Condition, 1e-12);
+
+            state.Version = 7;
+            foreach (var rr in state.Workforce.Robots) rr.HasUpkeep = false;
+            var c = Create();
+            Assert.IsTrue(c.RestoreState(state));
+            Assert.AreEqual(1.0, c.Workforce.Robots[0].Battery.StateOfCharge, 1e-12);
+            Assert.AreEqual(1.0, c.Workforce.Robots[0].Condition);
         }
     }
 }

@@ -42,7 +42,7 @@ namespace KardashevAscent.Simulation.Game
     /// Cancelling a site gives back what was put into it; taking down a finished building gives back
     /// <see cref="BuildCosts.SalvageShare"/> of its cost.
     /// </summary>
-    public sealed class Construction
+    public sealed class Construction : Robots.IPartsStore
     {
         sealed class Site
         {
@@ -61,6 +61,14 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>Build parts on hand, Wh.</summary>
         public double StockWh { get; private set; }
+
+        /// <summary>Take up to <paramref name="wh"/> of parts out of stock (robot repairs); returns what was taken, Wh.</summary>
+        public double Take(double wh)
+        {
+            double take = Math.Max(0.0, Math.Min(StockWh, wh));
+            StockWh -= take;
+            return take;
+        }
 
         /// <summary>Construction sites still waiting for parts.</summary>
         public int QueueCount => queue.Count;
