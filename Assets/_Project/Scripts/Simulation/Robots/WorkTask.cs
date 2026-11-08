@@ -73,7 +73,7 @@ namespace KardashevAscent.Simulation.Robots
         public override string ToString() => $"{Kind} {Tile}.{Slot}";
     }
 
-    /// <summary>Which robot kinds can do which tasks (design D1: the General robot does basic work of every kind).</summary>
+    /// <summary>Which robot kinds can do which tasks: a thin front for <see cref="RobotCatalog"/> (spec v2 §2, data-driven).</summary>
     public static class RobotAbilities
     {
         /// <summary>
@@ -92,20 +92,10 @@ namespace KardashevAscent.Simulation.Robots
             }
         }
 
-        /// <summary>How fast a robot works at a task (hours of work per hour): specialists are faster at their own job.</summary>
-        public static double Speed(RobotKind robot, TaskKind task) =>
-            robot == RobotKind.General ? 1.0 : CanDo(robot, task) ? RobotSpecs.SpecialistSpeed : 0.0;
+        /// <summary>How fast a kind works at a task with no milestones (hours of work per hour), from <see cref="RobotCatalog"/>.</summary>
+        public static double Speed(RobotKind robot, TaskKind task) => RobotCatalog.Efficiency(robot, task, 0);
 
-        public static bool CanDo(RobotKind robot, TaskKind task)
-        {
-            switch (robot)
-            {
-                case RobotKind.General: return true;
-                case RobotKind.Construction: return task == TaskKind.Build || task == TaskKind.Salvage || task == TaskKind.Manufacture;
-                case RobotKind.Mining: return task == TaskKind.Mine;
-                case RobotKind.Research: return task == TaskKind.Survey;
-                default: return false;
-            }
-        }
+        /// <summary>Can a kind do a task with no milestones (its primary roles)? See <see cref="RobotCatalog.Capabilities"/>.</summary>
+        public static bool CanDo(RobotKind robot, TaskKind task) => RobotCatalog.CanDo(robot, task, 0);
     }
 }

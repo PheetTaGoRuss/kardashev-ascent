@@ -552,8 +552,12 @@ namespace KardashevAscent.Presentation.UI
         {
             string at = !r.Facility.HasValue ? ""
                 : r.Facility.Value.Slot < 0 ? "at the lander" : $"at the battery yard in slot {r.Facility.Value.Slot}";
-            if (r.State == RobotState.Shutdown)
-                return "Shut down (condition 0 %): waiting for a place at the lander to be repaired";
+            switch (r.Shutdown)
+            {
+                case ShutdownKind.Mechanical: return "Mechanical shutdown (condition 0 %): waiting for a place at the lander to be repaired";
+                case ShutdownKind.CriticalDamage: return "Critical damage: shut down until it is repaired at the lander";
+                case ShutdownKind.Energy: return "Energy shutdown (battery 0 %): waiting for a free charger";
+            }
             if (r.Activity == RobotActivity.Charging)
                 return $"Charging {at} until 80 %";
             if (r.Activity == RobotActivity.Maintenance)

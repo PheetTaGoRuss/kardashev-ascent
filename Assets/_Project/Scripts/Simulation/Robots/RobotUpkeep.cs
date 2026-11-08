@@ -46,7 +46,7 @@ namespace KardashevAscent.Simulation.Robots
             // Movement: how much charge each robot must keep to drive back, and who is stuck with an empty battery.
             foreach (Robot r in workforce.Robots)
             {
-                double toCharger = movement != null ? movement.HoursToCharger[r.Tile] : 0.0;
+                double toCharger = movement != null ? movement.HoursToCharger[r.Tile] / r.Attribute(RobotAttribute.Speed) : 0.0;
                 r.ReserveFraction = movement != null && r.Battery.CapacityWh > 0.0 && !double.IsInfinity(toCharger)
                     ? movement.EnergyWh(toCharger) / r.Battery.CapacityWh : 0.0;
                 r.IsStranded = movement != null && r.Battery.StoredWh <= 1e-6 && toCharger > 1e-9;
@@ -68,7 +68,7 @@ namespace KardashevAscent.Simulation.Robots
                 if (r.Activity == RobotActivity.Charging && r.Battery.StateOfCharge >= RobotSpecs.ReturnToChargeFraction
                     && r.LastChargeW <= 0.0 && r.ChargedBefore)
                     Leave(r);
-                if (r.Activity == RobotActivity.Maintenance && r.Condition >= 1.0 - 1e-12 && !r.Battery.WornOut)
+                if (r.Activity == RobotActivity.Maintenance && r.Condition >= 1.0 - 1e-12 && !r.Battery.WornOut && !r.CriticallyDamaged)
                     Leave(r);
                 if (r.Activity != RobotActivity.None)
                     used[r.Facility.Value] = Used(used, r.Facility.Value) + 1;
@@ -80,7 +80,7 @@ namespace KardashevAscent.Simulation.Robots
                     continue;
                 if (r.IsStranded)
                     continue;
-                if (r.NeedsMaintenance || r.IsShutDown)
+                if (r.NeedsMaintenance || r.Shutdown == ShutdownKind.Mechanical || r.Shutdown == ShutdownKind.CriticalDamage)
                 {
                     RobotFacility? shop = Free(r, facilities, used, true, movement);
                     if (shop.HasValue)
@@ -89,7 +89,8 @@ namespace KardashevAscent.Simulation.Robots
                         continue;
                     }
                 }
-                if (r.NeedsCharge && !r.IsShutDown)
+                // An empty battery (energy shutdown) still lets a robot at a charger plug in.
+                if (r.NeedsCharge && (r.Shutdown == ShutdownKind.None || r.Shutdown == ShutdownKind.Energy))
                 {
                     RobotFacility? charger = Free(r, facilities, used, false, movement);
                     if (charger.HasValue)
@@ -138,10 +139,11 @@ namespace KardashevAscent.Simulation.Robots
             double fc = CriticalRequestW > 0.0 ? Math.Min(1.0, Math.Max(0.0, criticalServedW) / CriticalRequestW) : 0.0;
             double ft = TopUpRequestW > 0.0 ? Math.Min(1.0, Math.Max(0.0, topUpServedW) / TopUpRequestW) : 0.0;
             ChargingW = 0.0;
-            // A Maintenance robot free at the base speeds up repairs (its speciality).
-            bool mechanic = false;
+            // A free Maintenance robot speeds up repairs (its repair efficiency, from the catalogue).
+            double mechanic = 1.0;
             foreach (Robot r in workforce.Robots)
-                mechanic |= r.Kind == RobotKind.Maintenance && r.Available;
+                if (r.Kind == RobotKind.Maintenance && r.Available)
+                    mechanic = Math.Max(mechanic, r.Attribute(RobotAttribute.RepairEfficiency));
             foreach (Robot r in workforce.Robots)
             {
                 if (movement != null && r.IsTravelling)
@@ -161,19 +163,21 @@ namespace KardashevAscent.Simulation.Robots
                         break;
                     case RobotActivity.Maintenance:
                         if (movement == null || r.Tile == r.Facility.Value.Tile)
-                            Repair(r, hours, parts, mechanic ? RobotSpecs.SpecialistSpeed : 1.0);
+                            Repair(r, hours, parts, mechanic);
                         break;
                     default:
                         if (r.IsShutDown)
                             break;
                         bool working = r.Task.HasValue;
-                        r.Battery.Draw(working ? RobotSpecs.WorkingPowerW(r.Task.Value.Kind) : RobotSpecs.IdlePowerW, hours);
+                        double efficiency = r.Attribute(RobotAttribute.EnergyEfficiency);
+                        r.Battery.Draw((working ? RobotSpecs.WorkingPowerW(r.Task.Value.Kind) : RobotSpecs.IdlePowerW) / efficiency, hours);
                         if (working)
-                            r.Condition -= RobotSpecs.WearPerWorkingHour * hours;
+                            r.Condition -= RobotSpecs.WearPerWorkingHour * hours / r.Attribute(RobotAttribute.Durability);
                         break;
                 }
                 if (flaringStar && r.Activity != RobotActivity.Maintenance)
-                    r.Condition -= RobotSpecs.FlareWearPerHour * hours * (r.Has(RobotModule.Shielding) ? RobotTech.ShieldingFactor : 1.0);
+                    r.Condition -= RobotSpecs.FlareWearPerHour * hours * (r.Has(RobotModule.Shielding) ? RobotTech.ShieldingFactor : 1.0)
+                                   / r.Attribute(RobotAttribute.Durability);
                 r.Condition = Math.Max(0.0, Math.Min(1.0, r.Condition));
             }
         }
@@ -181,9 +185,9 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>Drive along the route: draw drive power and cross tiles at their terrain's pace.</summary>
         static void Drive(Robot r, double hours, Movement movement)
         {
-            double want = movement.DrivePowerW;
+            double want = movement.DrivePowerW / r.Attribute(RobotAttribute.EnergyEfficiency);
             double got = r.Battery.Draw(want, hours);
-            double moved = want > 0.0 ? hours * got / want : hours;
+            double moved = (want > 0.0 ? hours * got / want : hours) * r.Attribute(RobotAttribute.Speed);
             while (moved > 0.0 && r.Route.Count > 0)
             {
                 double hop = movement.Routes.HopHoursAt(r.Route[0]);
@@ -220,6 +224,8 @@ namespace KardashevAscent.Simulation.Robots
                 return;
             double got = parts.Take(want * RobotSpecs.RepairPartsWh);
             r.Condition += got / RobotSpecs.RepairPartsWh;
+            if (r.Condition >= 1.0 - 1e-12)
+                r.CriticallyDamaged = false;   // a full repair also fixes critical damage
         }
 
         static int Used(Dictionary<(int, int), int> used, (int, int) key) => used.TryGetValue(key, out int n) ? n : 0;
