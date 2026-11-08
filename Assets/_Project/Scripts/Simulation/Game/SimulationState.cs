@@ -7,8 +7,8 @@ namespace KardashevAscent.Simulation.Game
     [Serializable]
     public sealed class SimulationState
     {
-        /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished.</summary>
-        public int Version = 6;
+        /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished. 7 added robots.</summary>
+        public int Version = 7;
         /// <summary>Planet id from planets.json (version 3); empty in older saves.</summary>
         public string PlanetId = "";
         /// <summary>Milestones reached and the day-average power behind them (version 4; 0 in older saves).</summary>
@@ -38,6 +38,10 @@ namespace KardashevAscent.Simulation.Game
         public List<BuildingRecord> Buildings = new List<BuildingRecord>();
         /// <summary>What the colony has measured about its sky (version 6; empty in older saves).</summary>
         public Solar.SkyNotebookState Notebook = new Solar.SkyNotebookState();
+        /// <summary>Robots and groups (version 7; older saves start with one General robot at the base).</summary>
+        public Robots.WorkforceState Workforce = new Robots.WorkforceState();
+        /// <summary>Finished buildings waiting for a robot to take them down (version 7).</summary>
+        public List<Robots.SalvageOrderRecord> SalvageOrders = new List<Robots.SalvageOrderRecord>();
     }
 
     /// <summary>One building in a saved game. Tilt/Azimuth (radians) are only used for panels.</summary>

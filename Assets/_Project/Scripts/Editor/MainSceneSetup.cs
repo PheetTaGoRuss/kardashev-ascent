@@ -112,13 +112,14 @@ namespace KardashevAscent.EditorTools
             SetUpTileInfo(runner, planet, placer);
             SetUpPanels(planet, placer, site);
             SetUpColony(runner);
+            SetUpWorkforce(runner);
             SetUpPlanetChooser(runner);
             SetUpHints(runner, picker, placer);
             SetUpCursorLight(planet, picker);
             SetUpSky(runner, planet, site, placer);
 
             EditorSceneManager.MarkSceneDirty(planet.gameObject.scene);
-            Debug.Log("Scene set up: Simulation runner, planets, star light, light-potential map, building sites, panel placement, HUD, tile info, side panels, colony overview, planet chooser, cursor flashlight. Save the scene to keep it.");
+            Debug.Log("Scene set up: Simulation runner, planets, star light, light-potential map, building sites, panel placement, HUD, tile info, side panels, colony overview, robots overview, planet chooser, cursor flashlight. Save the scene to keep it.");
         }
 
         /// <summary>Import planets.json and give the runner every planet in file order, starting on the first playable one.</summary>
@@ -282,6 +283,30 @@ namespace KardashevAscent.EditorTools
             {
                 Undo.RecordObject(colonyDocument, "Colony draw order");
                 colonyDocument.sortingOrder = ColonySortingOrder;
+            }
+        }
+
+        const string WorkforceLayoutPath = "Assets/_Project/UI/Workforce/Workforce.uxml";
+
+        /// <summary>The robots overview (G): drawn like the colony overview, above the HUD and side panels.</summary>
+        static void SetUpWorkforce(SimulationRunner runner)
+        {
+            var view = Object.FindAnyObjectByType<WorkforceView>();
+            if (view == null)
+            {
+                var go = new GameObject("Workforce");
+                Undo.RegisterCreatedObjectUndo(go, "Add Workforce");
+                var document = Undo.AddComponent<UIDocument>(go);
+                document.panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
+                document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(WorkforceLayoutPath);
+                view = Undo.AddComponent<WorkforceView>(go);
+            }
+            SetReference(view, "runner", runner);
+            var workforceDocument = view.GetComponent<UIDocument>();
+            if (workforceDocument.sortingOrder != ColonySortingOrder)
+            {
+                Undo.RecordObject(workforceDocument, "Workforce draw order");
+                workforceDocument.sortingOrder = ColonySortingOrder;
             }
         }
 
