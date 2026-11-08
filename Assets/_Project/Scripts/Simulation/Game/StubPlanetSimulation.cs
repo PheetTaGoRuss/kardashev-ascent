@@ -70,6 +70,25 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>The colony's robots and groups; they work on construction sites and salvage orders (phase 1).</summary>
         public Workforce Workforce { get; } = new Workforce();
 
+        /// <summary>Robots charging, wearing and being repaired (phase 2).</summary>
+        public RobotUpkeep Upkeep { get; } = new RobotUpkeep();
+
+        /// <summary>Power going into robot batteries now, W.</summary>
+        public double RobotChargingW { get; private set; }
+
+        /// <summary>True around a flaring red dwarf (Proxima Cen, TRAPPIST-1): robots wear faster (design D13).</summary>
+        public bool IsFlaringStar => StarTemperatureK > 0.0 && StarTemperatureK < RobotSpecs.FlaringStarBelowK;
+
+        /// <summary>Where robots charge and are repaired: the lander, and every finished battery yard (design D10, D12).</summary>
+        public List<RobotFacility> RobotFacilities()
+        {
+            var list = new List<RobotFacility> { new RobotFacility(BaseTileId, -1, ChargingCapability.Lander) };
+            foreach (var b in batteries)
+                if (!Build.IsQueued(b.Tile, b.Slot))
+                    list.Add(new RobotFacility(b.Tile, b.Slot, ChargingCapability.BatteryYard));
+            return list;
+        }
+
         /// <summary>Finished buildings the player asked a robot to take down, in the order asked.</summary>
         readonly List<(int Tile, int Slot)> salvageOrders = new List<(int, int)>();
 
@@ -164,18 +183,24 @@ namespace KardashevAscent.Simulation.Game
             TimeHours += dt;
             UpdateStar();
 
-            GridStep grid = Grid.Step(ComputeGeneration(), dt, TimeHours / Rtg.HoursPerYear);
+            // Robots at the lander charge from its RTGs first (D10); elsewhere, robots below 20 % charge right after the
+            // colony and the rest top up from spare power before build parts (D6).
+            Upkeep.Plan(Workforce, RobotFacilities(), dt);
+            GridStep grid = Grid.Step(ComputeGeneration(), dt, TimeHours / Rtg.HoursPerYear, Upkeep.CriticalRequestW, Upkeep.DockRequestW);
             GenerationW = grid.GenerationW;
             RtgW = grid.RtgW;
             DemandW = grid.DemandW;
             BatteryPowerW = grid.ChargeW - grid.DischargeW;
             // Spare power (battery full or at its limit) is turned into build parts, which then pay the sites.
-            BuildPowerW = grid.CurtailedW;
-            CurtailedW = grid.CurtailedW - BuildPowerW;
+            double topUpW = Math.Min(grid.CurtailedW, Upkeep.TopUpRequestW);
+            BuildPowerW = grid.CurtailedW - topUpW;
+            CurtailedW = grid.CurtailedW - topUpW - BuildPowerW;
+            Upkeep.Apply(Workforce, dt, grid.DockServedW, grid.PriorityServedW, topUpW, IsFlaringStar, Build);
+            RobotChargingW = Upkeep.ChargingW;
             Build.AddParts(BuildPowerW, dt);
             Settle(null);
             // Used power: what reached the loads, went into the battery or made build parts; curtailed power is not used.
-            KardashevPowerW = grid.ServedW + grid.ChargeW + BuildPowerW;
+            KardashevPowerW = grid.ServedW + grid.ChargeW + BuildPowerW + RobotChargingW;
             // Milestones are judged on a whole day's average, so a sunny noon doesn't count.
             dayEnergyWh += KardashevPowerW * dt;
             dayHours += dt;

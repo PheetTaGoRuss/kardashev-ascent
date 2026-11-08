@@ -16,10 +16,16 @@ namespace KardashevAscent.Simulation.Energy
         public readonly double DischargeW;
         /// <summary>Surplus with nowhere to go (battery full or at its power limit).</summary>
         public readonly double CurtailedW;
+        /// <summary>Power that reached the priority load (robots charging below 20 %; design D6), W.</summary>
+        public readonly double PriorityServedW;
+        /// <summary>Power the lander's RTGs gave robots charging at the lander, W.</summary>
+        public readonly double DockServedW;
 
         public GridStep(double solarW, double rtgW, double demandW, double servedW,
-                        double chargeW, double dischargeW, double curtailedW)
+                        double chargeW, double dischargeW, double curtailedW, double priorityServedW = 0.0, double dockServedW = 0.0)
         {
+            PriorityServedW = priorityServedW;
+            DockServedW = dockServedW;
             SolarW = solarW;
             RtgW = rtgW;
             DemandW = demandW;
@@ -66,31 +72,43 @@ namespace KardashevAscent.Simulation.Energy
 
         public double RtgPowerW(double yearsSinceLanding) => RtgUnits * Rtg.Power(RtgUnitStartW, yearsSinceLanding);
 
-        /// <summary>Run the grid for <paramref name="hours"/> with <paramref name="solarW"/> of solar power.</summary>
-        public GridStep Step(double solarW, double hours, double yearsSinceLanding)
+        /// <summary>
+        /// Run the grid for <paramref name="hours"/> with <paramref name="solarW"/> of solar power.
+        /// <paramref name="priorityLoadW"/> is served right after the colony's demand, from generation and then the
+        /// battery, before the battery charges (robots charging below 20 %; design D6). It never causes a brownout.
+        /// <paramref name="dockLoadW"/> (robots charging at the lander) is served before everything else, straight from
+        /// the lander's RTGs and never more than they make, so a robot can always recover even in a brownout (D10).
+        /// </summary>
+        public GridStep Step(double solarW, double hours, double yearsSinceLanding, double priorityLoadW = 0.0, double dockLoadW = 0.0)
         {
             if (hours <= 0.0)
                 return Last;
             solarW = Math.Max(0.0, solarW);
             double rtgW = RtgPowerW(yearsSinceLanding);
-            double generation = solarW + rtgW;
+            double priority = Math.Max(0.0, priorityLoadW);
+            double dock = Math.Min(rtgW, Math.Max(0.0, dockLoadW));
+            double generation = solarW + rtgW - dock;
             double demand = Math.Max(0.0, DemandW);
+            double total = demand + priority;
 
-            double served, charge = 0.0, discharge = 0.0, curtailed = 0.0;
-            if (generation >= demand)
+            double served, priorityServed, charge = 0.0, discharge = 0.0, curtailed = 0.0;
+            if (generation >= total)
             {
                 served = demand;
-                double surplus = generation - demand;
+                priorityServed = priority;
+                double surplus = generation - total;
                 charge = Battery.Charge(surplus, hours);
                 curtailed = surplus - charge;
             }
             else
             {
-                discharge = Battery.Discharge(demand - generation, hours);
-                served = generation + discharge;
+                discharge = Battery.Discharge(total - generation, hours);
+                double available = generation + discharge;
+                served = Math.Min(demand, available);
+                priorityServed = Math.Max(0.0, available - served);
             }
 
-            Last = new GridStep(solarW, rtgW, demand, served, charge, discharge, curtailed);
+            Last = new GridStep(solarW, rtgW, demand, served, charge, discharge, curtailed, priorityServed, dock);
             if (Last.IsBrownout != IsBrownout)
             {
                 IsBrownout = Last.IsBrownout;

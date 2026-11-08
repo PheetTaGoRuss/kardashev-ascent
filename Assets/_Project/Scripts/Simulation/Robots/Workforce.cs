@@ -280,7 +280,7 @@ namespace KardashevAscent.Simulation.Robots
             {
                 if (!r.Task.HasValue)
                     continue;
-                if (!open.TryGetValue(r.Task.Value, out WorkTask now) || GetGroup(r.GroupId).State == GroupState.Paused || !taken.Add(now))
+                if (!r.Available || !open.TryGetValue(r.Task.Value, out WorkTask now) || GetGroup(r.GroupId).State == GroupState.Paused || !taken.Add(now))
                 {
                     r.Task = null;
                     r.OnTemporaryTask = false;
@@ -306,7 +306,7 @@ namespace KardashevAscent.Simulation.Robots
                 foreach (int id in g.MemberIds)
                 {
                     Robot r = GetRobot(id);
-                    if (!RobotAbilities.CanDo(r.Kind, t.Kind))
+                    if (!r.Available || !RobotAbilities.CanDo(r.Kind, t.Kind))
                         continue;
                     if (pick == null || Busyness(r) < Busyness(pick))
                         pick = r;
@@ -326,7 +326,7 @@ namespace KardashevAscent.Simulation.Robots
                 changed = false;
                 foreach (Robot r in robots)
                 {
-                    if (r.OnTemporaryTask || GetGroup(r.GroupId).State == GroupState.Paused)
+                    if (!r.Available || r.OnTemporaryTask || GetGroup(r.GroupId).State == GroupState.Paused)
                         continue;
                     WorkTask? best = BestFor(r, open.Values, taken);
                     if (!best.HasValue)
@@ -399,6 +399,14 @@ namespace KardashevAscent.Simulation.Robots
                     HasTask = r.Task.HasValue, OnTemporaryTask = r.OnTemporaryTask,
                     HasProgramOverride = r.ProgramOverride.HasValue,
                     ProgramOverride = r.ProgramOverride ?? OperatingProgram.Priority,
+                    HasUpkeep = true,
+                    BatteryStoredWh = r.Battery.StoredWh,
+                    BatteryDeliveredWh = r.Battery.DeliveredWh,
+                    Condition = r.Condition,
+                    Activity = r.Activity,
+                    HasFacility = r.Facility.HasValue,
+                    FacilityTile = r.Facility?.Tile ?? 0,
+                    FacilitySlot = r.Facility?.Slot ?? 0,
                 };
                 if (r.Task.HasValue)
                 {
@@ -448,6 +456,22 @@ namespace KardashevAscent.Simulation.Robots
                 if (rs.PriorityOverrides != null)
                     foreach (PriorityRecord p in rs.PriorityOverrides)
                         r.PriorityOverrides[p.Kind] = p.Priority;
+                // Saves before version 8 have no battery or condition: the robot comes back charged and like new.
+                if (rs.HasUpkeep)
+                {
+                    r.Battery.Restore(rs.BatteryDeliveredWh, rs.BatteryStoredWh);
+                    r.Condition = Math.Max(0.0, Math.Min(1.0, rs.Condition));
+                    if (rs.Activity != RobotActivity.None && rs.HasFacility)
+                    {
+                        r.Activity = rs.Activity;
+                        r.Facility = (rs.FacilityTile, rs.FacilitySlot);
+                    }
+                    if (r.Activity != RobotActivity.None)
+                    {
+                        r.Task = null;
+                        r.OnTemporaryTask = false;
+                    }
+                }
                 robots.Add(r);
                 RobotGroup g = GetGroup(rs.GroupId);
                 if (g != null) { g.MemberIds.Add(r.Id); r.GroupId = g.Id; }

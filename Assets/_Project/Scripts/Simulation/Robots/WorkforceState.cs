@@ -30,6 +30,15 @@ namespace KardashevAscent.Simulation.Robots
         public bool HasProgramOverride;
         public OperatingProgram ProgramOverride;
         public List<PriorityRecord> PriorityOverrides = new List<PriorityRecord>();
+        /// <summary>True when battery, condition and activity below were saved (save version 8).</summary>
+        public bool HasUpkeep;
+        public double BatteryStoredWh;
+        public double BatteryDeliveredWh;
+        public double Condition;
+        public RobotActivity Activity;
+        public bool HasFacility;
+        public int FacilityTile;
+        public int FacilitySlot;
     }
 
     [Serializable]
