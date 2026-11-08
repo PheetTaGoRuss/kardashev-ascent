@@ -456,6 +456,7 @@ namespace KardashevAscent.Presentation.UI
                 row.AddToClassList("task-row");
                 string state = rec != null ? StateName(rec.State) : "";
                 string who = worker != null ? $" · {worker.Name}" : "";
+                if (rec != null && rec.Capacity > 1) who += $" · crew {rec.Workers}/{rec.Capacity}";
                 string why = rec != null && rec.Reason.Length > 0 && worker == null ? $" · {rec.Reason}" : "";
                 string prio = rec != null && rec.Priority != TaskPriority.Normal ? $" · {rec.Priority}" : "";
                 Label text = MakeLabel($"{Describe(sim, t)} · {state}{who}{prio}{why}", "task-text");

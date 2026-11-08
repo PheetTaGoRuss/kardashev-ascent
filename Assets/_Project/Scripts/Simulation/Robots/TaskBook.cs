@@ -38,6 +38,9 @@ namespace KardashevAscent.Simulation.Robots
         public string Reason { get; internal set; } = "";
         public int? RobotId { get; internal set; }
         public int? ReservedFor { get; internal set; }
+        /// <summary>Robots on it now, and how many it can take (spec v2 §5).</summary>
+        public int Workers { get; internal set; }
+        public int Capacity { get; internal set; } = 1;
         /// <summary>The most urgent priority any robot that could take it gives it.</summary>
         public TaskPriority Priority { get; internal set; } = TaskPriority.Normal;
         /// <summary>Game hours when it became blocked (−1: not blocked).</summary>
