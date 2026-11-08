@@ -79,6 +79,15 @@ namespace KardashevAscent.Simulation.Robots
         public int HopsLeft => Route.Count;
         public int? Destination => Route.Count > 0 ? Route[Route.Count - 1] : (int?)null;
 
+        /// <summary>
+        /// A task the player reserved for this robot (spec v2 §4): it takes it as soon as it can, and no other robot
+        /// takes it automatically. Cleared when the task ends.
+        /// </summary>
+        public WorkTask? ReservedTask { get; internal set; }
+
+        /// <summary>The task it left to charge or be repaired; it goes back to it when it returns (spec v2 §4).</summary>
+        public WorkTask? ResumeTask { get; internal set; }
+
         /// <summary>A tile the player sent it to (hybrid movement); it takes no tasks until it gets there.</summary>
         public int? ManualTarget { get; internal set; }
 

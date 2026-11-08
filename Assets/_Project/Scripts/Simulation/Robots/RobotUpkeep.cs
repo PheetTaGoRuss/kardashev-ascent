@@ -85,6 +85,7 @@ namespace KardashevAscent.Simulation.Robots
                     RobotFacility? shop = Free(r, facilities, used, true, movement);
                     if (shop.HasValue)
                     {
+                        workforce.LeftTask(r, "went for maintenance");
                         Enter(r, RobotActivity.Maintenance, shop.Value, used, movement);
                         continue;
                     }
@@ -94,7 +95,10 @@ namespace KardashevAscent.Simulation.Robots
                 {
                     RobotFacility? charger = Free(r, facilities, used, false, movement);
                     if (charger.HasValue)
+                    {
+                        workforce.LeftTask(r, "went to charge");
                         Enter(r, RobotActivity.Charging, charger.Value, used, movement);
+                    }
                 }
             }
 
