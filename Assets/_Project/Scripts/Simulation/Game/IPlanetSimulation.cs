@@ -114,6 +114,9 @@ namespace KardashevAscent.Simulation.Game
         /// </summary>
         Solar.SkyReport DescribeSky(int tileId, double tilt, double azimuth);
 
+        /// <summary>What the colony has measured about its sky (saved with the game). Unlocks best-angle advice per tile.</summary>
+        Solar.SkyNotebook Notebook { get; }
+
         // Commands
 
         /// <summary>Advance the simulation by <paramref name="hours"/> of game time.</summary>

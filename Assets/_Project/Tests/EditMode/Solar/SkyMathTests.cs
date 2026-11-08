@@ -138,6 +138,25 @@ namespace KardashevAscent.Simulation.Tests.Solar
         }
 
         [Test]
+        public void Notebook_IsSavedWithTheColony()
+        {
+            var a = Earthlike();
+            a.Notebook.WorkOutDeclination(a.DescribeSky(a.BaseTileId, 0.3, Math.PI));
+            a.Tick(14.0);   // night at the base
+            SkyReport night = a.DescribeSky(a.BaseTileId, 0.3, Math.PI);
+            Assume.That(night.SunUp, Is.False);
+            a.Notebook.MeasurePole(a.BaseTileId, night);
+            SimulationState state = a.CaptureState();
+
+            var b = Earthlike();
+            Assert.IsFalse(b.Notebook.Surveyed);
+            Assert.IsTrue(b.RestoreState(state));
+            Assert.IsTrue(b.Notebook.KnowsDeclination);
+            Assert.IsTrue(b.Notebook.CanUseBestAngle(b.BaseTileId + 1), "the survey came back too");
+            Assert.AreEqual(a.Notebook.LatitudeDeg(a.BaseTileId, 0), b.Notebook.LatitudeDeg(b.BaseTileId, 0), 1e-12);
+        }
+
+        [Test]
         public void DescribeSky_PowerMatchesALivePanel()
         {
             var sim = Earthlike();

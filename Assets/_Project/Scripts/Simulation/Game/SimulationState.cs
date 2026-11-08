@@ -8,7 +8,7 @@ namespace KardashevAscent.Simulation.Game
     public sealed class SimulationState
     {
         /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished.</summary>
-        public int Version = 5;
+        public int Version = 6;
         /// <summary>Planet id from planets.json (version 3); empty in older saves.</summary>
         public string PlanetId = "";
         /// <summary>Milestones reached and the day-average power behind them (version 4; 0 in older saves).</summary>
@@ -36,6 +36,8 @@ namespace KardashevAscent.Simulation.Game
         public double HistoryBrownoutHours;
         public double HistoryHours;
         public List<BuildingRecord> Buildings = new List<BuildingRecord>();
+        /// <summary>What the colony has measured about its sky (version 6; empty in older saves).</summary>
+        public Solar.SkyNotebookState Notebook = new Solar.SkyNotebookState();
     }
 
     /// <summary>One building in a saved game. Tilt/Azimuth (radians) are only used for panels.</summary>

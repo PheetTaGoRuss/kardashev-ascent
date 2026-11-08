@@ -27,6 +27,8 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Placeholder colony demand, W.</summary>
         public double BaseDemandW { get => Grid.DemandW; set => Grid.DemandW = value; }
 
+        public SkyNotebook Notebook { get; } = new SkyNotebook();
+
         /// <summary>Which planet this is (the id in planets.json); saves remember it.</summary>
         public string PlanetId { get; set; } = "";
 
@@ -430,6 +432,7 @@ namespace KardashevAscent.Simulation.Game
             var state = new SimulationState
             {
                 PlanetId = PlanetId,
+                Notebook = Notebook.Capture(),
                 MilestonesReached = MilestonesReached,
                 DayAveragePowerW = DayAveragePowerW,
                 DayEnergyWh = dayEnergyWh,
@@ -488,6 +491,7 @@ namespace KardashevAscent.Simulation.Game
             dayEnergyWh = Math.Max(0.0, state.DayEnergyWh);
             dayHours = Math.Max(0.0, state.DayHours);
             targetReached = MilestonesReached >= 10;
+            Notebook.Restore(state.Notebook);
             UpdateStar();
             // A version-1 save had no parts: every building in it is finished, and the colony keeps the lander's parts.
             Build.Reset(state.Version >= 2 ? state.BuildStockWh : BuildCosts.LanderStockWh);

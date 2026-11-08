@@ -48,7 +48,9 @@ namespace KardashevAscent.Presentation.Planet
         public bool Active { get; private set; }
         public int Tile { get; private set; } = -1;
         public int Slot { get; private set; } = -1;
-        public SkyNotebook Notebook { get; private set; } = new SkyNotebook();
+        /// <summary>The colony's notebook (saved with the game); an empty one before the simulation exists.</summary>
+        public SkyNotebook Notebook => runner != null && runner.Simulation != null ? runner.Simulation.Notebook : emptyNotebook;
+        readonly SkyNotebook emptyNotebook = new SkyNotebook();
         public SkyReport Report { get; private set; }
         public KeyCode ToggleKey => toggleKey;
 
@@ -88,7 +90,6 @@ namespace KardashevAscent.Presentation.Planet
 
         void OnSimulationCreated()
         {
-            Notebook = new SkyNotebook();   // a new colony starts its notebook over
             Close();
         }
 
@@ -256,7 +257,7 @@ namespace KardashevAscent.Presentation.Planet
 
             if (book.KnowsLatitude(Tile))
             {
-                double phi = book.LatitudeDeg(Tile) * Math.PI / 180.0;
+                double phi = book.LatitudeDeg(Tile, Report.LatitudeDeg) * Math.PI / 180.0;
                 var pole = new Double3(0, Math.Cos(phi), Math.Sin(phi));   // the north celestial pole
                 Segment("poleAxis", 0, Scale(pole, -1.05), Scale(pole, 1.05), PoleColor, width);
                 Label("NCP", Scale(pole, 1.12), PoleColor);
