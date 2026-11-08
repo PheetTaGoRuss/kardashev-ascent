@@ -90,9 +90,11 @@ Each stage raises `SimulationState.Version` by one and keeps reading older saves
 
 ## 6. Questions that change what gets built
 
-- **Q1 (network, blocks stage E):** what makes a robot lose the colony network?
-  - Options: distance beyond a relay range (coverage that relays extend), power shortage at the network hub, events, or several of these.
-  - Without an answer, the network can only be switched on and off by a debug toggle.
+- **Q1 (network): DECIDED 2026-11-08: relay range + hub power.** Stage E builds it like this; the details below are design choices, and the numbers are configurable TBD placeholders.
+  - **Hub:** the lander is the network hub. It draws a small load from `PowerGrid` as part of colony demand. When the colony is in brownout, the hub is unpowered and the whole network is down.
+  - **Range:** a robot is connected while it is within the relay range of the hub or of a powered **Relay** (a new building). Range is counted in tiles along `HexSphere.Neighbors` (TBD). Relays extend coverage and need power too; a relay on a browned-out grid is down.
+  - **Disconnected robots** keep working on their own: they finish the current task, then choose from their cached program and priorities. Nearby robots exchange information directly. Everything syncs when the robot reconnects (spec v2 §12).
+  - **No other causes** (events, damage) for now; events are future scope.
 - **Q2 (facility staffing, blocks stage C):** which buildings use workers?
   - Recommendation:
     - **Panels:** optional; workers raise output by cleaning and tracking, at up to 1 robot per N slots.
