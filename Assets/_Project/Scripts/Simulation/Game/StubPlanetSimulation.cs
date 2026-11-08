@@ -100,13 +100,77 @@ namespace KardashevAscent.Simulation.Game
         readonly HashSet<(int Tile, int Slot)> workshops = new HashSet<(int, int)>();
         readonly HashSet<(int Tile, int Slot)> stations = new HashSet<(int, int)>();
 
+        // ---- Footprints: a building covers several slots of its tile (stored at its anchor slot) ----
+
+        /// <summary>Covered slot (not the anchor) → its building's anchor slot.</summary>
+        readonly Dictionary<(int Tile, int Slot), int> coveredBy = new Dictionary<(int, int), int>();
+        /// <summary>Anchor → every slot the building covers (anchor first).</summary>
+        readonly Dictionary<(int Tile, int Slot), List<int>> footprints = new Dictionary<(int, int), List<int>>();
+
+        public int FootprintSize(BuildingType type) => BuildingFootprints.SlotsFor(type, PanelTier);
+
+        TileSite SiteOf(int tileId)
+        {
+            SlotCount(tileId);
+            return sites[tileId];
+        }
+
+        public List<int> FootprintFor(BuildingType type, int tileId, int slot)
+        {
+            if (tileId < 0 || tileId >= TileCount || slot < 0 || slot >= SlotCount(tileId))
+                return new List<int>();
+            return SiteOf(tileId).NearestSlots(slot, FootprintSize(type));
+        }
+
+        public bool CanPlace(BuildingType type, int tileId, int slot)
+        {
+            if (tileId < 0 || tileId >= TileCount || slot < 0 || slot >= SlotCount(tileId) || GetTile(tileId).IsWater)
+                return false;
+            foreach (int s in FootprintFor(type, tileId, slot))
+                if (GetBuilding(tileId, s) != BuildingType.None) return false;
+            return true;
+        }
+
+        public int AnchorOf(int tileId, int slot)
+        {
+            int a = coveredBy.TryGetValue((tileId, slot), out int anchor) ? anchor : slot;
+            return GetBuildingAt(tileId, a) != BuildingType.None ? a : -1;
+        }
+
+        /// <summary>The anchor of the building covering a slot, or the slot itself (for calls that take any of its slots).</summary>
+        int A(int tileId, int slot) => coveredBy.TryGetValue((tileId, slot), out int anchor) ? anchor : slot;
+
+        public IReadOnlyList<int> FootprintAt(int tileId, int slot)
+        {
+            int a = AnchorOf(tileId, slot);
+            if (a < 0) return new List<int>();
+            return footprints.TryGetValue((tileId, a), out List<int> f) ? f : new List<int> { a };
+        }
+
+        void Occupy(int tileId, List<int> footprint)
+        {
+            int anchor = footprint[0];
+            footprints[(tileId, anchor)] = new List<int>(footprint);
+            for (int i = 1; i < footprint.Count; i++)
+                coveredBy[(tileId, footprint[i])] = anchor;
+        }
+
+        void Vacate(int tileId, int anchor)
+        {
+            if (!footprints.TryGetValue((tileId, anchor), out List<int> f))
+                return;
+            for (int i = 1; i < f.Count; i++)
+                coveredBy.Remove((tileId, f[i]));
+            footprints.Remove((tileId, anchor));
+        }
+
         public bool PlaceChargingStation(int tileId, int slot)
         {
-            if (tileId < 0 || tileId >= TileCount || slot < 0 || slot >= SlotCount(tileId)
-                || GetTile(tileId).IsWater || GetBuilding(tileId, slot) != BuildingType.None)
+            if (!CanPlace(BuildingType.ChargingStation, tileId, slot))
                 return false;
             Build.Start(tileId, slot, BuildCostWh(BuildingType.ChargingStation), 0.0, false);
             stations.Add((tileId, slot));
+            Occupy(tileId, FootprintFor(BuildingType.ChargingStation, tileId, slot));
             Settle((tileId, slot));
             return true;
         }
@@ -131,11 +195,11 @@ namespace KardashevAscent.Simulation.Game
 
         public bool PlaceWorkshop(int tileId, int slot)
         {
-            if (tileId < 0 || tileId >= TileCount || slot < 0 || slot >= SlotCount(tileId)
-                || GetTile(tileId).IsWater || GetBuilding(tileId, slot) != BuildingType.None)
+            if (!CanPlace(BuildingType.Workshop, tileId, slot))
                 return false;
             Build.Start(tileId, slot, BuildCostWh(BuildingType.Workshop), 0.0, false);
             workshops.Add((tileId, slot));
+            Occupy(tileId, FootprintFor(BuildingType.Workshop, tileId, slot));
             Settle((tileId, slot));
             return true;
         }
@@ -671,6 +735,7 @@ namespace KardashevAscent.Simulation.Game
             // It waits as a site until a robot works on it; an idle robot takes it now (design D2).
             Build.Start(tileId, slot, PanelCost(area), 0.0, false);
             AddPanel(tileId, slot, tilt, azimuth, area);
+            Occupy(tileId, FootprintFor(BuildingType.SolarPanel, tileId, slot));
             Settle((tileId, slot));
             return true;
         }
@@ -680,21 +745,25 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Index into <see cref="PanelTiers.All"/> of what new panels are built as.</summary>
         public int PanelTier => PanelTiers.For(MilestonesReached);
 
-        /// <summary>Ground one new panel covers on a tile, m²: the tier's size, capped at the slot's share of the tile.</summary>
+        /// <summary>Ground one new panel covers on a tile, m²: the tier's size, capped at its footprint's share of the tile.</summary>
         public double NewPanelAreaM2(int tileId)
         {
             double area = PanelAreaM2 * PanelTiers.All[PanelTier].Scale;
             if (tileId >= 0 && tileId < TileCount)
-                area = Math.Min(area, tileAreaM2 / SlotCount(tileId));
+                area = Math.Min(area, FootprintSize(BuildingType.SolarPanel) * tileAreaM2 / SlotCount(tileId));
             return area;
         }
 
         /// <summary>Ground the panel in a slot covers, m² (0 if there is none).</summary>
-        public double PanelAreaAt(int tileId, int slot) => panels.TryGetValue((tileId, slot), out var p) ? p.Area : 0.0;
+        public double PanelAreaAt(int tileId, int slot) => panels.TryGetValue((tileId, A(tileId, slot)), out var p) ? p.Area : 0.0;
 
         double PanelCost(double areaM2) => BuildCosts.Panel(EmbodiedWhPerM2, areaM2);
 
         bool CanPlacePanel(int tileId, int slot, double tilt, double azimuth) =>
+            CanPlace(BuildingType.SolarPanel, tileId, slot) && PreviewPanel(tileId, tilt, azimuth).CanPlace;
+
+        /// <summary>A saved panel's own slot is free and allowed (its footprint is put back from the save).</summary>
+        bool CanRestorePanel(int tileId, int slot, double tilt, double azimuth) =>
             tileId >= 0 && tileId < TileCount && slot >= 0 && slot < SlotCount(tileId) && GetBuilding(tileId, slot) == BuildingType.None
             && PreviewPanel(tileId, tilt, azimuth).CanPlace;
 
@@ -707,6 +776,7 @@ namespace KardashevAscent.Simulation.Game
 
         public bool SetPanelAngles(int tileId, int slot, double tilt, double azimuth)
         {
+            slot = A(tileId, slot);
             if (!panels.ContainsKey((tileId, slot)) || !PreviewPanel(tileId, tilt, azimuth).CanPlace)
                 return false;
             panels[(tileId, slot)] = (tilt, azimuth, panels[(tileId, slot)].Area);
@@ -720,8 +790,8 @@ namespace KardashevAscent.Simulation.Game
         public double BuildPowerW { get; private set; }
         public int ConstructionQueueCount => Build.QueueCount;
         public double ConstructionRemainingWh => Build.RemainingWh;
-        public bool IsUnderConstruction(int tileId, int slot) => Build.IsQueued(tileId, slot);
-        public double ConstructionProgress(int tileId, int slot) => Build.Progress(tileId, slot);
+        public bool IsUnderConstruction(int tileId, int slot) => Build.IsQueued(tileId, A(tileId, slot));
+        public double ConstructionProgress(int tileId, int slot) => Build.Progress(tileId, A(tileId, slot));
 
         public double BuildCostWh(BuildingType type)
         {
@@ -812,6 +882,7 @@ namespace KardashevAscent.Simulation.Game
 
         public bool OrderSalvage(int tileId, int slot)
         {
+            slot = A(tileId, slot);
             if (GetBuilding(tileId, slot) == BuildingType.None)
                 return false;
             if (Build.IsQueued(tileId, slot))
@@ -823,10 +894,11 @@ namespace KardashevAscent.Simulation.Game
             return true;
         }
 
-        public bool IsSalvageOrdered(int tileId, int slot) => salvageOrders.Contains((tileId, slot));
+        public bool IsSalvageOrdered(int tileId, int slot) => salvageOrders.Contains((tileId, A(tileId, slot)));
 
         public bool CancelSalvage(int tileId, int slot)
         {
+            slot = A(tileId, slot);
             if (!salvageOrders.Remove((tileId, slot)))
                 return false;
             Workforce.Tasks.MarkCancelled(new WorkTask(TaskKind.Salvage, tileId, slot));
@@ -853,16 +925,18 @@ namespace KardashevAscent.Simulation.Game
 
         public bool RemovePanel(int tileId, int slot)
         {
+            slot = A(tileId, slot);
             if (!panels.ContainsKey((tileId, slot)))
                 return false;
             Dismantle(tileId, slot, BuildingType.SolarPanel);
             panels.Remove((tileId, slot));
+            Vacate(tileId, slot);
             panelsPerTile[tileId] = PanelCount(tileId) - 1;
             GenerationW = ComputeGeneration() + RtgW;
             return true;
         }
 
-        public bool HasPanel(int tileId, int slot) => panels.ContainsKey((tileId, slot));
+        public bool HasPanel(int tileId, int slot) => panels.ContainsKey((tileId, A(tileId, slot)));
 
         public double[] MonthlyEnergyWh(int tileId, double tilt, double azimuth)
         {
@@ -894,7 +968,10 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>One battery yard: about five grid-scale Li-ion units (≈ 4 MWh each) on a slot, Wh.</summary>
         public double BatteryUnitWh { get; set; } = 20_000_000.0;
 
-        public BuildingType GetBuilding(int tileId, int slot) =>
+        /// <summary>What covers a slot: the building stored there, or the one whose footprint covers it.</summary>
+        public BuildingType GetBuilding(int tileId, int slot) => GetBuildingAt(tileId, A(tileId, slot));
+
+        BuildingType GetBuildingAt(int tileId, int slot) =>
             panels.ContainsKey((tileId, slot)) ? BuildingType.SolarPanel
             : batteries.Contains((tileId, slot)) ? BuildingType.Battery
             : workshops.Contains((tileId, slot)) ? BuildingType.Workshop
@@ -903,11 +980,11 @@ namespace KardashevAscent.Simulation.Game
 
         public bool PlaceBattery(int tileId, int slot)
         {
-            if (tileId < 0 || tileId >= TileCount || slot < 0 || slot >= SlotCount(tileId)
-                || GetTile(tileId).IsWater || GetBuilding(tileId, slot) != BuildingType.None)
+            if (!CanPlace(BuildingType.Battery, tileId, slot))
                 return false;
             bool finished = Build.Start(tileId, slot, BuildCostWh(BuildingType.Battery), 0.0, false);
             AddBattery(tileId, slot);
+            Occupy(tileId, FootprintFor(BuildingType.Battery, tileId, slot));
             if (finished)
                 Grid.Battery.AddCapacity(BatteryUnitWh);
             Settle((tileId, slot));
@@ -924,24 +1001,28 @@ namespace KardashevAscent.Simulation.Game
 
         public bool RemoveBuilding(int tileId, int slot)
         {
+            slot = A(tileId, slot);
             if (RemovePanel(tileId, slot))
                 return true;
             if (workshops.Contains((tileId, slot)))
             {
                 Dismantle(tileId, slot, BuildingType.Workshop);
                 workshops.Remove((tileId, slot));
+                Vacate(tileId, slot);
                 return true;
             }
             if (stations.Contains((tileId, slot)))
             {
                 Dismantle(tileId, slot, BuildingType.ChargingStation);
                 stations.Remove((tileId, slot));
+                Vacate(tileId, slot);
                 return true;
             }
             if (!batteries.Contains((tileId, slot)))
                 return false;
             Dismantle(tileId, slot, BuildingType.Battery);
             batteries.Remove((tileId, slot));
+            Vacate(tileId, slot);
             batteriesPerTile[tileId] = BatteryCount(tileId) - 1;
             return true;
         }
@@ -1003,6 +1084,9 @@ namespace KardashevAscent.Simulation.Game
                     RobotId = j.RobotId, Module = j.Module, Output = j.Output, OutputKg = j.OutputKg, DoneHours = j.DoneHours,
                 });
             state.Buildings.Sort((a, b) => a.Tile != b.Tile ? a.Tile.CompareTo(b.Tile) : a.Slot.CompareTo(b.Slot));
+            foreach (BuildingRecord r in state.Buildings)
+                if (footprints.TryGetValue((r.Tile, r.Slot), out List<int> f))
+                    for (int i = 1; i < f.Count; i++) r.Covered.Add(f[i]);
             int order = 0;
             var sites = new Dictionary<(int, int), (double Paid, int Order)>();
             foreach (var site in Build.Sites())
@@ -1113,7 +1197,7 @@ namespace KardashevAscent.Simulation.Game
         {
             if (r.Type == BuildingType.SolarPanel)
             {
-                if (!CanPlacePanel(r.Tile, r.Slot, r.Tilt, r.Azimuth))
+                if (!CanRestorePanel(r.Tile, r.Slot, r.Tilt, r.Azimuth))
                     return;
                 // Saves before version 5 have no area: their panels are base panel fields.
                 double area = r.AreaM2 > 0.0 ? r.AreaM2 : PanelAreaM2;
@@ -1141,6 +1225,14 @@ namespace KardashevAscent.Simulation.Game
                 if (site) Build.RestoreSite(r.Tile, r.Slot, BuildCostWh(BuildingType.Battery), r.PaidWh);
                 else Grid.Battery.AddCapacity(BatteryUnitWh);
                 AddBattery(r.Tile, r.Slot);
+            }
+            // Its footprint, as saved (version 16); older saves: one slot each.
+            if (GetBuildingAt(r.Tile, r.Slot) != BuildingType.None && r.Covered != null && r.Covered.Count > 0)
+            {
+                var f = new List<int> { r.Slot };
+                foreach (int s in r.Covered)
+                    if (s >= 0 && s < SlotCount(r.Tile) && GetBuilding(r.Tile, s) == BuildingType.None) f.Add(s);
+                Occupy(r.Tile, f);
             }
         }
 

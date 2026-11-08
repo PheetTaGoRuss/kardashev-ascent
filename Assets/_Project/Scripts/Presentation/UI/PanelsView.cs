@@ -60,6 +60,11 @@ namespace KardashevAscent.Presentation.UI
             modeStation = root.Q<Button>("mode-station");
             if (modeStation != null)
                 modeStation.clicked += () => { if (placer != null) placer.Mode = BuildMode.ChargingStation; };
+            // Press a build button and drag onto the site: the building is built where the mouse is let go.
+            DragFrom(modePanel, BuildMode.SolarPanel);
+            DragFrom(modeBattery, BuildMode.Battery);
+            DragFrom(modeWorkshop, BuildMode.Workshop);
+            DragFrom(modeStation, BuildMode.ChargingStation);
             hoverText = root.Q<Label>("hover-text");
             siteTitle = root.Q<Label>("site-title");
             siteText = root.Q<Label>("site-text");
@@ -254,12 +259,13 @@ namespace KardashevAscent.Presentation.UI
             {
                 placer.CountSelection(out selected, out empty, out withPanels, out withBatteries);
                 plannerTitle.text = $"{selected} slots selected";
-                string adds = !placer.Preview.CanPlace || empty == 0 ? ""
-                    : panelMode ? $"\nBuilding on the empty ones adds {Format.Energy(placer.Preview.EnergyPerYearWh * empty)} a year"
+                int planned = placer.PlannedBuildings;
+                string adds = !placer.Preview.CanPlace || planned == 0 ? ""
+                    : panelMode ? $"\nBuilding on the empty ones adds {Format.Energy(placer.Preview.EnergyPerYearWh * planned)} a year"
                     : workshopMode || stationMode ? ""
-                    : $"\nBuilding on the empty ones adds {Format.Energy(placer.BatteryUnitWh * empty)} of storage";
+                    : $"\nBuilding on the empty ones adds {Format.Energy(placer.BatteryUnitWh * planned)} of storage";
                 multiText.text = $"{empty} empty · {withPanels} panels · {withBatteries} battery yards" + adds;
-                placeButton.text = $"Place {empty} {thing}s (P)";
+                placeButton.text = $"Place {planned} {thing}s (P)";
                 removeAllButton.text = $"Remove {withPanels + withBatteries} (Del)";
                 reangleButton.text = $"Set angle on {withPanels}";
                 removeAllButton.SetEnabled(withPanels + withBatteries > 0);
@@ -267,7 +273,9 @@ namespace KardashevAscent.Presentation.UI
             }
             else
             {
-                plannerTitle.text = panelMode ? $"Plan a {placer.NewPanelName} · slot {slot}" : $"Plan a {thing} · slot {slot}";
+                int n = placer.ModeFootprint;
+                string covers = n > 1 ? $" · covers {n} slots" : "";
+                plannerTitle.text = (panelMode ? $"Plan a {placer.NewPanelName} · slot {slot}" : $"Plan a {thing} · slot {slot}") + covers;
                 placeButton.text = $"Place {thing} (P)";
             }
             batteryText.text = stationMode
@@ -353,5 +361,18 @@ namespace KardashevAscent.Presentation.UI
         }
 
         static void Show(VisualElement element, bool visible) => element?.EnableInClassList("hidden", !visible);
+
+        /// <summary>Pressing this build button starts dragging that building (trickle-down: before the button's own click).</summary>
+        void DragFrom(Button button, BuildMode what)
+        {
+            if (button == null)
+                return;
+            button.RegisterCallback<PointerDownEvent>(e =>
+            {
+                if (placer != null && e.button == 0)
+                    placer.BeginDrag(what);
+            }, TrickleDown.TrickleDown);
+            button.tooltip = "Drag onto the site to build";
+        }
     }
 }

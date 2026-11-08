@@ -74,6 +74,23 @@ namespace KardashevAscent.Simulation.Planet
         /// <summary>Tangent-plane (east, north) centre of a slot's area.</summary>
         public Vector2 SlotOffset(int slot) => centroids[slot];
 
+        /// <summary>
+        /// The <paramref name="count"/> slots nearest to <paramref name="anchor"/> (the anchor first, then by distance,
+        /// ties by id): the footprint of a building that covers several slots (a compact patch inside this tile).
+        /// </summary>
+        public List<int> NearestSlots(int anchor, int count)
+        {
+            var list = new List<int>(centroids.Length);
+            for (int s = 0; s < centroids.Length; s++) list.Add(s);
+            Vector2 a = centroids[anchor];
+            list.Sort((x, y) =>
+            {
+                int c = Vector2.DistanceSquared(centroids[x], a).CompareTo(Vector2.DistanceSquared(centroids[y], a));
+                return c != 0 ? c : x.CompareTo(y);
+            });
+            return list.GetRange(0, Math.Max(1, Math.Min(count, list.Count)));
+        }
+
         /// <summary>A slot's area compared with a regular slot (1: every slot is a whole regular hexagon).</summary>
         public double SlotAreaShare(int slot) => areaShares[slot];
 
