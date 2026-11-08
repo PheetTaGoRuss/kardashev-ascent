@@ -212,6 +212,12 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Power going into robot batteries now, W (it counts as used power).</summary>
         double RobotChargingW { get; }
 
+        /// <summary>Send a robot to drive to a tile (hybrid movement, spec §10). False if it can't go (busy charging, no route).</summary>
+        bool SendRobot(int robotId, int tileId);
+
+        /// <summary>Driving hours between two tiles (∞ if there is no land route).</summary>
+        double DriveHours(int fromTile, int toTile);
+
         /// <summary>Every open task now (sites, salvage and survey orders, mining, Workshop jobs), in a stable order.</summary>
         System.Collections.Generic.IReadOnlyList<Robots.WorkTask> OpenWork();
 

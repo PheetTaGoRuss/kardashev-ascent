@@ -104,12 +104,15 @@ namespace KardashevAscent.Presentation.UI
                 "Robots build construction sites (a site only takes build parts while a robot works on it) and take down " +
                 "buildings you mark with Del. Each robot takes the most urgent task it can do; only Critical tasks pull a " +
                 "busy robot off its work.\n" +
+                "Robots drive tile to tile (never across the sea), slower over highland, mountains and ice; driving uses " +
+                "battery, more on high-gravity planets. They only take work they can reach and still drive back to a " +
+                "charger from with 20 % left. Select a tile and press Send to move a robot yourself.\n" +
                 "Robots run on their own battery: below 20 % they charge at the lander or a battery yard until 80 %, or go " +
                 "back to work sooner if no spare power reaches a battery yard. Work " +
                 "wears them; below 30 % condition they are repaired at the lander with build parts, and a worn-out battery " +
                 "is replaced there. At 0 % condition a robot shuts down until it is repaired.\n" +
-                $"Not yet: movement. Group capacity {w.GroupCapacity} (rises at milestones 2, 4 and 6), power use, wear, " +
-                "repair rates, recipes and unlock milestones are placeholder values.";
+                $"Not yet: transport and rescue (later features). Group capacity {w.GroupCapacity} (rises at milestones 2, " +
+                "4 and 6), power use, driving pace, wear, repair rates, recipes and unlock milestones are placeholder values.";
 
             var openKeys = new StringBuilder();
             foreach (WorkTask t in sim.OpenWork()) openKeys.Append(t).Append(';');
@@ -222,7 +225,7 @@ namespace KardashevAscent.Presentation.UI
             {
                 sb.Append(r.Id).Append(r.State).Append(r.OnTemporaryTask);
                 foreach (TaskKind k in Kinds) sb.Append(r.PriorityOverride(k));
-                sb.Append(r.ProgramOverride).Append(r.GroupId);
+                sb.Append(r.ProgramOverride).Append(r.GroupId).Append(r.Tile).Append(r.ManualTarget).Append(r.IsTravelling);
             }
             return sb.ToString();
         }
@@ -494,6 +497,17 @@ namespace KardashevAscent.Presentation.UI
             OperatingProgram? ownProgram = r.ProgramOverride;
             OperatingProgram? nextOwn = !ownProgram.HasValue ? OperatingProgram.Priority
                 : ownProgram.Value == OperatingProgram.TaskQueue ? (OperatingProgram?)null : ownProgram.Value + 1;
+            int selectedTile = picker != null ? picker.SelectedTile : -1;
+            if (selectedTile >= 0 && selectedTile != r.Tile && !r.IsShutDown && r.Activity == RobotActivity.None)
+            {
+                double hours = sim.DriveHours(r.Tile, selectedTile);
+                if (!double.IsInfinity(hours))
+                    manage.Add(MakeButton($"Send to tile {selectedTile} ({hours:0} h)", () =>
+                    {
+                        workshopMessage.text = sim.SendRobot(robotId, selectedTile) ? $"{r.Name} is driving to tile {selectedTile}." : "It can't go there now.";
+                        Changed(sim);
+                    }));
+            }
             manage.Add(MakeButton(ownProgram.HasValue ? $"Own program: {ownProgram.Value}" : "Program: group's", () =>
             {
                 w.SetRobotProgramOverride(robotId, nextOwn);
@@ -520,7 +534,21 @@ namespace KardashevAscent.Presentation.UI
             $"Battery {r.Battery.StateOfCharge * 100.0:0} % · health {r.Battery.Health * 100.0:0} % " +
             $"({r.Battery.EquivalentFullCycles:0} cycles) · condition {r.Condition * 100.0:0} %";
 
+        /// <summary>What a robot is doing, with where it is driving first (spec §10).</summary>
         static string TaskText(IPlanetSimulation sim, Robot r)
+        {
+            if (r.IsStranded)
+                return $"Stranded on tile {r.Tile}: battery empty away from a charger. Rescue is a later feature; " +
+                       "a battery yard built on this tile would charge it.";
+            if (r.ManualTarget.HasValue)
+                return $"Driving to tile {r.ManualTarget.Value} (sent by you) · {r.HopsLeft} tile{(r.HopsLeft == 1 ? "" : "s")} to go";
+            string what = DoingText(sim, r);
+            return r.IsTravelling
+                ? $"Driving to tile {r.Destination} · {r.HopsLeft} tile{(r.HopsLeft == 1 ? "" : "s")} to go · then: {what}"
+                : $"{what} · on tile {r.Tile}";
+        }
+
+        static string DoingText(IPlanetSimulation sim, Robot r)
         {
             string at = !r.Facility.HasValue ? ""
                 : r.Facility.Value.Slot < 0 ? "at the lander" : $"at the battery yard in slot {r.Facility.Value.Slot}";
