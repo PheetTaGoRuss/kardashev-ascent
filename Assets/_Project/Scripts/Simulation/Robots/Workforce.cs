@@ -64,6 +64,14 @@ namespace KardashevAscent.Simulation.Robots
 
         public bool IsWorked(WorkTask task) => WorkerOf(task) != null;
 
+        /// <summary>A repeating task (a mining batch) finished one round: its robot lets go and re-evaluates.</summary>
+        public void Release(WorkTask task)
+        {
+            foreach (Robot r in robots)
+                if (r.Task.HasValue && r.Task.Value.Equals(task))
+                    r.Task = null;
+        }
+
         // ---- Robots and groups ----
 
         /// <summary>A new robot on a tile; it joins the automatic group of its kind.</summary>
@@ -360,7 +368,8 @@ namespace KardashevAscent.Simulation.Robots
                 if (p == TaskPriority.Disabled)
                     continue;
                 if (!best.HasValue || p < bestP
-                    || (p == bestP && (t.Kind < best.Value.Kind || (t.Kind == best.Value.Kind && t.Order < best.Value.Order))))
+                    || (p == bestP && (RobotAbilities.TieRank(t.Kind) < RobotAbilities.TieRank(best.Value.Kind)
+                                       || (t.Kind == best.Value.Kind && t.Order < best.Value.Order))))
                 {
                     best = t;
                     bestP = p;
@@ -404,6 +413,8 @@ namespace KardashevAscent.Simulation.Robots
                     BatteryDeliveredWh = r.Battery.DeliveredWh,
                     Condition = r.Condition,
                     Activity = r.Activity,
+                    Modules = r.Modules,
+                    SodiumBattery = r.SodiumBattery,
                     HasFacility = r.Facility.HasValue,
                     FacilityTile = r.Facility?.Tile ?? 0,
                     FacilitySlot = r.Facility?.Slot ?? 0,
@@ -457,6 +468,10 @@ namespace KardashevAscent.Simulation.Robots
                     foreach (PriorityRecord p in rs.PriorityOverrides)
                         r.PriorityOverrides[p.Kind] = p.Priority;
                 // Saves before version 8 have no battery or condition: the robot comes back charged and like new.
+                r.Modules = rs.Modules;
+                r.SodiumBattery = rs.SodiumBattery;
+                if (Math.Abs(r.DesignBatteryWh - r.Battery.NominalWh) > 1e-9)
+                    r.Battery = new RobotBattery(r.DesignBatteryWh);
                 if (rs.HasUpkeep)
                 {
                     r.Battery.Restore(rs.BatteryDeliveredWh, rs.BatteryStoredWh);

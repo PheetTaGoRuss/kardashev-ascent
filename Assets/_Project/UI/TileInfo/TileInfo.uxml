@@ -17,6 +17,10 @@
                 </ui:VisualElement>
             </ui:VisualElement>
 
+            <ui:Label class="heading section" text="GROUND" />
+            <ui:Label name="ground" class="caption wrap" text="" />
+            <ui:VisualElement name="ground-actions" class="ground-actions" />
+
             <ui:Label class="heading section" text="SUN PATH" />
             <ui:Label name="sunpath-caption" class="caption" text="How high the star climbs, and where" />
             <ui:VisualElement name="sunpath" class="chart sunpath-chart" />

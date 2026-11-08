@@ -39,6 +39,24 @@ namespace KardashevAscent.Simulation.Robots
         public bool HasFacility;
         public int FacilityTile;
         public int FacilitySlot;
+        /// <summary>Phase 3b (save version 10): upgrades and battery chemistry.</summary>
+        public RobotModule Modules;
+        public bool SodiumBattery;
+    }
+
+    /// <summary>A Workshop job in a saved game (version 10); its recipe is rebuilt from these fields.</summary>
+    [Serializable]
+    public sealed class JobRecord
+    {
+        public JobKind Kind;
+        public RobotKind RobotKind;
+        public bool SodiumBattery;
+        public bool AluminiumWiring;
+        public int RobotId;
+        public RobotModule Module;
+        public Resources.Material Output;
+        public double OutputKg;
+        public double DoneHours;
     }
 
     [Serializable]
