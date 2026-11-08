@@ -221,7 +221,7 @@ namespace KardashevAscent.Simulation.Tests.Energy
                 for (int s = 0; s < 4; s++)
                     Assert.IsTrue(sim.PlacePanel(tile, s, tilt, Math.PI));
                 for (int s = 0; s < batteryCount; s++)
-                    Assert.IsTrue(sim.PlaceBattery(tile, 10 + s));
+                    Assert.IsTrue(sim.PlaceBattery(tile, 30 + 10 * s));   // battery yards cover two slots: keep them apart
                 int count = 0;
                 sim.BrownoutChanged += on => { if (on) count++; };
                 sim.Tick(20 * 24.0);
