@@ -112,7 +112,7 @@ namespace KardashevAscent.EditorTools
             SetUpTileInfo(runner, planet, placer);
             SetUpPanels(planet, placer, site);
             SetUpColony(runner);
-            SetUpWorkforce(runner);
+            SetUpWorkforce(runner, picker);
             SetUpPlanetChooser(runner);
             SetUpHints(runner, picker, placer);
             SetUpCursorLight(planet, picker);
@@ -289,7 +289,7 @@ namespace KardashevAscent.EditorTools
         const string WorkforceLayoutPath = "Assets/_Project/UI/Workforce/Workforce.uxml";
 
         /// <summary>The robots overview (G): drawn like the colony overview, above the HUD and side panels.</summary>
-        static void SetUpWorkforce(SimulationRunner runner)
+        static void SetUpWorkforce(SimulationRunner runner, TilePicker picker)
         {
             var view = Object.FindAnyObjectByType<WorkforceView>();
             if (view == null)
@@ -302,6 +302,7 @@ namespace KardashevAscent.EditorTools
                 view = Undo.AddComponent<WorkforceView>(go);
             }
             SetReference(view, "runner", runner);
+            SetReference(view, "picker", picker);
             var workforceDocument = view.GetComponent<UIDocument>();
             if (workforceDocument.sortingOrder != ColonySortingOrder)
             {
