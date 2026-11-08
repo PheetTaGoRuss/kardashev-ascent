@@ -74,6 +74,9 @@ namespace KardashevAscent.Presentation.Game
                         return;
                     }
                 }
+                // A save from a colony that landed elsewhere on this planet: land there first.
+                if (state != null && state.TileCount == runner.Simulation.TileCount && state.BaseTileId != runner.Simulation.BaseTileId)
+                    runner.LandAt(state.BaseTileId, true);
                 if (state == null || !runner.Simulation.RestoreState(state))
                 {
                     Show("That save is from a different planet");

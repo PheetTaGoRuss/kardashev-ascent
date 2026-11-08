@@ -419,6 +419,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.CameraControl.OrbitCamera
   target: {fileID: 765499588}
+  runner: {fileID: 123573323}
   fallbackRadius: 5
   minDistance: 1.15
   maxDistance: 6
@@ -716,6 +717,7 @@ GameObject:
   - component: {fileID: 765499592}
   - component: {fileID: 765499593}
   - component: {fileID: 765499594}
+  - component: {fileID: 765499595}
   m_Layer: 0
   m_Name: Planet
   m_TagString: Untagged
@@ -955,6 +957,24 @@ MonoBehaviour:
   domeRadiusSlots: 1.3
   viewTilt: 66
   openOnAdjust: 1
+--- !u!114 &765499595
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 765499584}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f3be01eb5385d544da35e2b41cfbc885, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.Planet.RobotView
+  runner: {fileID: 123573323}
+  planet: {fileID: 765499585}
+  siteView: {fileID: 765499592}
+  bodyMaterial: {fileID: 2100000, guid: 8ed0e2ac7715acf44bc2412bbd498210, type: 2}
+  wheelMaterial: {fileID: 2100000, guid: c19cc231ca76b0546ac8e1e62b967517, type: 2}
+  sizeOfSlot: 0.45
 --- !u!1 &1248001364
 GameObject:
   m_ObjectHideFlags: 0

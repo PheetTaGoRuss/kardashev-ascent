@@ -117,9 +117,12 @@ namespace KardashevAscent.EditorTools
             SetUpHints(runner, picker, placer);
             SetUpCursorLight(planet, picker);
             SetUpSky(runner, planet, site, placer);
+            SetUpRobots(runner, planet, site);
+            if (mainCamera != null && mainCamera.GetComponent<KardashevAscent.Presentation.CameraControl.OrbitCamera>() != null)
+                SetReference(mainCamera.GetComponent<KardashevAscent.Presentation.CameraControl.OrbitCamera>(), "runner", runner);
 
             EditorSceneManager.MarkSceneDirty(planet.gameObject.scene);
-            Debug.Log("Scene set up: Simulation runner, planets, star light, light-potential map, building sites, panel placement, HUD, tile info, side panels, colony overview, robots overview, planet chooser, cursor flashlight. Save the scene to keep it.");
+            Debug.Log("Scene set up: Simulation runner, planets, star light, light-potential map, building sites, panel placement, HUD, tile info, side panels, colony overview, robots overview, robot models, planet chooser, cursor flashlight. Save the scene to keep it.");
         }
 
         /// <summary>Import planets.json and give the runner every planet in file order, starting on the first playable one.</summary>
@@ -155,6 +158,25 @@ namespace KardashevAscent.EditorTools
             if (oldLight != null)
                 Undo.DestroyObjectImmediate(oldLight);
             SetReference(cursorLight, "picker", picker);
+        }
+
+        const string RobotBodyMaterial = "Assets/_Project/Materials/RobotBody.mat";
+
+        /// <summary>A rover model for every robot (RobotView on the planet).</summary>
+        static void SetUpRobots(SimulationRunner runner, PlanetView planet, SiteView site)
+        {
+            var view = planet.GetComponent<RobotView>();
+            if (view == null)
+                view = Undo.AddComponent<RobotView>(planet.gameObject);
+            SetReference(view, "runner", runner);
+            SetReference(view, "planet", planet);
+            SetReference(view, "siteView", site);
+            SetReference(view, "bodyMaterial", LoadOrCreateMaterial(RobotBodyMaterial, "Standard", m =>
+            {
+                m.color = new Color(0.93f, 0.62f, 0.22f);
+                m.SetFloat("_Glossiness", 0.35f);
+            }));
+            SetReference(view, "wheelMaterial", LoadOrCreateMaterial(PanelCellMaterial, "Standard"));
         }
 
         const string MapMaterial = "Assets/_Project/Materials/PlanetTilesUnlit.mat";

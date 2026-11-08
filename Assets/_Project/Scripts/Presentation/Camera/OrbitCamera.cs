@@ -15,6 +15,8 @@ namespace KardashevAscent.Presentation.CameraControl
     public sealed class OrbitCamera : MonoBehaviour
     {
         [SerializeField] Transform target;
+        [Tooltip("The colony: R (and a new colony) turns the planet view to face its landing site.")]
+        [SerializeField] KardashevAscent.Presentation.Game.SimulationRunner runner;
         [Tooltip("Used when the target has no PlanetView.")]
         [Min(0.01f)] [SerializeField] float fallbackRadius = 5f;
 
@@ -99,11 +101,41 @@ namespace KardashevAscent.Presentation.CameraControl
             ResetView(true);
         }
 
+        void OnEnable()
+        {
+            if (runner != null)
+                runner.SimulationCreated += FlyToColony;
+        }
+
+        void OnDisable()
+        {
+            if (runner != null)
+                runner.SimulationCreated -= FlyToColony;
+        }
+
+        /// <summary>A new colony (new planet or new landing site): turn to face it.</summary>
+        void FlyToColony()
+        {
+            if (!inSite)
+                ResetView(false);
+        }
+
+        /// <summary>
+        /// Back to the start view, turned to face the colony's landing site (or the default angle without a colony).
+        /// </summary>
         public void ResetView(bool instant)
         {
             goalYaw = startYaw;
             goalPitch = startPitch;
             goalAltitude = startDistance - 1f;
+            var sim = runner != null ? runner.Simulation : null;
+            if (sim != null && target != null && sim.BaseTileId >= 0 && sim.BaseTileId < sim.Sphere.TileCount)
+            {
+                System.Numerics.Vector3 c = sim.Sphere.Centers[sim.BaseTileId];
+                Vector3 up = target.TransformDirection(new Vector3(c.X, c.Y, c.Z).normalized);
+                goalPitch = Mathf.Clamp(Mathf.Asin(Mathf.Clamp(up.y, -1f, 1f)) * Mathf.Rad2Deg, -89f, 89f);
+                goalYaw = Mathf.Atan2(-up.x, -up.z) * Mathf.Rad2Deg;
+            }
             if (!instant)
                 return;
             yaw = goalYaw;
@@ -323,7 +355,7 @@ namespace KardashevAscent.Presentation.CameraControl
                 return tiles +
                        "Drag (mouse) or WASD/arrows: rotate\n" +
                        "Mouse wheel or Q/E: zoom · F: flashlight on/off\n" +
-                       "R: reset view · H: hide help · C: colony · G: robots · L: planets · F5/F9: save/load";
+                       "R: back to the colony · H: hide help · C: colony · G: robots · L: planets · F5/F9: save/load";
             }
         }
     }
