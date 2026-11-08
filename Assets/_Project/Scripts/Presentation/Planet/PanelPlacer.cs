@@ -168,10 +168,16 @@ namespace KardashevAscent.Presentation.Planet
             if (listeningTo == sim)
                 return;
             if (listeningTo != null)
+            {
                 listeningTo.BuildingCompleted -= OnBuildingCompleted;
+                listeningTo.BuildingSalvaged -= RemoveVisual;
+            }
             listeningTo = sim;
             if (listeningTo != null)
+            {
                 listeningTo.BuildingCompleted += OnBuildingCompleted;
+                listeningTo.BuildingSalvaged += RemoveVisual;
+            }
         }
 
         /// <summary>A construction site got its parts: swap its see-through look for the real building.</summary>
@@ -638,27 +644,43 @@ namespace KardashevAscent.Presentation.Planet
             return true;
         }
 
+        /// <summary>
+        /// Ask a robot to take down what stands in a slot (a site is cancelled at once). Asking again for a building
+        /// still waiting for its robot withdraws the order.
+        /// </summary>
         bool RemoveAt(int s)
         {
-            if (simulation != null && s >= 0 && batteryVisuals.TryGetValue((tile, s), out BatteryVisual yard))
-            {
-                if (!simulation.RemoveBuilding(tile, s))
-                    return false;
-                yard.Destroy();
-                batteryVisuals.Remove((tile, s));
-                return true;
-            }
-            if (simulation == null || s < 0 || !placed.TryGetValue((tile, s), out Placed p))
+            if (simulation == null || tile < 0 || s < 0 || simulation.GetBuilding(tile, s) == BuildingType.None)
                 return false;
-            if (!simulation.RemovePanel(tile, s))
+            if (simulation.IsSalvageOrdered(tile, s))
+                return simulation.CancelSalvage(tile, s);
+            if (!simulation.OrderSalvage(tile, s))
                 return false;
-            if (p.Rating == AngleRating.Optimal)
-                BestAnglePanels--;
-            p.Visual.Destroy();
-            placed.Remove((tile, s));
-            previewDirty = true;
+            if (simulation.GetBuilding(tile, s) == BuildingType.None)
+                RemoveVisual(tile, s);
             return true;
         }
+
+        /// <summary>A building is gone (cancelled, or salvaged by a robot): drop its visual.</summary>
+        void RemoveVisual(int atTile, int s)
+        {
+            if (batteryVisuals.TryGetValue((atTile, s), out BatteryVisual yard))
+            {
+                yard.Destroy();
+                batteryVisuals.Remove((atTile, s));
+            }
+            if (placed.TryGetValue((atTile, s), out Placed p))
+            {
+                if (p.Rating == AngleRating.Optimal)
+                    BestAnglePanels--;
+                p.Visual.Destroy();
+                placed.Remove((atTile, s));
+            }
+            previewDirty = true;
+        }
+
+        /// <summary>True while the selected slot's building waits for a robot to take it down.</summary>
+        public bool SelectedSalvageOrdered => simulation != null && tile >= 0 && slot >= 0 && simulation.IsSalvageOrdered(tile, slot);
 
         /// <summary>Set the planned angles to the best ones found for this tile.</summary>
         public void UseBestAngle()

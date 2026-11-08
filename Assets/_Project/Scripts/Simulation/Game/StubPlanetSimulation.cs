@@ -5,6 +5,7 @@ using KardashevAscent.Simulation.Civilization;
 using KardashevAscent.Simulation.Planet;
 using KardashevAscent.Simulation.Solar;
 using KardashevAscent.Simulation.Energy;
+using KardashevAscent.Simulation.Robots;
 
 namespace KardashevAscent.Simulation.Game
 {
@@ -66,6 +67,12 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Build parts and construction sites: what buildings cost and how spare power pays for them.</summary>
         public Construction Build { get; } = new Construction();
 
+        /// <summary>The colony's robots and groups; they work on construction sites and salvage orders (phase 1).</summary>
+        public Workforce Workforce { get; } = new Workforce();
+
+        /// <summary>Finished buildings the player asked a robot to take down, in the order asked.</summary>
+        readonly List<(int Tile, int Slot)> salvageOrders = new List<(int, int)>();
+
         readonly HashSet<(int Tile, int Slot)> batteries = new HashSet<(int, int)>();
         readonly Dictionary<int, int> batteriesPerTile = new Dictionary<int, int>();
 
@@ -78,6 +85,7 @@ namespace KardashevAscent.Simulation.Game
             this.planetRadiusM = planetRadiusM;
             tileAreaM2 = 4.0 * Math.PI * planetRadiusM * planetRadiusM / sphere.TileCount;
             BaseTileId = baseTileId >= 0 ? baseTileId : PickBaseTile();
+            Workforce.Reset(BaseTileId);
 
             // Start mid-morning at the base: hour angle −0.4π. A tidally locked planet has the star fixed over
             // longitude 0, as in LightPotential and AnnualYield, so the base (picked near longitude 0) is in daylight.
@@ -133,6 +141,7 @@ namespace KardashevAscent.Simulation.Game
         public event Action<bool> DayNightChanged;
         public event Action TargetReached;
         public event Action<int, int> BuildingCompleted;
+        public event Action<int, int> BuildingSalvaged;
 
         public TileInfo GetTile(int tileId) =>
             new TileInfo(tileId, Sphere.Latitude(tileId), Sphere.Longitude(tileId),
@@ -163,8 +172,8 @@ namespace KardashevAscent.Simulation.Game
             // Spare power (battery full or at its limit) is turned into build parts, which then pay the sites.
             BuildPowerW = grid.CurtailedW;
             CurtailedW = grid.CurtailedW - BuildPowerW;
-            foreach (var done in Build.Step(BuildPowerW, dt))
-                Finish(done.Tile, done.Slot);
+            Build.AddParts(BuildPowerW, dt);
+            Settle(null);
             // Used power: what reached the loads, went into the battery or made build parts; curtailed power is not used.
             KardashevPowerW = grid.ServedW + grid.ChargeW + BuildPowerW;
             // Milestones are judged on a whole day's average, so a sunny noon doesn't count.
@@ -259,8 +268,10 @@ namespace KardashevAscent.Simulation.Game
             if (!CanPlacePanel(tileId, slot, tilt, azimuth))
                 return false;
             double area = NewPanelAreaM2(tileId);
-            Build.Start(tileId, slot, PanelCost(area));
+            // It waits as a site until a robot works on it; an idle robot takes it now (design D2).
+            Build.Start(tileId, slot, PanelCost(area), 0.0, false);
             AddPanel(tileId, slot, tilt, azimuth, area);
+            Settle((tileId, slot));
             return true;
         }
 
@@ -322,19 +333,88 @@ namespace KardashevAscent.Simulation.Game
             }
         }
 
-        /// <summary>A site got all its parts: it starts working.</summary>
-        void Finish(int tileId, int slot)
+        /// <summary>A site got all its parts: it starts working. A building finished by the command that placed it raises no event.</summary>
+        void Finish(int tileId, int slot, bool raise)
         {
             if (batteries.Contains((tileId, slot)))
                 Grid.Battery.AddCapacity(BatteryUnitWh);
             else
                 GenerationW = ComputeGeneration() + RtgW;
-            BuildingCompleted?.Invoke(tileId, slot);
+            if (raise)
+                BuildingCompleted?.Invoke(tileId, slot);
+        }
+
+        // ---- Robots at work ----
+
+        /// <summary>Open work: construction sites in queue order, then salvage orders in the order asked.</summary>
+        List<WorkTask> OpenTasks()
+        {
+            var tasks = new List<WorkTask>(Build.QueueCount + salvageOrders.Count);
+            int i = 0;
+            foreach (var site in Build.Sites())
+                tasks.Add(new WorkTask(TaskKind.Build, site.Tile, site.Slot, i++));
+            for (int k = 0; k < salvageOrders.Count; k++)
+                tasks.Add(new WorkTask(TaskKind.Salvage, salvageOrders[k].Tile, salvageOrders[k].Slot, k));
+            return tasks;
+        }
+
+        /// <summary>
+        /// Hand out work, let worked sites take parts from stock and worked salvage orders take their building down,
+        /// and repeat while anything finished (a freed robot takes the next task at once).
+        /// </summary>
+        void Settle((int Tile, int Slot)? silent)
+        {
+            while (true)
+            {
+                Workforce.Assign(OpenTasks());
+                bool any = false;
+                foreach (var done in Build.Pay(key => Workforce.IsWorked(new WorkTask(TaskKind.Build, key.Tile, key.Slot))))
+                {
+                    any = true;
+                    Finish(done.Tile, done.Slot, !(silent.HasValue && silent.Value == done));
+                }
+                foreach (var order in salvageOrders.ToArray())
+                {
+                    if (!Workforce.IsWorked(new WorkTask(TaskKind.Salvage, order.Tile, order.Slot)))
+                        continue;
+                    any = true;
+                    RemoveBuilding(order.Tile, order.Slot);
+                    BuildingSalvaged?.Invoke(order.Tile, order.Slot);
+                }
+                if (!any)
+                    return;
+            }
+        }
+
+        public void RefreshWork() => Settle(null);
+
+        public bool OrderSalvage(int tileId, int slot)
+        {
+            if (GetBuilding(tileId, slot) == BuildingType.None)
+                return false;
+            if (Build.IsQueued(tileId, slot))
+                return RemoveBuilding(tileId, slot);   // a site is simply cancelled; its parts come back
+            if (salvageOrders.Contains((tileId, slot)))
+                return false;
+            salvageOrders.Add((tileId, slot));
+            Settle(null);
+            return true;
+        }
+
+        public bool IsSalvageOrdered(int tileId, int slot) => salvageOrders.Contains((tileId, slot));
+
+        public bool CancelSalvage(int tileId, int slot)
+        {
+            if (!salvageOrders.Remove((tileId, slot)))
+                return false;
+            Settle(null);
+            return true;
         }
 
         /// <summary>A building is going away: a site gives back its parts, a finished one is salvaged.</summary>
         void Dismantle(int tileId, int slot, BuildingType type)
         {
+            salvageOrders.Remove((tileId, slot));
             if (Build.IsQueued(tileId, slot))
             {
                 Build.Cancel(tileId, slot);
@@ -400,10 +480,11 @@ namespace KardashevAscent.Simulation.Game
             if (tileId < 0 || tileId >= TileCount || slot < 0 || slot >= SlotCount(tileId)
                 || GetTile(tileId).IsWater || GetBuilding(tileId, slot) != BuildingType.None)
                 return false;
-            bool finished = Build.Start(tileId, slot, BuildCostWh(BuildingType.Battery));
+            bool finished = Build.Start(tileId, slot, BuildCostWh(BuildingType.Battery), 0.0, false);
             AddBattery(tileId, slot);
             if (finished)
                 Grid.Battery.AddCapacity(BatteryUnitWh);
+            Settle((tileId, slot));
             return true;
         }
 
@@ -454,7 +535,10 @@ namespace KardashevAscent.Simulation.Game
                 HistoryBuildWh = History.TotalBuildWh,
                 HistoryBrownoutHours = History.BrownoutHours,
                 HistoryHours = History.TotalHours,
+                Workforce = Workforce.Capture(),
             };
+            foreach (var salvage in salvageOrders)
+                state.SalvageOrders.Add(new SalvageOrderRecord { Tile = salvage.Tile, Slot = salvage.Slot });
             foreach (var kv in panels)
                 state.Buildings.Add(new BuildingRecord { Tile = kv.Key.Tile, Slot = kv.Key.Slot, Type = BuildingType.SolarPanel, Tilt = kv.Value.Tilt, Azimuth = kv.Value.Azimuth, AreaM2 = kv.Value.Area });
             foreach (var b in batteries)
@@ -511,6 +595,15 @@ namespace KardashevAscent.Simulation.Game
             Grid.DemandW = Colony.DemandW;
             DemandW = Colony.DemandW;
             IsDayAtBase = SunAt(BaseTileId).Up > 0.0;
+            // Version 7 added robots; an older save starts with the one General robot at the base.
+            if (state.Version < 7 || !Workforce.Restore(state.Workforce))
+                Workforce.Reset(BaseTileId);
+            salvageOrders.Clear();
+            if (state.SalvageOrders != null)
+                foreach (SalvageOrderRecord o in state.SalvageOrders)
+                    if (GetBuilding(o.Tile, o.Slot) != BuildingType.None && !Build.IsQueued(o.Tile, o.Slot) && !salvageOrders.Contains((o.Tile, o.Slot)))
+                        salvageOrders.Add((o.Tile, o.Slot));
+            Workforce.Assign(OpenTasks());
             GenerationW = ComputeGeneration() + RtgW;
             return true;
         }

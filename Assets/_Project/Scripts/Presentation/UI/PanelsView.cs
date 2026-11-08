@@ -195,8 +195,10 @@ namespace KardashevAscent.Presentation.UI
             {
                 placer.SelectedSiteProgress(out double progress, out double remaining);
                 siteLine = $"Under construction: {progress * 100.0:0} % · needs {Format.Energy(remaining)} more build parts " +
-                           "(made from spare power). Works once finished.\n";
+                           "(made from spare power; taken only while a robot works here). Works once finished.\n";
             }
+            if (hasPanel && placer.SelectedSalvageOrdered)
+                siteLine = "Salvage ordered: it works until a robot takes it down (Del again to cancel).\n" + siteLine;
             if (hasPanel && placer.SelectedBuilding == BuildingType.Battery)
             {
                 placedTitle.text = isSite ? $"Battery yard site · slot {slot}" : $"Battery yard · slot {slot}";

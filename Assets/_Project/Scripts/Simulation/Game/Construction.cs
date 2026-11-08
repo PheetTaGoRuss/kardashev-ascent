@@ -38,6 +38,7 @@ namespace KardashevAscent.Simulation.Game
     /// Spare power (what is left once the colony and the battery have taken theirs) is turned into parts. A new building
     /// takes what it costs from the parts in stock; if there are not enough, it waits as a construction site and the
     /// sites are finished first come, first served as new parts are made. A site does nothing until it is finished.
+    /// With robots (design D2) the simulation only lets a site take parts while a robot works on it (<see cref="Pay"/>).
     /// Cancelling a site gives back what was put into it; taking down a finished building gives back
     /// <see cref="BuildCosts.SalvageShare"/> of its cost.
     /// </summary>
@@ -92,11 +93,17 @@ namespace KardashevAscent.Simulation.Game
         /// Start a building that costs <paramref name="costWh"/>. Returns true if the parts in stock paid for all of it
         /// (it is finished now), false if it joins the queue as a site.
         /// </summary>
-        public bool Start(int tile, int slot, double costWh, double paidWh = 0.0)
+        public bool Start(int tile, int slot, double costWh, double paidWh = 0.0) => Start(tile, slot, costWh, paidWh, true);
+
+        /// <summary>
+        /// Start a building; with <paramref name="payFromStock"/> false it takes nothing from stock now and waits as a
+        /// site (unless it costs nothing), to be paid by <see cref="Pay"/> once a robot works on it.
+        /// </summary>
+        public bool Start(int tile, int slot, double costWh, double paidWh, bool payFromStock)
         {
             if (costWh < 0.0) throw new ArgumentOutOfRangeException(nameof(costWh));
             if (IsQueued(tile, slot)) throw new InvalidOperationException($"Slot {tile}.{slot} is already a construction site.");
-            double take = Math.Min(StockWh, Math.Max(0.0, costWh - paidWh));
+            double take = payFromStock ? Math.Min(StockWh, Math.Max(0.0, costWh - paidWh)) : 0.0;
             StockWh -= take;
             paidWh += take;
             if (paidWh >= costWh - Tolerance(costWh))
@@ -138,18 +145,38 @@ namespace KardashevAscent.Simulation.Game
         /// </summary>
         public List<(int Tile, int Slot)> Step(double spareW, double hours)
         {
-            var finished = new List<(int Tile, int Slot)>();
+            AddParts(spareW, hours);
+            return Pay(null);
+        }
+
+        /// <summary>Turn <paramref name="spareW"/> of spare power into parts for <paramref name="hours"/>.</summary>
+        public void AddParts(double spareW, double hours)
+        {
             if (hours > 0.0 && spareW > 0.0)
                 StockWh += spareW * hours;
-            while (queue.Count > 0 && StockWh > 0.0)
+        }
+
+        /// <summary>
+        /// Pay sites from stock in queue order, skipping those <paramref name="canTake"/> refuses (null: every site;
+        /// with robots, only sites a robot is working on). Returns the sites finished, in the order they finished.
+        /// </summary>
+        public List<(int Tile, int Slot)> Pay(Func<(int Tile, int Slot), bool> canTake)
+        {
+            var finished = new List<(int Tile, int Slot)>();
+            for (int i = 0; i < queue.Count && StockWh > 0.0;)
             {
-                Site s = queue[0];
+                Site s = queue[i];
+                if (canTake != null && !canTake(s.Key))
+                {
+                    i++;
+                    continue;
+                }
                 double take = Math.Min(StockWh, s.CostWh - s.PaidWh);
                 s.PaidWh += take;
                 StockWh -= take;
                 if (s.PaidWh < s.CostWh - Tolerance(s.CostWh))
                     break;
-                queue.RemoveAt(0);
+                queue.RemoveAt(i);
                 finished.Add(s.Key);
             }
             return finished;
