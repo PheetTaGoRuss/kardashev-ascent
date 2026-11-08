@@ -496,7 +496,10 @@ namespace KardashevAscent.Presentation.Planet
         public int PlannedBuildings { get; private set; }
 
         /// <summary>How many slots a building of the current mode covers.</summary>
-        public int ModeFootprint => simulation != null ? simulation.FootprintSize(TypeOf(mode)) : 1;
+        public int ModeFootprint => FootprintOf(mode);
+
+        /// <summary>How many slots a building of this kind covers (solar: at today's tier).</summary>
+        public int FootprintOf(BuildMode what) => simulation != null ? simulation.FootprintSize(TypeOf(what)) : 1;
 
         /// <summary>What a new solar building here is, e.g. "solar farm (1 km²)".</summary>
         public string NewPanelName => simulation == null ? "solar panel"
