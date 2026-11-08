@@ -185,7 +185,9 @@ namespace KardashevAscent.Presentation.UI
                             $"{placer.PanelsOnTile + placer.BatteriesOnTile} of {siteView.Site.SlotCount} slots used";
             totals.text = placer.PanelCount == 0
                 ? "No panels yet"
-                : $"Panels {placer.PanelCount} ({placer.BestAnglePanels} at best angle) · now {Format.Power(placer.GenerationW)}";
+                : placer.BestAngleUnlocked
+                    ? $"Panels {placer.PanelCount} ({placer.BestAnglePanels} at best angle) · now {Format.Power(placer.GenerationW)}"
+                    : $"Panels {placer.PanelCount} · now {Format.Power(placer.GenerationW)}";
 
             bool isSite = hasPanel && placer.SelectedIsSite;
             string siteLine = "";
@@ -209,7 +211,7 @@ namespace KardashevAscent.Presentation.UI
                 placedTitle.text = isSite ? $"{placer.SelectedPanelName} site · slot {slot}" : $"{placer.SelectedPanelName} · slot {slot}";
                 placedAngles.text = $"Tilt {t * Mathf.Rad2Deg:0}° · facing {a * Mathf.Rad2Deg:0}° {Compass((float)(a * Mathf.Rad2Deg))}";
                 placedNumbers.text = siteLine + Numbers(p);
-                Show(placedBonus, rating == AngleRating.Optimal);
+                Show(placedBonus, rating == AngleRating.Optimal && placer.BestAngleUnlocked);
                 return;
             }
             if (slot < 0 && !multi)
@@ -250,13 +252,22 @@ namespace KardashevAscent.Presentation.UI
             plannerReason.text = blocked ? $"Can't build here: {preview.Reason}" : "";
             plannerNumbers.text = Numbers(preview);
 
-            if (placer.TryGetBest(out PanelAngles best))
+            if (!placer.BestAngleUnlocked)
+            {
+                // Measuring matters: no angle advice until the colony knows where on the planet it is.
+                plannerBest.text = "Best angle: unknown until you know this place's latitude φ.\n" +
+                                   "Press V for the sky view and measure the noon sun (or the celestial pole at night).";
+                bestButton.SetEnabled(false);
+            }
+            else if (placer.TryGetBest(out PanelAngles best))
             {
                 double share = placer.PlannedShareOfBest;
                 AngleRating rating = PanelAngleSearch.Rate(share);
                 string verdict = rating == AngleRating.Optimal ? "★ best-angle bonus"
                     : rating == AngleRating.Good ? "close" : "far off";
-                plannerBest.text = $"Best here: β {best.Tilt * Mathf.Rad2Deg:0}°, γ {best.Azimuth * Mathf.Rad2Deg:0}° → {Format.Energy(best.EnergyPerYearWh)}\n" +
+                double phi = placer.KnownLatitudeDeg;
+                plannerBest.text = $"φ = {phi:+0.0;−0.0}° → rule of thumb β ≈ |φ| = {Mathf.Abs((float)phi):0}°, facing the equator\n" +
+                                   $"Best here: β {best.Tilt * Mathf.Rad2Deg:0}°, γ {best.Azimuth * Mathf.Rad2Deg:0}° → {Format.Energy(best.EnergyPerYearWh)}\n" +
                                    $"Yours: {share * 100.0:0} % of best · {verdict}";
                 bestButton.SetEnabled(true);
             }

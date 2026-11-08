@@ -185,9 +185,39 @@ namespace KardashevAscent.Presentation.Planet
             SetHovered(-1);
             dragging = pressed = false;
             SetSelection(Array.Empty<int>());
+            FocusWholeSite();
+            SiteChanged?.Invoke(tile);
+        }
+
+        /// <summary>Camera back on the whole open site.</summary>
+        public void FocusWholeSite()
+        {
+            if (Site == null)
+                return;
             float siteRadius = (float)(Site.Spacing * (Site.Rings + 1)) * planet.Radius * transform.lossyScale.x;
             orbitCamera?.FocusSite(ToUnity(Site.Centre), siteRadius);
-            SiteChanged?.Invoke(tile);
+        }
+
+        /// <summary>
+        /// Camera close on one slot of the open site (the sky view), framing <paramref name="radiusWorld"/> around it,
+        /// looking <paramref name="tiltDeg"/> from straight down. Returns the site view's previous angle and distance.
+        /// </summary>
+        public Vector2 FocusSlot(int slot, float radiusWorld, float tiltDeg)
+        {
+            if (Site == null || slot < 0 || slot >= Site.SlotCount || orbitCamera == null)
+                return Vector2.zero;
+            Vector2 before = orbitCamera.SiteViewGoal;
+            orbitCamera.FocusSite(ToUnity(Site.SlotDirections[slot]), radiusWorld);
+            orbitCamera.SetSiteView(tiltDeg, 2.6f);
+            return before;
+        }
+
+        /// <summary>Camera back on the whole site at a remembered angle and distance (from <see cref="FocusSlot"/>).</summary>
+        public void FocusWholeSite(Vector2 view)
+        {
+            FocusWholeSite();
+            if (orbitCamera != null && view != Vector2.zero)
+                orbitCamera.SetSiteView(view.x, view.y);
         }
 
         void Close()
