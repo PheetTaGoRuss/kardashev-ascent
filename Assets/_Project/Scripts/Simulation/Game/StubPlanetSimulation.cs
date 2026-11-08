@@ -94,6 +94,160 @@ namespace KardashevAscent.Simulation.Game
         readonly List<(int Tile, int Slot)> salvageOrders = new List<(int, int)>();
 
         readonly HashSet<(int Tile, int Slot)> batteries = new HashSet<(int, int)>();
+        readonly HashSet<(int Tile, int Slot)> workshops = new HashSet<(int, int)>();
+        readonly List<ManufacturingJob> jobs = new List<ManufacturingJob>();
+
+        // ---- Manufacturing (phase 3b) ----
+
+        public IReadOnlyList<ManufacturingJob> Jobs => jobs;
+
+        /// <summary>Finished Workshops in a fixed order (tile, then slot): job i is worked at Workshop i.</summary>
+        List<(int Tile, int Slot)> FinishedWorkshops()
+        {
+            var list = new List<(int Tile, int Slot)>();
+            foreach (var w in workshops)
+                if (!Build.IsQueued(w.Tile, w.Slot))
+                    list.Add(w);
+            list.Sort((a, b) => a.Tile != b.Tile ? a.Tile.CompareTo(b.Tile) : a.Slot.CompareTo(b.Slot));
+            return list;
+        }
+
+        public int WorkshopCount => FinishedWorkshops().Count;
+
+        public bool PlaceWorkshop(int tileId, int slot)
+        {
+            if (tileId < 0 || tileId >= TileCount || slot < 0 || slot >= SlotCount(tileId)
+                || GetTile(tileId).IsWater || GetBuilding(tileId, slot) != BuildingType.None)
+                return false;
+            Build.Start(tileId, slot, BuildCostWh(BuildingType.Workshop), 0.0, false);
+            workshops.Add((tileId, slot));
+            Settle((tileId, slot));
+            return true;
+        }
+
+        /// <summary>Copper if there is enough, else aluminium once refining it is unlocked (and there is enough).</summary>
+        bool UseAluminium(double kg) =>
+            Materials[Material.Copper] < kg && MilestonesReached >= RobotTech.UnlockMilestone(Material.Aluminium)
+            && Materials[Material.Aluminium] >= kg;
+
+        bool UseSodium(double lithiumKg, double sodiumKg) =>
+            Materials[Material.Lithium] < lithiumKg && MilestonesReached >= RobotTech.UnlockMilestone(Material.Sodium)
+            && Materials[Material.Sodium] >= sodiumKg;
+
+        /// <summary>Take a recipe's inputs, or say what is missing (and take nothing).</summary>
+        string TakeInputs(Recipe recipe)
+        {
+            if (WorkshopCount == 0 && workshops.Count == 0)
+                return "Build a Robot Workshop first.";
+            var need = new Dictionary<Material, double>();
+            foreach (var (m, kg) in recipe.Inputs)
+                need[m] = (need.TryGetValue(m, out double n) ? n : 0.0) + kg;
+            string missing = "";
+            foreach (var kv in need)
+                if (Materials[kv.Key] < kv.Value - 1e-9)
+                    missing += (missing.Length > 0 ? ", " : "") + $"{kv.Value - Materials[kv.Key]:0.#} kg {Resources.Materials.Name(kv.Key).ToLowerInvariant()}";
+            if (Build.StockWh < recipe.PartsWh - 1e-9)
+                missing += (missing.Length > 0 ? ", " : "") + $"{(recipe.PartsWh - Build.StockWh) / 1000.0:0.#} kWh of build parts";
+            if (missing.Length > 0)
+                return "Missing " + missing + ".";
+            foreach (var kv in need)
+                Materials.TryTake(kv.Key, kv.Value);
+            Build.Take(recipe.PartsWh);
+            return null;
+        }
+
+        public string OrderRobot(RobotKind kind)
+        {
+            if (MilestonesReached < RobotTech.UnlockMilestone(kind))
+                return RobotTech.UnlockMilestone(kind) == int.MaxValue
+                    ? $"{kind} robots are not available (transport is a later feature)."
+                    : $"{kind} robots unlock at milestone {RobotTech.UnlockMilestone(kind)}.";
+            bool al = UseAluminium(40.0), na = UseSodium(2.0, 6.0);
+            Recipe recipe = RobotTech.Robot(kind, na, al);
+            string why = TakeInputs(recipe);
+            if (why != null) return why;
+            jobs.Add(new ManufacturingJob { Kind = JobKind.Robot, RobotKind = kind, SodiumBattery = na, AluminiumWiring = al, Recipe = recipe });
+            Settle(null);
+            return null;
+        }
+
+        public string OrderUpgrade(int robotId, RobotModule module)
+        {
+            Robot r = Workforce.GetRobot(robotId);
+            if (r == null) return "No such robot.";
+            if (MilestonesReached < RobotTech.UnlockMilestone(module))
+                return $"{RobotTech.ModuleName(module)} unlocks at milestone {RobotTech.UnlockMilestone(module)}.";
+            if (r.Has(module)) return $"{r.Name} already has it.";
+            foreach (ManufacturingJob j in jobs)
+                if (j.Kind == JobKind.Upgrade && j.RobotId == robotId && j.Module == module)
+                    return "Already ordered.";
+            bool al = UseAluminium(10.0), na = UseSodium(1.0, 3.0);
+            Recipe recipe = RobotTech.Upgrade(module, na, al);
+            string why = TakeInputs(recipe);
+            if (why != null) return why;
+            jobs.Add(new ManufacturingJob { Kind = JobKind.Upgrade, RobotId = robotId, Module = module, SodiumBattery = na, AluminiumWiring = al, Recipe = recipe });
+            Settle(null);
+            return null;
+        }
+
+        public string OrderRefine(Material output)
+        {
+            if (MilestonesReached < RobotTech.UnlockMilestone(output))
+                return RobotTech.UnlockMilestone(output) == int.MaxValue
+                    ? $"{Resources.Materials.Name(output)} can't be refined."
+                    : $"Refining {Resources.Materials.Name(output).ToLowerInvariant()} unlocks at milestone {RobotTech.UnlockMilestone(output)}.";
+            Recipe recipe = RobotTech.Refine(output);
+            string why = TakeInputs(recipe);
+            if (why != null) return why;
+            jobs.Add(new ManufacturingJob { Kind = JobKind.Refine, Output = output, OutputKg = RobotTech.RefineBatchKg(output), Recipe = recipe });
+            Settle(null);
+            return null;
+        }
+
+        public bool CancelJob(int index)
+        {
+            if (index < 0 || index >= jobs.Count)
+                return false;
+            ManufacturingJob j = jobs[index];
+            jobs.RemoveAt(index);
+            foreach (var (m, kg) in j.Recipe.Inputs)
+                Materials.Add(m, kg);
+            Build.AddParts(j.Recipe.PartsWh, 1.0);
+            Settle(null);
+            return true;
+        }
+
+        /// <summary>Rebuild a job's recipe from its fields (when a game is loaded).</summary>
+        static Recipe RecipeOf(ManufacturingJob j) =>
+            j.Kind == JobKind.Robot ? RobotTech.Robot(j.RobotKind, j.SodiumBattery, j.AluminiumWiring)
+            : j.Kind == JobKind.Upgrade ? RobotTech.Upgrade(j.Module, j.SodiumBattery, j.AluminiumWiring)
+            : RobotTech.Refine(j.Output);
+
+        void FinishJob(ManufacturingJob j)
+        {
+            switch (j.Kind)
+            {
+                case JobKind.Robot:
+                    Robot made = Workforce.AddRobot(j.RobotKind, BaseTileId);
+                    made.SodiumBattery = j.SodiumBattery;
+                    made.Battery = new RobotBattery(made.DesignBatteryWh);
+                    break;
+                case JobKind.Upgrade:
+                    Robot r = Workforce.GetRobot(j.RobotId);
+                    if (r == null) break;
+                    r.Modules |= j.Module;
+                    if (j.Module == RobotModule.BigBattery)
+                    {
+                        double stored = r.Battery.StoredWh;
+                        r.Battery = new RobotBattery(r.DesignBatteryWh, 0.0);
+                        r.Battery.Restore(0.0, stored);
+                    }
+                    break;
+                default:
+                    Materials.Add(j.Output, j.OutputKg);
+                    break;
+            }
+        }
         readonly Dictionary<int, int> batteriesPerTile = new Dictionary<int, int>();
 
         public StubPlanetSimulation(HexSphere sphere, PlanetSurface surface, PlanetSolarParams planet,
@@ -152,6 +306,9 @@ namespace KardashevAscent.Simulation.Game
         readonly Dictionary<WorkTask, double> fieldWork = new Dictionary<WorkTask, double>();
 
         public event Action<int> TileSurveyed;
+
+        /// <summary>A Workshop job finished (a new robot, an upgrade or a refined batch).</summary>
+        public event Action<ManufacturingJob> JobFinished;
 
         static WorkTask SurveyTask(int tile) => new WorkTask(TaskKind.Survey, tile, -1);
         static WorkTask MineTask(int tile, Material m) => new WorkTask(TaskKind.Mine, tile, (int)m);
@@ -216,9 +373,32 @@ namespace KardashevAscent.Simulation.Game
                 if (!r.Task.HasValue || r.Activity != RobotActivity.None || r.IsShutDown)
                     continue;
                 WorkTask t = r.Task.Value;
+                double speed = RobotAbilities.Speed(r.Kind, t.Kind) * (r.Has(RobotModule.FastDrive) ? RobotTech.FastDriveFactor : 1.0);
+                if (t.Kind == TaskKind.Manufacture)
+                {
+                    int index = FinishedWorkshops().IndexOf((t.Tile, t.Slot));
+                    if (index >= 0 && index < jobs.Count)
+                    {
+                        double before = jobs[index].DoneHours;
+                        jobs[index].DoneHours += dt * speed;
+                        // Long jobs go in rounds, like mining batches, so the robot still takes more urgent work between them.
+                        if (Math.Floor(jobs[index].DoneHours / RobotSpecs.MiningBatchHours + 1e-9) > Math.Floor(before / RobotSpecs.MiningBatchHours + 1e-9))
+                            Workforce.Release(t);
+                    }
+                    continue;
+                }
                 if (t.Kind != TaskKind.Survey && t.Kind != TaskKind.Mine)
                     continue;
-                fieldWork[t] = (fieldWork.TryGetValue(t, out double h) ? h : 0.0) + dt * RobotAbilities.Speed(r.Kind, t.Kind);
+                fieldWork[t] = (fieldWork.TryGetValue(t, out double h) ? h : 0.0) + dt * speed;
+            }
+            for (int i = jobs.Count - 1; i >= 0; i--)
+            {
+                ManufacturingJob j = jobs[i];
+                if (j.DoneHours < j.Recipe.WorkHours - 1e-9)
+                    continue;
+                jobs.RemoveAt(i);
+                FinishJob(j);
+                JobFinished?.Invoke(j);
             }
             foreach (int tile in surveyOrders.ToArray())
             {
@@ -351,6 +531,8 @@ namespace KardashevAscent.Simulation.Game
             while (MilestonesReached < now)
             {
                 MilestonesReached++;
+                // Technology (D8): milestones raise how many robots a group can hold.
+                Workforce.GroupCapacity = Math.Max(Workforce.GroupCapacity, RobotTech.GroupCapacity(MilestonesReached));
                 MilestoneReached?.Invoke(MilestonesReached);
             }
             if (!targetReached && DayAveragePowerW >= TypeITargetW)
@@ -462,6 +644,7 @@ namespace KardashevAscent.Simulation.Game
             {
                 case BuildingType.SolarPanel: return PanelCost(PanelAreaM2 * PanelTiers.All[PanelTier].Scale);
                 case BuildingType.Battery: return BuildCosts.Battery(BatteryUnitWh);
+                case BuildingType.Workshop: return RobotTech.WorkshopPartsWh;
                 default: return 0.0;
             }
         }
@@ -492,6 +675,9 @@ namespace KardashevAscent.Simulation.Game
                 tasks.Add(new WorkTask(TaskKind.Survey, surveyOrders[k], -1, k));
             for (int k = 0; k < miningOrders.Count; k++)
                 tasks.Add(new WorkTask(TaskKind.Mine, miningOrders[k].Tile, (int)miningOrders[k].Material, k));
+            List<(int Tile, int Slot)> shops = FinishedWorkshops();
+            for (int k = 0; k < Math.Min(jobs.Count, shops.Count); k++)
+                tasks.Add(new WorkTask(TaskKind.Manufacture, shops[k].Tile, shops[k].Slot, k));
             return tasks;
         }
 
@@ -610,6 +796,7 @@ namespace KardashevAscent.Simulation.Game
         public BuildingType GetBuilding(int tileId, int slot) =>
             panels.ContainsKey((tileId, slot)) ? BuildingType.SolarPanel
             : batteries.Contains((tileId, slot)) ? BuildingType.Battery
+            : workshops.Contains((tileId, slot)) ? BuildingType.Workshop
             : BuildingType.None;
 
         public bool PlaceBattery(int tileId, int slot)
@@ -637,6 +824,12 @@ namespace KardashevAscent.Simulation.Game
         {
             if (RemovePanel(tileId, slot))
                 return true;
+            if (workshops.Contains((tileId, slot)))
+            {
+                Dismantle(tileId, slot, BuildingType.Workshop);
+                workshops.Remove((tileId, slot));
+                return true;
+            }
             if (!batteries.Contains((tileId, slot)))
                 return false;
             Dismantle(tileId, slot, BuildingType.Battery);
@@ -691,6 +884,14 @@ namespace KardashevAscent.Simulation.Game
                 state.Buildings.Add(new BuildingRecord { Tile = kv.Key.Tile, Slot = kv.Key.Slot, Type = BuildingType.SolarPanel, Tilt = kv.Value.Tilt, Azimuth = kv.Value.Azimuth, AreaM2 = kv.Value.Area });
             foreach (var b in batteries)
                 state.Buildings.Add(new BuildingRecord { Tile = b.Tile, Slot = b.Slot, Type = BuildingType.Battery });
+            foreach (var w in workshops)
+                state.Buildings.Add(new BuildingRecord { Tile = w.Tile, Slot = w.Slot, Type = BuildingType.Workshop });
+            foreach (ManufacturingJob j in jobs)
+                state.Jobs.Add(new JobRecord
+                {
+                    Kind = j.Kind, RobotKind = j.RobotKind, SodiumBattery = j.SodiumBattery, AluminiumWiring = j.AluminiumWiring,
+                    RobotId = j.RobotId, Module = j.Module, Output = j.Output, OutputKg = j.OutputKg, DoneHours = j.DoneHours,
+                });
             state.Buildings.Sort((a, b) => a.Tile != b.Tile ? a.Tile.CompareTo(b.Tile) : a.Slot.CompareTo(b.Slot));
             int order = 0;
             var sites = new Dictionary<(int, int), (double Paid, int Order)>();
@@ -716,6 +917,8 @@ namespace KardashevAscent.Simulation.Game
             foreach (var key in new List<(int Tile, int Slot)>(panels.Keys))
                 RemoveBuilding(key.Tile, key.Slot);
             foreach (var key in new List<(int Tile, int Slot)>(batteries))
+                RemoveBuilding(key.Tile, key.Slot);
+            foreach (var key in new List<(int Tile, int Slot)>(workshops))
                 RemoveBuilding(key.Tile, key.Slot);
             TimeHours = state.TimeHours;
             MilestonesReached = Math.Max(0, Math.Min(10, state.MilestonesReached));
@@ -772,6 +975,20 @@ namespace KardashevAscent.Simulation.Game
             if (state.FieldWork != null)
                 foreach (FieldWorkRecord f in state.FieldWork)
                     fieldWork[new WorkTask(f.Kind, f.Tile, f.Slot)] = Math.Max(0.0, f.Hours);
+            // Version 10 added the Workshop's jobs; older saves have none.
+            jobs.Clear();
+            if (state.Jobs != null)
+                foreach (JobRecord jr in state.Jobs)
+                {
+                    var j = new ManufacturingJob
+                    {
+                        Kind = jr.Kind, RobotKind = jr.RobotKind, SodiumBattery = jr.SodiumBattery, AluminiumWiring = jr.AluminiumWiring,
+                        RobotId = jr.RobotId, Module = jr.Module, Output = jr.Output, OutputKg = jr.OutputKg, DoneHours = Math.Max(0.0, jr.DoneHours),
+                    };
+                    j.Recipe = RecipeOf(j);
+                    jobs.Add(j);
+                }
+            Workforce.GroupCapacity = Math.Max(Workforce.GroupCapacity, RobotTech.GroupCapacity(MilestonesReached));
             Workforce.Assign(OpenTasks());
             GenerationW = ComputeGeneration() + RtgW;
             return true;
@@ -787,6 +1004,13 @@ namespace KardashevAscent.Simulation.Game
                 double area = r.AreaM2 > 0.0 ? r.AreaM2 : PanelAreaM2;
                 if (site) Build.RestoreSite(r.Tile, r.Slot, PanelCost(area), r.PaidWh);
                 AddPanel(r.Tile, r.Slot, r.Tilt, r.Azimuth, area);
+            }
+            else if (r.Type == BuildingType.Workshop)
+            {
+                if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
+                    return;
+                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildCostWh(BuildingType.Workshop), r.PaidWh);
+                workshops.Add((r.Tile, r.Slot));
             }
             else if (r.Type == BuildingType.Battery)
             {

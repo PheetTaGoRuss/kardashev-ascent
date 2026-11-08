@@ -7,8 +7,8 @@ namespace KardashevAscent.Simulation.Game
     [Serializable]
     public sealed class SimulationState
     {
-        /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished. 7 added robots; 8 their batteries and condition; 9 resources.</summary>
-        public int Version = 9;
+        /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished. 7 added robots; 8 their batteries and condition; 9 resources; 10 the Workshop.</summary>
+        public int Version = 10;
         /// <summary>Planet id from planets.json (version 3); empty in older saves.</summary>
         public string PlanetId = "";
         /// <summary>Milestones reached and the day-average power behind them (version 4; 0 in older saves).</summary>
@@ -48,6 +48,8 @@ namespace KardashevAscent.Simulation.Game
         public List<MiningOrderRecord> MiningOrders = new List<MiningOrderRecord>();
         public List<MaterialRecord> MaterialsKg = new List<MaterialRecord>();
         public List<FieldWorkRecord> FieldWork = new List<FieldWorkRecord>();
+        /// <summary>Workshop jobs in order (version 10).</summary>
+        public List<Robots.JobRecord> Jobs = new List<Robots.JobRecord>();
     }
 
     [Serializable]

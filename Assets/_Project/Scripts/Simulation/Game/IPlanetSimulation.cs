@@ -249,6 +249,29 @@ namespace KardashevAscent.Simulation.Game
         bool IsMiningOrdered(int tileId, Resources.Material material);
         bool CancelMining(int tileId, Resources.Material material);
 
+        // Manufacturing (phase 3b; see Robots.RobotTech)
+
+        /// <summary>Build a Robot Workshop in an empty land slot (a construction site until a robot finishes it).</summary>
+        bool PlaceWorkshop(int tileId, int slot);
+
+        /// <summary>Finished Workshops (each works one job at a time).</summary>
+        int WorkshopCount { get; }
+
+        /// <summary>Jobs waiting or under way, in order; the first <see cref="WorkshopCount"/> are being worked.</summary>
+        System.Collections.Generic.IReadOnlyList<Robots.ManufacturingJob> Jobs { get; }
+
+        /// <summary>Order a new robot. Returns null if ordered, else why not (locked, no Workshop, missing materials or parts).</summary>
+        string OrderRobot(Robots.RobotKind kind);
+
+        /// <summary>Order an upgrade for a robot. Returns null if ordered, else why not.</summary>
+        string OrderUpgrade(int robotId, Robots.RobotModule module);
+
+        /// <summary>Order a batch of a refined material (aluminium or sodium). Returns null if ordered, else why not.</summary>
+        string OrderRefine(Resources.Material output);
+
+        /// <summary>Cancel a job; its materials and parts come back.</summary>
+        bool CancelJob(int index);
+
         /// <summary>Everything needed to restore this simulation later (time, buildings, battery, colony).</summary>
         SimulationState CaptureState();
 
@@ -288,6 +311,8 @@ namespace KardashevAscent.Simulation.Game
         None,
         SolarPanel,
         Battery,
+        /// <summary>Robot Workshop (phase 3b): makes robots, upgrades and refined materials.</summary>
+        Workshop,
     }
 
     /// <summary>Static facts about one tile.</summary>
