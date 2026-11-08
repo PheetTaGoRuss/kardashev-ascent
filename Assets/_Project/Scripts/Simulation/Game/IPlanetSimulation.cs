@@ -201,6 +201,30 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>How much of the site in a slot is paid for, 0–1; 1 for a finished building or an empty slot.</summary>
         double ConstructionProgress(int tileId, int slot);
 
+        // Robots (see Robots.Workforce; phase 1 of docs/design/robotic-workforce.md)
+
+        /// <summary>
+        /// The colony's robots and groups. A construction site only takes parts while a robot works on it; robots take
+        /// work by priority. Settings changed here apply at the next tick or <see cref="RefreshWork"/>.
+        /// </summary>
+        Robots.Workforce Workforce { get; }
+
+        /// <summary>Hand out work now (after changing workforce settings), instead of waiting for the next tick.</summary>
+        void RefreshWork();
+
+        /// <summary>
+        /// Ask a robot to take down the building in a slot. A construction site is cancelled at once (its parts come
+        /// back); a finished building keeps working until a robot salvages it (<see cref="BuildingSalvaged"/>).
+        /// Returns false if the slot is empty or already ordered.
+        /// </summary>
+        bool OrderSalvage(int tileId, int slot);
+
+        /// <summary>True while a finished building waits for a robot to take it down.</summary>
+        bool IsSalvageOrdered(int tileId, int slot);
+
+        /// <summary>Withdraw a salvage order. Returns false if there was none.</summary>
+        bool CancelSalvage(int tileId, int slot);
+
         /// <summary>Everything needed to restore this simulation later (time, buildings, battery, colony).</summary>
         SimulationState CaptureState();
 
@@ -226,6 +250,9 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>A construction site (tile, slot) got all its parts and now works.</summary>
         event Action<int, int> BuildingCompleted;
+
+        /// <summary>A robot took down an ordered building (tile, slot); the slot is empty now.</summary>
+        event Action<int, int> BuildingSalvaged;
     }
 
     /// <summary>What a building slot holds.</summary>
