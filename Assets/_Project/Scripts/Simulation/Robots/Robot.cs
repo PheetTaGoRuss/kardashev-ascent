@@ -62,15 +62,40 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>True once it has had a step at its present charger (not saved).</summary>
         internal bool ChargedBefore;
 
-        public bool IsShutDown => Condition <= 0.0 && Activity != RobotActivity.Maintenance;
+        // ---- Movement (spec §10) ----
 
-        /// <summary>Below the charge threshold and not yet charging (it waits for a free charger).</summary>
-        public bool NeedsCharge => Activity == RobotActivity.None && Battery.StateOfCharge < RobotSpecs.ReturnToChargeFraction;
+        /// <summary>Tiles still to drive through, in order (empty: not driving).</summary>
+        internal readonly List<int> Route = new List<int>();
+        /// <summary>How far across the next tile it is, 0–1.</summary>
+        internal double HopProgress;
+        /// <summary>Charge it must keep to drive back to the nearest charger, as a share of capacity (set each step).</summary>
+        internal double ReserveFraction;
+
+        public bool IsTravelling => Route.Count > 0;
+        public int HopsLeft => Route.Count;
+        public int? Destination => Route.Count > 0 ? Route[Route.Count - 1] : (int?)null;
+
+        /// <summary>A tile the player sent it to (hybrid movement); it takes no tasks until it gets there.</summary>
+        public int? ManualTarget { get; internal set; }
+
+        /// <summary>
+        /// Out of charge away from any charger: it can't move. Rescue is a later feature (spec §12), so it waits for
+        /// the player (a charger built on its tile brings it back).
+        /// </summary>
+        public bool IsStranded { get; internal set; }
+
+        public bool IsShutDown => (Condition <= 0.0 && Activity != RobotActivity.Maintenance) || IsStranded;
+
+        /// <summary>
+        /// Below the charge threshold (20 %, plus what it needs to drive back to a charger) and not yet charging.
+        /// </summary>
+        public bool NeedsCharge => Activity == RobotActivity.None
+                                   && Battery.StateOfCharge < RobotSpecs.ReturnToChargeFraction + ReserveFraction;
 
         public bool NeedsMaintenance => Condition < RobotSpecs.MaintenanceBelowCondition || Battery.WornOut;
 
         /// <summary>Free to take colony work: not shut down, charging, in maintenance or low on charge.</summary>
-        public bool Available => Activity == RobotActivity.None && !IsShutDown && !NeedsCharge;
+        public bool Available => Activity == RobotActivity.None && !IsShutDown && !NeedsCharge && !ManualTarget.HasValue;
 
         public RobotState State =>
             IsShutDown ? RobotState.Shutdown

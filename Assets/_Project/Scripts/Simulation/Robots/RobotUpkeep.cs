@@ -41,8 +41,16 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>Charging power robots took in the last <see cref="Apply"/>, W.</summary>
         public double ChargingW { get; private set; }
 
-        public void Plan(Workforce workforce, IReadOnlyList<RobotFacility> facilities, double hours)
+        public void Plan(Workforce workforce, IReadOnlyList<RobotFacility> facilities, double hours, Movement movement = null)
         {
+            // Movement: how much charge each robot must keep to drive back, and who is stuck with an empty battery.
+            foreach (Robot r in workforce.Robots)
+            {
+                double toCharger = movement != null ? movement.HoursToCharger[r.Tile] : 0.0;
+                r.ReserveFraction = movement != null && r.Battery.CapacityWh > 0.0 && !double.IsInfinity(toCharger)
+                    ? movement.EnergyWh(toCharger) / r.Battery.CapacityWh : 0.0;
+                r.IsStranded = movement != null && r.Battery.StoredWh <= 1e-6 && toCharger > 1e-9;
+            }
             var byKey = new Dictionary<(int, int), RobotFacility>();
             foreach (RobotFacility f in facilities)
                 byKey[(f.Tile, f.Slot)] = f;
@@ -70,20 +78,22 @@ namespace KardashevAscent.Simulation.Robots
             {
                 if (r.Activity != RobotActivity.None)
                     continue;
+                if (r.IsStranded)
+                    continue;
                 if (r.NeedsMaintenance || r.IsShutDown)
                 {
-                    RobotFacility? shop = Free(facilities, used, true);
+                    RobotFacility? shop = Free(r, facilities, used, true, movement);
                     if (shop.HasValue)
                     {
-                        Enter(r, RobotActivity.Maintenance, shop.Value, used);
+                        Enter(r, RobotActivity.Maintenance, shop.Value, used, movement);
                         continue;
                     }
                 }
                 if (r.NeedsCharge && !r.IsShutDown)
                 {
-                    RobotFacility? charger = Free(facilities, used, false);
+                    RobotFacility? charger = Free(r, facilities, used, false, movement);
                     if (charger.HasValue)
-                        Enter(r, RobotActivity.Charging, charger.Value, used);
+                        Enter(r, RobotActivity.Charging, charger.Value, used, movement);
                 }
             }
 
@@ -93,7 +103,7 @@ namespace KardashevAscent.Simulation.Robots
             DockRequestW = CriticalRequestW = TopUpRequestW = 0.0;
             foreach (Robot r in workforce.Robots)
             {
-                if (r.Activity != RobotActivity.Charging)
+                if (r.Activity != RobotActivity.Charging || r.IsTravelling || (movement != null && r.Tile != r.Facility.Value.Tile))
                     continue;
                 double req = r.Battery.ChargeRequestW(byKey[r.Facility.Value].Capability.PowerW, hours);
                 if (r.Facility.Value.Slot < 0)
@@ -120,7 +130,7 @@ namespace KardashevAscent.Simulation.Robots
         /// to what each robot asked for).
         /// </summary>
         public void Apply(Workforce workforce, double hours, double dockServedW, double criticalServedW, double topUpServedW,
-                          bool flaringStar, IPartsStore parts)
+                          bool flaringStar, IPartsStore parts, Movement movement = null)
         {
             if (hours <= 0.0)
                 return;
@@ -134,7 +144,12 @@ namespace KardashevAscent.Simulation.Robots
                 mechanic |= r.Kind == RobotKind.Maintenance && r.Available;
             foreach (Robot r in workforce.Robots)
             {
-                switch (r.Activity)
+                if (movement != null && r.IsTravelling)
+                {
+                    if (!r.IsShutDown)
+                        Drive(r, hours, movement);
+                }
+                else switch (r.Activity)
                 {
                     case RobotActivity.Charging:
                         double offer = dockRequest.TryGetValue(r.Id, out double d) ? d * fd
@@ -145,7 +160,8 @@ namespace KardashevAscent.Simulation.Robots
                         ChargingW += r.LastChargeW;
                         break;
                     case RobotActivity.Maintenance:
-                        Repair(r, hours, parts, mechanic ? RobotSpecs.SpecialistSpeed : 1.0);
+                        if (movement == null || r.Tile == r.Facility.Value.Tile)
+                            Repair(r, hours, parts, mechanic ? RobotSpecs.SpecialistSpeed : 1.0);
                         break;
                     default:
                         if (r.IsShutDown)
@@ -160,6 +176,30 @@ namespace KardashevAscent.Simulation.Robots
                     r.Condition -= RobotSpecs.FlareWearPerHour * hours * (r.Has(RobotModule.Shielding) ? RobotTech.ShieldingFactor : 1.0);
                 r.Condition = Math.Max(0.0, Math.Min(1.0, r.Condition));
             }
+        }
+
+        /// <summary>Drive along the route: draw drive power and cross tiles at their terrain's pace.</summary>
+        static void Drive(Robot r, double hours, Movement movement)
+        {
+            double want = movement.DrivePowerW;
+            double got = r.Battery.Draw(want, hours);
+            double moved = want > 0.0 ? hours * got / want : hours;
+            while (moved > 0.0 && r.Route.Count > 0)
+            {
+                double hop = movement.Routes.HopHoursAt(r.Route[0]);
+                double left = (1.0 - r.HopProgress) * hop;
+                if (moved < left - 1e-12)
+                {
+                    r.HopProgress += moved / hop;
+                    break;
+                }
+                moved -= left;
+                r.Tile = r.Route[0];
+                r.Route.RemoveAt(0);
+                r.HopProgress = 0.0;
+            }
+            if (r.Route.Count == 0 && r.ManualTarget.HasValue && r.Tile == r.ManualTarget.Value)
+                r.ManualTarget = null;
         }
 
         static void Repair(Robot r, double hours, IPartsStore parts, double speed)
@@ -184,29 +224,48 @@ namespace KardashevAscent.Simulation.Robots
 
         static int Used(Dictionary<(int, int), int> used, (int, int) key) => used.TryGetValue(key, out int n) ? n : 0;
 
-        /// <summary>A facility with a free place: one that repairs, or the most powerful charger.</summary>
-        static RobotFacility? Free(IReadOnlyList<RobotFacility> facilities, Dictionary<(int, int), int> used, bool repair)
+        /// <summary>
+        /// A facility with a free place: one that repairs, or a charger. With movement, the nearest one it can reach
+        /// (then the most powerful); without, the most powerful.
+        /// </summary>
+        static RobotFacility? Free(Robot r, IReadOnlyList<RobotFacility> facilities, Dictionary<(int, int), int> used, bool repair, Movement movement)
         {
             RobotFacility? best = null;
+            double bestHours = double.PositiveInfinity;
             foreach (RobotFacility f in facilities)
             {
                 if (repair && !f.Capability.Repairs)
                     continue;
                 if (Used(used, (f.Tile, f.Slot)) >= f.Capability.Slots)
                     continue;
-                if (!best.HasValue || f.Capability.PowerW > best.Value.Capability.PowerW)
+                double h = movement != null ? movement.Routes.HoursBetween(r.Tile, f.Tile) : 0.0;
+                if (double.IsInfinity(h))
+                    continue;
+                if (!best.HasValue || h < bestHours - 1e-9
+                    || (Math.Abs(h - bestHours) <= 1e-9 && f.Capability.PowerW > best.Value.Capability.PowerW))
+                {
                     best = f;
+                    bestHours = h;
+                }
             }
             return best;
         }
 
-        static void Enter(Robot r, RobotActivity activity, RobotFacility f, Dictionary<(int, int), int> used)
+        static void Enter(Robot r, RobotActivity activity, RobotFacility f, Dictionary<(int, int), int> used, Movement movement)
         {
             r.Activity = activity;
             r.Facility = (f.Tile, f.Slot);
             r.Task = null;
             r.OnTemporaryTask = false;
+            r.ManualTarget = null;
             used[(f.Tile, f.Slot)] = Used(used, (f.Tile, f.Slot)) + 1;
+            r.Route.Clear();
+            r.HopProgress = 0.0;
+            if (movement != null && r.Tile != f.Tile)
+            {
+                List<int> route = movement.Routes.Route(r.Tile, f.Tile);
+                if (route != null) r.Route.AddRange(route);
+            }
         }
 
         static void Leave(Robot r)

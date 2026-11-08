@@ -43,6 +43,65 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>The colony's needs at the last assignment (for the Demand program).</summary>
         public ColonyNeeds Needs { get; private set; }
 
+        /// <summary>
+        /// Routes and chargers for driving (spec §10). Null: robots don't move (they work any tile from where they
+        /// are), as before movement existed.
+        /// </summary>
+        public Movement Movement { get; set; }
+
+        /// <summary>The robot on a task that is at the task's tile and not driving (only then does the work count).</summary>
+        public bool IsWorkedOnSite(WorkTask task)
+        {
+            Robot r = WorkerOf(task);
+            return r != null && (Movement == null || (!r.IsTravelling && r.Tile == task.Tile));
+        }
+
+        /// <summary>Send a robot to a tile (hybrid movement): it drops its task and drives there, then works from there.</summary>
+        public bool SendTo(int robotId, int tile)
+        {
+            Robot r = GetRobot(robotId);
+            if (r == null || Movement == null || r.Tile == tile || r.IsShutDown || r.Activity != RobotActivity.None
+                || Movement.Routes.Route(r.Tile, tile) == null)
+                return false;
+            r.Task = null;
+            r.OnTemporaryTask = false;
+            r.ManualTarget = tile;
+            return true;
+        }
+
+        /// <summary>Start driving to <paramref name="tile"/> (or stop, if it is there).</summary>
+        void Head(Robot r, int tile)
+        {
+            if (Movement == null)
+                return;
+            if (r.Tile == tile)
+            {
+                r.Route.Clear();
+                r.HopProgress = 0.0;
+                return;
+            }
+            if (r.Destination == tile)
+                return;
+            List<int> route = Movement.Routes.Route(r.Tile, tile);
+            r.Route.Clear();
+            r.HopProgress = 0.0;
+            if (route != null)
+                r.Route.AddRange(route);
+        }
+
+        /// <summary>Can it get to a task's tile and back to a charger, keeping 20 %? (Always true without movement.)</summary>
+        bool InRange(Robot r, WorkTask t)
+        {
+            if (Movement == null)
+                return true;
+            double go = Movement.Routes.HoursBetween(r.Tile, t.Tile);
+            double back = Movement.HoursToCharger[t.Tile];
+            if (double.IsInfinity(go) || double.IsInfinity(back))
+                return false;
+            double spare = r.Battery.StoredWh - RobotSpecs.ReturnToChargeFraction * r.Battery.CapacityWh;
+            return Movement.EnergyWh(go + back) <= spare + 1e-9;
+        }
+
         // ---- Phase 4 settings ----
 
         /// <summary>Facility program: work only on this tile (null: anywhere).</summary>
@@ -353,6 +412,22 @@ namespace KardashevAscent.Simulation.Robots
             foreach (RobotGroup g in groups)
                 g.QueueItems.RemoveAll(q => !open.ContainsKey(q));
 
+            // Robots the player sent somewhere drive there first.
+            foreach (Robot r in robots)
+            {
+                if (!r.ManualTarget.HasValue)
+                    continue;
+                if (Movement == null || r.Tile == r.ManualTarget.Value || r.Activity != RobotActivity.None)
+                {
+                    r.ManualTarget = null;
+                    continue;
+                }
+                r.Task = null;
+                Head(r, r.ManualTarget.Value);
+                if (!r.IsTravelling)
+                    r.ManualTarget = null;   // no way there
+            }
+
             // Interrupted groups whose temporary task is gone go back to their program.
             foreach (RobotGroup g in groups)
                 if (g.State == GroupState.Interrupted && (!g.InterruptTask.HasValue || !open.ContainsKey(g.InterruptTask.Value)))
@@ -429,6 +504,21 @@ namespace KardashevAscent.Simulation.Robots
                     changed = true;
                 }
             }
+
+            // Drive to the task; robots with nothing to do stop where they are.
+            if (Movement != null)
+                foreach (Robot r in robots)
+                {
+                    if (r.Activity != RobotActivity.None || r.ManualTarget.HasValue || r.IsShutDown)
+                        continue;
+                    if (r.Task.HasValue)
+                        Head(r, r.Task.Value.Tile);
+                    else if (r.IsTravelling)
+                    {
+                        r.Route.Clear();
+                        r.HopProgress = 0.0;
+                    }
+                }
         }
 
         /// <summary>How reluctant a robot is to drop what it does: idle 0, else 1 + how urgent its task is.</summary>
@@ -442,7 +532,7 @@ namespace KardashevAscent.Simulation.Robots
             {
                 var openSet = new HashSet<WorkTask>(open);
                 foreach (WorkTask q in g.QueueItems)
-                    if (openSet.Contains(q) && !taken.Contains(q) && RobotAbilities.CanDo(r.Kind, q.Kind))
+                    if (openSet.Contains(q) && !taken.Contains(q) && RobotAbilities.CanDo(r.Kind, q.Kind) && InRange(r, q))
                         foreach (WorkTask t in open)
                             if (t.Equals(q)) return t;
                 return null;
@@ -454,6 +544,8 @@ namespace KardashevAscent.Simulation.Robots
                 if (taken.Contains(t) || !RobotAbilities.CanDo(r.Kind, t.Kind))
                     continue;
                 if (program == OperatingProgram.Facility && g.FacilityTile.HasValue && t.Tile != g.FacilityTile.Value)
+                    continue;
+                if (!InRange(r, t))
                     continue;
                 TaskPriority p = ProgramPriority(r, t.Kind);
                 if (p == TaskPriority.Disabled)
@@ -511,6 +603,9 @@ namespace KardashevAscent.Simulation.Robots
                     Activity = r.Activity,
                     Modules = r.Modules,
                     SodiumBattery = r.SodiumBattery,
+                    HopProgress = r.HopProgress,
+                    HasManualTarget = r.ManualTarget.HasValue,
+                    ManualTarget = r.ManualTarget ?? 0,
                     HasFacility = r.Facility.HasValue,
                     FacilityTile = r.Facility?.Tile ?? 0,
                     FacilitySlot = r.Facility?.Slot ?? 0,
@@ -523,6 +618,7 @@ namespace KardashevAscent.Simulation.Robots
                 }
                 foreach (var kv in r.PriorityOverrides)
                     rs.PriorityOverrides.Add(new PriorityRecord { Kind = kv.Key, Priority = kv.Value });
+                rs.Route.AddRange(r.Route);
                 s.Robots.Add(rs);
             }
             return s;
@@ -572,6 +668,10 @@ namespace KardashevAscent.Simulation.Robots
                 // Saves before version 8 have no battery or condition: the robot comes back charged and like new.
                 r.Modules = rs.Modules;
                 r.SodiumBattery = rs.SodiumBattery;
+                // Saves before version 12 have no routes: robots stand where they were.
+                if (rs.Route != null) r.Route.AddRange(rs.Route);
+                r.HopProgress = Math.Max(0.0, Math.Min(1.0, rs.HopProgress));
+                r.ManualTarget = rs.HasManualTarget ? rs.ManualTarget : (int?)null;
                 if (Math.Abs(r.DesignBatteryWh - r.Battery.NominalWh) > 1e-9)
                     r.Battery = new RobotBattery(r.DesignBatteryWh);
                 if (rs.HasUpkeep)
