@@ -27,7 +27,7 @@ namespace KardashevAscent.Presentation.UI
               plannerReason, placedTitle, placedAngles, placedNumbers, placedBonus, totals, mapHint, help,
               legendMin, legendMax, legendTile, multiText, batteryText, plannerCost;
         Slider tilt, facing;
-        Button bestButton, placeButton, removeAllButton, reangleButton, modePanel, modeBattery, modeWorkshop;
+        Button bestButton, placeButton, removeAllButton, reangleButton, modePanel, modeBattery, modeWorkshop, modeStation;
         float nextText;
 
         void OnEnable()
@@ -57,6 +57,9 @@ namespace KardashevAscent.Presentation.UI
             modeWorkshop = root.Q<Button>("mode-workshop");
             if (modeWorkshop != null)
                 modeWorkshop.clicked += () => { if (placer != null) placer.Mode = BuildMode.Workshop; };
+            modeStation = root.Q<Button>("mode-station");
+            if (modeStation != null)
+                modeStation.clicked += () => { if (placer != null) placer.Mode = BuildMode.ChargingStation; };
             hoverText = root.Q<Label>("hover-text");
             siteTitle = root.Q<Label>("site-title");
             siteText = root.Q<Label>("site-text");
@@ -151,6 +154,7 @@ namespace KardashevAscent.Presentation.UI
             modePanel.EnableInClassList("selected", panelMode);
             modeBattery.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.Battery);
             modeWorkshop?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.Workshop);
+            modeStation?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.ChargingStation);
 
             // Keep the sliders on the planned angles (keys and "best angle" move them too).
             if (siteOpen)
@@ -203,6 +207,15 @@ namespace KardashevAscent.Presentation.UI
             }
             if (hasPanel && placer.SelectedSalvageOrdered)
                 siteLine = "Salvage ordered: it works until a robot takes it down (Del again to cancel).\n" + siteLine;
+            if (hasPanel && placer.SelectedBuilding == BuildingType.ChargingStation)
+            {
+                placedTitle.text = isSite ? $"Charging station site · slot {slot}" : $"Charging station · slot {slot}";
+                placedAngles.text = "Charges robots from the grid";
+                placedNumbers.text = siteLine + "Robots below 20 % come here to charge. Faster than a battery yard, " +
+                                     "and more robots at once (placeholder values).";
+                Show(placedBonus, false);
+                return;
+            }
             if (hasPanel && placer.SelectedBuilding == BuildingType.Workshop)
             {
                 placedTitle.text = isSite ? $"Robot Workshop site · slot {slot}" : $"Robot Workshop · slot {slot}";
@@ -234,7 +247,8 @@ namespace KardashevAscent.Presentation.UI
 
             bool panelMode = placer.Mode == BuildMode.SolarPanel;
             bool workshopMode = placer.Mode == BuildMode.Workshop;
-            string thing = panelMode ? "panel" : workshopMode ? "Workshop" : "battery yard";
+            bool stationMode = placer.Mode == BuildMode.ChargingStation;
+            string thing = panelMode ? "panel" : workshopMode ? "Workshop" : stationMode ? "charging station" : "battery yard";
             int selected = 0, empty = 0, withPanels = 0, withBatteries = 0;
             if (multi)
             {
@@ -242,7 +256,7 @@ namespace KardashevAscent.Presentation.UI
                 plannerTitle.text = $"{selected} slots selected";
                 string adds = !placer.Preview.CanPlace || empty == 0 ? ""
                     : panelMode ? $"\nBuilding on the empty ones adds {Format.Energy(placer.Preview.EnergyPerYearWh * empty)} a year"
-                    : workshopMode ? ""
+                    : workshopMode || stationMode ? ""
                     : $"\nBuilding on the empty ones adds {Format.Energy(placer.BatteryUnitWh * empty)} of storage";
                 multiText.text = $"{empty} empty · {withPanels} panels · {withBatteries} battery yards" + adds;
                 placeButton.text = $"Place {empty} {thing}s (P)";
@@ -256,7 +270,10 @@ namespace KardashevAscent.Presentation.UI
                 plannerTitle.text = panelMode ? $"Plan a {placer.NewPanelName} · slot {slot}" : $"Plan a {thing} · slot {slot}";
                 placeButton.text = $"Place {thing} (P)";
             }
-            batteryText.text = workshopMode
+            batteryText.text = stationMode
+                ? $"Costs {Format.Energy(placer.BuildCostWh)} of build parts. Charges robots from the grid, faster than a " +
+                  "battery yard and more at once. Build one near where robots work: they drive to the nearest charger."
+                : workshopMode
                 ? $"Costs {Format.Energy(placer.BuildCostWh)} of build parts. Makes new robots, upgrades, and aluminium " +
                   "or sodium from rock. Order jobs in the Robots panel (G)."
                 : $"Stores {Format.Energy(placer.BatteryUnitWh)}: charges from surplus by day, " +

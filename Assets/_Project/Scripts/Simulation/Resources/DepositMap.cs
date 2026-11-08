@@ -147,6 +147,14 @@ namespace KardashevAscent.Simulation.Resources
 
         public void Set(Material m, double amountKg) => kg[(int)m] = Math.Max(0.0, amountKg);
 
+        /// <summary>Take up to <paramref name="amountKg"/>; returns what was taken, kg.</summary>
+        public double Take(Material m, double amountKg)
+        {
+            double t = Math.Max(0.0, Math.Min(kg[(int)m], amountKg));
+            kg[(int)m] -= t;
+            return t;
+        }
+
         public void Clear()
         {
             for (int i = 0; i < kg.Length; i++) kg[i] = 0.0;

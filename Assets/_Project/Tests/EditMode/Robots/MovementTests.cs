@@ -196,7 +196,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             a.SendRobot(r.Id, m >= 0 ? m : n);
             a.Tick(1.0);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(14, state.Version);
+            Assert.AreEqual(15, state.Version);
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));
             Robot c = b.Workforce.Robots[0];

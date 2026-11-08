@@ -170,7 +170,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             a.Workforce.Pause(a.Workforce.GetGroup(a.Workforce.Robots[0].GroupId).Id);
             a.OrderSalvage(t, 0);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(14, state.Version);
+            Assert.AreEqual(15, state.Version);
 
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));
