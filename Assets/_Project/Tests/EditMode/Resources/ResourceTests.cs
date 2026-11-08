@@ -205,7 +205,7 @@ namespace KardashevAscent.Simulation.Tests.Resources
         public void Mining_YieldFollowsTheGrade()
         {
             var sim = Create();
-            int t = LandTileWith(sim, Material.Iron);
+            int t = sim.BaseTileId;   // every land tile has iron; the base needs no drive
             sim.Deposits.MarkSurveyed(t);
             Assert.IsTrue(sim.OrderMining(t, Material.Iron));
             sim.Tick(1.0);
@@ -247,7 +247,7 @@ namespace KardashevAscent.Simulation.Tests.Resources
             a.Tick(1.5);
             if (!a.GetTile(other).IsWater) a.OrderSurvey(other);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(11, state.Version);
+            Assert.AreEqual(12, state.Version);
 
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));

@@ -261,6 +261,7 @@ namespace KardashevAscent.Simulation.Game
             BaseTileId = baseTileId >= 0 ? baseTileId : PickBaseTile();
             Workforce.Reset(BaseTileId);
             Deposits = new DepositMap(sphere, surface, PlanetChemistry.EarthLike, 7);
+            Routes = new RouteFinder(sphere, surface);
 
             // Start mid-morning at the base: hour angle −0.4π. A tidally locked planet has the star fixed over
             // longitude 0, as in LightPotential and AnnualYield, so the base (picked near longitude 0) is in daylight.
@@ -290,6 +291,50 @@ namespace KardashevAscent.Simulation.Game
             StarTemperatureK = record.star.teffK;
             Clouds = record.Clouds;
             Deposits = new DepositMap(sphere, surface, record.ToChemistry(), record.look?.terrainSeed ?? 7);
+            if (record.planet.surfaceGravityMs2 > 0.0)
+                Routes = new RouteFinder(sphere, surface, record.planet.surfaceGravityMs2);
+        }
+
+        // ---- Movement (spec §10) ----
+
+        /// <summary>Driving routes on this planet (terrain pace, drive power ∝ surface gravity).</summary>
+        public RouteFinder Routes { get; private set; }
+
+        /// <summary>Robots drive between tiles (true) or work any tile from where they are (false, as before movement).</summary>
+        public bool MovementEnabled { get; set; } = true;
+
+        string chargerKey;
+        Movement movement;
+
+        /// <summary>Routes plus driving hours to the nearest charger from every tile (recomputed when chargers change).</summary>
+        Movement CurrentMovement()
+        {
+            if (!MovementEnabled)
+                return null;
+            List<RobotFacility> facilities = RobotFacilities();
+            var tiles = new List<int>();
+            foreach (RobotFacility f in facilities)
+                if (!tiles.Contains(f.Tile)) tiles.Add(f.Tile);
+            tiles.Sort();
+            string key = string.Join(",", tiles);
+            if (movement == null || key != chargerKey)
+            {
+                movement = new Movement(Routes, Routes.HoursFromNearest(tiles));
+                chargerKey = key;
+            }
+            return movement;
+        }
+
+        public double DriveHours(int fromTile, int toTile) =>
+            fromTile < 0 || toTile < 0 || fromTile >= TileCount || toTile >= TileCount ? double.PositiveInfinity : Routes.HoursBetween(fromTile, toTile);
+
+        public bool SendRobot(int robotId, int tileId)
+        {
+            Workforce.Movement = CurrentMovement();
+            if (!Workforce.SendTo(robotId, tileId))
+                return false;
+            Settle(null);
+            return true;
         }
 
         // ---- Resources (phase 3a) ----
@@ -373,7 +418,7 @@ namespace KardashevAscent.Simulation.Game
             foreach (int tile in surveyOrders)
             {
                 WorkTask st = SurveyTask(tile);
-                if (fieldWork.ContainsKey(st) && !Workforce.IsWorked(st))
+                if (fieldWork.ContainsKey(st) && !Workforce.IsWorkedOnSite(st))
                     fieldWork.Remove(st);
             }
             foreach (Robot r in Workforce.Robots)
@@ -381,6 +426,8 @@ namespace KardashevAscent.Simulation.Game
                 if (!r.Task.HasValue || r.Activity != RobotActivity.None || r.IsShutDown)
                     continue;
                 WorkTask t = r.Task.Value;
+                if (MovementEnabled && (r.IsTravelling || r.Tile != t.Tile))
+                    continue;   // still driving there
                 double speed = RobotAbilities.Speed(r.Kind, t.Kind) * (r.Has(RobotModule.FastDrive) ? RobotTech.FastDriveFactor : 1.0);
                 if (t.Kind == TaskKind.Manufacture)
                 {
@@ -480,7 +527,9 @@ namespace KardashevAscent.Simulation.Game
 
             // Robots at the lander charge from its RTGs first (D10); elsewhere, robots below 20 % charge right after the
             // colony and the rest top up from spare power before build parts (D6).
-            Upkeep.Plan(Workforce, RobotFacilities(), dt);
+            Movement moving = CurrentMovement();
+            Workforce.Movement = moving;
+            Upkeep.Plan(Workforce, RobotFacilities(), dt, moving);
             GridStep grid = Grid.Step(ComputeGeneration(), dt, TimeHours / Rtg.HoursPerYear, Upkeep.CriticalRequestW, Upkeep.DockRequestW);
             GenerationW = grid.GenerationW;
             RtgW = grid.RtgW;
@@ -490,7 +539,7 @@ namespace KardashevAscent.Simulation.Game
             double topUpW = Math.Min(grid.CurtailedW, Upkeep.TopUpRequestW);
             BuildPowerW = grid.CurtailedW - topUpW;
             CurtailedW = grid.CurtailedW - topUpW - BuildPowerW;
-            Upkeep.Apply(Workforce, dt, grid.DockServedW, grid.PriorityServedW, topUpW, IsFlaringStar, Build);
+            Upkeep.Apply(Workforce, dt, grid.DockServedW, grid.PriorityServedW, topUpW, IsFlaringStar, Build, moving);
             RobotChargingW = Upkeep.ChargingW;
             AdvanceFieldWork(dt);
             Build.AddParts(BuildPowerW, dt);
@@ -697,16 +746,17 @@ namespace KardashevAscent.Simulation.Game
         {
             while (true)
             {
+                Workforce.Movement = CurrentMovement();
                 Workforce.Assign(OpenTasks(), Needs());
                 bool any = false;
-                foreach (var done in Build.Pay(key => Workforce.IsWorked(new WorkTask(TaskKind.Build, key.Tile, key.Slot))))
+                foreach (var done in Build.Pay(key => Workforce.IsWorkedOnSite(new WorkTask(TaskKind.Build, key.Tile, key.Slot))))
                 {
                     any = true;
                     Finish(done.Tile, done.Slot, !(silent.HasValue && silent.Value == done));
                 }
                 foreach (var order in salvageOrders.ToArray())
                 {
-                    if (!Workforce.IsWorked(new WorkTask(TaskKind.Salvage, order.Tile, order.Slot)))
+                    if (!Workforce.IsWorkedOnSite(new WorkTask(TaskKind.Salvage, order.Tile, order.Slot)))
                         continue;
                     any = true;
                     RemoveBuilding(order.Tile, order.Slot);
@@ -1007,6 +1057,7 @@ namespace KardashevAscent.Simulation.Game
                     jobs.Add(j);
                 }
             Workforce.GroupCapacity = Math.Max(Workforce.GroupCapacity, RobotTech.GroupCapacity(MilestonesReached));
+            Workforce.Movement = CurrentMovement();
             Workforce.Assign(OpenTasks(), Needs());
             GenerationW = ComputeGeneration() + RtgW;
             return true;

@@ -42,6 +42,11 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>Phase 3b (save version 10): upgrades and battery chemistry.</summary>
         public RobotModule Modules;
         public bool SodiumBattery;
+        /// <summary>Movement (save version 12): the tiles still to drive, progress across the next one, and a player's target.</summary>
+        public List<int> Route = new List<int>();
+        public double HopProgress;
+        public bool HasManualTarget;
+        public int ManualTarget;
     }
 
     /// <summary>A Workshop job in a saved game (version 10); its recipe is rebuilt from these fields.</summary>
