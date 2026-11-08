@@ -88,7 +88,21 @@ namespace KardashevAscent.Simulation.Robots
         /// </summary>
         public bool IsStranded { get; internal set; }
 
-        public bool IsShutDown => (Condition <= 0.0 && Activity != RobotActivity.Maintenance) || IsStranded;
+        /// <summary>Critical operational damage (spec v2 §7): shuts the robot down until repaired. Nothing causes it yet (events are future).</summary>
+        public bool CriticallyDamaged { get; internal set; }
+
+        /// <summary>Why it is shut down, if it is: energy (battery 0 %), mechanical (condition 0 %) or critical damage.</summary>
+        public ShutdownKind Shutdown =>
+            Activity == RobotActivity.Maintenance ? ShutdownKind.None
+            : CriticallyDamaged ? ShutdownKind.CriticalDamage
+            : Condition <= 0.0 ? ShutdownKind.Mechanical
+            : IsStranded || (Battery.StoredWh <= 1e-6 && Activity != RobotActivity.Charging) ? ShutdownKind.Energy
+            : ShutdownKind.None;
+
+        public bool IsShutDown => Shutdown != ShutdownKind.None;
+
+        /// <summary>Its profile from <see cref="RobotCatalog"/>, with upgrades.</summary>
+        public double Attribute(RobotAttribute a) => RobotCatalog.AttributeOf(this, a);
 
         /// <summary>
         /// Below the charge threshold (20 %, plus what it needs to drive back to a charger) and not yet charging.
@@ -96,7 +110,7 @@ namespace KardashevAscent.Simulation.Robots
         public bool NeedsCharge => Activity == RobotActivity.None
                                    && Battery.StateOfCharge < RobotSpecs.ReturnToChargeFraction + ReserveFraction;
 
-        public bool NeedsMaintenance => Condition < RobotSpecs.MaintenanceBelowCondition || Battery.WornOut;
+        public bool NeedsMaintenance => Condition < RobotSpecs.MaintenanceBelowCondition || Battery.WornOut || CriticallyDamaged;
 
         /// <summary>Free to take colony work: not shut down, charging, in maintenance or low on charge.</summary>
         public bool Available => Activity == RobotActivity.None && !IsShutDown && !NeedsCharge && !ManualTarget.HasValue;

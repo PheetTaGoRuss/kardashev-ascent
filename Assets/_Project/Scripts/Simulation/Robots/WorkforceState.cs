@@ -47,6 +47,8 @@ namespace KardashevAscent.Simulation.Robots
         public double HopProgress;
         public bool HasManualTarget;
         public int ManualTarget;
+        /// <summary>Stage A (save version 13): critical operational damage.</summary>
+        public bool CriticallyDamaged;
     }
 
     /// <summary>A Workshop job in a saved game (version 10); its recipe is rebuilt from these fields.</summary>
