@@ -428,7 +428,7 @@ namespace KardashevAscent.Simulation.Game
                 WorkTask t = r.Task.Value;
                 if (MovementEnabled && (r.IsTravelling || r.Tile != t.Tile))
                     continue;   // still driving there
-                double speed = RobotAbilities.Speed(r.Kind, t.Kind) * (r.Has(RobotModule.FastDrive) ? RobotTech.FastDriveFactor : 1.0);
+                double speed = RobotCatalog.Productivity(r, t.Kind, MilestonesReached);
                 if (t.Kind == TaskKind.Manufacture)
                 {
                     int index = FinishedWorkshops().IndexOf((t.Tile, t.Slot));
@@ -747,6 +747,7 @@ namespace KardashevAscent.Simulation.Game
             while (true)
             {
                 Workforce.Movement = CurrentMovement();
+                Workforce.Milestones = MilestonesReached;
                 Workforce.Assign(OpenTasks(), Needs());
                 bool any = false;
                 foreach (var done in Build.Pay(key => Workforce.IsWorkedOnSite(new WorkTask(TaskKind.Build, key.Tile, key.Slot))))
@@ -1058,6 +1059,7 @@ namespace KardashevAscent.Simulation.Game
                 }
             Workforce.GroupCapacity = Math.Max(Workforce.GroupCapacity, RobotTech.GroupCapacity(MilestonesReached));
             Workforce.Movement = CurrentMovement();
+            Workforce.Milestones = MilestonesReached;
             Workforce.Assign(OpenTasks(), Needs());
             GenerationW = ComputeGeneration() + RtgW;
             return true;

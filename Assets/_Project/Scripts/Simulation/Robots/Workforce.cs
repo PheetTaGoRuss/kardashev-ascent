@@ -40,6 +40,22 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>Every program is implemented (phase 4).</summary>
         public static bool IsImplemented(OperatingProgram program) => Enum.IsDefined(typeof(OperatingProgram), program);
 
+        /// <summary>Milestones reached: they unlock secondary capabilities in <see cref="RobotCatalog"/>.</summary>
+        public int Milestones { get; set; }
+
+        bool Capable(Robot r, TaskKind kind) => RobotCatalog.CanDo(r.Kind, kind, Milestones);
+
+        /// <summary>Critical operational damage (spec v2 §7): the robot shuts down until it is repaired at the lander.</summary>
+        public bool DamageCritically(int robotId)
+        {
+            Robot r = GetRobot(robotId);
+            if (r == null) return false;
+            r.CriticallyDamaged = true;
+            r.Task = null;
+            r.OnTemporaryTask = false;
+            return true;
+        }
+
         /// <summary>The colony's needs at the last assignment (for the Demand program).</summary>
         public ColonyNeeds Needs { get; private set; }
 
@@ -94,8 +110,9 @@ namespace KardashevAscent.Simulation.Robots
         {
             if (Movement == null)
                 return true;
-            double go = Movement.Routes.HoursBetween(r.Tile, t.Tile);
-            double back = Movement.HoursToCharger[t.Tile];
+            double speed = r.Attribute(RobotAttribute.Speed);
+            double go = Movement.Routes.HoursBetween(r.Tile, t.Tile) / speed;
+            double back = Movement.HoursToCharger[t.Tile] / speed;
             if (double.IsInfinity(go) || double.IsInfinity(back))
                 return false;
             double spare = r.Battery.StoredWh - RobotSpecs.ReturnToChargeFraction * r.Battery.CapacityWh;
@@ -372,7 +389,7 @@ namespace KardashevAscent.Simulation.Robots
             if (g == null || g.State == GroupState.Paused) return false;
             bool able = false;
             foreach (int id in g.MemberIds)
-                able |= RobotAbilities.CanDo(GetRobot(id).Kind, task.Kind);
+                able |= Capable(GetRobot(id), task.Kind);
             if (!able) return false;
             EndInterrupt(g);
             g.State = GroupState.Interrupted;
@@ -467,7 +484,7 @@ namespace KardashevAscent.Simulation.Robots
                 foreach (int id in g.MemberIds)
                 {
                     Robot r = GetRobot(id);
-                    if (!r.Available || !RobotAbilities.CanDo(r.Kind, t.Kind))
+                    if (!r.Available || !Capable(r, t.Kind))
                         continue;
                     if (pick == null || Busyness(r) < Busyness(pick))
                         pick = r;
@@ -532,7 +549,7 @@ namespace KardashevAscent.Simulation.Robots
             {
                 var openSet = new HashSet<WorkTask>(open);
                 foreach (WorkTask q in g.QueueItems)
-                    if (openSet.Contains(q) && !taken.Contains(q) && RobotAbilities.CanDo(r.Kind, q.Kind) && InRange(r, q))
+                    if (openSet.Contains(q) && !taken.Contains(q) && Capable(r, q.Kind) && InRange(r, q))
                         foreach (WorkTask t in open)
                             if (t.Equals(q)) return t;
                 return null;
@@ -541,7 +558,7 @@ namespace KardashevAscent.Simulation.Robots
             TaskPriority bestP = TaskPriority.Disabled;
             foreach (WorkTask t in open)
             {
-                if (taken.Contains(t) || !RobotAbilities.CanDo(r.Kind, t.Kind))
+                if (taken.Contains(t) || !Capable(r, t.Kind))
                     continue;
                 if (program == OperatingProgram.Facility && g.FacilityTile.HasValue && t.Tile != g.FacilityTile.Value)
                     continue;
@@ -596,6 +613,7 @@ namespace KardashevAscent.Simulation.Robots
                     HasTask = r.Task.HasValue, OnTemporaryTask = r.OnTemporaryTask,
                     HasProgramOverride = r.ProgramOverride.HasValue,
                     ProgramOverride = r.ProgramOverride ?? OperatingProgram.Priority,
+                    CriticallyDamaged = r.CriticallyDamaged,
                     HasUpkeep = true,
                     BatteryStoredWh = r.Battery.StoredWh,
                     BatteryDeliveredWh = r.Battery.DeliveredWh,
@@ -668,6 +686,7 @@ namespace KardashevAscent.Simulation.Robots
                 // Saves before version 8 have no battery or condition: the robot comes back charged and like new.
                 r.Modules = rs.Modules;
                 r.SodiumBattery = rs.SodiumBattery;
+                r.CriticallyDamaged = rs.CriticallyDamaged;
                 // Saves before version 12 have no routes: robots stand where they were.
                 if (rs.Route != null) r.Route.AddRange(rs.Route);
                 r.HopProgress = Math.Max(0.0, Math.Min(1.0, rs.HopProgress));
