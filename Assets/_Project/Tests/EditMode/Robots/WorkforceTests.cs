@@ -97,14 +97,15 @@ namespace KardashevAscent.Simulation.Tests.Robots
         }
 
         [Test]
-        public void Programs_OnlyPriorityIsImplemented()
+        public void Programs_AllCanBeSet_OverridesStillWork()
         {
             Workforce w = Start();
             Robot r = w.Robots[0];
-            Assert.IsFalse(w.SetGroupProgram(r.GroupId, OperatingProgram.Demand));
-            Assert.IsFalse(w.SetRobotProgramOverride(r.Id, OperatingProgram.TaskQueue));
-            Assert.IsTrue(w.SetRobotProgramOverride(r.Id, OperatingProgram.Priority));
-            Assert.AreEqual(OperatingProgram.Priority, w.EffectiveProgram(r));
+            Assert.IsTrue(w.SetGroupProgram(r.GroupId, OperatingProgram.Demand));
+            Assert.IsTrue(w.SetRobotProgramOverride(r.Id, OperatingProgram.TaskQueue));
+            Assert.AreEqual(OperatingProgram.TaskQueue, w.EffectiveProgram(r));
+            w.SetRobotProgramOverride(r.Id, null);
+            Assert.AreEqual(OperatingProgram.Demand, w.EffectiveProgram(r));
         }
 
         [Test]

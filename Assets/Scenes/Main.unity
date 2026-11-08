@@ -657,6 +657,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.UI.WorkforceView
   runner: {fileID: 123573323}
+  picker: {fileID: 765499589}
   toggleKey: 103
   refreshInterval: 0.5
 --- !u!114 &730110440

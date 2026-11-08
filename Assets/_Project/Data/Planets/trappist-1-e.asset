@@ -17,7 +17,7 @@ MonoBehaviour:
     displayName: TRAPPIST-1 e
     archiveName: TRAPPIST-1 e
     source: NASA Exoplanet Archive, table pscomppars
-    retrieved: 2026-11-05
+    retrieved: 2026-11-08
     solar:
       luminosityW: 2.116907731641514e+23
       semiMajorAxisM: 4375737717.975
@@ -53,6 +53,9 @@ MonoBehaviour:
       terrainSeed: 1841868279
       water: liquid
       oceanFraction: 0.85
+    chemistry:
+      metallicityDex: 0.052
+      ironMassFraction: 0.21
     provenance:
     - field: solar.luminosityW
       origin: nasa
@@ -147,3 +150,9 @@ MonoBehaviour:
     - field: look.oceanFraction
       origin: assumed
       note: share of the surface in low basins (seas, or dry basins), game value
+    - field: chemistry.metallicityDex
+      origin: nasa
+      note: st_met ([Fe/H])
+    - field: chemistry.ironMassFraction
+      origin: derived
+      note: 'Agol et al. 2021, PSJ 2:1: all seven TRAPPIST-1 planets fit ~21 wt % iron (Earth 32 %)'

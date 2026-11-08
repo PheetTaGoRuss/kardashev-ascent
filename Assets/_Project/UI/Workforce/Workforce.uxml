@@ -11,6 +11,9 @@
         <ui:Label name="summary" class="body" text="" />
         <ui:ScrollView name="scroll" class="workforce-scroll" mode="Vertical">
             <ui:VisualElement name="groups" />
+            <ui:VisualElement name="group-actions" class="button-row" />
+            <ui:Label class="heading section-head" text="TASKS" />
+            <ui:VisualElement name="tasks" />
             <ui:Label class="heading section-head" text="WORKSHOP" />
             <ui:Label name="workshop-status" class="caption wrap" text="" />
             <ui:VisualElement name="workshop" />

@@ -368,6 +368,14 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Robots on survey and mining tasks add work; finished surveys reveal tiles, finished batches add material.</summary>
         void AdvanceFieldWork(double dt)
         {
+            // Interruption rule (D15): a survey (a measurement) restarts if no robot is on it; building, salvage and
+            // mining keep their progress, which lives on the site or the batch.
+            foreach (int tile in surveyOrders)
+            {
+                WorkTask st = SurveyTask(tile);
+                if (fieldWork.ContainsKey(st) && !Workforce.IsWorked(st))
+                    fieldWork.Remove(st);
+            }
             foreach (Robot r in Workforce.Robots)
             {
                 if (!r.Task.HasValue || r.Activity != RobotActivity.None || r.IsShutDown)
@@ -689,7 +697,7 @@ namespace KardashevAscent.Simulation.Game
         {
             while (true)
             {
-                Workforce.Assign(OpenTasks());
+                Workforce.Assign(OpenTasks(), Needs());
                 bool any = false;
                 foreach (var done in Build.Pay(key => Workforce.IsWorked(new WorkTask(TaskKind.Build, key.Tile, key.Slot))))
                 {
@@ -710,6 +718,16 @@ namespace KardashevAscent.Simulation.Game
         }
 
         public void RefreshWork() => Settle(null);
+
+        /// <summary>
+        /// What the colony needs now, for robots on the Demand program (D16): a brownout, or the grid battery under
+        /// 30 % at night (TBD), and sites waiting for a robot.
+        /// </summary>
+        ColonyNeeds Needs() =>
+            new ColonyNeeds(Grid.IsBrownout || (!IsDayAtBase && Grid.Battery.StateOfCharge < 0.30), Build.QueueCount > 0);
+
+        /// <summary>Every open task now (sites, salvage and survey orders, mining, Workshop jobs), for the UI.</summary>
+        public IReadOnlyList<WorkTask> OpenWork() => OpenTasks();
 
         public bool OrderSalvage(int tileId, int slot)
         {
@@ -989,7 +1007,7 @@ namespace KardashevAscent.Simulation.Game
                     jobs.Add(j);
                 }
             Workforce.GroupCapacity = Math.Max(Workforce.GroupCapacity, RobotTech.GroupCapacity(MilestonesReached));
-            Workforce.Assign(OpenTasks());
+            Workforce.Assign(OpenTasks(), Needs());
             GenerationW = ComputeGeneration() + RtgW;
             return true;
         }

@@ -33,6 +33,21 @@
 .button-row { flex-direction: row; flex-wrap: wrap; align-items: center; margin-top: 4px; }
 .job { flex-direction: row; align-items: center; margin-top: 3px; }
 .job-text { flex-grow: 1; font-size: 11px; padding: 0; margin: 0; white-space: normal; }
+.name-field { width: 150px; margin: 0 4px 0 0; padding: 0; }
+.name-field .unity-base-text-field__input,
+.name-field .unity-text-field__input {
+    color: var(--text);
+    background-color: rgba(255, 255, 255, 0.10);
+    border-color: rgba(255, 255, 255, 0.25);
+    -unity-font-style: normal;
+    font-size: 11px;
+    min-height: 20px;
+    padding: 0 4px;
+    margin: 0;
+}
+.name-field .unity-text-element { color: var(--text); }
+.task-row { flex-direction: row; align-items: center; margin-top: 2px; }
+.task-text { flex-grow: 1; font-size: 11px; padding: 0; margin: 0; white-space: normal; }
 .small-button.locked { color: var(--text-muted); background-color: rgba(255, 255, 255, 0.08); }
 
 .group {

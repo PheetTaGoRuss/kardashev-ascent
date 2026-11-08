@@ -37,8 +37,78 @@ namespace KardashevAscent.Simulation.Robots
             set => groupCapacity = Math.Max(1, value);
         }
 
-        /// <summary>Only the Priority program works so far; the others are phase 4 placeholders.</summary>
-        public static bool IsImplemented(OperatingProgram program) => program == OperatingProgram.Priority;
+        /// <summary>Every program is implemented (phase 4).</summary>
+        public static bool IsImplemented(OperatingProgram program) => Enum.IsDefined(typeof(OperatingProgram), program);
+
+        /// <summary>The colony's needs at the last assignment (for the Demand program).</summary>
+        public ColonyNeeds Needs { get; private set; }
+
+        // ---- Phase 4 settings ----
+
+        /// <summary>Facility program: work only on this tile (null: anywhere).</summary>
+        public bool SetGroupFacility(int groupId, int? tile)
+        {
+            RobotGroup g = GetGroup(groupId);
+            if (g == null) return false;
+            g.FacilityTile = tile;
+            return true;
+        }
+
+        /// <summary>Move a kind of task one place earlier in the group's own order (spec §5 ranked ordering).</summary>
+        public bool RaiseInRanking(int groupId, TaskKind kind)
+        {
+            RobotGroup g = GetGroup(groupId);
+            if (g == null) return false;
+            List<TaskKind> order = g.RankedKinds();
+            int i = order.IndexOf(kind);
+            if (i > 0)
+            {
+                order.RemoveAt(i);
+                order.Insert(i - 1, kind);
+            }
+            g.Ranking = order;
+            return true;
+        }
+
+        /// <summary>Back to the default order.</summary>
+        public bool ResetRanking(int groupId)
+        {
+            RobotGroup g = GetGroup(groupId);
+            if (g == null) return false;
+            g.Ranking = null;
+            return true;
+        }
+
+        /// <summary>Add a task to the end of a group's queue (Task queue program). False if it is already queued.</summary>
+        public bool Enqueue(int groupId, WorkTask task)
+        {
+            RobotGroup g = GetGroup(groupId);
+            if (g == null || g.QueueItems.Contains(task)) return false;
+            g.QueueItems.Add(task);
+            return true;
+        }
+
+        public bool RemoveFromQueue(int groupId, int index)
+        {
+            RobotGroup g = GetGroup(groupId);
+            if (g == null || index < 0 || index >= g.QueueItems.Count) return false;
+            g.QueueItems.RemoveAt(index);
+            return true;
+        }
+
+        /// <summary>
+        /// The priority a robot gives a kind of task under its program: its own or its group's priority, except
+        /// under Demand, where the colony's needs decide (a Disabled kind stays disabled).
+        /// </summary>
+        public TaskPriority ProgramPriority(Robot r, TaskKind kind)
+        {
+            TaskPriority p = EffectivePriority(r, kind);
+            if (EffectiveProgram(r) != OperatingProgram.Demand || p == TaskPriority.Disabled)
+                return p;
+            if (kind == TaskKind.Build && (Needs.BrownoutRisk || Needs.SitesWaiting))
+                return TaskPriority.High;
+            return kind == TaskKind.Mine ? TaskPriority.Low : TaskPriority.Normal;
+        }
 
         public Robot GetRobot(int id)
         {
@@ -268,12 +338,20 @@ namespace KardashevAscent.Simulation.Robots
         // ---- Automation ----
 
         /// <summary>Hand out the open tasks (see the class summary). Tasks not in the list are finished or gone.</summary>
-        public void Assign(IReadOnlyList<WorkTask> tasks)
+        public void Assign(IReadOnlyList<WorkTask> tasks) => Assign(tasks, default);
+
+        /// <summary>Hand out the open tasks, with the colony's needs for the Demand program.</summary>
+        public void Assign(IReadOnlyList<WorkTask> tasks, ColonyNeeds needs)
         {
+            Needs = needs;
             var open = new Dictionary<WorkTask, WorkTask>();
             foreach (WorkTask t in tasks)
                 open[t] = t;
             var taken = new HashSet<WorkTask>();
+
+            // Queued tasks that are done (no longer open) leave the queues.
+            foreach (RobotGroup g in groups)
+                g.QueueItems.RemoveAll(q => !open.ContainsKey(q));
 
             // Interrupted groups whose temporary task is gone go back to their program.
             foreach (RobotGroup g in groups)
@@ -341,8 +419,8 @@ namespace KardashevAscent.Simulation.Robots
                         continue;
                     if (r.Task.HasValue)
                     {
-                        if (EffectivePriority(r, best.Value.Kind) != TaskPriority.Critical
-                            || EffectivePriority(r, r.Task.Value.Kind) == TaskPriority.Critical)
+                        if (ProgramPriority(r, best.Value.Kind) != TaskPriority.Critical
+                            || ProgramPriority(r, r.Task.Value.Kind) == TaskPriority.Critical)
                             continue;
                         taken.Remove(r.Task.Value);
                     }
@@ -354,21 +432,34 @@ namespace KardashevAscent.Simulation.Robots
         }
 
         /// <summary>How reluctant a robot is to drop what it does: idle 0, else 1 + how urgent its task is.</summary>
-        int Busyness(Robot r) => r.Task.HasValue ? 1 + (int)TaskPriority.Disabled - (int)EffectivePriority(r, r.Task.Value.Kind) : 0;
+        int Busyness(Robot r) => r.Task.HasValue ? 1 + (int)TaskPriority.Disabled - (int)ProgramPriority(r, r.Task.Value.Kind) : 0;
 
         WorkTask? BestFor(Robot r, IEnumerable<WorkTask> open, HashSet<WorkTask> taken)
         {
+            RobotGroup g = GetGroup(r.GroupId);
+            OperatingProgram program = EffectiveProgram(r);
+            if (program == OperatingProgram.TaskQueue)
+            {
+                var openSet = new HashSet<WorkTask>(open);
+                foreach (WorkTask q in g.QueueItems)
+                    if (openSet.Contains(q) && !taken.Contains(q) && RobotAbilities.CanDo(r.Kind, q.Kind))
+                        foreach (WorkTask t in open)
+                            if (t.Equals(q)) return t;
+                return null;
+            }
             WorkTask? best = null;
             TaskPriority bestP = TaskPriority.Disabled;
             foreach (WorkTask t in open)
             {
                 if (taken.Contains(t) || !RobotAbilities.CanDo(r.Kind, t.Kind))
                     continue;
-                TaskPriority p = EffectivePriority(r, t.Kind);
+                if (program == OperatingProgram.Facility && g.FacilityTile.HasValue && t.Tile != g.FacilityTile.Value)
+                    continue;
+                TaskPriority p = ProgramPriority(r, t.Kind);
                 if (p == TaskPriority.Disabled)
                     continue;
                 if (!best.HasValue || p < bestP
-                    || (p == bestP && (RobotAbilities.TieRank(t.Kind) < RobotAbilities.TieRank(best.Value.Kind)
+                    || (p == bestP && (g.RankOf(t.Kind) < g.RankOf(best.Value.Kind)
                                        || (t.Kind == best.Value.Kind && t.Order < best.Value.Order))))
                 {
                     best = t;
@@ -398,6 +489,11 @@ namespace KardashevAscent.Simulation.Robots
                 }
                 foreach (var kv in g.Priorities)
                     gs.Priorities.Add(new PriorityRecord { Kind = kv.Key, Priority = kv.Value });
+                gs.HasFacility = g.FacilityTile.HasValue;
+                gs.FacilityTile = g.FacilityTile ?? 0;
+                if (g.Ranking != null) gs.Ranking.AddRange(g.Ranking);
+                foreach (WorkTask q in g.QueueItems)
+                    gs.Queue.Add(new QueueItemRecord { Kind = q.Kind, Tile = q.Tile, Slot = q.Slot });
                 s.Groups.Add(gs);
             }
             foreach (Robot r in robots)
@@ -451,6 +547,12 @@ namespace KardashevAscent.Simulation.Robots
                 if (gs.Priorities != null)
                     foreach (PriorityRecord p in gs.Priorities)
                         g.Priorities[p.Kind] = p.Priority;
+                // Saves before version 11 have no facility, ranking or queue.
+                g.FacilityTile = gs.HasFacility ? gs.FacilityTile : (int?)null;
+                if (gs.Ranking != null && gs.Ranking.Count > 0) g.Ranking = new List<TaskKind>(gs.Ranking);
+                if (gs.Queue != null)
+                    foreach (QueueItemRecord q in gs.Queue)
+                        g.QueueItems.Add(new WorkTask(q.Kind, q.Tile, q.Slot));
                 newGroups.Add(g);
             }
             groups.Clear();

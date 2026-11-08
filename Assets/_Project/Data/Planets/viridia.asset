@@ -53,6 +53,9 @@ MonoBehaviour:
       terrainSeed: 7
       water: liquid
       oceanFraction: 0.62
+    chemistry:
+      metallicityDex: 0
+      ironMassFraction: 0.32
     provenance:
     - field: solar.luminosityW
       origin: assumed
@@ -135,3 +138,9 @@ MonoBehaviour:
     - field: look.oceanFraction
       origin: assumed
       note: share of the surface in low basins (seas, or dry basins), game value
+    - field: chemistry.metallicityDex
+      origin: assumed
+      note: 'not in the archive: solar metallicity assumed'
+    - field: chemistry.ironMassFraction
+      origin: assumed
+      note: 'composition not measured: Earth-like 32 wt % iron assumed'

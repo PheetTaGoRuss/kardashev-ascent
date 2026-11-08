@@ -19,10 +19,30 @@ namespace KardashevAscent.Simulation.Robots
     public enum TaskKind { Build, Salvage, Survey, Mine, Manufacture }
 
     /// <summary>
-    /// Operating programs (spec §4). Only <see cref="Priority"/> (the default) is implemented; the others are
-    /// placeholders for phase 4 and cannot be selected yet.
+    /// Operating programs (spec §4):
+    /// <list type="bullet">
+    /// <item><see cref="Priority"/> (default): the most urgent task by the group's priorities and ranking.</item>
+    /// <item><see cref="Facility"/>: like Priority, but only tasks on the group's facility tile.</item>
+    /// <item><see cref="Demand"/>: priorities follow what the colony needs now (design D16): building first when a
+    /// brownout threatens or sites are waiting, mining last. A Disabled kind stays disabled.</item>
+    /// <item><see cref="TaskQueue"/>: the group's own list of tasks, first open one first; idle when it is empty.</item>
+    /// </list>
     /// </summary>
     public enum OperatingProgram { Priority, Facility, Demand, TaskQueue }
+
+    /// <summary>What the colony needs now, for the Demand program (design D16).</summary>
+    public readonly struct ColonyNeeds
+    {
+        /// <summary>A brownout now, or the grid battery low at night.</summary>
+        public readonly bool BrownoutRisk;
+        public readonly bool SitesWaiting;
+
+        public ColonyNeeds(bool brownoutRisk, bool sitesWaiting)
+        {
+            BrownoutRisk = brownoutRisk;
+            SitesWaiting = sitesWaiting;
+        }
+    }
 
     /// <summary>Group states (spec §5): running its program, on a temporary manual task, or stopped.</summary>
     public enum GroupState { Automatic, Interrupted, Paused }

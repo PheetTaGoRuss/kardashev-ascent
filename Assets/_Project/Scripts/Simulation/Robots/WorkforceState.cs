@@ -73,6 +73,19 @@ namespace KardashevAscent.Simulation.Robots
         public int InterruptTile;
         public int InterruptSlot;
         public List<PriorityRecord> Priorities = new List<PriorityRecord>();
+        /// <summary>Phase 4 (save version 11): facility, own ranking and task queue.</summary>
+        public bool HasFacility;
+        public int FacilityTile;
+        public List<TaskKind> Ranking = new List<TaskKind>();
+        public List<QueueItemRecord> Queue = new List<QueueItemRecord>();
+    }
+
+    [Serializable]
+    public sealed class QueueItemRecord
+    {
+        public TaskKind Kind;
+        public int Tile;
+        public int Slot;
     }
 
     [Serializable]
