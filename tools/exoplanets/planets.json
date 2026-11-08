@@ -35,7 +35,11 @@
       "id": "trappist-1-e",
       "displayName": "TRAPPIST-1 e",
       "archiveName": "TRAPPIST-1 e",
-      "assumed": { "tidallyLocked": true, "oceanFraction": 0.85 }
+      "assumed": {
+        "tidallyLocked": true, "oceanFraction": 0.85,
+        "ironMassFraction": 0.21,
+        "ironMassFractionNote": "Agol et al. 2021, PSJ 2:1: all seven TRAPPIST-1 planets fit ~21 wt % iron (Earth 32 %)"
+      }
     },
     {
       "id": "kepler-16-b",

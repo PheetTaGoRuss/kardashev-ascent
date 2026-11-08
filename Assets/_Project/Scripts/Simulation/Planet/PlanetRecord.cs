@@ -46,7 +46,23 @@ namespace KardashevAscent.Simulation.Planet
         public BodyRecord planet = new BodyRecord();
         public FlagsRecord flags = new FlagsRecord();
         public LookRecord look = new LookRecord();
+        public ChemistryRecord chemistry = new ChemistryRecord();
         public List<ProvenanceRecord> provenance = new List<ProvenanceRecord>();
+
+        /// <summary>What the planet is made of, for resources (geology_resources.md claim 10).</summary>
+        [Serializable]
+        public sealed class ChemistryRecord
+        {
+            /// <summary>Host star metallicity [Fe/H] in dex (archive st_met; 0 = solar when unknown).</summary>
+            public double metallicityDex;
+            /// <summary>Planet iron mass fraction (0.32 Earth-like when not measured).</summary>
+            public double ironMassFraction = 0.32;
+        }
+
+        /// <summary>Chemistry for the deposit rules: metals from the star, iron measured or assumed.</summary>
+        public Resources.PlanetChemistry ToChemistry() =>
+            new Resources.PlanetChemistry(chemistry?.metallicityDex ?? 0.0, chemistry?.ironMassFraction ?? 0.32,
+                                          OriginOf("chemistry.ironMassFraction") == ValueOrigin.Derived, HasLiquidWater);
 
         [Serializable]
         public sealed class LookRecord

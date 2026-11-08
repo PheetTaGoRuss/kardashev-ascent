@@ -11,8 +11,12 @@ namespace KardashevAscent.Simulation.Robots
     /// <summary>Task priority levels (spec §5). Lower value = more urgent; Disabled tasks are never taken.</summary>
     public enum TaskPriority { Critical, High, Normal, Low, Disabled }
 
-    /// <summary>Kinds of work in phase 1 (design D1): finishing a construction site and taking down a building.</summary>
-    public enum TaskKind { Build, Salvage }
+    /// <summary>
+    /// Kinds of work (design D1): finishing a construction site, taking down a building (phase 1), surveying a tile's
+    /// ground and mining a material (phase 3a), and working a Workshop job (phase 3b). For Mine, the task's slot
+    /// holds the material; for Manufacture, the task is at the Workshop's tile and slot.
+    /// </summary>
+    public enum TaskKind { Build, Salvage, Survey, Mine, Manufacture }
 
     /// <summary>
     /// Operating programs (spec §4). Only <see cref="Priority"/> (the default) is implemented; the others are
@@ -52,12 +56,34 @@ namespace KardashevAscent.Simulation.Robots
     /// <summary>Which robot kinds can do which tasks (design D1: the General robot does basic work of every kind).</summary>
     public static class RobotAbilities
     {
+        /// <summary>
+        /// Which kind of task goes first when priorities are equal: building, salvage, the Workshop, surveys, then
+        /// mining (open-ended background work).
+        /// </summary>
+        public static int TieRank(TaskKind kind)
+        {
+            switch (kind)
+            {
+                case TaskKind.Build: return 0;
+                case TaskKind.Salvage: return 1;
+                case TaskKind.Manufacture: return 2;
+                case TaskKind.Survey: return 3;
+                default: return 4;
+            }
+        }
+
+        /// <summary>How fast a robot works at a task (hours of work per hour): specialists are faster at their own job.</summary>
+        public static double Speed(RobotKind robot, TaskKind task) =>
+            robot == RobotKind.General ? 1.0 : CanDo(robot, task) ? RobotSpecs.SpecialistSpeed : 0.0;
+
         public static bool CanDo(RobotKind robot, TaskKind task)
         {
             switch (robot)
             {
                 case RobotKind.General: return true;
-                case RobotKind.Construction: return task == TaskKind.Build || task == TaskKind.Salvage;
+                case RobotKind.Construction: return task == TaskKind.Build || task == TaskKind.Salvage || task == TaskKind.Manufacture;
+                case RobotKind.Mining: return task == TaskKind.Mine;
+                case RobotKind.Research: return task == TaskKind.Survey;
                 default: return false;
             }
         }

@@ -28,6 +28,12 @@
 .body { font-size: 12px; padding: 0; margin: 2px 0 0 0; white-space: normal; }
 .wrap { white-space: normal; }
 .notes { margin-top: 10px; }
+.section-head { margin-top: 12px; }
+.message { color: var(--warning); margin-top: 4px; }
+.button-row { flex-direction: row; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+.job { flex-direction: row; align-items: center; margin-top: 3px; }
+.job-text { flex-grow: 1; font-size: 11px; padding: 0; margin: 0; white-space: normal; }
+.small-button.locked { color: var(--text-muted); background-color: rgba(255, 255, 255, 0.08); }
 
 .group {
     margin-top: 8px;

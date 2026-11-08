@@ -128,6 +128,10 @@ namespace KardashevAscent.Simulation.Robots
             double fc = CriticalRequestW > 0.0 ? Math.Min(1.0, Math.Max(0.0, criticalServedW) / CriticalRequestW) : 0.0;
             double ft = TopUpRequestW > 0.0 ? Math.Min(1.0, Math.Max(0.0, topUpServedW) / TopUpRequestW) : 0.0;
             ChargingW = 0.0;
+            // A Maintenance robot free at the base speeds up repairs (its speciality).
+            bool mechanic = false;
+            foreach (Robot r in workforce.Robots)
+                mechanic |= r.Kind == RobotKind.Maintenance && r.Available;
             foreach (Robot r in workforce.Robots)
             {
                 switch (r.Activity)
@@ -141,7 +145,7 @@ namespace KardashevAscent.Simulation.Robots
                         ChargingW += r.LastChargeW;
                         break;
                     case RobotActivity.Maintenance:
-                        Repair(r, hours, parts);
+                        Repair(r, hours, parts, mechanic ? RobotSpecs.SpecialistSpeed : 1.0);
                         break;
                     default:
                         if (r.IsShutDown)
@@ -153,12 +157,12 @@ namespace KardashevAscent.Simulation.Robots
                         break;
                 }
                 if (flaringStar && r.Activity != RobotActivity.Maintenance)
-                    r.Condition -= RobotSpecs.FlareWearPerHour * hours;
+                    r.Condition -= RobotSpecs.FlareWearPerHour * hours * (r.Has(RobotModule.Shielding) ? RobotTech.ShieldingFactor : 1.0);
                 r.Condition = Math.Max(0.0, Math.Min(1.0, r.Condition));
             }
         }
 
-        static void Repair(Robot r, double hours, IPartsStore parts)
+        static void Repair(Robot r, double hours, IPartsStore parts, double speed)
         {
             if (parts == null)
                 return;
@@ -171,7 +175,7 @@ namespace KardashevAscent.Simulation.Robots
                     r.Battery.Replace();
                 }
             }
-            double want = Math.Min(1.0 - r.Condition, RobotSpecs.RepairPerHour * hours);
+            double want = Math.Min(1.0 - r.Condition, RobotSpecs.RepairPerHour * speed * hours);
             if (want <= 0.0)
                 return;
             double got = parts.Take(want * RobotSpecs.RepairPartsWh);
