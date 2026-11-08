@@ -232,17 +232,20 @@ namespace KardashevAscent.Presentation.UI
                     : $"Maintenance {at}: repairs use build parts";
             if (r.NeedsCharge)
                 return "Battery below 20 %: waiting for a free charger";
+            string repairNote = !r.NeedsMaintenance ? ""
+                : r.Battery.WornOut ? " · battery worn out: waits for a place at the lander"
+                : " · needs repair: waits for a place at the lander";
             if (!r.Task.HasValue)
-                return "No task: waiting for work";
+                return "No task: waiting for work" + repairNote;
             WorkTask t = r.Task.Value;
             string what = BuildingName(sim.GetBuilding(t.Tile, t.Slot));
             if (t.Kind == TaskKind.Build)
             {
                 double progress = sim.ConstructionProgress(t.Tile, t.Slot);
                 string waiting = sim.BuildStockWh <= 0.0 && sim.BuildPowerW <= 0.0 ? " · waiting for spare power" : "";
-                return $"Building a {what} · tile {t.Tile}, slot {t.Slot} · {progress * 100.0:0} %{waiting}";
+                return $"Building a {what} · tile {t.Tile}, slot {t.Slot} · {progress * 100.0:0} %{waiting}{repairNote}";
             }
-            return $"Taking down a {what} · tile {t.Tile}, slot {t.Slot}";
+            return $"Taking down a {what} · tile {t.Tile}, slot {t.Slot}{repairNote}";
         }
 
         static string BuildingName(BuildingType type) =>
