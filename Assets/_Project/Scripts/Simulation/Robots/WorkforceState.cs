@@ -49,6 +49,15 @@ namespace KardashevAscent.Simulation.Robots
         public int ManualTarget;
         /// <summary>Stage A (save version 13): critical operational damage.</summary>
         public bool CriticallyDamaged;
+        /// <summary>Stage B (save version 14): the player's reservation and the task to go back to.</summary>
+        public bool HasReserved;
+        public TaskKind ReservedKind;
+        public int ReservedTile;
+        public int ReservedSlot;
+        public bool HasResume;
+        public TaskKind ResumeKind;
+        public int ResumeTile;
+        public int ResumeSlot;
     }
 
     /// <summary>A Workshop job in a saved game (version 10); its recipe is rebuilt from these fields.</summary>

@@ -131,7 +131,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             var a = Create(Sunlike("viridia"));
             SimulationState state = a.CaptureState();
             Assert.AreEqual("viridia", state.PlanetId);
-            Assert.AreEqual(13, state.Version);
+            Assert.AreEqual(14, state.Version);
             Assert.IsTrue(Create(Sunlike("viridia")).RestoreState(state));
             Assert.IsFalse(Create(Sunlike("elsewhere")).RestoreState(state), "a save from another planet");
             state.PlanetId = "";
