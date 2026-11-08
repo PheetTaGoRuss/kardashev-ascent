@@ -150,6 +150,11 @@ namespace KardashevAscent.Presentation.UI
                 bestLabel.text = $"{best.Tilt * Mathf.Rad2Deg:0}° · {best.Azimuth * Mathf.Rad2Deg:0}°";
                 bestCaption.text = "tilt · facing (from north)";
             }
+            else if (!info.IsWater && placer != null && placer.Tile == tile && !placer.BestAngleUnlocked)
+            {
+                bestLabel.text = "?";
+                bestCaption.text = "find your latitude first (V: sky view)";
+            }
             else
             {
                 bestLabel.text = info.IsWater ? "–" : "…";
