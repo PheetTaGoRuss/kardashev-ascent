@@ -22,6 +22,7 @@
                     <ui:Button name="mode-panel" class="action-button mode" text="Solar panel" />
                     <ui:Button name="mode-battery" class="action-button mode" text="Battery yard" />
                     <ui:Button name="mode-workshop" class="action-button mode" text="Workshop" />
+                    <ui:Button name="mode-station" class="action-button mode" text="Charger" />
                 </ui:VisualElement>
                 <ui:Label class="caption" text="Tab: switch what to build" />
                 <ui:Label name="battery-text" class="body hidden" text="" />

@@ -87,6 +87,9 @@ namespace KardashevAscent.Simulation.Game
             foreach (var b in batteries)
                 if (!Build.IsQueued(b.Tile, b.Slot))
                     list.Add(new RobotFacility(b.Tile, b.Slot, ChargingCapability.BatteryYard));
+            foreach (var c in stations)
+                if (!Build.IsQueued(c.Tile, c.Slot))
+                    list.Add(new RobotFacility(c.Tile, c.Slot, ChargingCapability.Station));
             return list;
         }
 
@@ -95,6 +98,18 @@ namespace KardashevAscent.Simulation.Game
 
         readonly HashSet<(int Tile, int Slot)> batteries = new HashSet<(int, int)>();
         readonly HashSet<(int Tile, int Slot)> workshops = new HashSet<(int, int)>();
+        readonly HashSet<(int Tile, int Slot)> stations = new HashSet<(int, int)>();
+
+        public bool PlaceChargingStation(int tileId, int slot)
+        {
+            if (tileId < 0 || tileId >= TileCount || slot < 0 || slot >= SlotCount(tileId)
+                || GetTile(tileId).IsWater || GetBuilding(tileId, slot) != BuildingType.None)
+                return false;
+            Build.Start(tileId, slot, BuildCostWh(BuildingType.ChargingStation), 0.0, false);
+            stations.Add((tileId, slot));
+            Settle((tileId, slot));
+            return true;
+        }
         readonly List<ManufacturingJob> jobs = new List<ManufacturingJob>();
 
         // ---- Manufacturing (phase 3b) ----
@@ -551,7 +566,8 @@ namespace KardashevAscent.Simulation.Game
             double topUpW = Math.Min(grid.CurtailedW, Upkeep.TopUpRequestW);
             BuildPowerW = grid.CurtailedW - topUpW;
             CurtailedW = grid.CurtailedW - topUpW - BuildPowerW;
-            Upkeep.Apply(Workforce, dt, grid.DockServedW, grid.PriorityServedW, topUpW, IsFlaringStar, Build, moving);
+            Upkeep.Apply(Workforce, dt, grid.DockServedW, grid.PriorityServedW, topUpW, IsFlaringStar, Build, moving,
+                         Materials, planet.AirTemperatureC);
             RobotChargingW = Upkeep.ChargingW;
             AdvanceFieldWork(dt);
             Build.AddParts(BuildPowerW, dt);
@@ -714,6 +730,7 @@ namespace KardashevAscent.Simulation.Game
                 case BuildingType.SolarPanel: return PanelCost(PanelAreaM2 * PanelTiers.All[PanelTier].Scale);
                 case BuildingType.Battery: return BuildCosts.Battery(BatteryUnitWh);
                 case BuildingType.Workshop: return RobotTech.WorkshopPartsWh;
+                case BuildingType.ChargingStation: return RobotTech.ChargingStationPartsWh;
                 default: return 0.0;
             }
         }
@@ -881,6 +898,7 @@ namespace KardashevAscent.Simulation.Game
             panels.ContainsKey((tileId, slot)) ? BuildingType.SolarPanel
             : batteries.Contains((tileId, slot)) ? BuildingType.Battery
             : workshops.Contains((tileId, slot)) ? BuildingType.Workshop
+            : stations.Contains((tileId, slot)) ? BuildingType.ChargingStation
             : BuildingType.None;
 
         public bool PlaceBattery(int tileId, int slot)
@@ -912,6 +930,12 @@ namespace KardashevAscent.Simulation.Game
             {
                 Dismantle(tileId, slot, BuildingType.Workshop);
                 workshops.Remove((tileId, slot));
+                return true;
+            }
+            if (stations.Contains((tileId, slot)))
+            {
+                Dismantle(tileId, slot, BuildingType.ChargingStation);
+                stations.Remove((tileId, slot));
                 return true;
             }
             if (!batteries.Contains((tileId, slot)))
@@ -970,6 +994,8 @@ namespace KardashevAscent.Simulation.Game
                 state.Buildings.Add(new BuildingRecord { Tile = b.Tile, Slot = b.Slot, Type = BuildingType.Battery });
             foreach (var w in workshops)
                 state.Buildings.Add(new BuildingRecord { Tile = w.Tile, Slot = w.Slot, Type = BuildingType.Workshop });
+            foreach (var c in stations)
+                state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.ChargingStation });
             foreach (ManufacturingJob j in jobs)
                 state.Jobs.Add(new JobRecord
                 {
@@ -1003,6 +1029,8 @@ namespace KardashevAscent.Simulation.Game
             foreach (var key in new List<(int Tile, int Slot)>(batteries))
                 RemoveBuilding(key.Tile, key.Slot);
             foreach (var key in new List<(int Tile, int Slot)>(workshops))
+                RemoveBuilding(key.Tile, key.Slot);
+            foreach (var key in new List<(int Tile, int Slot)>(stations))
                 RemoveBuilding(key.Tile, key.Slot);
             TimeHours = state.TimeHours;
             MilestonesReached = Math.Max(0, Math.Min(10, state.MilestonesReached));
@@ -1091,6 +1119,13 @@ namespace KardashevAscent.Simulation.Game
                 double area = r.AreaM2 > 0.0 ? r.AreaM2 : PanelAreaM2;
                 if (site) Build.RestoreSite(r.Tile, r.Slot, PanelCost(area), r.PaidWh);
                 AddPanel(r.Tile, r.Slot, r.Tilt, r.Azimuth, area);
+            }
+            else if (r.Type == BuildingType.ChargingStation)
+            {
+                if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
+                    return;
+                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildCostWh(BuildingType.ChargingStation), r.PaidWh);
+                stations.Add((r.Tile, r.Slot));
             }
             else if (r.Type == BuildingType.Workshop)
             {

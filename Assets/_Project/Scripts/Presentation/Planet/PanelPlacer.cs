@@ -27,6 +27,8 @@ namespace KardashevAscent.Presentation.Planet
         Battery,
         /// <summary>Robot Workshop (phase 3b).</summary>
         Workshop,
+        /// <summary>Robot charging station (spec v2 §7).</summary>
+        ChargingStation,
     }
 
     [RequireComponent(typeof(PlanetView))]
@@ -62,7 +64,7 @@ namespace KardashevAscent.Presentation.Planet
         readonly List<BatteryVisual> batteryGhosts = new List<BatteryVisual>();
         BuildMode mode = BuildMode.SolarPanel;
 
-        /// <summary>What P builds: solar panels, battery yards or a Robot Workshop. Tab switches.</summary>
+        /// <summary>What P builds: solar panels, battery yards, a Robot Workshop or a charging station. Tab switches.</summary>
         public BuildMode Mode
         {
             get => mode;
@@ -246,14 +248,15 @@ namespace KardashevAscent.Presentation.Planet
             return new PanelPreview(p.CanPlace, p.Reason, p.EnergyPerYearWh * area / newArea, p.CapacityFactor, p.Eroi, p.PaybackYears);
         }
 
-        /// <summary>A battery yard, or a Workshop (the same blocks with the colours swapped).</summary>
+        /// <summary>A battery yard, a Workshop or a charging station: the same blocks in different colours.</summary>
         BatteryVisual MakeBattery(int t, int s, bool constructionSite)
         {
-            bool workshop = simulation != null && simulation.GetBuilding(t, s) == BuildingType.Workshop;
-            string what = workshop ? "Workshop" : "Battery";
+            BuildingType type = simulation != null ? simulation.GetBuilding(t, s) : BuildingType.Battery;
+            string what = type == BuildingType.Workshop ? "Workshop" : type == BuildingType.ChargingStation ? "Charger" : "Battery";
             if (!constructionSite)
-                return workshop ? new BatteryVisual($"{what} {t}.{s}", transform, cellMaterial, frameMaterial)
-                                : new BatteryVisual($"{what} {t}.{s}", transform, frameMaterial, cellMaterial);
+                return type == BuildingType.Workshop ? new BatteryVisual($"{what} {t}.{s}", transform, cellMaterial, frameMaterial)
+                     : type == BuildingType.ChargingStation ? new BatteryVisual($"{what} {t}.{s}", transform, frameMaterial, frameMaterial)
+                     : new BatteryVisual($"{what} {t}.{s}", transform, frameMaterial, cellMaterial);
             var visual = new BatteryVisual($"{what} Site {t}.{s}", transform, ghostMaterial, ghostMaterial);
             visual.SetTint(siteTint);
             return visual;
@@ -317,7 +320,7 @@ namespace KardashevAscent.Presentation.Planet
             foreach (BuildingRecord r in simulation.CaptureState().Buildings)
             {
                 TileSite site = siteView.SiteFor(r.Tile);
-                if (r.Type == BuildingType.Battery || r.Type == BuildingType.Workshop)
+                if (r.Type == BuildingType.Battery || r.Type == BuildingType.Workshop || r.Type == BuildingType.ChargingStation)
                 {
                     BatteryVisual yard = MakeBattery(r.Tile, r.Slot, r.UnderConstruction);
                     ShowBattery(yard, site, r.Slot);
@@ -407,7 +410,8 @@ namespace KardashevAscent.Presentation.Planet
             }
 
             if (tile >= 0 && Input.GetKeyDown(KeyCode.Tab))
-                mode = mode == BuildMode.SolarPanel ? BuildMode.Battery : mode == BuildMode.Battery ? BuildMode.Workshop : BuildMode.SolarPanel;
+                mode = mode == BuildMode.SolarPanel ? BuildMode.Battery : mode == BuildMode.Battery ? BuildMode.Workshop
+                     : mode == BuildMode.Workshop ? BuildMode.ChargingStation : BuildMode.SolarPanel;
 
             if (MultiSelect)
             {
@@ -444,7 +448,8 @@ namespace KardashevAscent.Presentation.Planet
 
         /// <summary>Build parts one building of the current mode costs, Wh.</summary>
         public double BuildCostWh => simulation != null
-            ? simulation.BuildCostWh(mode == BuildMode.Battery ? BuildingType.Battery : mode == BuildMode.Workshop ? BuildingType.Workshop : BuildingType.SolarPanel) : 0.0;
+            ? simulation.BuildCostWh(mode == BuildMode.Battery ? BuildingType.Battery : mode == BuildMode.Workshop ? BuildingType.Workshop
+                                     : mode == BuildMode.ChargingStation ? BuildingType.ChargingStation : BuildingType.SolarPanel) : 0.0;
 
         /// <summary>What a new solar building here is, e.g. "solar farm (1 km²)".</summary>
         public string NewPanelName => simulation == null ? "solar panel"
@@ -625,9 +630,10 @@ namespace KardashevAscent.Presentation.Planet
         {
             if (simulation == null || tile < 0 || s < 0 || Occupied(s) || siteView.Site == null)
                 return false;
-            if (mode == BuildMode.Battery || mode == BuildMode.Workshop)
+            if (mode == BuildMode.Battery || mode == BuildMode.Workshop || mode == BuildMode.ChargingStation)
             {
-                if (!(mode == BuildMode.Battery ? simulation.PlaceBattery(tile, s) : simulation.PlaceWorkshop(tile, s)))
+                if (!(mode == BuildMode.Battery ? simulation.PlaceBattery(tile, s)
+                      : mode == BuildMode.Workshop ? simulation.PlaceWorkshop(tile, s) : simulation.PlaceChargingStation(tile, s)))
                     return false;
                 BatteryVisual yard = MakeBattery(tile, s, simulation.IsUnderConstruction(tile, s));
                 ShowBattery(yard, siteView.Site, s);

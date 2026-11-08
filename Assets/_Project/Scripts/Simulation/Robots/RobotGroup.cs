@@ -37,6 +37,9 @@ namespace KardashevAscent.Simulation.Robots
         public TaskPriority PriorityOf(TaskKind kind) =>
             Priorities.TryGetValue(kind, out TaskPriority p) ? p : TaskPriority.Normal;
 
+        /// <summary>Maintenance rule (spec v2 §8): the group's robots go for repair below this condition.</summary>
+        public double MaintenanceBelow { get; internal set; } = RobotSpecs.MaintenanceBelowCondition;
+
         /// <summary>Facility program: the tile the group works on (null: anywhere).</summary>
         public int? FacilityTile { get; internal set; }
 

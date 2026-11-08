@@ -263,6 +263,9 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Build a Robot Workshop in an empty land slot (a construction site until a robot finishes it).</summary>
         bool PlaceWorkshop(int tileId, int slot);
 
+        /// <summary>Build a robot charging station in an empty land slot (a construction site until a robot finishes it).</summary>
+        bool PlaceChargingStation(int tileId, int slot);
+
         /// <summary>Finished Workshops (each works one job at a time).</summary>
         int WorkshopCount { get; }
 
@@ -322,6 +325,8 @@ namespace KardashevAscent.Simulation.Game
         Battery,
         /// <summary>Robot Workshop (phase 3b): makes robots, upgrades and refined materials.</summary>
         Workshop,
+        /// <summary>Dedicated robot charging station (spec v2 §7).</summary>
+        ChargingStation,
     }
 
     /// <summary>Static facts about one tile.</summary>

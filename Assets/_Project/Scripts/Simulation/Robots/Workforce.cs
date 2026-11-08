@@ -240,7 +240,8 @@ namespace KardashevAscent.Simulation.Robots
             double back = Movement.HoursToCharger[t.Tile] / speed;
             if (double.IsInfinity(go) || double.IsInfinity(back))
                 return false;
-            double spare = r.Battery.StoredWh - RobotSpecs.ReturnToChargeFraction * r.Battery.CapacityWh;
+            double usableCapacity = r.Battery.ColdFactor * r.Battery.CapacityWh;
+            double spare = r.Battery.UsableWh - RobotSpecs.ReturnToChargeFraction * usableCapacity;
             return Movement.EnergyWh(go + back) <= spare + 1e-9;
         }
 
@@ -433,6 +434,15 @@ namespace KardashevAscent.Simulation.Robots
         }
 
         // ---- Settings ----
+
+        /// <summary>A group's maintenance rule (spec v2 §8): repair below this condition (0.05–0.9).</summary>
+        public bool SetGroupMaintenance(int groupId, double belowCondition)
+        {
+            RobotGroup g = GetGroup(groupId);
+            if (g == null || belowCondition < 0.05 || belowCondition > 0.9) return false;
+            g.MaintenanceBelow = belowCondition;
+            return true;
+        }
 
         public bool SetGroupPriority(int groupId, TaskKind kind, TaskPriority priority)
         {
@@ -932,8 +942,9 @@ namespace KardashevAscent.Simulation.Robots
             double back = Movement.HoursToCharger[t.Tile] / speed;
             if (double.IsInfinity(go) || double.IsInfinity(back))
                 return false;
-            double spare = (RobotSpecs.ResumeWorkFraction - RobotSpecs.ReturnToChargeFraction) * r.Battery.CapacityWh;
-            return Movement.EnergyWh(go + back) <= Math.Max(spare, r.Battery.StoredWh - RobotSpecs.ReturnToChargeFraction * r.Battery.CapacityWh) + 1e-9;
+            double usableCapacity = r.Battery.ColdFactor * r.Battery.CapacityWh;
+            double spare = (RobotSpecs.ResumeWorkFraction - RobotSpecs.ReturnToChargeFraction) * usableCapacity;
+            return Movement.EnergyWh(go + back) <= Math.Max(spare, r.Battery.UsableWh - RobotSpecs.ReturnToChargeFraction * usableCapacity) + 1e-9;
         }
 
         /// <summary>How reluctant a robot is to drop what it does: idle 0, else 1 + how urgent its task is.</summary>
@@ -997,6 +1008,7 @@ namespace KardashevAscent.Simulation.Robots
                 }
                 foreach (var kv in g.Priorities)
                     gs.Priorities.Add(new PriorityRecord { Kind = kv.Key, Priority = kv.Value });
+                gs.MaintenanceBelow = g.MaintenanceBelow;
                 gs.HasFacility = g.FacilityTile.HasValue;
                 gs.FacilityTile = g.FacilityTile ?? 0;
                 if (g.Ranking != null) gs.Ranking.AddRange(g.Ranking);
@@ -1024,6 +1036,11 @@ namespace KardashevAscent.Simulation.Robots
                     HasUpkeep = true,
                     BatteryStoredWh = r.Battery.StoredWh,
                     BatteryDeliveredWh = r.Battery.DeliveredWh,
+                    HasBatteryAgeing = true,
+                    BatteryDamage = r.Battery.Damage,
+                    BatteryCycleTop = r.Battery.CycleTop,
+                    BatteryCycleLow = r.Battery.CycleLow,
+                    BatteryZeroDischarges = r.Battery.ZeroDischarges,
                     Condition = r.Condition,
                     Activity = r.Activity,
                     Modules = r.Modules,
@@ -1070,6 +1087,8 @@ namespace KardashevAscent.Simulation.Robots
                         g.Priorities[p.Kind] = p.Priority;
                 // Saves before version 11 have no facility, ranking or queue.
                 g.FacilityTile = gs.HasFacility ? gs.FacilityTile : (int?)null;
+                // Saves before version 15 have no maintenance rule: the default.
+                g.MaintenanceBelow = gs.MaintenanceBelow > 0.0 ? gs.MaintenanceBelow : RobotSpecs.MaintenanceBelowCondition;
                 if (gs.Ranking != null && gs.Ranking.Count > 0) g.Ranking = new List<TaskKind>(gs.Ranking);
                 if (gs.Queue != null)
                     foreach (QueueItemRecord q in gs.Queue)
@@ -1107,7 +1126,12 @@ namespace KardashevAscent.Simulation.Robots
                     r.Battery = new RobotBattery(r.DesignBatteryWh);
                 if (rs.HasUpkeep)
                 {
-                    r.Battery.Restore(rs.BatteryDeliveredWh, rs.BatteryStoredWh);
+                    // Saves before version 15 count health from full cycles only.
+                    if (rs.HasBatteryAgeing)
+                        r.Battery.Restore(rs.BatteryDeliveredWh, rs.BatteryStoredWh, rs.BatteryDamage, rs.BatteryCycleTop,
+                                          rs.BatteryCycleLow, rs.BatteryZeroDischarges);
+                    else
+                        r.Battery.Restore(rs.BatteryDeliveredWh, rs.BatteryStoredWh);
                     r.Condition = Math.Max(0.0, Math.Min(1.0, rs.Condition));
                     if (rs.Activity != RobotActivity.None && rs.HasFacility)
                     {

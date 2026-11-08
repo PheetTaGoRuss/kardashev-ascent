@@ -91,6 +91,15 @@ namespace KardashevAscent.Simulation.Robots
 
         /// <summary>Build parts for a full repair (condition 0 → 1), Wh. TBD (D4); manufacture (phase 3) must cost more.</summary>
         public const double RepairPartsWh = 10_000.0;
+
+        /// <summary>Iron for a full repair (spec v2 §8: basic maintenance uses basic materials), kg. TBD.</summary>
+        public const double RepairIronKg = 20.0;
+
+        /// <summary>Without iron, repairs go this much slower. TBD.</summary>
+        public const double RepairWithoutIronRate = 0.5;
+
+        /// <summary>Battery health restored per hour of maintenance when the ageing is minor. TBD.</summary>
+        public const double MinorBatteryRepairPerHour = 0.01;
     }
 
     /// <summary>
@@ -108,6 +117,7 @@ namespace KardashevAscent.Simulation.Robots
             Slots = slots;
             PowerW = powerW;
             Repairs = repairs;
+            AllowedKinds = null;
         }
 
         /// <summary>The lander: the robots' home, charges and repairs (D10). TBD values.</summary>
@@ -115,6 +125,26 @@ namespace KardashevAscent.Simulation.Robots
 
         /// <summary>A battery yard charges robots (spec §6 example). TBD values.</summary>
         public static ChargingCapability BatteryYard => new ChargingCapability(4, 2_000.0, false);
+
+        /// <summary>A dedicated charging station (spec v2 §7). TBD values.</summary>
+        public static ChargingCapability Station => new ChargingCapability(6, 5_000.0, false);
+
+        /// <summary>Robot kinds allowed to use it (null: all) — access restrictions (spec v2 §7).</summary>
+        public RobotKind[] AllowedKinds { get; }
+
+        public ChargingCapability(int slots, double powerW, bool repairs, RobotKind[] allowedKinds)
+            : this(slots, powerW, repairs)
+        {
+            AllowedKinds = allowedKinds;
+        }
+
+        public bool Allows(RobotKind kind)
+        {
+            if (AllowedKinds == null) return true;
+            foreach (RobotKind k in AllowedKinds)
+                if (k == kind) return true;
+            return false;
+        }
     }
 
     /// <summary>One place robots can charge or be repaired. Slot −1 is the lander on its tile.</summary>
