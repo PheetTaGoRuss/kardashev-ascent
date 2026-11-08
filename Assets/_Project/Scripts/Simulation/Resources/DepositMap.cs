@@ -27,6 +27,16 @@ namespace KardashevAscent.Simulation.Resources
     {
         /// <summary>Share of eligible tiles that hold copper or lithium. TBD (D4).</summary>
         public const double CopperShare = 0.35, LithiumShare = 0.35;
+        /// <summary>
+        /// Arc copper sits in high ground up to this many tiles from a sea (the map has no plate boundaries; on
+        /// Earth porphyry belts lie 100–300 km inland of the trench, geology_resources.md claim 1). TBD.
+        /// </summary>
+        public const int ArcReachTiles = 4;
+        /// <summary>
+        /// Magmatic and impact nickel-copper sulfides (claims 1 and 5): any high ground on any planet, rarer and
+        /// poorer than arc copper. Share and grade factor TBD.
+        /// </summary>
+        public const double SulfideCopperShare = 0.12, SulfideCopperGrade = 0.5;
         /// <summary>Tile-to-tile spread of grades: grade × (1 − Spread … 1 + Spread). TBD (D4).</summary>
         public const double Spread = 0.5;
         /// <summary>Ground ice under tundra compared with a glacier. TBD (D4).</summary>
@@ -41,8 +51,9 @@ namespace KardashevAscent.Simulation.Resources
             if (surface == null) throw new ArgumentNullException(nameof(surface));
             Chemistry = chemistry;
             deposits = new List<Deposit>[sphere.TileCount];
+            int[] toSea = SeaDistance(sphere, surface);
             for (int t = 0; t < sphere.TileCount; t++)
-                deposits[t] = Generate(sphere, surface, chemistry, seed, t);
+                deposits[t] = Generate(sphere, surface, chemistry, seed, t, toSea[t]);
         }
 
         public PlanetChemistry Chemistry { get; }
@@ -72,7 +83,33 @@ namespace KardashevAscent.Simulation.Resources
         /// <summary>True if the player can see this material on this tile: rock always, the rest once surveyed.</summary>
         public bool IsKnown(int tile, Material m) => m == Material.Rock || IsSurveyed(tile);
 
-        static List<Deposit> Generate(HexSphere sphere, PlanetSurface surface, PlanetChemistry chem, int seed, int t)
+        /// <summary>Tiles from each tile to the nearest sea (open or frozen); int.MaxValue on a planet without seas.</summary>
+        static int[] SeaDistance(HexSphere sphere, PlanetSurface surface)
+        {
+            int n = sphere.TileCount;
+            var d = new int[n];
+            var queue = new Queue<int>();
+            for (int t = 0; t < n; t++)
+            {
+                TerrainType tt = surface.Terrain[t];
+                bool sea = Terrains.IsWater(tt) || tt == TerrainType.FrozenSea;
+                d[t] = sea ? 0 : int.MaxValue;
+                if (sea) queue.Enqueue(t);
+            }
+            while (queue.Count > 0)
+            {
+                int t = queue.Dequeue();
+                foreach (int nb in sphere.Neighbors[t])
+                    if (d[nb] == int.MaxValue)
+                    {
+                        d[nb] = d[t] + 1;
+                        queue.Enqueue(nb);
+                    }
+            }
+            return d;
+        }
+
+        static List<Deposit> Generate(HexSphere sphere, PlanetSurface surface, PlanetChemistry chem, int seed, int t, int tilesToSea)
         {
             var list = new List<Deposit>();
             TerrainType here = surface.Terrain[t];
@@ -97,10 +134,14 @@ namespace KardashevAscent.Simulation.Resources
             if (ice > 0.0)
                 list.Add(new Deposit(Material.Water, ice * Vary(seed, t, 2)));
 
-            // Porphyry copper: magmatic arcs above subduction, with water (claim 1). Stand-in: mountains on a coast.
-            if (chem.WaterHistory && (here == TerrainType.Mountain || here == TerrainType.Highland) && waterNeighbour
-                && Hash01(seed, t, 3) < CopperShare)
+            // Copper (claims 1 and 5). Arc copper (porphyry, epithermal) forms in high ground near a sea on a planet with
+            // water; stand-in: highland or mountain within ArcReachTiles of a sea. Magmatic and impact Ni-Cu sulfides
+            // form in high ground on any planet, rarer and poorer.
+            bool high = here == TerrainType.Mountain || here == TerrainType.Highland;
+            if (high && chem.WaterHistory && tilesToSea <= ArcReachTiles && Hash01(seed, t, 3) < CopperShare)
                 list.Add(new Deposit(Material.Copper, chem.MetalFactor * Vary(seed, t, 4)));
+            else if (high && Hash01(seed, t, 7) < SulfideCopperShare)
+                list.Add(new Deposit(Material.Copper, SulfideCopperGrade * chem.MetalFactor * Vary(seed, t, 8)));
 
             // Lithium brine: arid closed basin with a volcanic source and a water history (claim 2, USGS).
             // Stand-in: inland low ground (no sea next to it) beside highlands.
