@@ -3,6 +3,8 @@ using KardashevAscent.Presentation.Game;
 using KardashevAscent.Presentation.Planet;
 using KardashevAscent.Simulation.Game;
 using KardashevAscent.Simulation.Planet;
+using KardashevAscent.Simulation.Resources;
+using Material = KardashevAscent.Simulation.Resources.Material;
 using KardashevAscent.Simulation.Solar;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -27,7 +29,9 @@ namespace KardashevAscent.Presentation.UI
 
         static readonly string[] MonthNames = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12" };
 
-        VisualElement panelRoot, monthly, monthLabels;
+        VisualElement panelRoot, monthly, monthLabels, groundActions;
+        Label ground;
+        string groundShape;
         Label title, place, sunlight, bestLabel, bestCaption, sunPathCaption, monthlyCaption, monthlyHover, legend1, legend2;
         SunPathChart sunPath;
         int shownTile = -1;
@@ -56,6 +60,9 @@ namespace KardashevAscent.Presentation.UI
             legend2 = root.Q<Label>("legend-2");
             monthly = root.Q("monthly");
             monthLabels = root.Q("month-labels");
+            ground = root.Q<Label>("ground");
+            groundActions = root.Q("ground-actions");
+            groundShape = null;
 
             VisualElement holder = root.Q("sunpath");
             sunPath = new SunPathChart();
@@ -108,7 +115,86 @@ namespace KardashevAscent.Presentation.UI
                 return;
             nextRefresh = Time.unscaledTime + refreshInterval;
             Refresh(sim, tile);
+            RefreshGround(sim, tile);
         }
+
+        /// <summary>
+        /// What is known about the tile's ground (phase 3a): rock always; the rest after a robot surveys it. Buttons
+        /// order a survey or keep robots mining a material here (click again to stop).
+        /// </summary>
+        void RefreshGround(IPlanetSimulation sim, int tile)
+        {
+            if (ground == null || groundActions == null)
+                return;
+            DepositMap map = sim.Deposits;
+            bool water = sim.GetTile(tile).IsWater;
+            bool surveyed = map.IsSurveyed(tile);
+            string text;
+            if (water)
+                text = "Sea floor: robots can't reach it yet (copper and zinc ores form at sea-floor vents).";
+            else if (!surveyed)
+                text = sim.IsSurveyOrdered(tile)
+                    ? $"Survey under way: {sim.SurveyProgress(tile) * 100.0:0} % (a robot takes cores and scans the ground).\nRock: yes, everywhere on land."
+                    : "Not surveyed: only rock is known. Survey to find iron, water ice, copper or lithium.";
+            else
+            {
+                text = "";
+                foreach (Deposit d in map.At(tile))
+                    text += $"{Materials.Name(d.Material)}: grade {d.Grade:0.00}{(sim.IsMiningOrdered(tile, d.Material) ? " · being mined" : "")}\n";
+                if (map.At(tile).Count <= 2)
+                    text += "No water, copper or lithium here.\n";
+                text += $"Grade 1 = an ordinary deposit on Earth. This planet: metals ×{map.Chemistry.MetalFactor:0.00} " +
+                        $"(star [Fe/H] {map.Chemistry.MetallicityDex:+0.00;-0.00}), iron ×{map.Chemistry.IronFactor:0.00}" +
+                        (map.Chemistry.IronMeasured ? " (measured iron fraction)" : "") +
+                        (map.Chemistry.WaterHistory ? "" : ". No seas: no copper or lithium ores");
+            }
+            text += $"\nOn hand: {Stock(sim)}";
+            ground.text = text;
+
+            string shape = $"{tile}|{water}|{surveyed}|{sim.IsSurveyOrdered(tile)}";
+            foreach (Material m in Materials.Mined)
+                shape += sim.IsMiningOrdered(tile, m) ? "1" : "0";
+            if (shape == groundShape)
+                return;
+            groundShape = shape;
+            groundActions.Clear();
+            if (water)
+                return;
+            if (!surveyed)
+            {
+                bool ordered = sim.IsSurveyOrdered(tile);
+                AddGroundButton(ordered ? "Cancel survey" : "Survey (robot)", ordered,
+                                () => { if (sim.IsSurveyOrdered(tile)) sim.CancelSurvey(tile); else sim.OrderSurvey(tile); groundShape = null; });
+            }
+            foreach (Material m in Materials.Mined)
+            {
+                if (!map.IsKnown(tile, m) || map.GradeOf(tile, m) <= 0.0)
+                    continue;
+                Material material = m;
+                bool on = sim.IsMiningOrdered(tile, m);
+                AddGroundButton(on ? $"Stop mining {Materials.Name(m).ToLowerInvariant()}" : $"Mine {Materials.Name(m).ToLowerInvariant()}", on,
+                                () => { if (sim.IsMiningOrdered(tile, material)) sim.CancelMining(tile, material); else sim.OrderMining(tile, material); groundShape = null; });
+            }
+        }
+
+        void AddGroundButton(string text, bool on, Action onClick)
+        {
+            var b = new Button(onClick) { text = text };
+            b.AddToClassList("ground-button");
+            b.EnableInClassList("on", on);
+            groundActions.Add(b);
+        }
+
+        static string Stock(IPlanetSimulation sim)
+        {
+            string s = "";
+            foreach (Material m in Materials.All)
+                if (sim.Materials[m] > 0.0)
+                    s += (s.Length > 0 ? " · " : "") + $"{Materials.Name(m)} {FormatKg(sim.Materials[m])}";
+            return s.Length > 0 ? s : "no materials yet";
+        }
+
+        static string FormatKg(double kg) => kg >= 1000.0 ? $"{kg / 1000.0:0.##} t" : $"{kg:0} kg";
 
         void ShowTile(IPlanetSimulation sim, int tile)
         {

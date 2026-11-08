@@ -7,8 +7,8 @@ namespace KardashevAscent.Simulation.Game
     [Serializable]
     public sealed class SimulationState
     {
-        /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished. 7 added robots; 8 their batteries and condition.</summary>
-        public int Version = 8;
+        /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished. 7 added robots; 8 their batteries and condition; 9 resources.</summary>
+        public int Version = 9;
         /// <summary>Planet id from planets.json (version 3); empty in older saves.</summary>
         public string PlanetId = "";
         /// <summary>Milestones reached and the day-average power behind them (version 4; 0 in older saves).</summary>
@@ -42,6 +42,35 @@ namespace KardashevAscent.Simulation.Game
         public Robots.WorkforceState Workforce = new Robots.WorkforceState();
         /// <summary>Finished buildings waiting for a robot to take them down (version 7).</summary>
         public List<Robots.SalvageOrderRecord> SalvageOrders = new List<Robots.SalvageOrderRecord>();
+        /// <summary>Resources (version 9): surveyed tiles, orders, materials on hand and work done on field tasks.</summary>
+        public List<int> SurveyedTiles = new List<int>();
+        public List<int> SurveyOrders = new List<int>();
+        public List<MiningOrderRecord> MiningOrders = new List<MiningOrderRecord>();
+        public List<MaterialRecord> MaterialsKg = new List<MaterialRecord>();
+        public List<FieldWorkRecord> FieldWork = new List<FieldWorkRecord>();
+    }
+
+    [Serializable]
+    public sealed class MiningOrderRecord
+    {
+        public int Tile;
+        public Resources.Material Material;
+    }
+
+    [Serializable]
+    public sealed class MaterialRecord
+    {
+        public Resources.Material Material;
+        public double Kg;
+    }
+
+    [Serializable]
+    public sealed class FieldWorkRecord
+    {
+        public Robots.TaskKind Kind;
+        public int Tile;
+        public int Slot;
+        public double Hours;
     }
 
     /// <summary>One building in a saved game. Tilt/Azimuth (radians) are only used for panels.</summary>

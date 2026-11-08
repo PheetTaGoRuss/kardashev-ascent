@@ -228,6 +228,27 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Withdraw a salvage order. Returns false if there was none.</summary>
         bool CancelSalvage(int tileId, int slot);
 
+        // Resources (phase 3a; see Resources.DepositMap)
+
+        /// <summary>What lies in each tile's ground, and which tiles are surveyed (only those are shown to the player).</summary>
+        Resources.DepositMap Deposits { get; }
+
+        /// <summary>Materials on hand, kg.</summary>
+        Resources.MaterialStock Materials { get; }
+
+        /// <summary>Ask a robot to survey a land tile's ground. False if it is water, surveyed or already ordered.</summary>
+        bool OrderSurvey(int tileId);
+        bool IsSurveyOrdered(int tileId);
+        bool CancelSurvey(int tileId);
+
+        /// <summary>How much of a tile's survey is done, 0–1.</summary>
+        double SurveyProgress(int tileId);
+
+        /// <summary>Keep robots mining a known material on a tile, in batches. False if it isn't known there or already ordered.</summary>
+        bool OrderMining(int tileId, Resources.Material material);
+        bool IsMiningOrdered(int tileId, Resources.Material material);
+        bool CancelMining(int tileId, Resources.Material material);
+
         /// <summary>Everything needed to restore this simulation later (time, buildings, battery, colony).</summary>
         SimulationState CaptureState();
 
@@ -256,6 +277,9 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>A robot took down an ordered building (tile, slot); the slot is empty now.</summary>
         event Action<int, int> BuildingSalvaged;
+
+        /// <summary>A robot finished surveying a tile: its deposits are known now.</summary>
+        event Action<int> TileSurveyed;
     }
 
     /// <summary>What a building slot holds.</summary>

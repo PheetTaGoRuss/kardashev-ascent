@@ -37,7 +37,36 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>Draw while taking a building down, W. TBD (D4).</summary>
         public const double SalvagePowerW = 200.0;
 
-        public static double WorkingPowerW(TaskKind kind) => kind == TaskKind.Salvage ? SalvagePowerW : BuildPowerW;
+        /// <summary>Draw while surveying (sensors, drilling cores), W. TBD (D4).</summary>
+        public const double SurveyPowerW = 100.0;
+
+        /// <summary>Draw while mining, W. TBD (D4).</summary>
+        public const double MinePowerW = 300.0;
+
+        public static double WorkingPowerW(TaskKind kind)
+        {
+            switch (kind)
+            {
+                case TaskKind.Salvage: return SalvagePowerW;
+                case TaskKind.Survey: return SurveyPowerW;
+                case TaskKind.Mine: return MinePowerW;
+                default: return BuildPowerW;
+            }
+        }
+
+        // ---- Survey and mining (phase 3a; TBD placeholders) ----
+
+        /// <summary>Hours of work to survey one tile's ground. TBD (D4).</summary>
+        public const double SurveyWorkHours = 2.0;
+
+        /// <summary>Hours of work in one mining batch; the robot re-evaluates its work after each. TBD (D4).</summary>
+        public const double MiningBatchHours = 1.0;
+
+        /// <summary>Material mined per hour of work from a grade-1 deposit, kg. TBD (D4).</summary>
+        public const double MiningKgPerHour = 50.0;
+
+        /// <summary>A specialised robot's work speed at its own job, relative to a General robot. TBD (D4).</summary>
+        public const double SpecialistSpeed = 2.0;
 
         // ---- Condition and maintenance (TBD placeholders) ----
 

@@ -6,6 +6,7 @@ using KardashevAscent.Simulation.Planet;
 using KardashevAscent.Simulation.Solar;
 using KardashevAscent.Simulation.Energy;
 using KardashevAscent.Simulation.Robots;
+using KardashevAscent.Simulation.Resources;
 
 namespace KardashevAscent.Simulation.Game
 {
@@ -105,6 +106,7 @@ namespace KardashevAscent.Simulation.Game
             tileAreaM2 = 4.0 * Math.PI * planetRadiusM * planetRadiusM / sphere.TileCount;
             BaseTileId = baseTileId >= 0 ? baseTileId : PickBaseTile();
             Workforce.Reset(BaseTileId);
+            Deposits = new DepositMap(sphere, surface, PlanetChemistry.EarthLike, 7);
 
             // Start mid-morning at the base: hour angle −0.4π. A tidally locked planet has the star fixed over
             // longitude 0, as in LightPotential and AnnualYield, so the base (picked near longitude 0) is in daylight.
@@ -133,6 +135,111 @@ namespace KardashevAscent.Simulation.Game
             PlanetId = record.id ?? "";
             StarTemperatureK = record.star.teffK;
             Clouds = record.Clouds;
+            Deposits = new DepositMap(sphere, surface, record.ToChemistry(), record.look?.terrainSeed ?? 7);
+        }
+
+        // ---- Resources (phase 3a) ----
+
+        /// <summary>What lies in each tile's ground, and which tiles are surveyed.</summary>
+        public DepositMap Deposits { get; private set; }
+
+        /// <summary>Materials on hand, kg.</summary>
+        public MaterialStock Materials { get; } = new MaterialStock();
+
+        readonly List<int> surveyOrders = new List<int>();
+        readonly List<(int Tile, Material Material)> miningOrders = new List<(int, Material)>();
+        /// <summary>Hours of work done on survey tasks and the current mining batch.</summary>
+        readonly Dictionary<WorkTask, double> fieldWork = new Dictionary<WorkTask, double>();
+
+        public event Action<int> TileSurveyed;
+
+        static WorkTask SurveyTask(int tile) => new WorkTask(TaskKind.Survey, tile, -1);
+        static WorkTask MineTask(int tile, Material m) => new WorkTask(TaskKind.Mine, tile, (int)m);
+
+        public bool OrderSurvey(int tileId)
+        {
+            if (tileId < 0 || tileId >= TileCount || GetTile(tileId).IsWater || Deposits.IsSurveyed(tileId) || surveyOrders.Contains(tileId))
+                return false;
+            surveyOrders.Add(tileId);
+            Settle(null);
+            return true;
+        }
+
+        public bool IsSurveyOrdered(int tileId) => surveyOrders.Contains(tileId);
+
+        public bool CancelSurvey(int tileId)
+        {
+            if (!surveyOrders.Remove(tileId))
+                return false;
+            fieldWork.Remove(SurveyTask(tileId));
+            Settle(null);
+            return true;
+        }
+
+        /// <summary>How much of a tile's survey is done, 0–1 (1 once surveyed).</summary>
+        public double SurveyProgress(int tileId) =>
+            Deposits.IsSurveyed(tileId) ? 1.0
+            : fieldWork.TryGetValue(SurveyTask(tileId), out double h) ? Math.Min(1.0, h / RobotSpecs.SurveyWorkHours) : 0.0;
+
+        /// <summary>
+        /// Keep robots mining a material on a tile (in batches, so they still take more urgent work between them).
+        /// The material must be known there: rock anywhere on land, the rest after a survey.
+        /// </summary>
+        public bool OrderMining(int tileId, Material material)
+        {
+            if (tileId < 0 || tileId >= TileCount || !Deposits.IsKnown(tileId, material) || Deposits.GradeOf(tileId, material) <= 0.0
+                || miningOrders.Contains((tileId, material)))
+                return false;
+            miningOrders.Add((tileId, material));
+            Settle(null);
+            return true;
+        }
+
+        public bool IsMiningOrdered(int tileId, Material material) => miningOrders.Contains((tileId, material));
+
+        public bool CancelMining(int tileId, Material material)
+        {
+            if (!miningOrders.Remove((tileId, material)))
+                return false;
+            fieldWork.Remove(MineTask(tileId, material));
+            Settle(null);
+            return true;
+        }
+
+        public int MiningOrderCount => miningOrders.Count;
+
+        /// <summary>Robots on survey and mining tasks add work; finished surveys reveal tiles, finished batches add material.</summary>
+        void AdvanceFieldWork(double dt)
+        {
+            foreach (Robot r in Workforce.Robots)
+            {
+                if (!r.Task.HasValue || r.Activity != RobotActivity.None || r.IsShutDown)
+                    continue;
+                WorkTask t = r.Task.Value;
+                if (t.Kind != TaskKind.Survey && t.Kind != TaskKind.Mine)
+                    continue;
+                fieldWork[t] = (fieldWork.TryGetValue(t, out double h) ? h : 0.0) + dt * RobotAbilities.Speed(r.Kind, t.Kind);
+            }
+            foreach (int tile in surveyOrders.ToArray())
+            {
+                WorkTask t = SurveyTask(tile);
+                if (fieldWork.TryGetValue(t, out double h) && h >= RobotSpecs.SurveyWorkHours - 1e-9)
+                {
+                    fieldWork.Remove(t);
+                    surveyOrders.Remove(tile);
+                    Deposits.MarkSurveyed(tile);
+                    TileSurveyed?.Invoke(tile);
+                }
+            }
+            foreach (var order in miningOrders.ToArray())
+            {
+                WorkTask t = MineTask(order.Tile, order.Material);
+                if (!fieldWork.TryGetValue(t, out double h) || h < RobotSpecs.MiningBatchHours - 1e-9)
+                    continue;
+                fieldWork[t] = h - RobotSpecs.MiningBatchHours;
+                Materials.Add(order.Material, RobotSpecs.MiningKgPerHour * RobotSpecs.MiningBatchHours * Deposits.GradeOf(order.Tile, order.Material));
+                Workforce.Release(t);
+            }
         }
 
         public HexSphere Sphere { get; }
@@ -197,6 +304,7 @@ namespace KardashevAscent.Simulation.Game
             CurtailedW = grid.CurtailedW - topUpW - BuildPowerW;
             Upkeep.Apply(Workforce, dt, grid.DockServedW, grid.PriorityServedW, topUpW, IsFlaringStar, Build);
             RobotChargingW = Upkeep.ChargingW;
+            AdvanceFieldWork(dt);
             Build.AddParts(BuildPowerW, dt);
             Settle(null);
             // Used power: what reached the loads, went into the battery or made build parts; curtailed power is not used.
@@ -380,6 +488,10 @@ namespace KardashevAscent.Simulation.Game
                 tasks.Add(new WorkTask(TaskKind.Build, site.Tile, site.Slot, i++));
             for (int k = 0; k < salvageOrders.Count; k++)
                 tasks.Add(new WorkTask(TaskKind.Salvage, salvageOrders[k].Tile, salvageOrders[k].Slot, k));
+            for (int k = 0; k < surveyOrders.Count; k++)
+                tasks.Add(new WorkTask(TaskKind.Survey, surveyOrders[k], -1, k));
+            for (int k = 0; k < miningOrders.Count; k++)
+                tasks.Add(new WorkTask(TaskKind.Mine, miningOrders[k].Tile, (int)miningOrders[k].Material, k));
             return tasks;
         }
 
@@ -562,6 +674,17 @@ namespace KardashevAscent.Simulation.Game
                 HistoryHours = History.TotalHours,
                 Workforce = Workforce.Capture(),
             };
+            foreach (int tile in Deposits.Surveyed)
+                state.SurveyedTiles.Add(tile);
+            state.SurveyedTiles.Sort();
+            state.SurveyOrders.AddRange(surveyOrders);
+            foreach (var mo in miningOrders)
+                state.MiningOrders.Add(new MiningOrderRecord { Tile = mo.Tile, Material = mo.Material });
+            foreach (Material m in Resources.Materials.All)
+                if (Materials[m] > 0.0)
+                    state.MaterialsKg.Add(new MaterialRecord { Material = m, Kg = Materials[m] });
+            foreach (var kv in fieldWork)
+                state.FieldWork.Add(new FieldWorkRecord { Kind = kv.Key.Kind, Tile = kv.Key.Tile, Slot = kv.Key.Slot, Hours = kv.Value });
             foreach (var salvage in salvageOrders)
                 state.SalvageOrders.Add(new SalvageOrderRecord { Tile = salvage.Tile, Slot = salvage.Slot });
             foreach (var kv in panels)
@@ -628,6 +751,27 @@ namespace KardashevAscent.Simulation.Game
                 foreach (SalvageOrderRecord o in state.SalvageOrders)
                     if (GetBuilding(o.Tile, o.Slot) != BuildingType.None && !Build.IsQueued(o.Tile, o.Slot) && !salvageOrders.Contains((o.Tile, o.Slot)))
                         salvageOrders.Add((o.Tile, o.Slot));
+            // Version 9 added resources; older saves start with nothing surveyed or mined.
+            Deposits.SetSurveyed(state.SurveyedTiles);
+            Materials.Clear();
+            surveyOrders.Clear();
+            miningOrders.Clear();
+            fieldWork.Clear();
+            if (state.MaterialsKg != null)
+                foreach (MaterialRecord m in state.MaterialsKg)
+                    Materials.Set(m.Material, m.Kg);
+            if (state.SurveyOrders != null)
+                foreach (int tile in state.SurveyOrders)
+                    if (tile >= 0 && tile < TileCount && !Deposits.IsSurveyed(tile) && !surveyOrders.Contains(tile))
+                        surveyOrders.Add(tile);
+            if (state.MiningOrders != null)
+                foreach (MiningOrderRecord o in state.MiningOrders)
+                    if (o.Tile >= 0 && o.Tile < TileCount && Deposits.IsKnown(o.Tile, o.Material) && Deposits.GradeOf(o.Tile, o.Material) > 0.0
+                        && !miningOrders.Contains((o.Tile, o.Material)))
+                        miningOrders.Add((o.Tile, o.Material));
+            if (state.FieldWork != null)
+                foreach (FieldWorkRecord f in state.FieldWork)
+                    fieldWork[new WorkTask(f.Kind, f.Tile, f.Slot)] = Math.Max(0.0, f.Hours);
             Workforce.Assign(OpenTasks());
             GenerationW = ComputeGeneration() + RtgW;
             return true;
