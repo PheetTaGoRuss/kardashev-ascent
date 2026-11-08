@@ -1,0 +1,67 @@
+.workforce {
+    position: absolute;
+    top: 80px;
+    left: 50%;
+    translate: -50% 0;
+    width: 440px;
+    max-height: 80%;
+    padding: 10px 12px;
+}
+/* Nearly opaque, like the colony overview: it sits over the tile and side panels. */
+.workforce.panel { background-color: rgba(10, 14, 24, 0.97); }
+
+.title-row { flex-direction: row; align-items: flex-start; }
+.title-text { flex-grow: 1; }
+.close-button {
+    width: 24px;
+    height: 24px;
+    margin: 0;
+    padding: 0;
+    font-size: 16px;
+    color: var(--text-muted);
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+}
+.close-button:hover { color: var(--text); }
+
+.workforce-scroll { flex-grow: 1; flex-shrink: 1; margin-top: 4px; }
+.body { font-size: 12px; padding: 0; margin: 2px 0 0 0; white-space: normal; }
+.wrap { white-space: normal; }
+.notes { margin-top: 10px; }
+
+.group {
+    margin-top: 8px;
+    padding: 6px 8px;
+    background-color: rgba(255, 255, 255, 0.04);
+    border-radius: 4px;
+}
+.group-head { flex-direction: row; align-items: center; }
+.group-name { flex-grow: 1; font-size: 13px; -unity-font-style: bold; padding: 0; margin: 0; }
+.group-state { font-size: 11px; padding: 0; margin: 0 6px 0 0; color: var(--text-muted); }
+.group-state.paused { color: var(--warning); }
+.group-state.interrupted { color: var(--accent); }
+
+.priority-row { flex-direction: row; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+.priority-label { font-size: 11px; padding: 0; margin: 0 4px 0 0; color: var(--text-muted); }
+
+.small-button {
+    height: 20px;
+    margin: 0 4px 0 0;
+    padding: 0 6px;
+    font-size: 11px;
+    color: rgb(12, 16, 26);
+    background-color: var(--accent);
+    border-width: 0;
+    border-radius: 3px;
+}
+.small-button:hover { background-color: rgb(170, 198, 255); }
+.chip { color: var(--text); background-color: rgba(143, 179, 255, 0.15); }
+.chip:hover { background-color: rgba(143, 179, 255, 0.30); }
+.chip.critical { color: rgb(255, 150, 140); }
+.chip.disabled-priority { color: var(--text-muted); }
+
+.robot { margin-top: 5px; padding-left: 6px; border-left-width: 2px; border-color: rgba(255, 255, 255, 0.12); }
+.robot.working { border-color: var(--good); }
+.robot-name { font-size: 12px; -unity-font-style: bold; padding: 0; margin: 0; }
+.robot-line { font-size: 11px; padding: 0; margin: 1px 0 0 0; white-space: normal; }
+.muted { color: var(--text-muted); }
