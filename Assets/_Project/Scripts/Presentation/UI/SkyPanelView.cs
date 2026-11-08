@@ -247,6 +247,7 @@ namespace KardashevAscent.Presentation.UI
             now = new Label("now");
             now.AddToClassList("orbit-label");
             Add(now);
+            RegisterCallback<GeometryChangedEvent>(_ => Place());
         }
 
         public void Set(PlanetSolarParams p, double eclipticLongitudeDeg, bool earthDates, bool hasSeasons)
@@ -322,7 +323,7 @@ namespace KardashevAscent.Presentation.UI
             p.BeginPath();
             p.Arc(Point(r, lambdaDeg), 4f, 0f, 360f);
             p.Fill();
-            Place();
+            // No label moves here: UI Toolkit forbids changing elements while it draws (Set and layout changes place them).
         }
     }
 }
