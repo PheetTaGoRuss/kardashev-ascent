@@ -139,6 +139,42 @@ namespace KardashevAscent.Simulation.Tests.Robots
         }
 
         [Test]
+        public void Above20_WithNoPowerAtTheCharger_GoesBackToWork()
+        {
+            Workforce w = WithRobots(1, 0.1);
+            Robot r = w.Robots[0];
+            var yard = new List<RobotFacility> { new RobotFacility(0, 3, ChargingCapability.BatteryYard) };
+            var up = new RobotUpkeep();
+            up.Plan(w, yard, 0.25);
+            up.Apply(w, 0.25, 0.0, up.CriticalRequestW, 0.0, false, null);   // below 20 %: served
+            Assert.Greater(r.Battery.StateOfCharge, RobotSpecs.ReturnToChargeFraction);
+
+            up.Plan(w, yard, 0.25);
+            Assert.AreEqual(RobotActivity.Charging, r.Activity, "it got power last step: it stays");
+            Assert.Greater(up.TopUpRequestW, 0.0);
+            up.Apply(w, 0.25, 0.0, 0.0, 0.0, false, null);                    // no spare power for a top-up
+            up.Plan(w, yard, 0.25);
+            Assert.AreEqual(RobotActivity.None, r.Activity, "nothing came: back to work above 20 %");
+            Assert.IsTrue(r.Available);
+        }
+
+        [Test]
+        public void Above20_WithSparePower_StaysUntil80()
+        {
+            Workforce w = WithRobots(1, 0.1);
+            Robot r = w.Robots[0];
+            var yard = new List<RobotFacility> { new RobotFacility(0, 3, ChargingCapability.BatteryYard) };
+            var up = new RobotUpkeep();
+            for (int i = 0; i < 40 && (i == 0 || r.Activity == RobotActivity.Charging); i++)
+            {
+                up.Plan(w, yard, 0.25);
+                up.Apply(w, 0.25, 0.0, up.CriticalRequestW, up.TopUpRequestW, false, null);
+            }
+            up.Plan(w, yard, 0.25);
+            Assert.GreaterOrEqual(r.Battery.StateOfCharge, RobotSpecs.ResumeWorkFraction - 1e-9);
+        }
+
+        [Test]
         public void Chargers_PreferTheMostPowerful()
         {
             Workforce w = WithRobots(1, 0.1);

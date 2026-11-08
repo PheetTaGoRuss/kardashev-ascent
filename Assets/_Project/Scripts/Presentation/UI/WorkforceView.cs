@@ -91,7 +91,8 @@ namespace KardashevAscent.Presentation.UI
                 "Robots build construction sites (a site only takes build parts while a robot works on it) and take down " +
                 "buildings you mark with Del. Each robot takes the most urgent task it can do; only Critical tasks pull a " +
                 "busy robot off its work.\n" +
-                "Robots run on their own battery: below 20 % they charge at the lander or a battery yard until 80 %. Work " +
+                "Robots run on their own battery: below 20 % they charge at the lander or a battery yard until 80 %, or go " +
+                "back to work sooner if no spare power reaches a battery yard. Work " +
                 "wears them; below 30 % condition they are repaired at the lander with build parts, and a worn-out battery " +
                 "is replaced there. At 0 % condition a robot shuts down until it is repaired.\n" +
                 $"Not yet: movement, making new robots (phase 3). Group capacity {w.GroupCapacity}, power use, wear and " +
