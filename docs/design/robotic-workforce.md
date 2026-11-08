@@ -1,6 +1,6 @@
 # Robotic workforce: repository audit and implementation plan
 
-Status: **plan for review**. Nothing in this document is implemented yet. Section 7 recommends an answer to every open decision.
+Status: **implemented**. The recommendations in section 7 were approved on 2026-11-08; section 9 lists what was built, in which PR, and what is still a placeholder or a later feature.
 Source: the Robotic Workforce Specification (sections 1–14) given on 2026-11-08.
 Sections 11 (transportation) and 12 (robot rescue) are out of scope and stay unimplemented.
 
@@ -269,3 +269,35 @@ Sources found for this plan (to check before they go into `physics-verification.
 - States: Automatic → Interrupted → Automatic; Paused robots take no tasks; settings unchanged by pausing.
 - Saves: version 7 round-trip; a version 6 save loads with one General robot.
 - Phase 2+: 20 %/80 % charging hysteresis, charging power and slot limits, grid load, battery health vs charge, condition shutdown, repair vs replace.
+
+## 9. Implementation status (2026-11-08)
+
+The PRs are stacked; merge them in order. Code lives in `Simulation/Robots/` (namespace `Robots`, not `Workforce/` as section 3 proposed, so the `Workforce` class doesn't clash with its namespace) and `Simulation/Resources/`.
+
+| PR | Phase | What it adds | Save version |
+| --- | --- | --- | --- |
+| #50 | 1 | Robots, groups (automatic by kind, manual), capacity, overrides, priority automation, Critical-only automatic interruption, pause/resume/interrupt, robot-gated construction (D2), salvage orders, Robots panel (G) | 7 |
+| #51 | 2 | Robot battery (2,408 Wh, Perseverance), cycle ageing, 20 %/80 % charging, charging on the grid (dock at the lander, D6/D10), battery yards as chargers, wear, maintenance and battery replacement at the lander, flare wear, "keep working" above 20 % | 8 |
+| #52 | 3a + 3b | Planet chemistry ([Fe/H], iron fraction), deposits per tile, survey and mining tasks; Robot Workshop, manufacturing, substitutes (aluminium, Na-ion), modules, unlocks by milestone, group capacity steps | 9, 10 |
+| #53 | 4 | Facility, Demand and Task queue programs, ranked ordering, survey restart rule (D15), full Robots panel controls | 11 |
+| #54 | §10 | Hybrid movement: routes, terrain pace, drive power ∝ g, range checks, charging trips, stranded robots, manual send | 12 |
+
+**Placeholders.** Every value marked `TBD` in `RobotSpecs`, `RobotTech`, `DepositMap`, `RouteFinder` and `ChargingCapability` has no balance claim (D4). That covers power use, wear, repair, slots, recipes, unlocks, deposit shares, hop times and drive power.
+
+**Sourced values:**
+- the battery size;
+- the cycle-life fallback;
+- the Na-ion capacity ratio;
+- [Fe/H] and the TRAPPIST-1 iron fraction;
+- the P ∝ g rule.
+
+These are recorded in `docs/physics/physics-verification.md` or in the notes.
+
+**Not built, as the spec says:**
+- transportation (spec §11): Transport robots can't be made;
+- rescue (spec §12): stranded robots wait.
+
+**Changed from the plan:**
+- **Sky surveys stay player actions.** The notebook's measurements depend on the moment you take them, so they are not robot tasks. D1 listed them; the ground survey task was added instead.
+- **Cold and calendar ageing are not modelled.** The cycle-only battery model has no temperature term. NREL's model is the next step (D5).
+
