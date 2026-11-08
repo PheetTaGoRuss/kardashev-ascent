@@ -72,6 +72,10 @@ namespace KardashevAscent.Simulation.Robots
         internal double ReserveFraction;
 
         public bool IsTravelling => Route.Count > 0;
+        /// <summary>The tile it is driving into, while driving.</summary>
+        public int? NextTile => Route.Count > 0 ? Route[0] : (int?)null;
+        /// <summary>How far across into <see cref="NextTile"/> it is, 0–1.</summary>
+        public double HopFraction => HopProgress;
         public int HopsLeft => Route.Count;
         public int? Destination => Route.Count > 0 ? Route[Route.Count - 1] : (int?)null;
 

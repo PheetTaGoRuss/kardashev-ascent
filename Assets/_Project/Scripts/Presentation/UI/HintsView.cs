@@ -102,7 +102,9 @@ namespace KardashevAscent.Presentation.UI
             switch (i)
             {
                 case 0:
-                    return "Click a land tile near your base to open its building site. M shows where sunlight is best.";
+                    return "Click a land tile near your base to open its building site. M shows where sunlight is best. " +
+                           "Before you build, you can land somewhere else: pick a land tile and press Land here in the tile panel. " +
+                           "R flies back to the colony.";
                 case 1:
                     string key = placer != null ? placer.PlaceKey.ToString() : "P";
                     return $"Click a slot, then press {key} to build a solar panel. V opens the sky over it: measure the noon sun to find " +
