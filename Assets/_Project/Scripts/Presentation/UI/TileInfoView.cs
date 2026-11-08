@@ -30,8 +30,9 @@ namespace KardashevAscent.Presentation.UI
         static readonly string[] MonthNames = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12" };
 
         VisualElement panelRoot, monthly, monthLabels, groundActions;
-        Label ground;
-        string groundShape;
+        Label ground, landingText;
+        VisualElement landingActions;
+        string groundShape, landingShape;
         Label title, place, sunlight, bestLabel, bestCaption, sunPathCaption, monthlyCaption, monthlyHover, legend1, legend2;
         SunPathChart sunPath;
         int shownTile = -1;
@@ -61,6 +62,9 @@ namespace KardashevAscent.Presentation.UI
             monthly = root.Q("monthly");
             monthLabels = root.Q("month-labels");
             ground = root.Q<Label>("ground");
+            landingText = root.Q<Label>("landing-text");
+            landingActions = root.Q("landing-actions");
+            landingShape = null;
             groundActions = root.Q("ground-actions");
             groundShape = null;
 
@@ -116,6 +120,40 @@ namespace KardashevAscent.Presentation.UI
             nextRefresh = Time.unscaledTime + refreshInterval;
             Refresh(sim, tile);
             RefreshGround(sim, tile);
+            RefreshLanding(sim, tile);
+        }
+
+        /// <summary>Where the colony landed, and (before anything is built) a button to land on this tile instead.</summary>
+        void RefreshLanding(IPlanetSimulation sim, int tile)
+        {
+            if (landingText == null || landingActions == null)
+                return;
+            bool here = tile == sim.BaseTileId, water = sim.GetTile(tile).IsWater, canMove = runner.CanMoveLanding;
+            string shape = $"{tile}|{sim.BaseTileId}|{canMove}";
+            if (shape == landingShape)
+                return;
+            landingShape = shape;
+            landingActions.Clear();
+            if (here)
+                landingText.text = canMove
+                    ? "Your lander is here. Before you build, you can land somewhere else: pick a land tile and press Land here."
+                    : "Your colony's landing site. Press R to fly back here.";
+            else if (canMove && !water)
+            {
+                landingText.text = $"Nothing is built yet: the lander can still come down here instead (tile #{sim.BaseTileId} now).";
+                var b = new Button(() =>
+                {
+                    string why = runner.LandAt(tile);
+                    landingText.text = why ?? "Landed here.";
+                    landingShape = null;
+                }) { text = "Land here" };
+                b.AddToClassList("ground-button");
+                b.AddToClassList("on");
+                landingActions.Add(b);
+            }
+            else
+                landingText.text = "";
+            landingText.EnableInClassList("hidden", landingText.text.Length == 0);
         }
 
         /// <summary>

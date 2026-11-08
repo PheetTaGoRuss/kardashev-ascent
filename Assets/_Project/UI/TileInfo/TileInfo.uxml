@@ -4,6 +4,8 @@
         <ui:ScrollView name="scroll" class="tile-scroll" mode="Vertical">
             <ui:Label name="title" class="value" text="Tile" />
             <ui:Label name="place" class="caption" text="0° N, 0° E" />
+            <ui:Label name="landing-text" class="caption wrap landing-text" text="" />
+            <ui:VisualElement name="landing-actions" class="ground-actions" />
             <ui:VisualElement class="stat-row">
                 <ui:VisualElement class="stat">
                     <ui:Label class="heading" text="SUNLIGHT" />

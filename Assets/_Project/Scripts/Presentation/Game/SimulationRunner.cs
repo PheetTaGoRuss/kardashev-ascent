@@ -41,6 +41,41 @@ namespace KardashevAscent.Presentation.Game
         /// <summary>Index of the current planet in <see cref="Planets"/>, or −1 for the built-in fallback.</summary>
         public int CurrentIndex { get; private set; } = -1;
 
+        /// <summary>Tile the player chose to land on (null: the game picks flat open ground near 20° N).</summary>
+        int? landingTile;
+
+        /// <summary>
+        /// The colony can still move its landing site: nothing is built yet (moving starts the colony over there).
+        /// </summary>
+        public bool CanMoveLanding
+        {
+            get
+            {
+                return Simulation != null && Simulation.CaptureState().Buildings.Count == 0;
+            }
+        }
+
+        /// <summary>
+        /// Land the colony on <paramref name="tileId"/> instead (a new colony on the same planet). Returns null if it
+        /// moved, else why not. <paramref name="force"/> skips the "nothing built yet" rule (loading a save).
+        /// </summary>
+        public string LandAt(int tileId, bool force = false)
+        {
+            if (Simulation == null || planet == null || planet.Sphere == null)
+                return "The planet isn't ready.";
+            if (tileId < 0 || tileId >= Simulation.TileCount)
+                return "No such tile.";
+            if (Simulation.GetTile(tileId).IsWater)
+                return "The lander can't come down on water.";
+            if (tileId == Simulation.BaseTileId)
+                return null;
+            if (!force && !CanMoveLanding)
+                return "The colony has started building here; the lander can only move before the first building.";
+            landingTile = tileId;
+            CreateSimulation();
+            return null;
+        }
+
         /// <summary>Raised when a new simulation is built (at start, on a new planet, and whenever the tiles are rebuilt).</summary>
         public event Action SimulationCreated;
 
@@ -93,6 +128,7 @@ namespace KardashevAscent.Presentation.Game
 
         void SelectPlanet(int index)
         {
+            landingTile = null;
             PickRecord(index);
             if (planet == null)
                 return;
@@ -133,7 +169,9 @@ namespace KardashevAscent.Presentation.Game
         {
             if (record == null)
                 PickRecord(startPlanet);
-            Simulation = new StubPlanetSimulation(planet.Sphere, planet.Surface, record);
+            if (landingTile.HasValue && (landingTile.Value >= planet.Sphere.TileCount || Terrains.IsWater(planet.Surface.Terrain[landingTile.Value])))
+                landingTile = null;
+            Simulation = new StubPlanetSimulation(planet.Sphere, planet.Surface, record, landingTile ?? -1);
             SolarParams = record.ToSolarParams();
             ClockSpeed speed = Clock?.Speed ?? startSpeed;
             double yearHours = SolarParams.YearLengthHours;
