@@ -132,11 +132,69 @@ namespace KardashevAscent.Simulation.Robots
         /// </summary>
         public Movement Movement { get; set; }
 
-        /// <summary>The robot on a task that is at the task's tile and not driving (only then does the work count).</summary>
+        /// <summary>Is a robot on the task at its tile and not driving (only then does the work count)?</summary>
         public bool IsWorkedOnSite(WorkTask task)
         {
-            Robot r = WorkerOf(task);
-            return r != null && (Movement == null || (!r.IsTravelling && r.Tile == task.Tile));
+            foreach (Robot r in robots)
+                if (r.Task.HasValue && r.Task.Value.Equals(task) && OnSite(r, task)) return true;
+            return false;
+        }
+
+        bool OnSite(Robot r, WorkTask task) => Movement == null || (!r.IsTravelling && r.Tile == task.Tile);
+
+        /// <summary>The robots on a task (a facility can have several, spec v2 §5).</summary>
+        public List<Robot> WorkersOf(WorkTask task)
+        {
+            var list = new List<Robot>();
+            foreach (Robot r in robots)
+                if (r.Task.HasValue && r.Task.Value.Equals(task)) list.Add(r);
+            return list;
+        }
+
+        /// <summary>How many robots a task can take at once (spec v2 §5); null: one each.</summary>
+        public Func<WorkTask, int> CapacityOf { get; set; }
+
+        int Capacity(WorkTask t) => CapacityOf != null ? Math.Max(1, CapacityOf(t)) : 1;
+
+        /// <summary>Robots on each task during an assignment; a task is "taken" when it is full.</summary>
+        sealed class Staffing
+        {
+            readonly Dictionary<WorkTask, int> count = new Dictionary<WorkTask, int>();
+            readonly Workforce owner;
+
+            public Staffing(Workforce owner) => this.owner = owner;
+
+            public int Of(WorkTask t) => count.TryGetValue(t, out int n) ? n : 0;
+            public bool Contains(WorkTask t) => Of(t) >= owner.Capacity(t);
+            public bool Has(WorkTask t) => Of(t) > 0;
+            public void Add(WorkTask t) => count[t] = Of(t) + 1;
+            public void Remove(WorkTask t)
+            {
+                if (Of(t) > 0) count[t] = Of(t) - 1;
+            }
+        }
+
+        /// <summary>Free a place on a full task for <paramref name="incoming"/>: the least suited automatic worker lets go.</summary>
+        void MakeRoom(WorkTask t, Robot incoming, Staffing taken, string reason)
+        {
+            Robot leave = null;
+            double worst = double.PositiveInfinity;
+            foreach (Robot w in WorkersOf(t))
+            {
+                if (w == incoming || w.OnTemporaryTask || (w.ReservedTask.HasValue && w.ReservedTask.Value.Equals(t)))
+                    continue;
+                double p = RobotCatalog.Productivity(w, t.Kind, Milestones);
+                if (leave == null || p < worst - 1e-12 || (Math.Abs(p - worst) <= 1e-12 && w.Id > leave.Id))
+                {
+                    leave = w;
+                    worst = p;
+                }
+            }
+            if (leave == null)
+                return;
+            Log(leave, t, null, reason);
+            leave.Task = null;
+            taken.Remove(t);
         }
 
         /// <summary>Send a robot to a tile (hybrid movement): it drops its task and drives there, then works from there.</summary>
@@ -490,7 +548,7 @@ namespace KardashevAscent.Simulation.Robots
             var open = new Dictionary<WorkTask, WorkTask>();
             foreach (WorkTask t in tasks)
                 open[t] = t;
-            var taken = new HashSet<WorkTask>();
+            var taken = new Staffing(this);
 
             // Queued tasks that are done (no longer open) leave the queues.
             foreach (RobotGroup g in groups)
@@ -531,7 +589,7 @@ namespace KardashevAscent.Simulation.Robots
                     : !r.Available ? (r.IsShutDown ? "shut down" : r.ManualTarget.HasValue ? "sent elsewhere by you"
                                       : r.Activity == RobotActivity.Maintenance ? "went for maintenance" : "went to charge")
                     : Paused(r) ? "group paused"
-                    : taken.Contains(now) ? "another robot already has it"
+                    : taken.Contains(now) ? (Capacity(now) > 1 ? "the facility is full" : "another robot already has it")
                     : null;
                 if (!isOpen || why != null)
                 {
@@ -593,13 +651,10 @@ namespace KardashevAscent.Simulation.Robots
                 reservedTasks.Add(rt);
                 if (!r.Available || r.OnTemporaryTask || Paused(r) || (r.Task.HasValue && r.Task.Value.Equals(rt)))
                     continue;
-                Robot other = WorkerOf(rt);
-                if (other != null && other != r)
-                {
-                    Log(other, rt, null, $"reserved for {r.Name} by you");
-                    other.Task = null;
-                    other.OnTemporaryTask = false;
-                }
+                if (taken.Contains(rt))
+                    MakeRoom(rt, r, taken, $"reserved for {r.Name} by you");
+                if (taken.Contains(rt))
+                    continue;   // everyone on it is reserved or temporary: wait
                 if (r.Task.HasValue) taken.Remove(r.Task.Value);
                 Log(r, r.Task, rt, "your reservation");
                 r.Task = rt;
@@ -617,14 +672,10 @@ namespace KardashevAscent.Simulation.Robots
                 if (r.Task.HasValue || !open.TryGetValue(want, out WorkTask back) || reservedTasks.Contains(back)
                     || !Capable(r, back.Kind) || !InRange(r, back))
                     continue;
-                Robot stand = WorkerOf(back);
-                if (stand != null)
-                {
-                    if (stand.OnTemporaryTask)
-                        continue;
-                    Log(stand, back, null, $"{r.Name} came back to it");
-                    stand.Task = null;
-                }
+                if (taken.Contains(back))
+                    MakeRoom(back, r, taken, $"{r.Name} came back to it");
+                if (taken.Contains(back))
+                    continue;
                 r.Task = back;
                 taken.Add(back);
                 Log(r, null, back, "back to its task after charging or maintenance");
@@ -653,7 +704,7 @@ namespace KardashevAscent.Simulation.Robots
                 changed = false;
                 foreach (WorkTask t in open.Values)
                 {
-                    if (taken.Contains(t) || reservedTasks.Contains(t))
+                    if (taken.Has(t) || reservedTasks.Contains(t))
                         continue;
                     Robot pick = null;
                     Score pickScore = default;
@@ -666,7 +717,7 @@ namespace KardashevAscent.Simulation.Robots
                             continue;
                         if (!TaskPolicy.For(r.Task.Value.Kind).MayBeInterrupted || !Eligible(r, t))
                             continue;
-                        Score s = ScoreOf(r, t);
+                        Score s = ScoreOf(r, t, 0);
                         if (pick == null || s.CompareTo(pickScore) < 0)
                         {
                             pick = r;
@@ -719,19 +770,22 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>Ordering of robot–task pairs (lower is better); every tie is broken, so results are deterministic.</summary>
         readonly struct Score : IComparable<Score>
         {
-            readonly int priority, rank, order, robot;
+            readonly int priority, rank, staffed, order, robot;
             readonly double suitability, hours, charge;
 
-            public Score(int priority, int rank, double suitability, double hours, double charge, int order, int robot)
+            public Score(int priority, int rank, int staffed, double suitability, double hours, double charge, int order, int robot)
             {
-                this.priority = priority; this.rank = rank; this.suitability = suitability; this.hours = hours;
+                this.priority = priority; this.rank = rank; this.staffed = staffed; this.suitability = suitability; this.hours = hours;
                 this.charge = charge; this.order = order; this.robot = robot;
             }
 
             public int CompareTo(Score o)
             {
                 if (priority != o.priority) return priority.CompareTo(o.priority);
+                // Every task of the same priority gets one robot before any gets a second (spec v2 §4 balanced allocation).
+                if ((staffed > 0) != (o.staffed > 0)) return staffed > 0 ? 1 : -1;
                 if (rank != o.rank) return rank.CompareTo(o.rank);
+                if (staffed != o.staffed) return staffed.CompareTo(o.staffed);
                 if (Math.Abs(suitability - o.suitability) > 1e-9) return o.suitability.CompareTo(suitability);   // better suited first
                 if (Math.Abs(hours - o.hours) > 1e-9) return hours.CompareTo(o.hours);                           // nearer first
                 if (Math.Abs(charge - o.charge) > 1e-9) return o.charge.CompareTo(charge);                       // fuller battery first
@@ -740,15 +794,15 @@ namespace KardashevAscent.Simulation.Robots
             }
         }
 
-        Score ScoreOf(Robot r, WorkTask t)
+        Score ScoreOf(Robot r, WorkTask t, int staffed)
         {
             double hours = Movement != null ? Movement.Routes.HoursBetween(r.Tile, t.Tile) / r.Attribute(RobotAttribute.Speed) : 0.0;
-            return new Score((int)ProgramPriority(r, t.Kind), GetGroup(r.GroupId).RankOf(t.Kind),
+            return new Score((int)ProgramPriority(r, t.Kind), GetGroup(r.GroupId).RankOf(t.Kind), staffed,
                              RobotCatalog.Productivity(r, t.Kind, Milestones), hours, r.Battery.StateOfCharge, t.Order, r.Id);
         }
 
         /// <summary>Give free robots work, best pair first, until no free robot can take an open task.</summary>
-        void HandOut(Dictionary<WorkTask, WorkTask> open, HashSet<WorkTask> taken, HashSet<WorkTask> reservedTasks)
+        void HandOut(Dictionary<WorkTask, WorkTask> open, Staffing taken, HashSet<WorkTask> reservedTasks)
         {
             while (true)
             {
@@ -763,7 +817,7 @@ namespace KardashevAscent.Simulation.Robots
                     {
                         if (taken.Contains(t) || reservedTasks.Contains(t) || !Eligible(r, t))
                             continue;
-                        Score s = ScoreOf(r, t);
+                        Score s = ScoreOf(r, t, taken.Of(t));
                         if (bestR == null || s.CompareTo(best) < 0)
                         {
                             bestR = r;
@@ -786,8 +840,13 @@ namespace KardashevAscent.Simulation.Robots
             foreach (WorkTask t in open.Values)
             {
                 TaskRecord rec = Tasks.Touch(t);
-                Robot w = WorkerOf(t);
+                List<Robot> crew = WorkersOf(t);
+                Robot w = null;
+                foreach (Robot c in crew)
+                    if (w == null || (OnSite(c, t) && !OnSite(w, t))) w = c;
                 Robot reserved = ReservedRobotFor(t);
+                rec.Workers = crew.Count;
+                rec.Capacity = Capacity(t);
                 rec.RobotId = w?.Id;
                 rec.ReservedFor = reserved?.Id;
                 TaskPriority p = TaskPriority.Disabled;
@@ -798,9 +857,10 @@ namespace KardashevAscent.Simulation.Robots
                 string reason = "";
                 if (w != null)
                 {
-                    bool there = Movement == null || (!w.IsTravelling && w.Tile == t.Tile);
+                    bool there = OnSite(w, t);
                     state = there ? TaskState.Working : TaskState.Travelling;
                     if (!there) reason = $"{w.Name} is driving there";
+                    else if (rec.Capacity > 1) reason = $"crew {crew.Count}/{rec.Capacity}";
                 }
                 else if (reserved != null)
                 {
@@ -811,7 +871,10 @@ namespace KardashevAscent.Simulation.Robots
                 else
                     state = WhyWaiting(t, out reason);
 
-                if (state == TaskState.Blocked)
+                // A facility with nobody on it is short of workers (spec v2 §5); if that lasts, the player is told.
+                bool shortage = state == TaskState.Available && rec.Capacity > 1;
+                if (shortage) reason = $"short of workers (0/{rec.Capacity}): every robot that could do it is busy";
+                if (state == TaskState.Blocked || shortage)
                 {
                     if (rec.BlockedSinceHours < 0.0) rec.BlockedSinceHours = NowHours;
                     if (NowHours - rec.BlockedSinceHours >= TaskBook.AssistanceAfterHours - 1e-9)
@@ -876,7 +939,7 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>How reluctant a robot is to drop what it does: idle 0, else 1 + how urgent its task is.</summary>
         int Busyness(Robot r) => r.Task.HasValue ? 1 + (int)TaskPriority.Disabled - (int)ProgramPriority(r, r.Task.Value.Kind) : 0;
 
-        WorkTask? BestFor(Robot r, IEnumerable<WorkTask> open, HashSet<WorkTask> taken, HashSet<WorkTask> reservedTasks = null)
+        WorkTask? BestFor(Robot r, IEnumerable<WorkTask> open, Staffing taken, HashSet<WorkTask> reservedTasks = null)
         {
             RobotGroup g = GetGroup(r.GroupId);
             OperatingProgram program = EffectiveProgram(r);

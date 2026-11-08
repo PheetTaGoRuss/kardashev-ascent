@@ -260,6 +260,7 @@ namespace KardashevAscent.Simulation.Game
             tileAreaM2 = 4.0 * Math.PI * planetRadiusM * planetRadiusM / sphere.TileCount;
             BaseTileId = baseTileId >= 0 ? baseTileId : PickBaseTile();
             Workforce.Reset(BaseTileId);
+            Workforce.CapacityOf = t => FacilityStaffing.CapacityFor(t.Kind);
             Deposits = new DepositMap(sphere, surface, PlanetChemistry.EarthLike, 7);
             Routes = new RouteFinder(sphere, surface);
 
@@ -423,6 +424,8 @@ namespace KardashevAscent.Simulation.Game
                 if (!TaskPolicy.For(TaskKind.Survey).KeepsProgress && fieldWork.ContainsKey(st) && !Workforce.IsWorkedOnSite(st))
                     fieldWork.Remove(st);
             }
+            // Each task's crew on site works together, with diminishing returns (spec v2 §5).
+            var crews = new Dictionary<WorkTask, List<double>>();
             foreach (Robot r in Workforce.Robots)
             {
                 if (!r.Task.HasValue || r.Activity != RobotActivity.None || r.IsShutDown)
@@ -430,7 +433,14 @@ namespace KardashevAscent.Simulation.Game
                 WorkTask t = r.Task.Value;
                 if (MovementEnabled && (r.IsTravelling || r.Tile != t.Tile))
                     continue;   // still driving there
-                double speed = RobotCatalog.Productivity(r, t.Kind, MilestonesReached);
+                if (!crews.TryGetValue(t, out List<double> crew))
+                    crews[t] = crew = new List<double>();
+                crew.Add(RobotCatalog.Productivity(r, t.Kind, MilestonesReached));
+            }
+            foreach (var kv in crews)
+            {
+                WorkTask t = kv.Key;
+                double speed = FacilityStaffing.Rate(kv.Value);
                 if (t.Kind == TaskKind.Manufacture)
                 {
                     int index = FinishedWorkshops().IndexOf((t.Tile, t.Slot));
