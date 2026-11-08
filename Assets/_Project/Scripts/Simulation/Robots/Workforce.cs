@@ -64,6 +64,14 @@ namespace KardashevAscent.Simulation.Robots
 
         public bool IsWorked(WorkTask task) => WorkerOf(task) != null;
 
+        /// <summary>A repeating task (a mining batch) finished one round: its robot lets go and re-evaluates.</summary>
+        public void Release(WorkTask task)
+        {
+            foreach (Robot r in robots)
+                if (r.Task.HasValue && r.Task.Value.Equals(task))
+                    r.Task = null;
+        }
+
         // ---- Robots and groups ----
 
         /// <summary>A new robot on a tile; it joins the automatic group of its kind.</summary>

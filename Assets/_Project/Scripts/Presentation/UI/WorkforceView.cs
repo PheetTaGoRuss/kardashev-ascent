@@ -246,13 +246,17 @@ namespace KardashevAscent.Presentation.UI
                 string waiting = sim.BuildStockWh <= 0.0 && sim.BuildPowerW <= 0.0 ? " · waiting for spare power" : "";
                 return $"Building a {what} · tile {t.Tile}, slot {t.Slot} · {progress * 100.0:0} %{waiting}{repairNote}";
             }
+            if (t.Kind == TaskKind.Survey)
+                return $"Surveying tile {t.Tile} · {sim.SurveyProgress(t.Tile) * 100.0:0} %{repairNote}";
+            if (t.Kind == TaskKind.Mine)
+                return $"Mining {KardashevAscent.Simulation.Resources.Materials.Name((KardashevAscent.Simulation.Resources.Material)t.Slot).ToLowerInvariant()} · tile {t.Tile}{repairNote}";
             return $"Taking down a {what} · tile {t.Tile}, slot {t.Slot}{repairNote}";
         }
 
         static string BuildingName(BuildingType type) =>
             type == BuildingType.Battery ? "battery yard" : type == BuildingType.SolarPanel ? "solar panel" : "building";
 
-        static string KindName(TaskKind k) => k == TaskKind.Build ? "Build" : "Salvage";
+        static string KindName(TaskKind k) => k.ToString();
 
         static string StateText(RobotGroup g) =>
             g.State == GroupState.Paused ? "Paused" : g.State == GroupState.Interrupted ? "Interrupted" : "Running";

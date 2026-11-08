@@ -30,7 +30,7 @@ COLUMNS = [
     "pl_name", "hostname", "sy_snum", "sy_pnum", "cb_flag",
     "pl_orbper", "pl_orbsmax", "pl_orbeccen", "pl_insol", "pl_eqt",
     "pl_rade", "pl_bmasse",
-    "st_teff", "st_rad", "st_mass", "st_lum", "st_spectype", "st_age",
+    "st_teff", "st_rad", "st_mass", "st_lum", "st_spectype", "st_age", "st_met", "st_metratio",
     "sy_dist", "discoverymethod",
 ]
 
@@ -58,7 +58,13 @@ DEFAULT_ASSUMED = {
     "terrainSeed": None,           # noise seed for the planet's continents; None: from the planet id (crc32)
     "water": "liquid",             # surface water: "liquid" (seas; frozen where it is cold) or "none" (dry basins)
     "oceanFraction": 0.62,         # share of the surface in low basins (seas, or dry basins on a dry world)
+    "metallicityDex": 0.0,         # host star [Fe/H] when the archive has none: solar
+    "ironMassFraction": None,      # planet iron mass fraction from the literature; None: Earth-like (EARTH_IRON_FRACTION)
+    "ironMassFractionNote": "",    # where ironMassFraction comes from
 }
+
+# Earth's bulk iron mass fraction, ~32 wt % (the value Agol et al. 2021 compare TRAPPIST-1 against).
+EARTH_IRON_FRACTION = 0.32
 
 
 def _num(row: dict[str, Any], key: str) -> float | None:
@@ -304,6 +310,20 @@ def convert(row: dict[str, Any] | None, entry: dict[str, Any], retrieved: str = 
     b.put("look", "oceanFraction", float(assumed["oceanFraction"]), "assumed",
           "share of the surface in low basins (seas, or dry basins), game value")
 
+    # ---- chemistry (resources; docs/physics/notes/geology_resources.md claim 10) ---------
+    met = _num(row, "st_met")
+    if met is not None:
+        b.put("chemistry", "metallicityDex", met, "nasa", f"st_met ({row.get('st_metratio') or '[Fe/H]'})")
+    else:
+        b.put("chemistry", "metallicityDex", float(assumed["metallicityDex"]), "assumed",
+              "not in the archive: solar metallicity assumed")
+    if assumed["ironMassFraction"] is not None:
+        b.put("chemistry", "ironMassFraction", float(assumed["ironMassFraction"]), "derived",
+              str(assumed["ironMassFractionNote"]) or "from the planet's measured density (literature)")
+    else:
+        b.put("chemistry", "ironMassFraction", EARTH_IRON_FRACTION, "assumed",
+              "composition not measured: Earth-like 32 wt % iron assumed")
+
     out: dict[str, Any] = {
         "id": entry["id"],
         "displayName": entry.get("displayName") or name or entry["id"],
@@ -315,6 +335,7 @@ def convert(row: dict[str, Any] | None, entry: dict[str, Any], retrieved: str = 
         "planet": b.values.get("planet", {}),
         "flags": b.values.get("flags", {}),
         "look": b.values.get("look", {}),
+        "chemistry": b.values.get("chemistry", {}),
         "provenance": b.provenance,
     }
     out["_warnings"] = b.warnings
