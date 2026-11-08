@@ -37,6 +37,39 @@ namespace KardashevAscent.Simulation.Robots
         public TaskPriority PriorityOf(TaskKind kind) =>
             Priorities.TryGetValue(kind, out TaskPriority p) ? p : TaskPriority.Normal;
 
+        /// <summary>Facility program: the tile the group works on (null: anywhere).</summary>
+        public int? FacilityTile { get; internal set; }
+
+        /// <summary>
+        /// The group's own order of task kinds for ties (spec §5 "advanced ranked ordering"); null: the default order
+        /// (build, salvage, Workshop, survey, mining).
+        /// </summary>
+        internal List<TaskKind> Ranking;
+
+        /// <summary>Task queue program: the group's tasks in order.</summary>
+        internal readonly List<WorkTask> QueueItems = new List<WorkTask>();
+
+        public IReadOnlyList<WorkTask> Queue => QueueItems;
+
+        /// <summary>Where a kind of task stands in this group's order (lower first).</summary>
+        public int RankOf(TaskKind kind)
+        {
+            if (Ranking == null)
+                return RobotAbilities.TieRank(kind);
+            int i = Ranking.IndexOf(kind);
+            return i >= 0 ? i : 100 + RobotAbilities.TieRank(kind);
+        }
+
+        /// <summary>The kinds in this group's order.</summary>
+        public List<TaskKind> RankedKinds()
+        {
+            var kinds = new List<TaskKind>((TaskKind[])Enum.GetValues(typeof(TaskKind)));
+            kinds.Sort((a, b) => RankOf(a).CompareTo(RankOf(b)));
+            return kinds;
+        }
+
+        public bool HasCustomRanking => Ranking != null;
+
         public IReadOnlyList<int> Members => MemberIds;
         public int Count => MemberIds.Count;
     }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using KardashevAscent.Presentation.Game;
+using KardashevAscent.Presentation.Planet;
 using KardashevAscent.Simulation.Game;
 using KardashevAscent.Simulation.Robots;
 using KardashevAscent.Simulation.Resources;
@@ -20,11 +21,15 @@ namespace KardashevAscent.Presentation.UI
     public sealed class WorkforceView : MonoBehaviour
     {
         [SerializeField] SimulationRunner runner;
+        [Tooltip("For the Facility program: the selected tile becomes a group's facility.")]
+        [SerializeField] TilePicker picker;
         [SerializeField] KeyCode toggleKey = KeyCode.G;
         [Tooltip("Seconds between refreshes while open.")]
         [Range(0.1f, 2f)] [SerializeField] float refreshInterval = 0.5f;
 
-        VisualElement panelRoot, groupsHolder, workshopHolder;
+        VisualElement panelRoot, groupsHolder, workshopHolder, groupActions, tasksHolder;
+        /// <summary>The group the TASKS buttons act on (interrupt, queue).</summary>
+        int targetGroupId = -1;
         Label subtitle, summary, notes, workshopStatus, workshopMessage;
         readonly List<Label> jobLabels = new List<Label>();
         float nextRefresh;
@@ -48,6 +53,8 @@ namespace KardashevAscent.Presentation.UI
             summary = root.Q<Label>("summary");
             notes = root.Q<Label>("notes");
             workshopHolder = root.Q("workshop");
+            groupActions = root.Q("group-actions");
+            tasksHolder = root.Q("tasks");
             workshopStatus = root.Q<Label>("workshop-status");
             workshopMessage = root.Q<Label>("workshop-message");
             Button close = root.Q<Button>("close");
@@ -104,7 +111,10 @@ namespace KardashevAscent.Presentation.UI
                 $"Not yet: movement. Group capacity {w.GroupCapacity} (rises at milestones 2, 4 and 6), power use, wear, " +
                 "repair rates, recipes and unlock milestones are placeholder values.";
 
-            string shape = Shape(w) + "|" + sim.MilestonesReached + "|" + sim.WorkshopCount + "|" + sim.Jobs.Count;
+            var openKeys = new StringBuilder();
+            foreach (WorkTask t in sim.OpenWork()) openKeys.Append(t).Append(';');
+            string shape = Shape(w) + "|" + sim.MilestonesReached + "|" + sim.WorkshopCount + "|" + sim.Jobs.Count + "|" + openKeys
+                           + "|" + targetGroupId + "|" + (picker != null ? picker.SelectedTile : -1);
             if (shape != shownShape)
             {
                 Rebuild(sim, w);
@@ -202,8 +212,9 @@ namespace KardashevAscent.Presentation.UI
             var sb = new StringBuilder();
             foreach (RobotGroup g in w.Groups)
             {
-                sb.Append(g.Id).Append(g.Name).Append(g.State).Append(g.Program);
-                foreach (TaskKind k in Kinds) sb.Append(g.PriorityOf(k));
+                sb.Append(g.Id).Append(g.Name).Append(g.State).Append(g.Program).Append(g.FacilityTile);
+                foreach (TaskKind k in Kinds) sb.Append(g.PriorityOf(k)).Append(g.RankOf(k));
+                foreach (WorkTask q in g.Queue) sb.Append(q);
                 foreach (int id in g.Members) sb.Append(',').Append(id);
                 sb.Append(';');
             }
@@ -211,6 +222,7 @@ namespace KardashevAscent.Presentation.UI
             {
                 sb.Append(r.Id).Append(r.State).Append(r.OnTemporaryTask);
                 foreach (TaskKind k in Kinds) sb.Append(r.PriorityOverride(k));
+                sb.Append(r.ProgramOverride).Append(r.GroupId);
             }
             return sb.ToString();
         }
@@ -262,6 +274,10 @@ namespace KardashevAscent.Presentation.UI
                     priorities.Add(chip);
                 }
                 box.Add(priorities);
+                box.Add(MakeProgramRow(sim, w, g));
+                box.Add(MakeRankingRow(sim, w, g));
+                if (g.Program == OperatingProgram.TaskQueue)
+                    box.Add(MakeQueue(sim, w, g));
 
                 foreach (int robotId in g.Members)
                 {
@@ -271,7 +287,154 @@ namespace KardashevAscent.Presentation.UI
                 }
                 groupsHolder.Add(box);
             }
+
+            groupActions.Clear();
+            groupActions.Add(MakeButton("New group", () => { w.CreateGroup($"Group {w.Groups.Count + 1}"); Changed(sim); }));
+            RebuildTasks(sim, w);
             RebuildWorkshop(sim, w);
+        }
+
+        // ---- Phase 4: programs, ranking, queue, groups, tasks ----
+
+        static OperatingProgram NextProgram(OperatingProgram p) =>
+            p == OperatingProgram.TaskQueue ? OperatingProgram.Priority : p + 1;
+
+        static string ProgramHelp(OperatingProgram p)
+        {
+            switch (p)
+            {
+                case OperatingProgram.Facility: return "only tasks on its facility tile";
+                case OperatingProgram.Demand: return "follows what the colony needs: building first when power runs short or sites wait, mining last";
+                case OperatingProgram.TaskQueue: return "works through its own list (queue tasks below)";
+                default: return "the most urgent task, by the priorities and order here";
+            }
+        }
+
+        VisualElement MakeProgramRow(IPlanetSimulation sim, Workforce w, RobotGroup g)
+        {
+            int id = g.Id;
+            var row = new VisualElement();
+            row.AddToClassList("button-row");
+            row.Add(MakeButton($"Program: {g.Program}", () => { w.SetGroupProgram(id, NextProgram(w.GetGroup(id).Program)); Changed(sim); }));
+            if (g.Program == OperatingProgram.Facility)
+            {
+                row.Add(MakeLabel(g.FacilityTile.HasValue ? $"facility: tile {g.FacilityTile.Value}" : "facility: anywhere", "priority-label"));
+                int selected = picker != null ? picker.SelectedTile : -1;
+                if (selected >= 0 && g.FacilityTile != selected)
+                    row.Add(MakeButton($"Use tile {selected}", () => { w.SetGroupFacility(id, selected); Changed(sim); }));
+                if (g.FacilityTile.HasValue)
+                    row.Add(MakeButton("Anywhere", () => { w.SetGroupFacility(id, null); Changed(sim); }));
+            }
+            if (!g.Automatic)
+            {
+                var name = new TextField { value = g.Name };
+                name.AddToClassList("name-field");
+                name.RegisterCallback<FocusOutEvent>(_ => { if (w.RenameGroup(id, name.value)) Changed(sim); });
+                row.Add(name);
+                row.Add(MakeButton("Delete group", () => { w.DeleteGroup(id); Changed(sim); }));
+            }
+            Label help = MakeLabel(ProgramHelp(g.Program), "robot-line");
+            help.AddToClassList("muted");
+            var wrap = new VisualElement();
+            wrap.Add(row);
+            wrap.Add(help);
+            return wrap;
+        }
+
+        VisualElement MakeRankingRow(IPlanetSimulation sim, Workforce w, RobotGroup g)
+        {
+            int id = g.Id;
+            var row = new VisualElement();
+            row.AddToClassList("priority-row");
+            row.Add(MakeLabel("Order for ties:", "priority-label"));
+            List<TaskKind> order = g.RankedKinds();
+            for (int i = 0; i < order.Count; i++)
+            {
+                TaskKind kind = order[i];
+                Button b = MakeButton(i == 0 ? KindName(kind) : "↑ " + KindName(kind), () => { w.RaiseInRanking(id, kind); Changed(sim); });
+                b.AddToClassList("chip");
+                b.tooltip = "Click to move it one place earlier. Priorities still come first.";
+                row.Add(b);
+            }
+            if (g.HasCustomRanking)
+                row.Add(MakeButton("Default", () => { w.ResetRanking(id); Changed(sim); }));
+            return row;
+        }
+
+        VisualElement MakeQueue(IPlanetSimulation sim, Workforce w, RobotGroup g)
+        {
+            int id = g.Id;
+            var box = new VisualElement();
+            if (g.Queue.Count == 0)
+                box.Add(MakeLabel("Queue empty: pick this group under TASKS and press Queue.", "robot-line"));
+            for (int i = 0; i < g.Queue.Count; i++)
+            {
+                int index = i;
+                var row = new VisualElement();
+                row.AddToClassList("task-row");
+                row.Add(MakeLabel($"{i + 1}. {Describe(sim, g.Queue[i])}", "task-text"));
+                row.Add(MakeButton("Remove", () => { w.RemoveFromQueue(id, index); Changed(sim); }));
+                box.Add(row);
+            }
+            return box;
+        }
+
+        static string Describe(IPlanetSimulation sim, WorkTask t)
+        {
+            switch (t.Kind)
+            {
+                case TaskKind.Build: return $"Build a {BuildingName(sim.GetBuilding(t.Tile, t.Slot))} · tile {t.Tile}, slot {t.Slot}";
+                case TaskKind.Salvage: return $"Take down a {BuildingName(sim.GetBuilding(t.Tile, t.Slot))} · tile {t.Tile}, slot {t.Slot}";
+                case TaskKind.Survey: return $"Survey tile {t.Tile}";
+                case TaskKind.Mine: return $"Mine {Materials.Name((Material)t.Slot).ToLowerInvariant()} · tile {t.Tile}";
+                case TaskKind.Manufacture:
+                    return t.Order < sim.Jobs.Count ? $"Workshop: {sim.Jobs[t.Order].Describe()}" : "Workshop job";
+                default: return t.ToString();
+            }
+        }
+
+        void RebuildTasks(IPlanetSimulation sim, Workforce w)
+        {
+            tasksHolder.Clear();
+            var groups = new List<RobotGroup>();
+            foreach (RobotGroup g in w.Groups)
+                if (g.Count > 0 || !g.Automatic) groups.Add(g);
+            if (groups.Count == 0)
+                return;
+            if (w.GetGroup(targetGroupId) == null)
+                targetGroupId = groups[0].Id;
+            RobotGroup target = w.GetGroup(targetGroupId);
+
+            var head = new VisualElement();
+            head.AddToClassList("button-row");
+            head.Add(MakeLabel("Buttons act on:", "priority-label"));
+            head.Add(MakeButton(target.Name, () =>
+            {
+                int i = groups.IndexOf(w.GetGroup(targetGroupId));
+                targetGroupId = groups[(i + 1) % groups.Count].Id;
+                nextRefresh = 0f;
+            }));
+            tasksHolder.Add(head);
+
+            IReadOnlyList<WorkTask> open = sim.OpenWork();
+            if (open.Count == 0)
+                tasksHolder.Add(MakeLabel("No open tasks: place buildings, mark salvage (Del), order surveys or mining (tile panel) or Workshop jobs.", "robot-line"));
+            foreach (WorkTask t in open)
+            {
+                WorkTask task = t;
+                Robot worker = w.WorkerOf(t);
+                var row = new VisualElement();
+                row.AddToClassList("task-row");
+                row.Add(MakeLabel($"{Describe(sim, t)}{(worker != null ? $" · {worker.Name}" : "")}", "task-text"));
+                row.Add(MakeButton("Interrupt", () =>
+                {
+                    workshopMessage.text = w.Interrupt(targetGroupId, task) ? $"{w.GetGroup(targetGroupId).Name} interrupted for: {Describe(sim, task)}." : "That group can't do this task now (paused, or no robot able).";
+                    Changed(sim);
+                }));
+                if (target.Program == OperatingProgram.TaskQueue)
+                    row.Add(MakeButton("Queue", () => { w.Enqueue(targetGroupId, task); Changed(sim); }));
+                tasksHolder.Add(row);
+            }
         }
 
         VisualElement MakeRobot(IPlanetSimulation sim, Workforce w, Robot r)
@@ -317,7 +480,40 @@ namespace KardashevAscent.Presentation.UI
                 row.Add(MakeLabel((r.SodiumBattery ? "Na-ion battery" + (have.Length > 0 ? " · " : "") : "") + have, "robot-line"));
             if (upgrades.childCount > 0)
                 row.Add(upgrades);
+
+            var manage = new VisualElement();
+            manage.AddToClassList("button-row");
+            int robotId = r.Id;
+            RobotGroup next = NextGroupFor(w, r);
+            if (next != null)
+                manage.Add(MakeButton($"Move to {next.Name}", () =>
+                {
+                    if (!w.MoveRobot(robotId, next.Id)) workshopMessage.text = $"{next.Name} is full.";
+                    Changed(sim);
+                }));
+            OperatingProgram? ownProgram = r.ProgramOverride;
+            OperatingProgram? nextOwn = !ownProgram.HasValue ? OperatingProgram.Priority
+                : ownProgram.Value == OperatingProgram.TaskQueue ? (OperatingProgram?)null : ownProgram.Value + 1;
+            manage.Add(MakeButton(ownProgram.HasValue ? $"Own program: {ownProgram.Value}" : "Program: group's", () =>
+            {
+                w.SetRobotProgramOverride(robotId, nextOwn);
+                Changed(sim);
+            }));
+            row.Add(manage);
             return row;
+        }
+
+        /// <summary>The next group this robot could join: manual groups, or the automatic group of its kind.</summary>
+        static RobotGroup NextGroupFor(Workforce w, Robot r)
+        {
+            var options = new List<RobotGroup>();
+            foreach (RobotGroup g in w.Groups)
+                if (g.Id == r.GroupId || !g.Automatic || g.AutoKind == r.Kind)
+                    options.Add(g);
+            if (options.Count <= 1)
+                return null;
+            int i = options.FindIndex(g => g.Id == r.GroupId);
+            return options[(i + 1) % options.Count];
         }
 
         static string Vitals(Robot r) =>
