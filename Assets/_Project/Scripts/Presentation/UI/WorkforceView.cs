@@ -30,6 +30,8 @@ namespace KardashevAscent.Presentation.UI
         VisualElement panelRoot, groupsHolder, workshopHolder, groupActions, tasksHolder;
         /// <summary>The group the TASKS buttons act on (interrupt, queue).</summary>
         int targetGroupId = -1;
+        /// <summary>The robot the TASKS Reserve buttons act on.</summary>
+        int targetRobotId = -1;
         Label subtitle, summary, notes, workshopStatus, workshopMessage;
         readonly List<Label> jobLabels = new List<Label>();
         float nextRefresh;
@@ -99,7 +101,9 @@ namespace KardashevAscent.Presentation.UI
             subtitle.text = $"{toggleKey}: close";
             summary.text = $"{w.Robots.Count} robot{(w.Robots.Count == 1 ? "" : "s")} · {working} working · " +
                            $"{sim.ConstructionQueueCount} site{(sim.ConstructionQueueCount == 1 ? "" : "s")} waiting · " +
-                           $"build parts {Format.Energy(sim.BuildStockWh)}";
+                           $"build parts {Format.Energy(sim.BuildStockWh)}" +
+                           (w.Tasks.Count(TaskState.Blocked) > 0 ? $" · {w.Tasks.Count(TaskState.Blocked)} blocked" : "") +
+                           (w.Tasks.Count(TaskState.AssistanceNeeded) > 0 ? $" · {w.Tasks.Count(TaskState.AssistanceNeeded)} need help" : "");
             notes.text =
                 "Robots build construction sites (a site only takes build parts while a robot works on it) and take down " +
                 "buildings you mark with Del. Each robot takes the most urgent task it can do; only Critical tasks pull a " +
@@ -115,7 +119,12 @@ namespace KardashevAscent.Presentation.UI
                 "4 and 6), power use, driving pace, wear, repair rates, recipes and unlock milestones are placeholder values.";
 
             var openKeys = new StringBuilder();
-            foreach (WorkTask t in sim.OpenWork()) openKeys.Append(t).Append(';');
+            foreach (WorkTask t in sim.OpenWork())
+            {
+                TaskRecord rec = w.Tasks.Get(t);
+                openKeys.Append(t).Append(rec?.State).Append(rec?.RobotId).Append(rec?.ReservedFor).Append(';');
+            }
+            openKeys.Append(w.Changes.Count > 0 ? w.Changes[w.Changes.Count - 1].Hours : -1.0).Append(targetRobotId);
             string shape = Shape(w) + "|" + sim.MilestonesReached + "|" + sim.WorkshopCount + "|" + sim.Jobs.Count + "|" + openKeys
                            + "|" + targetGroupId + "|" + (picker != null ? picker.SelectedTile : -1);
             if (shape != shownShape)
@@ -419,16 +428,49 @@ namespace KardashevAscent.Presentation.UI
             }));
             tasksHolder.Add(head);
 
+            if (w.GetRobot(targetRobotId) == null && w.Robots.Count > 0)
+                targetRobotId = w.Robots[0].Id;
+            Robot targetRobot = w.GetRobot(targetRobotId);
+            if (targetRobot != null)
+            {
+                head.Add(MakeLabel("· reserve for:", "priority-label"));
+                head.Add(MakeButton(targetRobot.Name, () =>
+                {
+                    int i = 0;
+                    for (int k = 0; k < w.Robots.Count; k++) if (w.Robots[k].Id == targetRobotId) i = k;
+                    targetRobotId = w.Robots[(i + 1) % w.Robots.Count].Id;
+                    nextRefresh = 0f;
+                }));
+            }
+
             IReadOnlyList<WorkTask> open = sim.OpenWork();
             if (open.Count == 0)
                 tasksHolder.Add(MakeLabel("No open tasks: place buildings, mark salvage (Del), order surveys or mining (tile panel) or Workshop jobs.", "robot-line"));
             foreach (WorkTask t in open)
             {
                 WorkTask task = t;
+                TaskRecord rec = w.Tasks.Get(t);
                 Robot worker = w.WorkerOf(t);
+                Robot reserved = w.ReservedRobotFor(t);
                 var row = new VisualElement();
                 row.AddToClassList("task-row");
-                row.Add(MakeLabel($"{Describe(sim, t)}{(worker != null ? $" · {worker.Name}" : "")}", "task-text"));
+                string state = rec != null ? StateName(rec.State) : "";
+                string who = worker != null ? $" · {worker.Name}" : "";
+                string why = rec != null && rec.Reason.Length > 0 && worker == null ? $" · {rec.Reason}" : "";
+                string prio = rec != null && rec.Priority != TaskPriority.Normal ? $" · {rec.Priority}" : "";
+                Label text = MakeLabel($"{Describe(sim, t)} · {state}{who}{prio}{why}", "task-text");
+                text.EnableInClassList("blocked", rec != null && (rec.State == TaskState.Blocked || rec.State == TaskState.AssistanceNeeded));
+                row.Add(text);
+                if (reserved != null)
+                    row.Add(MakeButton($"Unreserve {reserved.Name}", () => { w.Unreserve(reserved.Id); Changed(sim); }));
+                else if (targetRobot != null)
+                    row.Add(MakeButton($"Reserve {targetRobot.Name}", () =>
+                    {
+                        workshopMessage.text = w.Reserve(targetRobotId, task)
+                            ? $"{w.GetRobot(targetRobotId).Name} will take: {Describe(sim, task)}."
+                            : $"{w.GetRobot(targetRobotId).Name} can't do this kind of task.";
+                        Changed(sim);
+                    }));
                 row.Add(MakeButton("Interrupt", () =>
                 {
                     workshopMessage.text = w.Interrupt(targetGroupId, task) ? $"{w.GetGroup(targetGroupId).Name} interrupted for: {Describe(sim, task)}." : "That group can't do this task now (paused, or no robot able).";
@@ -437,6 +479,40 @@ namespace KardashevAscent.Presentation.UI
                 if (target.Program == OperatingProgram.TaskQueue)
                     row.Add(MakeButton("Queue", () => { w.Enqueue(targetGroupId, task); Changed(sim); }));
                 tasksHolder.Add(row);
+            }
+
+            int finished = w.Tasks.Finished.Count;
+            if (finished > 0)
+            {
+                string done = "";
+                for (int i = Math.Max(0, finished - 3); i < finished; i++)
+                {
+                    TaskRecord f = w.Tasks.Finished[i];
+                    done += (done.Length > 0 ? " · " : "Recently: ") + $"{Describe(sim, f.Task)} {StateName(f.State).ToLowerInvariant()}";
+                }
+                tasksHolder.Add(MakeLabel(done, "robot-line"));
+            }
+            if (w.Changes.Count > 0)
+            {
+                string log = "Changes: ";
+                for (int i = Math.Max(0, w.Changes.Count - 4); i < w.Changes.Count; i++)
+                {
+                    AssignmentChange c = w.Changes[i];
+                    Robot r = w.GetRobot(c.RobotId);
+                    log += $"{(r != null ? r.Name : "R" + c.RobotId)} {(c.To.HasValue ? "→ " + Describe(sim, c.To.Value) : "left " + (c.From.HasValue ? Describe(sim, c.From.Value) : "its task"))} ({c.Reason}); ";
+                }
+                Label l = MakeLabel(log, "robot-line");
+                l.AddToClassList("muted");
+                tasksHolder.Add(l);
+            }
+        }
+
+        static string StateName(TaskState s)
+        {
+            switch (s)
+            {
+                case TaskState.AssistanceNeeded: return "Needs help";
+                default: return s.ToString();
             }
         }
 
@@ -456,6 +532,8 @@ namespace KardashevAscent.Presentation.UI
                 if (p.HasValue) own.Add($"{KindName(k)} {p.Value}");
             }
             if (r.ProgramOverride.HasValue) own.Add($"program {r.ProgramOverride.Value}");
+            if (r.ReservedTask.HasValue) own.Add($"reserved for: {Describe(sim, r.ReservedTask.Value)}");
+            if (r.ResumeTask.HasValue) own.Add($"goes back to: {Describe(sim, r.ResumeTask.Value)}");
             if (own.Count > 0)
                 row.Add(MakeLabel("Own settings: " + string.Join(", ", own), "robot-line"));
             Label vitals = MakeLabel(Vitals(r), "robot-line");

@@ -40,6 +40,73 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>Every program is implemented (phase 4).</summary>
         public static bool IsImplemented(OperatingProgram program) => Enum.IsDefined(typeof(OperatingProgram), program);
 
+        // ---- Stage B: task records, reservations, reasons ----
+
+        /// <summary>The task monitor: every open task's state and reason, and recently finished tasks.</summary>
+        public TaskBook Tasks { get; } = new TaskBook();
+
+        readonly List<AssignmentChange> changes = new List<AssignmentChange>();
+        public const int ChangesKept = 50;
+
+        /// <summary>Recent assignment changes with their reasons, oldest first (spec v2 §4: no silent reassignment).</summary>
+        public IReadOnlyList<AssignmentChange> Changes => changes;
+
+        /// <summary>Game time, hours, for the records (set by the colony before each assignment).</summary>
+        public double NowHours { get; set; }
+
+        /// <summary>A task has been blocked too long and asks for assistance (the player is told).</summary>
+        public event Action<TaskRecord> AssistanceNeeded;
+
+        void Log(Robot r, WorkTask? from, WorkTask? to, string reason)
+        {
+            changes.Add(new AssignmentChange(NowHours, r.Id, from, to, reason));
+            if (changes.Count > ChangesKept) changes.RemoveAt(0);
+        }
+
+        /// <summary>A robot leaves its task to look after itself: it remembers the task to go back to.</summary>
+        internal void LeftTask(Robot r, string why)
+        {
+            if (!r.Task.HasValue)
+                return;
+            if (!r.OnTemporaryTask)
+                r.ResumeTask = r.Task;
+            Log(r, r.Task, null, why);
+        }
+
+        /// <summary>
+        /// Reserve a task for a robot (spec v2 §4): it takes it as soon as it is free, before any automatic choice, and
+        /// no other robot takes it automatically. One robot per task: an older reservation of the same task is dropped.
+        /// </summary>
+        public bool Reserve(int robotId, WorkTask task)
+        {
+            Robot r = GetRobot(robotId);
+            if (r == null || !Capable(r, task.Kind))
+                return false;
+            foreach (Robot other in robots)
+                if (other != r && other.ReservedTask.HasValue && other.ReservedTask.Value.Equals(task))
+                    other.ReservedTask = null;
+            r.ReservedTask = task;
+            return true;
+        }
+
+        public bool Unreserve(int robotId)
+        {
+            Robot r = GetRobot(robotId);
+            if (r == null || !r.ReservedTask.HasValue)
+                return false;
+            r.ReservedTask = null;
+            return true;
+        }
+
+        public Robot ReservedRobotFor(WorkTask task)
+        {
+            foreach (Robot r in robots)
+                if (r.ReservedTask.HasValue && r.ReservedTask.Value.Equals(task)) return r;
+            return null;
+        }
+
+        bool Paused(Robot r) => GetGroup(r.GroupId).State == GroupState.Paused;
+
         /// <summary>Milestones reached: they unlock secondary capabilities in <see cref="RobotCatalog"/>.</summary>
         public int Milestones { get; set; }
 
@@ -453,17 +520,32 @@ namespace KardashevAscent.Simulation.Robots
                     g.State = GroupState.Automatic;
                 }
 
-            // Drop finished tasks and the tasks of paused robots; keep the rest (with their current order).
+            // Drop finished tasks and the tasks of robots that can't go on, saying why; keep the rest.
             foreach (Robot r in robots)
             {
                 if (!r.Task.HasValue)
                     continue;
-                if (!r.Available || !open.TryGetValue(r.Task.Value, out WorkTask now) || GetGroup(r.GroupId).State == GroupState.Paused || !taken.Add(now))
+                WorkTask was = r.Task.Value;
+                bool isOpen = open.TryGetValue(was, out WorkTask now);
+                string why = !isOpen ? null
+                    : !r.Available ? (r.IsShutDown ? "shut down" : r.ManualTarget.HasValue ? "sent elsewhere by you"
+                                      : r.Activity == RobotActivity.Maintenance ? "went for maintenance" : "went to charge")
+                    : Paused(r) ? "group paused"
+                    : taken.Contains(now) ? "another robot already has it"
+                    : null;
+                if (!isOpen || why != null)
                 {
+                    if (why != null)
+                    {
+                        if (!r.Available && !r.OnTemporaryTask && !r.ManualTarget.HasValue)
+                            r.ResumeTask = was;
+                        Log(r, was, null, why);
+                    }
                     r.Task = null;
                     r.OnTemporaryTask = false;
                     continue;
                 }
+                taken.Add(now);
                 r.Task = now;
             }
 
@@ -497,30 +579,114 @@ namespace KardashevAscent.Simulation.Robots
                 taken.Add(t);
             }
 
-            // Priority program: idle robots take the most urgent task; Critical tasks pull busy robots off theirs.
+            // Manual reservations come first (spec v2 §4); a robot doing a reserved task for someone else lets go, with the reason.
+            var reservedTasks = new HashSet<WorkTask>();
+            foreach (Robot r in robots)
+            {
+                if (!r.ReservedTask.HasValue)
+                    continue;
+                if (!open.TryGetValue(r.ReservedTask.Value, out WorkTask rt))
+                {
+                    r.ReservedTask = null;   // done or gone
+                    continue;
+                }
+                reservedTasks.Add(rt);
+                if (!r.Available || r.OnTemporaryTask || Paused(r) || (r.Task.HasValue && r.Task.Value.Equals(rt)))
+                    continue;
+                Robot other = WorkerOf(rt);
+                if (other != null && other != r)
+                {
+                    Log(other, rt, null, $"reserved for {r.Name} by you");
+                    other.Task = null;
+                    other.OnTemporaryTask = false;
+                }
+                if (r.Task.HasValue) taken.Remove(r.Task.Value);
+                Log(r, r.Task, rt, "your reservation");
+                r.Task = rt;
+                r.ResumeTask = null;
+                taken.Add(rt);
+            }
+
+            // Robots back from charging or maintenance return to the task they left; a stand-in lets go (spec v2 §4).
+            foreach (Robot r in robots)
+            {
+                if (!r.ResumeTask.HasValue || !r.Available || r.OnTemporaryTask || Paused(r) || r.ReservedTask.HasValue)
+                    continue;
+                WorkTask want = r.ResumeTask.Value;
+                r.ResumeTask = null;
+                if (r.Task.HasValue || !open.TryGetValue(want, out WorkTask back) || reservedTasks.Contains(back)
+                    || !Capable(r, back.Kind) || !InRange(r, back))
+                    continue;
+                Robot stand = WorkerOf(back);
+                if (stand != null)
+                {
+                    if (stand.OnTemporaryTask)
+                        continue;
+                    Log(stand, back, null, $"{r.Name} came back to it");
+                    stand.Task = null;
+                }
+                r.Task = back;
+                taken.Add(back);
+                Log(r, null, back, "back to its task after charging or maintenance");
+            }
+
+            // Task queue robots take the first open task on their list.
+            foreach (Robot r in robots)
+            {
+                if (!IsFree(r) || EffectiveProgram(r) != OperatingProgram.TaskQueue)
+                    continue;
+                WorkTask? q = BestFor(r, open.Values, taken, reservedTasks);
+                if (!q.HasValue)
+                    continue;
+                r.Task = q;
+                taken.Add(q.Value);
+            }
+
+            // Everyone else: the best robot–task pairs first (priority, the group's order, the robot best suited, the
+            // nearest, the fullest battery, then fixed tie-breaks), so specialists get their work and nobody waits idle.
+            HandOut(open, taken, reservedTasks);
+
+            // Critical tasks pull a busy robot off a task that may be interrupted (spec v2 §3); the freed task is handed on.
             bool changed = true;
             for (int pass = 0; changed && pass <= robots.Count; pass++)
             {
                 changed = false;
-                foreach (Robot r in robots)
+                foreach (WorkTask t in open.Values)
                 {
-                    if (!r.Available || r.OnTemporaryTask || GetGroup(r.GroupId).State == GroupState.Paused)
+                    if (taken.Contains(t) || reservedTasks.Contains(t))
                         continue;
-                    WorkTask? best = BestFor(r, open.Values, taken);
-                    if (!best.HasValue)
-                        continue;
-                    if (r.Task.HasValue)
+                    Robot pick = null;
+                    Score pickScore = default;
+                    foreach (Robot r in robots)
                     {
-                        if (ProgramPriority(r, best.Value.Kind) != TaskPriority.Critical
-                            || ProgramPriority(r, r.Task.Value.Kind) == TaskPriority.Critical)
+                        if (!r.Available || !r.Task.HasValue || r.OnTemporaryTask || Paused(r) || r.ReservedTask.HasValue
+                            || EffectiveProgram(r) == OperatingProgram.TaskQueue)
                             continue;
-                        taken.Remove(r.Task.Value);
+                        if (ProgramPriority(r, t.Kind) != TaskPriority.Critical || ProgramPriority(r, r.Task.Value.Kind) == TaskPriority.Critical)
+                            continue;
+                        if (!TaskPolicy.For(r.Task.Value.Kind).MayBeInterrupted || !Eligible(r, t))
+                            continue;
+                        Score s = ScoreOf(r, t);
+                        if (pick == null || s.CompareTo(pickScore) < 0)
+                        {
+                            pick = r;
+                            pickScore = s;
+                        }
                     }
-                    r.Task = best;
-                    taken.Add(best.Value);
+                    if (pick == null)
+                        continue;
+                    WorkTask old = pick.Task.Value;
+                    taken.Remove(old);
+                    Log(pick, old, t, "a critical task");
+                    pick.Task = t;
+                    taken.Add(t);
                     changed = true;
                 }
+                if (changed)
+                    HandOut(open, taken, reservedTasks);
             }
+
+            UpdateBook(open);
 
             // Drive to the task; robots with nothing to do stop where they are.
             if (Movement != null)
@@ -538,10 +704,179 @@ namespace KardashevAscent.Simulation.Robots
                 }
         }
 
+        /// <summary>Free for automatic work: available, idle, not on a temporary task, running, not waiting for a reservation.</summary>
+        bool IsFree(Robot r) => r.Available && !r.Task.HasValue && !r.OnTemporaryTask && !Paused(r) && !r.ReservedTask.HasValue;
+
+        /// <summary>Can this robot take this task by itself (compatibility, work area, range, not disabled)?</summary>
+        bool Eligible(Robot r, WorkTask t)
+        {
+            if (!Capable(r, t.Kind) || !InRange(r, t) || ProgramPriority(r, t.Kind) == TaskPriority.Disabled)
+                return false;
+            RobotGroup g = GetGroup(r.GroupId);
+            return !(EffectiveProgram(r) == OperatingProgram.Facility && g.FacilityTile.HasValue && t.Tile != g.FacilityTile.Value);
+        }
+
+        /// <summary>Ordering of robot–task pairs (lower is better); every tie is broken, so results are deterministic.</summary>
+        readonly struct Score : IComparable<Score>
+        {
+            readonly int priority, rank, order, robot;
+            readonly double suitability, hours, charge;
+
+            public Score(int priority, int rank, double suitability, double hours, double charge, int order, int robot)
+            {
+                this.priority = priority; this.rank = rank; this.suitability = suitability; this.hours = hours;
+                this.charge = charge; this.order = order; this.robot = robot;
+            }
+
+            public int CompareTo(Score o)
+            {
+                if (priority != o.priority) return priority.CompareTo(o.priority);
+                if (rank != o.rank) return rank.CompareTo(o.rank);
+                if (Math.Abs(suitability - o.suitability) > 1e-9) return o.suitability.CompareTo(suitability);   // better suited first
+                if (Math.Abs(hours - o.hours) > 1e-9) return hours.CompareTo(o.hours);                           // nearer first
+                if (Math.Abs(charge - o.charge) > 1e-9) return o.charge.CompareTo(charge);                       // fuller battery first
+                if (order != o.order) return order.CompareTo(o.order);
+                return robot.CompareTo(o.robot);
+            }
+        }
+
+        Score ScoreOf(Robot r, WorkTask t)
+        {
+            double hours = Movement != null ? Movement.Routes.HoursBetween(r.Tile, t.Tile) / r.Attribute(RobotAttribute.Speed) : 0.0;
+            return new Score((int)ProgramPriority(r, t.Kind), GetGroup(r.GroupId).RankOf(t.Kind),
+                             RobotCatalog.Productivity(r, t.Kind, Milestones), hours, r.Battery.StateOfCharge, t.Order, r.Id);
+        }
+
+        /// <summary>Give free robots work, best pair first, until no free robot can take an open task.</summary>
+        void HandOut(Dictionary<WorkTask, WorkTask> open, HashSet<WorkTask> taken, HashSet<WorkTask> reservedTasks)
+        {
+            while (true)
+            {
+                Robot bestR = null;
+                WorkTask bestT = default;
+                Score best = default;
+                foreach (Robot r in robots)
+                {
+                    if (!IsFree(r) || EffectiveProgram(r) == OperatingProgram.TaskQueue)
+                        continue;
+                    foreach (WorkTask t in open.Values)
+                    {
+                        if (taken.Contains(t) || reservedTasks.Contains(t) || !Eligible(r, t))
+                            continue;
+                        Score s = ScoreOf(r, t);
+                        if (bestR == null || s.CompareTo(best) < 0)
+                        {
+                            bestR = r;
+                            bestT = t;
+                            best = s;
+                        }
+                    }
+                }
+                if (bestR == null)
+                    return;
+                bestR.Task = bestT;
+                taken.Add(bestT);
+            }
+        }
+
+        /// <summary>Refresh the task monitor: each open task's state and reason; ended tasks are recorded.</summary>
+        void UpdateBook(Dictionary<WorkTask, WorkTask> open)
+        {
+            Tasks.Close(new HashSet<WorkTask>(open.Keys), NowHours);
+            foreach (WorkTask t in open.Values)
+            {
+                TaskRecord rec = Tasks.Touch(t);
+                Robot w = WorkerOf(t);
+                Robot reserved = ReservedRobotFor(t);
+                rec.RobotId = w?.Id;
+                rec.ReservedFor = reserved?.Id;
+                TaskPriority p = TaskPriority.Disabled;
+                foreach (Robot r in robots)
+                    if (Capable(r, t.Kind) && ProgramPriority(r, t.Kind) < p) p = ProgramPriority(r, t.Kind);
+                rec.Priority = p;
+                TaskState state;
+                string reason = "";
+                if (w != null)
+                {
+                    bool there = Movement == null || (!w.IsTravelling && w.Tile == t.Tile);
+                    state = there ? TaskState.Working : TaskState.Travelling;
+                    if (!there) reason = $"{w.Name} is driving there";
+                }
+                else if (reserved != null)
+                {
+                    state = Paused(reserved) ? TaskState.Paused : TaskState.Reserved;
+                    reason = Paused(reserved) ? $"reserved for {reserved.Name}, whose group is paused"
+                           : $"reserved for {reserved.Name}" + (reserved.Available ? ", finishing its work" : $" ({reserved.State.ToString().ToLowerInvariant()})");
+                }
+                else
+                    state = WhyWaiting(t, out reason);
+
+                if (state == TaskState.Blocked)
+                {
+                    if (rec.BlockedSinceHours < 0.0) rec.BlockedSinceHours = NowHours;
+                    if (NowHours - rec.BlockedSinceHours >= TaskBook.AssistanceAfterHours - 1e-9)
+                    {
+                        bool first = rec.State != TaskState.AssistanceNeeded;
+                        state = TaskState.AssistanceNeeded;
+                        rec.State = state;
+                        rec.Reason = reason;
+                        if (first) AssistanceNeeded?.Invoke(rec);
+                    }
+                }
+                else
+                    rec.BlockedSinceHours = -1.0;
+                rec.State = state;
+                rec.Reason = reason;
+            }
+        }
+
+        /// <summary>Why nobody is on a task: waiting for a free robot, paused, or blocked (and by what).</summary>
+        TaskState WhyWaiting(WorkTask t, out string reason)
+        {
+            bool anyKind = false, anyEnabled = false, anyInRange = false, anyRunning = false;
+            foreach (Robot r in robots)
+            {
+                if (!Capable(r, t.Kind)) continue;
+                anyKind = true;
+                if (ProgramPriority(r, t.Kind) == TaskPriority.Disabled) continue;
+                anyEnabled = true;
+                if (!InRangeWhenCharged(r, t)) continue;
+                anyInRange = true;
+                if (!Paused(r)) anyRunning = true;
+            }
+            if (!anyKind)
+            {
+                var kinds = new List<string>();
+                foreach (Capability c in RobotCatalog.Capabilities)
+                    if (c.Task == t.Kind && Milestones >= c.UnlockMilestone && !kinds.Contains(c.Robot.ToString())) kinds.Add(c.Robot.ToString());
+                reason = $"no robot here can do it (needs a {string.Join(" or ", kinds)} robot)";
+                return TaskState.Blocked;
+            }
+            if (!anyEnabled) { reason = "disabled in the priorities of every robot that could do it"; return TaskState.Blocked; }
+            if (!anyInRange) { reason = "too far: no robot can drive there and back to a charger"; return TaskState.Blocked; }
+            if (!anyRunning) { reason = "every robot that could do it is paused"; return TaskState.Paused; }
+            reason = "waiting for a free robot";
+            return TaskState.Available;
+        }
+
+        /// <summary>Range with a battery charged to the resume level (a robot charging now could go later).</summary>
+        bool InRangeWhenCharged(Robot r, WorkTask t)
+        {
+            if (Movement == null)
+                return true;
+            double speed = r.Attribute(RobotAttribute.Speed);
+            double go = Movement.Routes.HoursBetween(r.Tile, t.Tile) / speed;
+            double back = Movement.HoursToCharger[t.Tile] / speed;
+            if (double.IsInfinity(go) || double.IsInfinity(back))
+                return false;
+            double spare = (RobotSpecs.ResumeWorkFraction - RobotSpecs.ReturnToChargeFraction) * r.Battery.CapacityWh;
+            return Movement.EnergyWh(go + back) <= Math.Max(spare, r.Battery.StoredWh - RobotSpecs.ReturnToChargeFraction * r.Battery.CapacityWh) + 1e-9;
+        }
+
         /// <summary>How reluctant a robot is to drop what it does: idle 0, else 1 + how urgent its task is.</summary>
         int Busyness(Robot r) => r.Task.HasValue ? 1 + (int)TaskPriority.Disabled - (int)ProgramPriority(r, r.Task.Value.Kind) : 0;
 
-        WorkTask? BestFor(Robot r, IEnumerable<WorkTask> open, HashSet<WorkTask> taken)
+        WorkTask? BestFor(Robot r, IEnumerable<WorkTask> open, HashSet<WorkTask> taken, HashSet<WorkTask> reservedTasks = null)
         {
             RobotGroup g = GetGroup(r.GroupId);
             OperatingProgram program = EffectiveProgram(r);
@@ -549,7 +884,8 @@ namespace KardashevAscent.Simulation.Robots
             {
                 var openSet = new HashSet<WorkTask>(open);
                 foreach (WorkTask q in g.QueueItems)
-                    if (openSet.Contains(q) && !taken.Contains(q) && Capable(r, q.Kind) && InRange(r, q))
+                    if (openSet.Contains(q) && !taken.Contains(q) && (reservedTasks == null || !reservedTasks.Contains(q))
+                        && Capable(r, q.Kind) && InRange(r, q))
                         foreach (WorkTask t in open)
                             if (t.Equals(q)) return t;
                 return null;
@@ -614,6 +950,14 @@ namespace KardashevAscent.Simulation.Robots
                     HasProgramOverride = r.ProgramOverride.HasValue,
                     ProgramOverride = r.ProgramOverride ?? OperatingProgram.Priority,
                     CriticallyDamaged = r.CriticallyDamaged,
+                    HasReserved = r.ReservedTask.HasValue,
+                    ReservedKind = r.ReservedTask?.Kind ?? TaskKind.Build,
+                    ReservedTile = r.ReservedTask?.Tile ?? 0,
+                    ReservedSlot = r.ReservedTask?.Slot ?? 0,
+                    HasResume = r.ResumeTask.HasValue,
+                    ResumeKind = r.ResumeTask?.Kind ?? TaskKind.Build,
+                    ResumeTile = r.ResumeTask?.Tile ?? 0,
+                    ResumeSlot = r.ResumeTask?.Slot ?? 0,
                     HasUpkeep = true,
                     BatteryStoredWh = r.Battery.StoredWh,
                     BatteryDeliveredWh = r.Battery.DeliveredWh,
@@ -671,6 +1015,8 @@ namespace KardashevAscent.Simulation.Robots
             }
             groups.Clear();
             groups.AddRange(newGroups);
+            Tasks.Clear();
+            changes.Clear();
             robots.Clear();
             foreach (RobotRecord rs in s.Robots)
             {
@@ -687,6 +1033,9 @@ namespace KardashevAscent.Simulation.Robots
                 r.Modules = rs.Modules;
                 r.SodiumBattery = rs.SodiumBattery;
                 r.CriticallyDamaged = rs.CriticallyDamaged;
+                // Saves before version 14 have no reservations or tasks to go back to.
+                r.ReservedTask = rs.HasReserved ? new WorkTask(rs.ReservedKind, rs.ReservedTile, rs.ReservedSlot) : (WorkTask?)null;
+                r.ResumeTask = rs.HasResume ? new WorkTask(rs.ResumeKind, rs.ResumeTile, rs.ResumeSlot) : (WorkTask?)null;
                 // Saves before version 12 have no routes: robots stand where they were.
                 if (rs.Route != null) r.Route.AddRange(rs.Route);
                 r.HopProgress = Math.Max(0.0, Math.Min(1.0, rs.HopProgress));
