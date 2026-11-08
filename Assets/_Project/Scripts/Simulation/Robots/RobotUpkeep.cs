@@ -55,6 +55,11 @@ namespace KardashevAscent.Simulation.Robots
                     Leave(r);
                 if (r.Activity == RobotActivity.Charging && r.Battery.StateOfCharge >= RobotSpecs.ResumeWorkFraction - 1e-9)
                     Leave(r);
+                // Above 20 % a robot doesn't wait at a charger that gave it nothing (no spare power): it goes back to
+                // work and charges again when it is below 20 % (design decision 2026-11-08: "keep working").
+                if (r.Activity == RobotActivity.Charging && r.Battery.StateOfCharge >= RobotSpecs.ReturnToChargeFraction
+                    && r.LastChargeW <= 0.0 && r.ChargedBefore)
+                    Leave(r);
                 if (r.Activity == RobotActivity.Maintenance && r.Condition >= 1.0 - 1e-12 && !r.Battery.WornOut)
                     Leave(r);
                 if (r.Activity != RobotActivity.None)
@@ -131,7 +136,9 @@ namespace KardashevAscent.Simulation.Robots
                         double offer = dockRequest.TryGetValue(r.Id, out double d) ? d * fd
                                      : criticalRequest.TryGetValue(r.Id, out double c) ? c * fc
                                      : topUpRequest.TryGetValue(r.Id, out double t) ? t * ft : 0.0;
-                        ChargingW += r.Battery.Charge(offer, hours);
+                        r.LastChargeW = r.Battery.Charge(offer, hours);
+                        r.ChargedBefore = true;
+                        ChargingW += r.LastChargeW;
                         break;
                     case RobotActivity.Maintenance:
                         Repair(r, hours, parts);
@@ -202,6 +209,8 @@ namespace KardashevAscent.Simulation.Robots
         {
             r.Activity = RobotActivity.None;
             r.Facility = null;
+            r.LastChargeW = 0.0;
+            r.ChargedBefore = false;
         }
     }
 }

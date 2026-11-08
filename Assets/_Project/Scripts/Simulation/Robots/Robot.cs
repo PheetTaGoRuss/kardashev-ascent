@@ -44,6 +44,11 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>Facility it charges or is repaired at (tile, slot; slot −1 = the lander), while it has one.</summary>
         public (int Tile, int Slot)? Facility { get; internal set; }
 
+        /// <summary>Charging power it took in the last step at its charger, W (not saved).</summary>
+        internal double LastChargeW;
+        /// <summary>True once it has had a step at its present charger (not saved).</summary>
+        internal bool ChargedBefore;
+
         public bool IsShutDown => Condition <= 0.0 && Activity != RobotActivity.Maintenance;
 
         /// <summary>Below the charge threshold and not yet charging (it waits for a free charger).</summary>
