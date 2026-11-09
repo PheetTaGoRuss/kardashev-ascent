@@ -43,6 +43,19 @@
                 <ui:Label name="placed-angles" class="body" text="" />
                 <ui:Label name="placed-numbers" class="body numbers" text="" />
                 <ui:Label name="placed-bonus" class="body bonus hidden" text="★ Best-angle bonus" />
+                <ui:VisualElement name="adjust-box" class="hidden">
+                    <ui:Label class="heading section-head" text="ADJUST ANGLES" />
+                    <ui:Label name="adjust-tilt-label" class="body slider-label" text="Tilt β" />
+                    <ui:Slider name="adjust-tilt" class="slider" low-value="0" high-value="90" />
+                    <ui:Label name="adjust-facing-label" class="body slider-label" text="Facing γ" />
+                    <ui:Slider name="adjust-facing" class="slider" low-value="0" high-value="359" />
+                    <ui:Label name="adjust-gain" class="body numbers" text="" />
+                    <ui:VisualElement class="button-row">
+                        <ui:Button name="adjust-best" class="action-button" text="Best angle" />
+                        <ui:Button name="adjust-apply" class="action-button primary" text="Send a robot to turn it" />
+                        <ui:Button name="adjust-cancel" class="action-button hidden" text="Cancel" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
                 <ui:VisualElement class="button-row">
                     <ui:Button name="remove-button" class="action-button" text="Remove (Del)" />
                 </ui:VisualElement>

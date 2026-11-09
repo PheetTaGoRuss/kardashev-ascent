@@ -113,10 +113,13 @@ namespace KardashevAscent.Simulation.Robots
             new Capability(RobotKind.General, TaskKind.Survey),
             new Capability(RobotKind.General, TaskKind.Mine),
             new Capability(RobotKind.General, TaskKind.Manufacture),
+            new Capability(RobotKind.General, TaskKind.Adjust),
 
             new Capability(RobotKind.Construction, TaskKind.Build),
             new Capability(RobotKind.Construction, TaskKind.Salvage),
             new Capability(RobotKind.Construction, TaskKind.Manufacture),
+            new Capability(RobotKind.Construction, TaskKind.Adjust),
+            new Capability(RobotKind.Maintenance, TaskKind.Adjust),
             new Capability(RobotKind.Mining, TaskKind.Mine),
             new Capability(RobotKind.Research, TaskKind.Survey),
 
@@ -169,7 +172,8 @@ namespace KardashevAscent.Simulation.Robots
                 case TaskKind.Mine: return 2.0;
                 case TaskKind.Build:
                 case TaskKind.Salvage: return 1.5;
-                case TaskKind.Survey: return 0.5;
+                case TaskKind.Survey:
+                case TaskKind.Adjust: return 0.5;
                 default: return 1.0;
             }
         }

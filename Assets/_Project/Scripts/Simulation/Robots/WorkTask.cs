@@ -16,7 +16,7 @@ namespace KardashevAscent.Simulation.Robots
     /// ground and mining a material (phase 3a), and working a Workshop job (phase 3b). For Mine, the task's slot
     /// holds the material; for Manufacture, the task is at the Workshop's tile and slot.
     /// </summary>
-    public enum TaskKind { Build, Salvage, Survey, Mine, Manufacture }
+    public enum TaskKind { Build, Salvage, Survey, Mine, Manufacture, Adjust }
 
     /// <summary>
     /// Operating programs (spec §4):
@@ -85,7 +85,8 @@ namespace KardashevAscent.Simulation.Robots
             switch (kind)
             {
                 case TaskKind.Build: return 0;
-                case TaskKind.Salvage: return 1;
+                case TaskKind.Salvage:
+                case TaskKind.Adjust: return 1;
                 case TaskKind.Manufacture: return 2;
                 case TaskKind.Survey: return 3;
                 default: return 4;

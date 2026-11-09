@@ -141,6 +141,48 @@ namespace KardashevAscent.Presentation.Planet
         /// <summary>The tile whose site is open, or −1.</summary>
         public int Tile => tile;
 
+        // ---- Re-angling a built panel (a robot does it) ----
+
+        /// <summary>A panel's visual and numbers follow its angles in the simulation (after a robot turned it).</summary>
+        void RefreshPanel(int atTile, int s)
+        {
+            if (!placed.TryGetValue((atTile, s), out Placed p) || !simulation.TryGetPanelAngles(atTile, s, out double t, out double a))
+                return;
+            if (p.Rating == AngleRating.Optimal) BestAnglePanels--;
+            p.Tilt = t;
+            p.Azimuth = a;
+            p.Preview = PreviewBuilt(atTile, s, t, a);
+            p.Rating = atTile == tile ? RatingOf(p.Preview) : AngleRating.Off;
+            if (p.Rating == AngleRating.Optimal) BestAnglePanels++;
+            ShowOnSlot(p.Visual, siteView.SiteFor(atTile), simulation.FootprintAt(atTile, s), t, a);
+            placed[(atTile, s)] = p;
+        }
+
+        /// <summary>What the selected panel would make at these angles (radians).</summary>
+        public PanelPreview PreviewSelectedAt(double tilt, double azimuth) =>
+            simulation != null && tile >= 0 && slot >= 0 ? PreviewBuilt(tile, Anchor(tile, slot), tilt, azimuth) : default;
+
+        /// <summary>Ask a robot to turn the selected panel to these angles (a site just takes them).</summary>
+        public bool OrderSelectedAngles(double tilt, double azimuth)
+        {
+            if (simulation == null || tile < 0 || slot < 0)
+                return false;
+            int a = Anchor(tile, slot);
+            if (!simulation.OrderPanelAngles(tile, a, tilt, azimuth))
+                return false;
+            RefreshPanel(tile, a);   // a site changes at once; a built panel waits for its robot
+            return true;
+        }
+
+        /// <summary>The angles the selected panel is waiting to be turned to, if any.</summary>
+        public bool SelectedAdjustOrder(out double tilt, out double azimuth)
+        {
+            tilt = azimuth = 0.0;
+            return simulation != null && tile >= 0 && slot >= 0 && simulation.TryGetAdjustOrder(tile, slot, out tilt, out azimuth);
+        }
+
+        public bool CancelSelectedAdjust() => simulation != null && tile >= 0 && slot >= 0 && simulation.CancelAdjust(tile, slot);
+
         /// <summary>The best angles for <see cref="Tile"/>, once the background search has found them.</summary>
         public bool TryGetBest(out PanelAngles angles)
         {
@@ -223,12 +265,14 @@ namespace KardashevAscent.Presentation.Planet
             {
                 listeningTo.BuildingCompleted -= OnBuildingCompleted;
                 listeningTo.BuildingSalvaged -= RemoveVisual;
+                listeningTo.PanelAdjusted -= RefreshPanel;
             }
             listeningTo = sim;
             if (listeningTo != null)
             {
                 listeningTo.BuildingCompleted += OnBuildingCompleted;
                 listeningTo.BuildingSalvaged += RemoveVisual;
+                listeningTo.PanelAdjusted += RefreshPanel;
             }
         }
 
@@ -722,7 +766,7 @@ namespace KardashevAscent.Presentation.Planet
             return removed;
         }
 
-        /// <summary>Turn the selected panels to the planned angles (free: nothing is rebuilt). Returns how many were changed.</summary>
+        /// <summary>Ask robots to turn the selected panels to the planned angles (sites take them at once). Returns how many.</summary>
         public int ReangleSelection()
         {
             if (simulation == null || siteView.Site == null)
@@ -734,16 +778,9 @@ namespace KardashevAscent.Presentation.Planet
                 anchors.Add(Anchor(tile, selected));
             foreach (int s in anchors)
             {
-                if (!placed.TryGetValue((tile, s), out Placed p) || !simulation.SetPanelAngles(tile, s, tilt, azimuth))
+                if (!placed.ContainsKey((tile, s)) || !simulation.OrderPanelAngles(tile, s, tilt, azimuth))
                     continue;
-                if (p.Rating == AngleRating.Optimal) BestAnglePanels--;
-                p.Tilt = tilt;
-                p.Azimuth = azimuth;
-                p.Preview = PreviewBuilt(tile, s, tilt, azimuth);
-                p.Rating = RatingOf(p.Preview);
-                if (p.Rating == AngleRating.Optimal) BestAnglePanels++;
-                ShowOnSlot(p.Visual, siteView.Site, simulation.FootprintAt(tile, s), tilt, azimuth);
-                placed[(tile, s)] = p;
+                RefreshPanel(tile, s);
                 changed++;
             }
             return changed;

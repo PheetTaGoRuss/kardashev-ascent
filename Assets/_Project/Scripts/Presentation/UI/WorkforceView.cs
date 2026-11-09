@@ -330,6 +330,7 @@ namespace KardashevAscent.Presentation.UI
             {
                 case TaskKind.Build: return $"Build a {BuildingName(sim.GetBuilding(t.Tile, t.Slot))} · tile {t.Tile}, slot {t.Slot}";
                 case TaskKind.Salvage: return $"Take down a {BuildingName(sim.GetBuilding(t.Tile, t.Slot))} · tile {t.Tile}, slot {t.Slot}";
+                case TaskKind.Adjust: return $"Turn a solar panel to new angles · tile {t.Tile}, slot {t.Slot}";
                 case TaskKind.Survey: return $"Survey tile {t.Tile}";
                 case TaskKind.Mine: return $"Mine {Materials.Name((Material)t.Slot).ToLowerInvariant()} · tile {t.Tile}";
                 case TaskKind.Manufacture:

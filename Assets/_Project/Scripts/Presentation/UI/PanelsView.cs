@@ -23,6 +23,15 @@ namespace KardashevAscent.Presentation.UI
         [Range(0.02f, 0.5f)] [SerializeField] float textInterval = 0.1f;
 
         VisualElement hoverBox, siteBox, plannerBox, placedBox, legend, legendBar, dragRect, multiButtons, buildBar;
+        // Re-angling a built panel: sliders, the gain, and a robot to do it.
+        VisualElement adjustBox;
+        Slider adjustTilt, adjustFacing;
+        Label adjustTiltLabel, adjustFacingLabel, adjustGain;
+        Button adjustBest, adjustApply, adjustCancel;
+        (int Tile, int Slot) adjustFor = (-1, -1);
+        bool adjustDirty;
+        float nextAdjustPreview;
+        PanelPreview adjustPreview;
         Label buildHint;
         Label hoverText, siteTitle, siteText, plannerTitle, tiltLabel, facingLabel, plannerNumbers, plannerBest,
               plannerReason, placedTitle, placedAngles, placedNumbers, placedBonus, totals, mapHint, help,
@@ -82,6 +91,30 @@ namespace KardashevAscent.Presentation.UI
             placedAngles = root.Q<Label>("placed-angles");
             placedNumbers = root.Q<Label>("placed-numbers");
             placedBonus = root.Q<Label>("placed-bonus");
+            adjustBox = root.Q("adjust-box");
+            adjustTilt = root.Q<Slider>("adjust-tilt");
+            adjustFacing = root.Q<Slider>("adjust-facing");
+            adjustTiltLabel = root.Q<Label>("adjust-tilt-label");
+            adjustFacingLabel = root.Q<Label>("adjust-facing-label");
+            adjustGain = root.Q<Label>("adjust-gain");
+            adjustBest = root.Q<Button>("adjust-best");
+            adjustApply = root.Q<Button>("adjust-apply");
+            adjustCancel = root.Q<Button>("adjust-cancel");
+            adjustTilt?.RegisterValueChangedCallback(e => adjustDirty = true);
+            adjustFacing?.RegisterValueChangedCallback(e => adjustDirty = true);
+            if (adjustBest != null)
+                adjustBest.clicked += () =>
+                {
+                    if (placer != null && placer.TryGetBest(out PanelAngles b))
+                    {
+                        adjustTilt.value = Mathf.Round((float)(b.Tilt * Mathf.Rad2Deg));
+                        adjustFacing.value = Mathf.Round((float)(b.Azimuth * Mathf.Rad2Deg)) % 360f;
+                    }
+                };
+            if (adjustApply != null)
+                adjustApply.clicked += () => placer?.OrderSelectedAngles(adjustTilt.value * Mathf.Deg2Rad, adjustFacing.value * Mathf.Deg2Rad);
+            if (adjustCancel != null)
+                adjustCancel.clicked += () => { if (placer != null && placer.CancelSelectedAdjust()) adjustFor = (-1, -1); };
             totals = root.Q<Label>("totals");
             mapHint = root.Q<Label>("map-hint");
             help = root.Q<Label>("help");
@@ -210,6 +243,7 @@ namespace KardashevAscent.Presentation.UI
 
         void UpdateSite(int slot, bool hasPanel, bool multi)
         {
+            Show(adjustBox, hasPanel && placer.SelectedBuilding == BuildingType.SolarPanel);
             int tile = siteView.Site.Tile;
             siteTitle.text = $"Building site · tile #{tile}";
             siteText.text = $"{placer.PanelsOnTile} panels · {placer.BatteriesOnTile} battery yards · " +
@@ -263,6 +297,7 @@ namespace KardashevAscent.Presentation.UI
                 placedAngles.text = $"Tilt {t * Mathf.Rad2Deg:0}° · facing {a * Mathf.Rad2Deg:0}° {Compass((float)(a * Mathf.Rad2Deg))}";
                 placedNumbers.text = siteLine + Numbers(p);
                 Show(placedBonus, rating == AngleRating.Optimal && placer.BestAngleUnlocked);
+                UpdateAdjust(tile, slot, t, a, p, isSite);
                 return;
             }
             if (slot < 0 && !multi)
@@ -402,6 +437,48 @@ namespace KardashevAscent.Presentation.UI
                     placer.BeginDrag(what);
             }, TrickleDown.TrickleDown);
             button.tooltip = "Drag onto the site to build";
+        }
+
+        /// <summary>
+        /// The ADJUST ANGLES part of a selected solar panel: sliders start at its angles (or the ones it waits for),
+        /// the gain against today's angles updates as they move, and a robot is sent to turn it.
+        /// </summary>
+        void UpdateAdjust(int tile, int slot, double tilt, double azimuth, PanelPreview now, bool isSite)
+        {
+            if (adjustBox == null)
+                return;
+            bool waiting = placer.SelectedAdjustOrder(out double wantTilt, out double wantAzimuth);
+            if (adjustFor != (tile, slot))
+            {
+                adjustFor = (tile, slot);
+                adjustTilt.SetValueWithoutNotify(Mathf.Round((float)((waiting ? wantTilt : tilt) * Mathf.Rad2Deg)));
+                adjustFacing.SetValueWithoutNotify(Mathf.Round((float)((waiting ? wantAzimuth : azimuth) * Mathf.Rad2Deg)));
+                adjustDirty = true;
+            }
+            adjustTiltLabel.text = $"Tilt β  {adjustTilt.value:0}°  (now {tilt * Mathf.Rad2Deg:0}°)";
+            adjustFacingLabel.text = $"Facing γ  {adjustFacing.value:0}° {Compass(adjustFacing.value)}  (now {azimuth * Mathf.Rad2Deg:0}°)";
+            if (adjustDirty && Time.unscaledTime >= nextAdjustPreview)
+            {
+                adjustPreview = placer.PreviewSelectedAt(adjustTilt.value * Mathf.Deg2Rad, adjustFacing.value * Mathf.Deg2Rad);
+                adjustDirty = false;
+                nextAdjustPreview = Time.unscaledTime + 0.15f;
+            }
+            double before = now.EnergyPerYearWh, after = adjustPreview.EnergyPerYearWh;
+            bool same = Mathf.Abs(adjustTilt.value - (float)(tilt * Mathf.Rad2Deg)) < 0.5f
+                        && Mathf.Abs(Mathf.DeltaAngle(adjustFacing.value, (float)(azimuth * Mathf.Rad2Deg))) < 0.5f;
+            string gain = before > 0.0 && after > 0.0
+                ? $"{Format.Energy(before)} → {Format.Energy(after)} a year ({(after / before - 1.0) * 100.0:+0.0;-0.0;0.0} %)"
+                : "working out…";
+            adjustGain.text = same ? "Move the sliders to try other angles." : gain;
+            adjustGain.EnableInClassList("warn", !same && after < before);
+            adjustBest.SetEnabled(placer.BestAngleUnlocked);
+            adjustBest.tooltip = placer.BestAngleUnlocked ? "" : "Needs this tile's latitude (V: sky view).";
+            adjustApply.text = isSite ? "Build it at these angles" : waiting ? "Change the order" : "Send a robot to turn it";
+            adjustApply.SetEnabled(!same || waiting);
+            Show(adjustCancel, waiting);
+            if (waiting)
+                adjustGain.text = $"Waiting for a robot to turn it to {wantTilt * Mathf.Rad2Deg:0}°, {wantAzimuth * Mathf.Rad2Deg:0}° " +
+                                  "(it keeps its old angles until then).\n" + adjustGain.text;
         }
     }
 }

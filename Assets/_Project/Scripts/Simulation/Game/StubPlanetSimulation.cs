@@ -95,6 +95,7 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>Finished buildings the player asked a robot to take down, in the order asked.</summary>
         readonly List<(int Tile, int Slot)> salvageOrders = new List<(int, int)>();
+        readonly List<(int Tile, int Slot, double Tilt, double Azimuth)> adjustOrders = new List<(int, int, double, double)>();
 
         readonly HashSet<(int Tile, int Slot)> batteries = new HashSet<(int, int)>();
         readonly HashSet<(int Tile, int Slot)> workshops = new HashSet<(int, int)>();
@@ -594,6 +595,7 @@ namespace KardashevAscent.Simulation.Game
         public event Action TargetReached;
         public event Action<int, int> BuildingCompleted;
         public event Action<int, int> BuildingSalvaged;
+        public event Action<int, int> PanelAdjusted;
 
         public TileInfo GetTile(int tileId) =>
             new TileInfo(tileId, Sphere.Latitude(tileId), Sphere.Longitude(tileId),
@@ -784,6 +786,53 @@ namespace KardashevAscent.Simulation.Game
             return true;
         }
 
+        public bool OrderPanelAngles(int tileId, int slot, double tilt, double azimuth)
+        {
+            slot = A(tileId, slot);
+            if (!panels.ContainsKey((tileId, slot)) || !PreviewPanel(tileId, tilt, azimuth).CanPlace)
+                return false;
+            if (Build.IsQueued(tileId, slot))
+            {
+                CancelAdjust(tileId, slot);
+                return SetPanelAngles(tileId, slot, tilt, azimuth);   // not built yet: it is just built that way
+            }
+            int i = adjustOrders.FindIndex(o => o.Tile == tileId && o.Slot == slot);
+            if (i >= 0)
+                adjustOrders[i] = (tileId, slot, tilt, azimuth);
+            else
+                adjustOrders.Add((tileId, slot, tilt, azimuth));
+            Settle(null);
+            return true;
+        }
+
+        public bool TryGetPanelAngles(int tileId, int slot, out double tilt, out double azimuth)
+        {
+            slot = A(tileId, slot);
+            bool found = panels.TryGetValue((tileId, slot), out var p);
+            tilt = found ? p.Tilt : 0.0;
+            azimuth = found ? p.Azimuth : 0.0;
+            return found;
+        }
+
+        public bool TryGetAdjustOrder(int tileId, int slot, out double tilt, out double azimuth)
+        {
+            slot = A(tileId, slot);
+            int i = adjustOrders.FindIndex(o => o.Tile == tileId && o.Slot == slot);
+            tilt = i >= 0 ? adjustOrders[i].Tilt : 0.0;
+            azimuth = i >= 0 ? adjustOrders[i].Azimuth : 0.0;
+            return i >= 0;
+        }
+
+        public bool CancelAdjust(int tileId, int slot)
+        {
+            slot = A(tileId, slot);
+            if (adjustOrders.RemoveAll(o => o.Tile == tileId && o.Slot == slot) == 0)
+                return false;
+            Workforce.Tasks.MarkCancelled(new WorkTask(TaskKind.Adjust, tileId, slot));
+            Settle(null);
+            return true;
+        }
+
         // ---- Construction ----
 
         public double BuildStockWh => Build.StockWh;
@@ -827,6 +876,8 @@ namespace KardashevAscent.Simulation.Game
                 tasks.Add(new WorkTask(TaskKind.Build, site.Tile, site.Slot, i++));
             for (int k = 0; k < salvageOrders.Count; k++)
                 tasks.Add(new WorkTask(TaskKind.Salvage, salvageOrders[k].Tile, salvageOrders[k].Slot, k));
+            for (int k = 0; k < adjustOrders.Count; k++)
+                tasks.Add(new WorkTask(TaskKind.Adjust, adjustOrders[k].Tile, adjustOrders[k].Slot, k));
             for (int k = 0; k < surveyOrders.Count; k++)
                 tasks.Add(new WorkTask(TaskKind.Survey, surveyOrders[k], -1, k));
             for (int k = 0; k < miningOrders.Count; k++)
@@ -862,6 +913,15 @@ namespace KardashevAscent.Simulation.Game
                     any = true;
                     RemoveBuilding(order.Tile, order.Slot);
                     BuildingSalvaged?.Invoke(order.Tile, order.Slot);
+                }
+                foreach (var order in adjustOrders.ToArray())
+                {
+                    if (!Workforce.IsWorkedOnSite(new WorkTask(TaskKind.Adjust, order.Tile, order.Slot)))
+                        continue;
+                    any = true;
+                    adjustOrders.Remove(order);
+                    SetPanelAngles(order.Tile, order.Slot, order.Tilt, order.Azimuth);
+                    PanelAdjusted?.Invoke(order.Tile, order.Slot);
                 }
                 if (!any)
                     return;
@@ -910,6 +970,7 @@ namespace KardashevAscent.Simulation.Game
         void Dismantle(int tileId, int slot, BuildingType type)
         {
             salvageOrders.Remove((tileId, slot));
+            adjustOrders.RemoveAll(o => o.Tile == tileId && o.Slot == slot);
             if (Build.IsQueued(tileId, slot))
             {
                 Build.Cancel(tileId, slot);
@@ -1069,6 +1130,8 @@ namespace KardashevAscent.Simulation.Game
                 state.FieldWork.Add(new FieldWorkRecord { Kind = kv.Key.Kind, Tile = kv.Key.Tile, Slot = kv.Key.Slot, Hours = kv.Value });
             foreach (var salvage in salvageOrders)
                 state.SalvageOrders.Add(new SalvageOrderRecord { Tile = salvage.Tile, Slot = salvage.Slot });
+            foreach (var adjust in adjustOrders)
+                state.AdjustOrders.Add(new AdjustOrderRecord { Tile = adjust.Tile, Slot = adjust.Slot, Tilt = adjust.Tilt, Azimuth = adjust.Azimuth });
             foreach (var kv in panels)
                 state.Buildings.Add(new BuildingRecord { Tile = kv.Key.Tile, Slot = kv.Key.Slot, Type = BuildingType.SolarPanel, Tilt = kv.Value.Tilt, Azimuth = kv.Value.Azimuth, AreaM2 = kv.Value.Area });
             foreach (var b in batteries)
@@ -1145,6 +1208,11 @@ namespace KardashevAscent.Simulation.Game
             // Version 7 added robots; an older save starts with the one General robot at the base.
             if (state.Version < 7 || !Workforce.Restore(state.Workforce))
                 Workforce.Reset(BaseTileId);
+            adjustOrders.Clear();
+            if (state.AdjustOrders != null)   // version 17
+                foreach (AdjustOrderRecord o in state.AdjustOrders)
+                    if (panels.ContainsKey((o.Tile, o.Slot)))
+                        adjustOrders.Add((o.Tile, o.Slot, o.Tilt, o.Azimuth));
             salvageOrders.Clear();
             if (state.SalvageOrders != null)
                 foreach (SalvageOrderRecord o in state.SalvageOrders)
