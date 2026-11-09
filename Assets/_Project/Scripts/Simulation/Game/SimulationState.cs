@@ -8,7 +8,7 @@ namespace KardashevAscent.Simulation.Game
     public sealed class SimulationState
     {
         /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished. 7 added robots; 8 their batteries and condition; 9 resources; 10 the Workshop; 11 programs (facility, ranking, queue); 12 movement; 13 critical damage (stage A); 14 reservations and tasks to go back to (stage B); 15 battery ageing by depth, maintenance rules (stage D); 16 building footprints.</summary>
-        public int Version = 18;
+        public int Version = 19;
         /// <summary>Planet id from planets.json (version 3); empty in older saves.</summary>
         public string PlanetId = "";
         /// <summary>Milestones reached and the day-average power behind them (version 4; 0 in older saves).</summary>
@@ -47,6 +47,8 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Solar parameters measured (version 18; older saves: none) and measurements under way.</summary>
         public List<int> MeasuredParameters = new List<int>();
         public List<MeasureOrderRecord> MeasureOrders = new List<MeasureOrderRecord>();
+        /// <summary>Latitude puzzles waiting for the player (version 19).</summary>
+        public List<Solar.LatitudePuzzle> LatitudePuzzles = new List<Solar.LatitudePuzzle>();
         /// <summary>Resources (version 9): surveyed tiles, orders, materials on hand and work done on field tasks.</summary>
         public List<int> SurveyedTiles = new List<int>();
         public List<int> SurveyOrders = new List<int>();

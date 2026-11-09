@@ -443,6 +443,28 @@ namespace KardashevAscent.Simulation.Game
         public ParameterBook Parameters { get; } = new ParameterBook();
         readonly List<(SolarParameter Parameter, int Tile)> measureOrders = new List<(SolarParameter, int)>();
         public event Action<SolarParameter> ParameterMeasured;
+        public event Action<SolarParameter> PuzzleReady;
+        readonly List<LatitudePuzzle> latitudePuzzles = new List<LatitudePuzzle>();
+        public IReadOnlyList<LatitudePuzzle> LatitudePuzzles => latitudePuzzles;
+
+        public string AnswerLatitudePuzzle(int tileId, double latitudeDeg, out LatitudePuzzle.Grade grade)
+        {
+            grade = LatitudePuzzle.Grade.Wrong;
+            LatitudePuzzle p = latitudePuzzles.Find(q => q.Tile == tileId);
+            if (p == null)
+                return "No shadow readings for that tile.";
+            grade = p.Check(latitudeDeg);
+            if (grade == LatitudePuzzle.Grade.Wrong)
+            {
+                p.Attempts++;
+                return $"φ = {latitudeDeg:0.0}° doesn't fit the readings. Check which way the shadow points, and the sign of δ.";
+            }
+            latitudePuzzles.Remove(p);
+            string method = grade == LatitudePuzzle.Grade.Precise
+                ? "noon shadow, worked out"
+                : $"noon shadow, worked out roughly (±{LatitudePuzzle.RoughDeg:0}°)";
+            return Notebook.RecordLatitude(tileId, latitudeDeg, method);
+        }
 
         static WorkTask MeasureTask(SolarParameter p, int tile) => new WorkTask(TaskKind.Measure, tile, (int)p);
 
@@ -452,8 +474,9 @@ namespace KardashevAscent.Simulation.Game
 
         public bool OrderMeasure(SolarParameter parameter, int tileId)
         {
-            // Latitude comes from the sky view (V) until its puzzle (stage C).
-            if (parameter == SolarParameter.Latitude || tileId < 0 || tileId >= TileCount || GetTile(tileId).IsWater
+            if (parameter == SolarParameter.Latitude && latitudePuzzles.Exists(q => q.Tile == tileId))
+                return false;   // the readings are in: solve the puzzle
+            if (tileId < 0 || tileId >= TileCount || GetTile(tileId).IsWater
                 || IsParameterKnown(parameter, tileId) || IsMeasureOrdered(parameter))
                 return false;
             measureOrders.Add((parameter, tileId));
@@ -702,8 +725,16 @@ namespace KardashevAscent.Simulation.Game
                     continue;
                 fieldWork.Remove(t);
                 measureOrders.Remove(mo);
-                Parameters.MarkMeasured(mo.Parameter);
                 Workforce.Release(t);
+                if (mo.Parameter == SolarParameter.Latitude)
+                {
+                    // The readings are in; the player works out the latitude (stage C).
+                    double lat = Sphere.Latitude(mo.Tile) * 180.0 / Math.PI;
+                    latitudePuzzles.Add(LatitudePuzzle.Make(mo.Tile, lat, DescribeSky(mo.Tile, 0.0, 0.0).DeclinationDeg));
+                    PuzzleReady?.Invoke(mo.Parameter);
+                    continue;
+                }
+                Parameters.MarkMeasured(mo.Parameter);
                 ParameterMeasured?.Invoke(mo.Parameter);
             }
             foreach (var order in miningOrders.ToArray())
@@ -1272,6 +1303,7 @@ namespace KardashevAscent.Simulation.Game
             state.SurveyedTiles.Sort();
             state.SurveyOrders.AddRange(surveyOrders);
             state.MeasuredParameters = Parameters.Capture();
+            state.LatitudePuzzles.AddRange(latitudePuzzles);
             foreach (var mo in measureOrders)
                 state.MeasureOrders.Add(new MeasureOrderRecord { Parameter = mo.Parameter, Tile = mo.Tile });
             foreach (var mo in miningOrders)
@@ -1378,6 +1410,11 @@ namespace KardashevAscent.Simulation.Game
             miningOrders.Clear();
             fieldWork.Clear();
             Parameters.Restore(state.MeasuredParameters);   // version 18
+            latitudePuzzles.Clear();
+            if (state.LatitudePuzzles != null)   // version 19
+                foreach (LatitudePuzzle p in state.LatitudePuzzles)
+                    if (p != null && p.Tile >= 0 && p.Tile < TileCount)
+                        latitudePuzzles.Add(p);
             measureOrders.Clear();
             if (state.MeasureOrders != null)
                 foreach (MeasureOrderRecord mo in state.MeasureOrders)
