@@ -15,6 +15,8 @@ namespace KardashevAscent.Simulation.Robots
         FastDrive = 2,
         /// <summary>Shielding against flares: flare wear × <see cref="RobotTech.ShieldingFactor"/>.</summary>
         Shielding = 4,
+        /// <summary>Thermal insulation: the battery stays at least at <see cref="RobotTech.InsulatedBatteryC"/> (spec v2 §11).</summary>
+        ThermalInsulation = 8,
     }
 
     public enum JobKind { Robot, Upgrade, Refine }
@@ -86,7 +88,14 @@ namespace KardashevAscent.Simulation.Robots
         }
 
         public static int UnlockMilestone(RobotModule module) =>
-            module == RobotModule.BigBattery ? 2 : module == RobotModule.FastDrive || module == RobotModule.Shielding ? 3 : int.MaxValue;
+            module == RobotModule.BigBattery || module == RobotModule.ThermalInsulation ? 2
+            : module == RobotModule.FastDrive || module == RobotModule.Shielding ? 3 : int.MaxValue;
+
+        /// <summary>An insulated battery is kept at least this warm, °C. TBD.</summary>
+        public const double InsulatedBatteryC = 0.0;
+
+        /// <summary>Charging station building: build parts, Wh. TBD.</summary>
+        public const double ChargingStationPartsWh = 500_000.0;
 
         /// <summary>Refining a substitute: aluminium (for copper) at 1, sodium (for lithium) at 2.</summary>
         public static int UnlockMilestone(Material refined) =>
@@ -109,7 +118,8 @@ namespace KardashevAscent.Simulation.Robots
         public const double SodiumCapacityRatio = 160.0 / 250.0;
 
         public static string ModuleName(RobotModule m) =>
-            m == RobotModule.BigBattery ? "Bigger battery" : m == RobotModule.FastDrive ? "Faster drive" : m == RobotModule.Shielding ? "Flare shielding" : m.ToString();
+            m == RobotModule.BigBattery ? "Bigger battery" : m == RobotModule.FastDrive ? "Faster drive" : m == RobotModule.Shielding ? "Flare shielding"
+            : m == RobotModule.ThermalInsulation ? "Thermal insulation" : m.ToString();
 
         // ---- Recipes (TBD) ----
 
@@ -135,6 +145,7 @@ namespace KardashevAscent.Simulation.Robots
                 case RobotModule.BigBattery: return r.Add(sodium ? Material.Sodium : Material.Lithium, sodium ? 3.0 : 1.0);
                 case RobotModule.FastDrive: return r.Add(aluminium ? Material.Aluminium : Material.Copper, 10.0).Add(Material.Iron, 20.0);
                 case RobotModule.Shielding: return r.Add(Material.Iron, 50.0).Add(Material.Water, 100.0);
+                case RobotModule.ThermalInsulation: return r.Add(Material.Rock, 30.0);
                 default: return r;
             }
         }

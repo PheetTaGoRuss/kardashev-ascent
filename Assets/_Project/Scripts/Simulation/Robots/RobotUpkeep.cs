@@ -43,13 +43,19 @@ namespace KardashevAscent.Simulation.Robots
 
         public void Plan(Workforce workforce, IReadOnlyList<RobotFacility> facilities, double hours, Movement movement = null)
         {
+            // Each robot follows its group's maintenance rule (spec v2 §8).
+            foreach (Robot r in workforce.Robots)
+            {
+                RobotGroup g = workforce.GetGroup(r.GroupId);
+                r.MaintenanceBelow = g != null ? g.MaintenanceBelow : RobotSpecs.MaintenanceBelowCondition;
+            }
             // Movement: how much charge each robot must keep to drive back, and who is stuck with an empty battery.
             foreach (Robot r in workforce.Robots)
             {
                 double toCharger = movement != null ? movement.HoursToCharger[r.Tile] / r.Attribute(RobotAttribute.Speed) : 0.0;
                 r.ReserveFraction = movement != null && r.Battery.CapacityWh > 0.0 && !double.IsInfinity(toCharger)
                     ? movement.EnergyWh(toCharger) / r.Battery.CapacityWh : 0.0;
-                r.IsStranded = movement != null && r.Battery.StoredWh <= 1e-6 && toCharger > 1e-9;
+                r.IsStranded = movement != null && r.Battery.UsableWh <= 1e-6 && toCharger > 1e-9;
             }
             var byKey = new Dictionary<(int, int), RobotFacility>();
             foreach (RobotFacility f in facilities)
@@ -135,8 +141,15 @@ namespace KardashevAscent.Simulation.Robots
         /// to what each robot asked for).
         /// </summary>
         public void Apply(Workforce workforce, double hours, double dockServedW, double criticalServedW, double topUpServedW,
-                          bool flaringStar, IPartsStore parts, Movement movement = null)
+                          bool flaringStar, IPartsStore parts, Movement movement = null,
+                          Resources.MaterialStock materials = null, double airTemperatureC = 25.0)
         {
+            // Cold locks part of each battery's capacity; insulated batteries stay warmer (spec v2 §11).
+            foreach (Robot r in workforce.Robots)
+            {
+                double t = r.Has(RobotModule.ThermalInsulation) ? Math.Max(airTemperatureC, RobotTech.InsulatedBatteryC) : airTemperatureC;
+                r.Battery.ColdFactor = RobotBattery.ColdCapacityFactor(t);
+            }
             if (hours <= 0.0)
                 return;
             double fd = DockRequestW > 0.0 ? Math.Min(1.0, Math.Max(0.0, dockServedW) / DockRequestW) : 0.0;
@@ -167,7 +180,7 @@ namespace KardashevAscent.Simulation.Robots
                         break;
                     case RobotActivity.Maintenance:
                         if (movement == null || r.Tile == r.Facility.Value.Tile)
-                            Repair(r, hours, parts, mechanic);
+                            Repair(r, hours, parts, mechanic, materials);
                         break;
                     default:
                         if (r.IsShutDown)
@@ -176,7 +189,8 @@ namespace KardashevAscent.Simulation.Robots
                         double efficiency = r.Attribute(RobotAttribute.EnergyEfficiency);
                         r.Battery.Draw((working ? RobotSpecs.WorkingPowerW(r.Task.Value.Kind) : RobotSpecs.IdlePowerW) / efficiency, hours);
                         if (working)
-                            r.Condition -= RobotSpecs.WearPerWorkingHour * hours / r.Attribute(RobotAttribute.Durability);
+                            r.Condition -= RobotSpecs.WearPerWorkingHour * RobotCatalog.WearFactor(r.Task.Value.Kind) * hours
+                                           / r.Attribute(RobotAttribute.Durability);
                         break;
                 }
                 if (flaringStar && r.Activity != RobotActivity.Maintenance)
@@ -210,7 +224,7 @@ namespace KardashevAscent.Simulation.Robots
                 r.ManualTarget = null;
         }
 
-        static void Repair(Robot r, double hours, IPartsStore parts, double speed)
+        static void Repair(Robot r, double hours, IPartsStore parts, double speed, Resources.MaterialStock materials)
         {
             if (parts == null)
                 return;
@@ -223,9 +237,25 @@ namespace KardashevAscent.Simulation.Robots
                     r.Battery.Replace();
                 }
             }
+            // Minor battery ageing is put right while it is here (spec v2 §7), paid with build parts like a new battery.
+            if (!r.Battery.WornOut && r.Battery.Health < 1.0)
+            {
+                double health = Math.Min(1.0 - r.Battery.Health, RobotSpecs.MinorBatteryRepairPerHour * hours);
+                double cost = health * BuildCosts.Battery(r.Battery.NominalWh);
+                if (health > 0.0 && parts.StockWh >= cost && r.Battery.RepairMinor(health) > 0.0)
+                    parts.Take(cost);
+            }
             double want = Math.Min(1.0 - r.Condition, RobotSpecs.RepairPerHour * speed * hours);
             if (want <= 0.0)
                 return;
+            // Basic maintenance uses iron as well as energy; without it, repairs go slower (spec v2 §8).
+            if (materials != null)
+            {
+                double ironNeed = want * RobotSpecs.RepairIronKg;
+                double iron = materials.Take(Resources.Material.Iron, ironNeed);
+                double share = ironNeed > 0.0 ? iron / ironNeed : 1.0;
+                want *= RobotSpecs.RepairWithoutIronRate + (1.0 - RobotSpecs.RepairWithoutIronRate) * share;
+            }
             double got = parts.Take(want * RobotSpecs.RepairPartsWh);
             r.Condition += got / RobotSpecs.RepairPartsWh;
             if (r.Condition >= 1.0 - 1e-12)
@@ -244,7 +274,7 @@ namespace KardashevAscent.Simulation.Robots
             double bestHours = double.PositiveInfinity;
             foreach (RobotFacility f in facilities)
             {
-                if (repair && !f.Capability.Repairs)
+                if ((repair && !f.Capability.Repairs) || !f.Capability.Allows(r.Kind))
                     continue;
                 if (Used(used, (f.Tile, f.Slot)) >= f.Capability.Slots)
                     continue;
