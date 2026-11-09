@@ -437,6 +437,137 @@ namespace KardashevAscent.Simulation.Game
         public event Action<ManufacturingJob> JobFinished;
 
         static WorkTask SurveyTask(int tile) => new WorkTask(TaskKind.Survey, tile, -1);
+
+        // ---- Solar parameters (stage B of docs/design/solar-measurements.md) ----
+
+        public ParameterBook Parameters { get; } = new ParameterBook();
+        readonly List<(SolarParameter Parameter, int Tile)> measureOrders = new List<(SolarParameter, int)>();
+        public event Action<SolarParameter> ParameterMeasured;
+
+        static WorkTask MeasureTask(SolarParameter p, int tile) => new WorkTask(TaskKind.Measure, tile, (int)p);
+
+        public bool IsParameterKnown(SolarParameter parameter, int tileId) =>
+            parameter == SolarParameter.Latitude ? Notebook.KnowsLatitude(tileId)
+            : parameter == SolarParameter.Clouds && Clouds == CloudModel.None || Parameters.IsMeasured(parameter);
+
+        public bool OrderMeasure(SolarParameter parameter, int tileId)
+        {
+            // Latitude comes from the sky view (V) until its puzzle (stage C).
+            if (parameter == SolarParameter.Latitude || tileId < 0 || tileId >= TileCount || GetTile(tileId).IsWater
+                || IsParameterKnown(parameter, tileId) || IsMeasureOrdered(parameter))
+                return false;
+            measureOrders.Add((parameter, tileId));
+            Settle(null);
+            return true;
+        }
+
+        public bool IsMeasureOrdered(SolarParameter parameter) => measureOrders.Exists(o => o.Parameter == parameter);
+
+        public bool CancelMeasure(SolarParameter parameter)
+        {
+            int i = measureOrders.FindIndex(o => o.Parameter == parameter);
+            if (i < 0)
+                return false;
+            WorkTask t = MeasureTask(parameter, measureOrders[i].Tile);
+            measureOrders.RemoveAt(i);
+            Workforce.Tasks.MarkCancelled(t);
+            fieldWork.Remove(t);
+            Settle(null);
+            return true;
+        }
+
+        public double MeasureProgress(SolarParameter parameter)
+        {
+            if (Parameters.IsMeasured(parameter))
+                return 1.0;
+            int i = measureOrders.FindIndex(o => o.Parameter == parameter);
+            return i >= 0 && fieldWork.TryGetValue(MeasureTask(parameter, measureOrders[i].Tile), out double h)
+                ? Math.Min(1.0, h / SolarUnknowns.MeasureHours) : 0.0;
+        }
+
+        /// <summary>A copy of the planet's solar values with the atmosphere and air changed.</summary>
+        static PlanetSolarParams WithAir(in PlanetSolarParams p, double opticalDepth, double diffuseK, double airTemperatureC) =>
+            new PlanetSolarParams(p.Luminosity, p.SemiMajorAxis, p.Eccentricity, p.Obliquity, p.PerihelionLongitude,
+                                  p.DayLengthHours, p.YearLengthHours, opticalDepth, diffuseK, airTemperatureC,
+                                  p.TidallyLocked, p.SurfacePressureEarth);
+
+        static PanelParams WithPanel(in PanelParams p, double latitude, double albedo, double fSpec, double fDust) =>
+            new PanelParams(latitude, p.Tilt, p.Azimuth, p.Area, p.Efficiency, p.Noct, p.TempCoefficient, albedo,
+                            p.PressureRatio, fSpec, fDust, p.FShade, p.Longitude);
+
+        /// <summary>A panel's yearly energy, Earth years, Wh: the preview's sum, with clouds month by month.</summary>
+        double YearEnergyWh(int tileId, in PlanetSolarParams pl, in PanelParams panel)
+        {
+            double energy = AnnualYield.Calculate(pl, panel).EnergyWh;
+            if (Clouds == CloudModel.EarthClimatology && energy > 0.0)
+            {
+                double[] months = MonthlyYield.Calculate(pl, panel);
+                double clear = 0.0, cloudy = 0.0;
+                for (int m = 0; m < months.Length; m++)
+                {
+                    clear += months[m];
+                    cloudy += months[m] * CloudFactor(tileId, MonthMeanAnomaly(m, months.Length));
+                }
+                energy *= clear > 0.0 ? cloudy / clear : 1.0;
+            }
+            if (YearLengthHours > 0.0)
+                energy *= SolarConstants.EarthYearHours / YearLengthHours;
+            return energy;
+        }
+
+        public List<ParameterEffect> ParameterEffects(int tileId, double tilt, double azimuth)
+        {
+            var list = new List<ParameterEffect>();
+            if (tileId < 0 || tileId >= TileCount || GetTile(tileId).IsWater)
+                return list;
+            PanelParams panel = MakePanel(tileId, tilt, azimuth, 1.0, NewPanelAreaM2(tileId));
+            double baseWh = YearEnergyWh(tileId, planet, panel);
+            const double Deg = Math.PI / 180.0;
+            foreach (SolarParameter p in (SolarParameter[])Enum.GetValues(typeof(SolarParameter)))
+            {
+                bool known = IsParameterKnown(p, tileId);
+                double lo = baseWh, hi = baseWh;
+                if (!known)
+                {
+                    switch (p)
+                    {
+                        case SolarParameter.Latitude:
+                            lo = YearEnergyWh(tileId, planet, WithPanel(panel, panel.Latitude - SolarUnknowns.LatitudeDeg * Deg, panel.Albedo, panel.FSpec, panel.FDust));
+                            hi = YearEnergyWh(tileId, planet, WithPanel(panel, panel.Latitude + SolarUnknowns.LatitudeDeg * Deg, panel.Albedo, panel.FSpec, panel.FDust));
+                            break;
+                        case SolarParameter.OpticalDepth:
+                            lo = YearEnergyWh(tileId, WithAir(planet, planet.OpticalDepth * (1.0 + SolarUnknowns.OpticalDepthShare), planet.DiffuseK, planet.AirTemperatureC), panel);
+                            hi = YearEnergyWh(tileId, WithAir(planet, planet.OpticalDepth * (1.0 - SolarUnknowns.OpticalDepthShare), planet.DiffuseK, planet.AirTemperatureC), panel);
+                            break;
+                        case SolarParameter.DiffuseShare:
+                            lo = YearEnergyWh(tileId, WithAir(planet, planet.OpticalDepth, Math.Min(1.0, planet.DiffuseK * (1.0 + SolarUnknowns.DiffuseShare)), planet.AirTemperatureC), panel);
+                            hi = YearEnergyWh(tileId, WithAir(planet, planet.OpticalDepth, planet.DiffuseK * (1.0 - SolarUnknowns.DiffuseShare), planet.AirTemperatureC), panel);
+                            break;
+                        case SolarParameter.Clouds:
+                            lo = baseWh * (1.0 - SolarUnknowns.CloudShare);
+                            hi = baseWh * (1.0 + SolarUnknowns.CloudShare);
+                            break;
+                        case SolarParameter.Albedo:
+                            lo = YearEnergyWh(tileId, planet, WithPanel(panel, panel.Latitude, Math.Max(0.0, panel.Albedo - SolarUnknowns.Albedo), panel.FSpec, panel.FDust));
+                            hi = YearEnergyWh(tileId, planet, WithPanel(panel, panel.Latitude, Math.Min(1.0, panel.Albedo + SolarUnknowns.Albedo), panel.FSpec, panel.FDust));
+                            break;
+                        case SolarParameter.AirTemperature:
+                            lo = YearEnergyWh(tileId, WithAir(planet, planet.OpticalDepth, planet.DiffuseK, planet.AirTemperatureC + SolarUnknowns.AirTemperatureC), panel);
+                            hi = YearEnergyWh(tileId, WithAir(planet, planet.OpticalDepth, planet.DiffuseK, planet.AirTemperatureC - SolarUnknowns.AirTemperatureC), panel);
+                            break;
+                        case SolarParameter.Dust:
+                            lo = YearEnergyWh(tileId, planet, WithPanel(panel, panel.Latitude, panel.Albedo, panel.FSpec, Math.Min(1.0, panel.FDust + SolarUnknowns.Dust)));
+                            break;
+                        case SolarParameter.Spectrum:
+                            lo = YearEnergyWh(tileId, planet, WithPanel(panel, panel.Latitude, panel.Albedo, panel.FSpec * (1.0 - SolarUnknowns.Spectrum), panel.FDust));
+                            hi = YearEnergyWh(tileId, planet, WithPanel(panel, panel.Latitude, panel.Albedo, Math.Min(1.0, panel.FSpec * (1.0 + SolarUnknowns.Spectrum)), panel.FDust));
+                            break;
+                    }
+                }
+                list.Add(new ParameterEffect(p, Math.Min(lo, hi), Math.Max(lo, hi), known));
+            }
+            return list;
+        }
         static WorkTask MineTask(int tile, Material m) => new WorkTask(TaskKind.Mine, tile, (int)m);
 
         public bool OrderSurvey(int tileId)
@@ -504,6 +635,12 @@ namespace KardashevAscent.Simulation.Game
                 if (!TaskPolicy.For(TaskKind.Survey).KeepsProgress && fieldWork.ContainsKey(st) && !Workforce.IsWorkedOnSite(st))
                     fieldWork.Remove(st);
             }
+            foreach (var mo in measureOrders)
+            {
+                WorkTask mt = MeasureTask(mo.Parameter, mo.Tile);
+                if (fieldWork.ContainsKey(mt) && !Workforce.IsWorkedOnSite(mt))
+                    fieldWork.Remove(mt);   // a measurement restarts if the robot leaves
+            }
             // Each task's crew on site works together, with diminishing returns (spec v2 §5).
             var crews = new Dictionary<WorkTask, List<double>>();
             foreach (Robot r in Workforce.Robots)
@@ -534,7 +671,7 @@ namespace KardashevAscent.Simulation.Game
                     }
                     continue;
                 }
-                if (t.Kind != TaskKind.Survey && t.Kind != TaskKind.Mine)
+                if (t.Kind != TaskKind.Survey && t.Kind != TaskKind.Mine && t.Kind != TaskKind.Measure)
                     continue;
                 fieldWork[t] = (fieldWork.TryGetValue(t, out double h) ? h : 0.0) + dt * speed;
             }
@@ -557,6 +694,17 @@ namespace KardashevAscent.Simulation.Game
                     Deposits.MarkSurveyed(tile);
                     TileSurveyed?.Invoke(tile);
                 }
+            }
+            foreach (var mo in measureOrders.ToArray())
+            {
+                WorkTask t = MeasureTask(mo.Parameter, mo.Tile);
+                if (!fieldWork.TryGetValue(t, out double h) || h < SolarUnknowns.MeasureHours - 1e-9)
+                    continue;
+                fieldWork.Remove(t);
+                measureOrders.Remove(mo);
+                Parameters.MarkMeasured(mo.Parameter);
+                Workforce.Release(t);
+                ParameterMeasured?.Invoke(mo.Parameter);
             }
             foreach (var order in miningOrders.ToArray())
             {
@@ -880,6 +1028,8 @@ namespace KardashevAscent.Simulation.Game
                 tasks.Add(new WorkTask(TaskKind.Adjust, adjustOrders[k].Tile, adjustOrders[k].Slot, k));
             for (int k = 0; k < surveyOrders.Count; k++)
                 tasks.Add(new WorkTask(TaskKind.Survey, surveyOrders[k], -1, k));
+            for (int k = 0; k < measureOrders.Count; k++)
+                tasks.Add(new WorkTask(TaskKind.Measure, measureOrders[k].Tile, (int)measureOrders[k].Parameter, k));
             for (int k = 0; k < miningOrders.Count; k++)
                 tasks.Add(new WorkTask(TaskKind.Mine, miningOrders[k].Tile, (int)miningOrders[k].Material, k));
             List<(int Tile, int Slot)> shops = FinishedWorkshops();
@@ -1121,6 +1271,9 @@ namespace KardashevAscent.Simulation.Game
                 state.SurveyedTiles.Add(tile);
             state.SurveyedTiles.Sort();
             state.SurveyOrders.AddRange(surveyOrders);
+            state.MeasuredParameters = Parameters.Capture();
+            foreach (var mo in measureOrders)
+                state.MeasureOrders.Add(new MeasureOrderRecord { Parameter = mo.Parameter, Tile = mo.Tile });
             foreach (var mo in miningOrders)
                 state.MiningOrders.Add(new MiningOrderRecord { Tile = mo.Tile, Material = mo.Material });
             foreach (Material m in Resources.Materials.All)
@@ -1224,6 +1377,12 @@ namespace KardashevAscent.Simulation.Game
             surveyOrders.Clear();
             miningOrders.Clear();
             fieldWork.Clear();
+            Parameters.Restore(state.MeasuredParameters);   // version 18
+            measureOrders.Clear();
+            if (state.MeasureOrders != null)
+                foreach (MeasureOrderRecord mo in state.MeasureOrders)
+                    if (mo.Tile >= 0 && mo.Tile < TileCount && !Parameters.IsMeasured(mo.Parameter) && !IsMeasureOrdered(mo.Parameter))
+                        measureOrders.Add((mo.Parameter, mo.Tile));
             if (state.MaterialsKg != null)
                 foreach (MaterialRecord m in state.MaterialsKg)
                     Materials.Set(m.Material, m.Kg);

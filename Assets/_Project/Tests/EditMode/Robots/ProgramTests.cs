@@ -94,7 +94,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             w.Assign(open);
             Assert.AreEqual(Build(3, 0), r.Task, "default order: build first");
             w.Assign(new List<WorkTask>());
-            for (int i = 0; i < 5; i++) w.RaiseInRanking(g, TaskKind.Mine);
+            for (int i = 0; i < Enum.GetValues(typeof(TaskKind)).Length; i++) w.RaiseInRanking(g, TaskKind.Mine);
             Assert.AreEqual(TaskKind.Mine, w.GetGroup(g).RankedKinds()[0]);
             w.Assign(open);
             Assert.AreEqual(Mine(5), r.Task, "mining ranked first");
