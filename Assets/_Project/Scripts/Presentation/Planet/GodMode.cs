@@ -99,7 +99,7 @@ namespace KardashevAscent.Presentation.Planet
                 return;
             style ??= new GUIStyle(GUI.skin.box) { fontSize = 14, alignment = TextAnchor.MiddleCenter };
             string what = Materials.Name(Cycle[index]);
-            GUI.Box(new Rect(Screen.width / 2f - 260f, 64f, 520f, 28f),
+            GUI.Box(new Rect(Screen.width / 2f - 260f, Screen.height - 150f, 520f, 28f),
                     $"GOD MODE · {what} map: {tiles} tiles · every tile shows as surveyed · F10: next", style);
         }
     }

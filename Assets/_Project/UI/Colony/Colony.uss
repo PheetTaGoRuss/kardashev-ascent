@@ -1,6 +1,6 @@
 .colony {
     position: absolute;
-    top: 80px;
+    top: 92px;   /* under the system tab bar */
     left: 50%;
     translate: -50% 0;
     width: 460px;
