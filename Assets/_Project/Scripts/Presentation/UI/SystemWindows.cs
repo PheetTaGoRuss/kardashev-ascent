@@ -243,9 +243,9 @@ namespace KardashevAscent.Presentation.UI
             Text("caption").text =
                 "Spread = how far the yearly energy of a 30°-tilted panel facing the equator could be off while the value is " +
                 "only an estimate (the model run at both ends of the range). A robot measures one value at a time; research " +
-                "robots are twice as quick as General ones. Latitude, haze, diffuse light and clouds end with a puzzle: work the value " +
-                "out from the robot's readings (within 5 %: known; within 15 %: half the spread is left). Ground, heat, dust and " +
-                "spectrum puzzles come next; those values are known as soon as they're measured. Ranges and hours are placeholder values.";
+                "robots are twice as quick as General ones. Every value but the star spectrum ends with a puzzle: work the value " +
+                "out from the robot's readings (within 5 %: known; within 15 %: half the spread is left). The spectrum puzzle comes next; " +
+                "it is known as soon as it is measured. Ranges and hours are placeholder values.";
         }
 
         IPlanetSimulation lastSim;
