@@ -243,8 +243,9 @@ namespace KardashevAscent.Presentation.UI
             Text("caption").text =
                 "Spread = how far the yearly energy of a 30°-tilted panel facing the equator could be off while the value is " +
                 "only an estimate (the model run at both ends of the range). A robot measures one value at a time; research " +
-                "robots are twice as quick as General ones. Latitude ends with a puzzle: work it out from the robot's readings " +
-                "(the sky view, V, still works too). The other values get their puzzles next. Ranges and hours are placeholder values.";
+                "robots are twice as quick as General ones. Latitude, haze, diffuse light and clouds end with a puzzle: work the value " +
+                "out from the robot's readings (within 5 %: known; within 15 %: half the spread is left). Ground, heat, dust and " +
+                "spectrum puzzles come next; those values are known as soon as they're measured. Ranges and hours are placeholder values.";
         }
 
         IPlanetSimulation lastSim;
@@ -253,6 +254,13 @@ namespace KardashevAscent.Presentation.UI
             if (picker == null) picker = Object.FindFirstObjectByType<KardashevAscent.Presentation.Planet.TilePicker>();
             int t = picker != null ? picker.SelectedTile : -1;
             return t >= 0 && !sim.GetTile(t).IsWater ? t : sim.BaseTileId;
+        }
+
+        static bool HasLightPuzzle(IPlanetSimulation sim, SolarParameter p)
+        {
+            foreach (ParameterPuzzle q in sim.ParameterPuzzles)
+                if (q.Parameter == p) return true;
+            return false;
         }
 
         static bool HasPuzzle(IPlanetSimulation sim, int tile)
@@ -273,12 +281,14 @@ namespace KardashevAscent.Presentation.UI
         protected override void RefreshBody(IPlanetSimulation sim)
         {
             lastSim = sim;
-            if (sim.LatitudePuzzles.Count != shownPuzzles)
+            if (sim.LatitudePuzzles.Count + sim.ParameterPuzzles.Count * 100 != shownPuzzles)
             {
-                shownPuzzles = sim.LatitudePuzzles.Count;
+                shownPuzzles = sim.LatitudePuzzles.Count + sim.ParameterPuzzles.Count * 100;
                 puzzles.Clear();
                 foreach (LatitudePuzzle p in sim.LatitudePuzzles)
                     puzzles.Add(new LatitudePuzzleView(sim, p, result => { solvedText.text = result; effectsTile = -2; }));
+                foreach (ParameterPuzzle p in sim.ParameterPuzzles)
+                    puzzles.Add(new LightPuzzleView(sim, p, result => { solvedText.text = result; effectsTile = -2; }));
                 puzzleHead.style.display = shownPuzzles > 0 || solvedText.text.Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
             }
             int tile = Tile(sim);
@@ -306,13 +316,15 @@ namespace KardashevAscent.Presentation.UI
                 SolarParameter p = e.Parameter;
                 bool ordered = sim.IsMeasureOrdered(p);
                 string share = baseWh > 0.0 ? $"± {e.HalfRangeWh / baseWh * 100.0:0.0} %" : "";
+                bool waitingPuzzle = p == SolarParameter.Latitude ? HasPuzzle(sim, tile) : HasLightPuzzle(sim, p);
                 status[p].text = e.Known
                     ? (p == SolarParameter.Clouds && !sim.Parameters.IsMeasured(p) ? "No clouds on this planet's model." : "Measured.")
                     : ordered ? $"Measuring with {SolarUnknowns.Instrument(p)}: {sim.MeasureProgress(p) * 100.0:0} %"
+                    : waitingPuzzle ? "Readings are in: work it out in PUZZLES above."
+                    : e.Rough ? $"Measured roughly · spread {share} left · measure again to pin it down"
                     : $"Estimate · spread {share} · measured with {SolarUnknowns.Instrument(p)}";
                 Button b = buttons[p];
-                bool waitingPuzzle = p == SolarParameter.Latitude && HasPuzzle(sim, tile);
-                b.text = ordered ? "Cancel" : waitingPuzzle ? "Solve above" : "Measure";
+                b.text = ordered ? "Cancel" : waitingPuzzle ? "Solve above" : e.Rough ? "Again" : "Measure";
                 b.SetEnabled(!e.Known && !waitingPuzzle);
             }
         }

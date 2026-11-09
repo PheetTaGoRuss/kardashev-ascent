@@ -222,6 +222,12 @@ namespace KardashevAscent.Simulation.Game
         /// </summary>
         string AnswerLatitudePuzzle(int tileId, double latitudeDeg, out Solar.LatitudePuzzle.Grade grade);
 
+        /// <summary>Readings waiting for the player to work out haze, diffuse share or clouds (stage D).</summary>
+        System.Collections.Generic.IReadOnlyList<Solar.ParameterPuzzle> ParameterPuzzles { get; }
+
+        /// <summary>Answer a light puzzle. Precise: the value is known; rough: half its range is left; wrong: try again.</summary>
+        string AnswerParameterPuzzle(Solar.SolarParameter parameter, double value, out Solar.LatitudePuzzle.Grade grade);
+
         /// <summary>A robot finished readings and a puzzle is waiting.</summary>
         event Action<Solar.SolarParameter> PuzzleReady;
 
