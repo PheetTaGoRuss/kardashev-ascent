@@ -39,7 +39,7 @@ namespace KardashevAscent.Simulation.Resources
                 case Material.Rock: return "every land tile (silicate rock: Si, Al, O, Mg)";
                 case Material.Iron: return "everywhere; how much follows the planet's iron fraction and its star's metals";
                 case Material.Water: return "glaciers, frozen seas, tundra ground ice, and shores of liquid seas";
-                case Material.Copper: return "coastal mountains on planets with seas (stand-in for volcanic arcs: porphyry copper needs water and subduction)";
+                case Material.Copper: return "highlands and mountains: richest within a few tiles of a sea on planets with seas (volcanic arcs), poorer magmatic copper-nickel ores in high ground anywhere";
                 case Material.Lithium: return "inland basins beside highlands on planets with seas (stand-in for arid closed basins with a volcanic source)";
                 case Material.Aluminium: return "made from rock in the Workshop; replaces copper in wiring (1.6× the resistance, 30 % of the weight)";
                 case Material.Sodium: return "made in the Workshop; Na-ion batteries replace lithium (~160 vs ~250 Wh/kg)";
