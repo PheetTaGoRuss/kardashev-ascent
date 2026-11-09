@@ -58,6 +58,12 @@ namespace KardashevAscent.Simulation.Robots
         public TaskKind ResumeKind;
         public int ResumeTile;
         public int ResumeSlot;
+        /// <summary>Stage D (save version 15): battery ageing by depth of discharge.</summary>
+        public bool HasBatteryAgeing;
+        public double BatteryDamage;
+        public double BatteryCycleTop;
+        public double BatteryCycleLow;
+        public int BatteryZeroDischarges;
     }
 
     /// <summary>A Workshop job in a saved game (version 10); its recipe is rebuilt from these fields.</summary>
@@ -94,6 +100,8 @@ namespace KardashevAscent.Simulation.Robots
         public int FacilityTile;
         public List<TaskKind> Ranking = new List<TaskKind>();
         public List<QueueItemRecord> Queue = new List<QueueItemRecord>();
+        /// <summary>Stage D (save version 15): the group's maintenance rule (0: default).</summary>
+        public double MaintenanceBelow;
     }
 
     [Serializable]

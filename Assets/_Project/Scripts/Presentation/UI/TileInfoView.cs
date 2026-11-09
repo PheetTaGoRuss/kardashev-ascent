@@ -166,7 +166,7 @@ namespace KardashevAscent.Presentation.UI
                 return;
             DepositMap map = sim.Deposits;
             bool water = sim.GetTile(tile).IsWater;
-            bool surveyed = map.IsSurveyed(tile);
+            bool surveyed = map.IsSurveyed(tile) || KardashevAscent.Presentation.Planet.GodMode.Active;   // god mode: view only
             string text;
             if (water)
                 text = "Sea floor: robots can't reach it yet (copper and zinc ores form at sea-floor vents).";

@@ -212,7 +212,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             int t = a.BaseTileId;
             int first = FillStock(a);
             Assert.IsTrue(a.PlacePanel(t, first + 1, Tilt(a), Math.PI));
-            Assert.IsTrue(a.PlaceBattery(t, first + 2));
+            int yard = first + 20;   // a battery yard covers two slots: away from the panels
+            Assert.IsTrue(a.PlaceBattery(t, yard));
             // Run until the first site is part paid (a fixed time breaks whenever panel cost or output changes).
             for (int i = 0; i < 96 && a.ConstructionProgress(t, first) <= 0.0; i++)
                 a.Tick(0.25);
@@ -224,7 +225,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.AreEqual(a.BuildStockWh, b.BuildStockWh, 1e-3);
             Assert.AreEqual(a.ConstructionQueueCount, b.ConstructionQueueCount);
             Assert.AreEqual(a.ConstructionRemainingWh, b.ConstructionRemainingWh, 1e-3);
-            foreach (int s in new[] { first, first + 1, first + 2 })
+            foreach (int s in new[] { first, first + 1, yard })
             {
                 Assert.AreEqual(a.IsUnderConstruction(t, s), b.IsUnderConstruction(t, s));
                 Assert.AreEqual(a.ConstructionProgress(t, s), b.ConstructionProgress(t, s), 1e-9);

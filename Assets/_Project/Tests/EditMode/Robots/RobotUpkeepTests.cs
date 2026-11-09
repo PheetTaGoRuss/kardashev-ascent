@@ -224,7 +224,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             Assert.AreEqual(2408.0 - RobotSpecs.IdlePowerW / Math.Sqrt(Battery.LithiumIonRoundTrip), idle.Battery.StoredWh, 1e-6);
             Assert.AreEqual(2408.0 - RobotSpecs.BuildPowerW / Math.Sqrt(Battery.LithiumIonRoundTrip), busy.Battery.StoredWh, 1e-6);
             Assert.AreEqual(1.0, idle.Condition, 1e-12);
-            Assert.AreEqual(1.0 - RobotSpecs.WearPerWorkingHour, busy.Condition, 1e-12);
+            Assert.AreEqual(1.0 - RobotSpecs.WearPerWorkingHour * RobotCatalog.WearFactor(TaskKind.Build), busy.Condition, 1e-12);
         }
 
         [Test]
