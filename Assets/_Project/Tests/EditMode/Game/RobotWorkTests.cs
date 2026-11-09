@@ -76,12 +76,12 @@ namespace KardashevAscent.Simulation.Tests.Game
             var sim = Create();
             int t = sim.BaseTileId;
             sim.Workforce.Pause(GroupOf(sim).Id);
-            for (int s = 0; s < 3; s++) sim.PlaceBattery(t, s);
+            for (int s = 0; s < 3; s++) Assert.IsTrue(sim.PlaceBattery(t, 20 * s));   // two-slot footprints, kept apart
             var events = new List<(int, int)>();
             sim.BuildingCompleted += (a, b) => events.Add((a, b));
             sim.Workforce.Resume(GroupOf(sim).Id);
             sim.Tick(0.25);
-            CollectionAssert.AreEqual(new[] { (t, 0), (t, 1), (t, 2) }, events, "the freed robot takes the next site at once");
+            CollectionAssert.AreEqual(new[] { (t, 0), (t, 20), (t, 40) }, events, "the freed robot takes the next site at once");
             Assert.AreEqual(3 * sim.BatteryUnitWh, sim.BatteryCapacityWh - PowerGridLanderCapacity());
         }
 
@@ -170,7 +170,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             a.Workforce.Pause(a.Workforce.GetGroup(a.Workforce.Robots[0].GroupId).Id);
             a.OrderSalvage(t, 0);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(14, state.Version);
+            Assert.AreEqual(16, state.Version);
 
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));

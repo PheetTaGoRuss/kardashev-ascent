@@ -105,7 +105,7 @@ namespace KardashevAscent.Simulation.Robots
             Activity == RobotActivity.Maintenance ? ShutdownKind.None
             : CriticallyDamaged ? ShutdownKind.CriticalDamage
             : Condition <= 0.0 ? ShutdownKind.Mechanical
-            : IsStranded || (Battery.StoredWh <= 1e-6 && Activity != RobotActivity.Charging) ? ShutdownKind.Energy
+            : IsStranded || (Battery.UsableWh <= 1e-6 && Activity != RobotActivity.Charging) ? ShutdownKind.Energy
             : ShutdownKind.None;
 
         public bool IsShutDown => Shutdown != ShutdownKind.None;
@@ -119,7 +119,10 @@ namespace KardashevAscent.Simulation.Robots
         public bool NeedsCharge => Activity == RobotActivity.None
                                    && Battery.StateOfCharge < RobotSpecs.ReturnToChargeFraction + ReserveFraction;
 
-        public bool NeedsMaintenance => Condition < RobotSpecs.MaintenanceBelowCondition || Battery.WornOut || CriticallyDamaged;
+        /// <summary>Its group's maintenance rule: go for repair below this condition (spec v2 §8, set each step).</summary>
+        internal double MaintenanceBelow = RobotSpecs.MaintenanceBelowCondition;
+
+        public bool NeedsMaintenance => Condition < MaintenanceBelow || Battery.WornOut || CriticallyDamaged;
 
         /// <summary>Free to take colony work: not shut down, charging, in maintenance or low on charge.</summary>
         public bool Available => Activity == RobotActivity.None && !IsShutDown && !NeedsCharge && !ManualTarget.HasValue;

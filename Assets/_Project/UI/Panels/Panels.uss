@@ -47,5 +47,8 @@
     background-color: rgba(143, 179, 255, 0.18);
 }
 
-.mode-row { margin-top: 6px; }
+.build-bar { position: absolute; left: 50%; bottom: 12px; translate: -50% 0; align-items: center; }
+.build-row { margin-top: 0; margin-bottom: 4px; }
+.build-row .action-button { min-width: 110px; }
+.legend.above-build-bar { bottom: 100px; }
 .action-button.mode.selected { color: rgb(10, 14, 24); background-color: var(--accent); border-color: var(--accent); -unity-font-style: bold; }

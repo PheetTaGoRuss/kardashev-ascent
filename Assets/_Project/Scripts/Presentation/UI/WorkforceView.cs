@@ -224,7 +224,7 @@ namespace KardashevAscent.Presentation.UI
             var sb = new StringBuilder();
             foreach (RobotGroup g in w.Groups)
             {
-                sb.Append(g.Id).Append(g.Name).Append(g.State).Append(g.Program).Append(g.FacilityTile);
+                sb.Append(g.Id).Append(g.Name).Append(g.State).Append(g.Program).Append(g.FacilityTile).Append(g.MaintenanceBelow);
                 foreach (TaskKind k in Kinds) sb.Append(g.PriorityOf(k)).Append(g.RankOf(k));
                 foreach (WorkTask q in g.Queue) sb.Append(q);
                 foreach (int id in g.Members) sb.Append(',').Append(id);
@@ -287,6 +287,14 @@ namespace KardashevAscent.Presentation.UI
                 }
                 box.Add(priorities);
                 box.Add(MakeProgramRow(sim, w, g));
+                double below = g.MaintenanceBelow;
+                double nextBelow = below < 0.25 ? 0.30 : below < 0.4 ? 0.50 : 0.20;
+                var rules = new VisualElement();
+                rules.AddToClassList("button-row");
+                Button rule = MakeButton($"Repair below {below * 100.0:0} % condition", () => { w.SetGroupMaintenance(id, nextBelow); Changed(sim); });
+                rule.tooltip = "Maintenance rule for this group: click to change (20 %, 30 %, 50 %). Repairs use build parts and iron.";
+                rules.Add(rule);
+                box.Add(rules);
                 box.Add(MakeRankingRow(sim, w, g));
                 if (g.Program == OperatingProgram.TaskQueue)
                     box.Add(MakeQueue(sim, w, g));
@@ -456,6 +464,7 @@ namespace KardashevAscent.Presentation.UI
                 row.AddToClassList("task-row");
                 string state = rec != null ? StateName(rec.State) : "";
                 string who = worker != null ? $" · {worker.Name}" : "";
+                if (rec != null && rec.Capacity > 1) who += $" · crew {rec.Workers}/{rec.Capacity}";
                 string why = rec != null && rec.Reason.Length > 0 && worker == null ? $" · {rec.Reason}" : "";
                 string prio = rec != null && rec.Priority != TaskPriority.Normal ? $" · {rec.Priority}" : "";
                 Label text = MakeLabel($"{Describe(sim, t)} · {state}{who}{prio}{why}", "task-text");
@@ -544,7 +553,7 @@ namespace KardashevAscent.Presentation.UI
             var upgrades = new VisualElement();
             upgrades.AddToClassList("button-row");
             string have = "";
-            foreach (RobotModule m in new[] { RobotModule.BigBattery, RobotModule.FastDrive, RobotModule.Shielding })
+            foreach (RobotModule m in new[] { RobotModule.BigBattery, RobotModule.FastDrive, RobotModule.Shielding, RobotModule.ThermalInsulation })
             {
                 if (r.Has(m))
                 {
@@ -610,7 +619,9 @@ namespace KardashevAscent.Presentation.UI
 
         static string Vitals(Robot r) =>
             $"Battery {r.Battery.StateOfCharge * 100.0:0} % · health {r.Battery.Health * 100.0:0} % " +
-            $"({r.Battery.EquivalentFullCycles:0} cycles) · condition {r.Condition * 100.0:0} %";
+            $"({r.Battery.EquivalentFullCycles:0} cycles" + (r.Battery.ZeroDischarges > 0 ? $", {r.Battery.ZeroDischarges}× run flat" : "") + ")" +
+            (r.Battery.ColdFactor < 0.999 ? $" · cold: {(1.0 - r.Battery.ColdFactor) * 100.0:0} % of capacity locked" : "") +
+            $" · condition {r.Condition * 100.0:0} %";
 
         /// <summary>What a robot is doing, with where it is driving first (spec §10).</summary>
         static string TaskText(IPlanetSimulation sim, Robot r)
