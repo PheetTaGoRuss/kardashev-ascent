@@ -13,18 +13,11 @@
             <ui:VisualElement name="site-box" class="panel box hidden">
                 <ui:Label name="site-title" class="value" text="Building site" />
                 <ui:Label name="site-text" class="body" text="" />
-                <ui:Label class="caption" text="Click a slot to build there · drag a box to select many · Ctrl+A: all" />
+                <ui:Label class="caption" text="Drag a building from the bar below onto a slot · click a slot to plan it · drag a box to select many · Ctrl+A: all" />
             </ui:VisualElement>
 
             <ui:VisualElement name="planner-box" class="panel box hidden">
                 <ui:Label name="planner-title" class="value" text="Plan a solar panel" />
-                <ui:VisualElement class="button-row mode-row">
-                    <ui:Button name="mode-panel" class="action-button mode" text="Solar panel" />
-                    <ui:Button name="mode-battery" class="action-button mode" text="Battery yard" />
-                    <ui:Button name="mode-workshop" class="action-button mode" text="Workshop" />
-                    <ui:Button name="mode-station" class="action-button mode" text="Charger" />
-                </ui:VisualElement>
-                <ui:Label class="caption" text="Tab: switch what to build" />
                 <ui:Label name="battery-text" class="body hidden" text="" />
                 <ui:Label name="tilt-label" class="body slider-label" text="Tilt β" />
                 <ui:Slider name="tilt" class="slider" low-value="0" high-value="90" />
@@ -61,6 +54,16 @@
         <ui:VisualElement name="bottom-left" class="bottom-left" picking-mode="Ignore">
             <ui:Label name="map-hint" class="caption hint" text="M: light-potential map" />
             <ui:Label name="help" class="panel box body help" text="" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="build-bar" class="panel box build-bar hidden">
+            <ui:VisualElement class="button-row build-row">
+                <ui:Button name="mode-panel" class="action-button mode" text="Solar panel" />
+                <ui:Button name="mode-battery" class="action-button mode" text="Battery yard" />
+                <ui:Button name="mode-workshop" class="action-button mode" text="Workshop" />
+                <ui:Button name="mode-station" class="action-button mode" text="Charger" />
+            </ui:VisualElement>
+            <ui:Label name="build-hint" class="caption" text="Drag a building onto the site · Tab: switch" />
         </ui:VisualElement>
 
         <ui:VisualElement name="legend" class="panel box legend hidden">
