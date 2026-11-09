@@ -159,6 +159,21 @@ namespace KardashevAscent.Simulation.Robots
             return c.HasValue ? c.Value.Factor * Profile(robot)[TaskAttribute(task)] : 0.0;
         }
 
+        /// <summary>
+        /// How hard a kind of work is on a robot (spec v2 §8 heavy workloads): wear per working hour × this. TBD.
+        /// </summary>
+        public static double WearFactor(TaskKind task)
+        {
+            switch (task)
+            {
+                case TaskKind.Mine: return 2.0;
+                case TaskKind.Build:
+                case TaskKind.Salvage: return 1.5;
+                case TaskKind.Survey: return 0.5;
+                default: return 1.0;
+            }
+        }
+
         // ---- Condition and performance (spec v2 §8) ----
 
         /// <summary>Above this condition a robot works at full rate. TBD.</summary>

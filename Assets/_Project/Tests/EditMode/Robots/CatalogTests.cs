@@ -106,7 +106,8 @@ namespace KardashevAscent.Simulation.Tests.Robots
             up.Plan(w, new List<RobotFacility>(), 1.0);
             up.Apply(w, 1.0, 0.0, 0.0, 0.0, false, null);
             double durability = RobotCatalog.Profile(RobotKind.Mining)[RobotAttribute.Durability];
-            Assert.AreEqual(1.0 - RobotSpecs.WearPerWorkingHour / durability, miner.Condition, 1e-12, "tougher robots wear slower");
+            Assert.AreEqual(1.0 - RobotSpecs.WearPerWorkingHour * RobotCatalog.WearFactor(TaskKind.Mine) / durability, miner.Condition, 1e-12,
+                            "tougher robots wear slower; mining is heavy work");
             Assert.AreEqual(1.25, durability);
             Assert.AreEqual(0.8, miner.Attribute(RobotAttribute.Speed), 1e-12);
             miner.Modules = RobotModule.FastDrive;

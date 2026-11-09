@@ -22,12 +22,13 @@ namespace KardashevAscent.Presentation.UI
         [SerializeField] OrbitCamera orbitCamera;
         [Range(0.02f, 0.5f)] [SerializeField] float textInterval = 0.1f;
 
-        VisualElement hoverBox, siteBox, plannerBox, placedBox, legend, legendBar, dragRect, multiButtons;
+        VisualElement hoverBox, siteBox, plannerBox, placedBox, legend, legendBar, dragRect, multiButtons, buildBar;
+        Label buildHint;
         Label hoverText, siteTitle, siteText, plannerTitle, tiltLabel, facingLabel, plannerNumbers, plannerBest,
               plannerReason, placedTitle, placedAngles, placedNumbers, placedBonus, totals, mapHint, help,
               legendMin, legendMax, legendTile, multiText, batteryText, plannerCost;
         Slider tilt, facing;
-        Button bestButton, placeButton, removeAllButton, reangleButton, modePanel, modeBattery, modeWorkshop;
+        Button bestButton, placeButton, removeAllButton, reangleButton, modePanel, modeBattery, modeWorkshop, modeStation;
         float nextText;
 
         void OnEnable()
@@ -43,6 +44,8 @@ namespace KardashevAscent.Presentation.UI
             plannerBox = root.Q("planner-box");
             placedBox = root.Q("placed-box");
             legend = root.Q("legend");
+            buildBar = root.Q("build-bar");
+            buildHint = root.Q<Label>("build-hint");
             legendBar = root.Q("legend-bar");
             dragRect = root.Q("drag-rect");
             multiButtons = root.Q("multi-buttons");
@@ -57,6 +60,14 @@ namespace KardashevAscent.Presentation.UI
             modeWorkshop = root.Q<Button>("mode-workshop");
             if (modeWorkshop != null)
                 modeWorkshop.clicked += () => { if (placer != null) placer.Mode = BuildMode.Workshop; };
+            modeStation = root.Q<Button>("mode-station");
+            if (modeStation != null)
+                modeStation.clicked += () => { if (placer != null) placer.Mode = BuildMode.ChargingStation; };
+            // Press a build button and drag onto the site: the building is built where the mouse is let go.
+            DragFrom(modePanel, BuildMode.SolarPanel);
+            DragFrom(modeBattery, BuildMode.Battery);
+            DragFrom(modeWorkshop, BuildMode.Workshop);
+            DragFrom(modeStation, BuildMode.ChargingStation);
             hoverText = root.Q<Label>("hover-text");
             siteTitle = root.Q<Label>("site-title");
             siteText = root.Q<Label>("site-text");
@@ -140,6 +151,21 @@ namespace KardashevAscent.Presentation.UI
             Show(help, orbitCamera != null && orbitCamera.ShowHelp);
             bool mapOn = lightMap != null && lightMap.Visible;
             Show(legend, mapOn);
+            legend?.EnableInClassList("above-build-bar", siteOpen);
+
+            // The build bar: always there while a site is open, so a building can be dragged onto any slot.
+            Show(buildBar, siteOpen);
+            if (siteOpen)
+            {
+                NameButton(modePanel, "Solar panel", BuildMode.SolarPanel);
+                NameButton(modeBattery, "Battery yard", BuildMode.Battery);
+                NameButton(modeWorkshop, "Workshop", BuildMode.Workshop);
+                NameButton(modeStation, "Charger", BuildMode.ChargingStation);
+                if (buildHint != null)
+                    buildHint.text = placer.Dragging
+                        ? "Let go over the site to build · Esc or right-click: cancel"
+                        : "Drag a building onto the site · Tab: switch";
+            }
             Show(mapHint, lightMap != null && !mapOn);
 
             // Panel-only controls hide while building batteries.
@@ -151,6 +177,7 @@ namespace KardashevAscent.Presentation.UI
             modePanel.EnableInClassList("selected", panelMode);
             modeBattery.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.Battery);
             modeWorkshop?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.Workshop);
+            modeStation?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.ChargingStation);
 
             // Keep the sliders on the planned angles (keys and "best angle" move them too).
             if (siteOpen)
@@ -203,6 +230,15 @@ namespace KardashevAscent.Presentation.UI
             }
             if (hasPanel && placer.SelectedSalvageOrdered)
                 siteLine = "Salvage ordered: it works until a robot takes it down (Del again to cancel).\n" + siteLine;
+            if (hasPanel && placer.SelectedBuilding == BuildingType.ChargingStation)
+            {
+                placedTitle.text = isSite ? $"Charging station site · slot {slot}" : $"Charging station · slot {slot}";
+                placedAngles.text = "Charges robots from the grid";
+                placedNumbers.text = siteLine + "Robots below 20 % come here to charge. Faster than a battery yard, " +
+                                     "and more robots at once (placeholder values).";
+                Show(placedBonus, false);
+                return;
+            }
             if (hasPanel && placer.SelectedBuilding == BuildingType.Workshop)
             {
                 placedTitle.text = isSite ? $"Robot Workshop site · slot {slot}" : $"Robot Workshop · slot {slot}";
@@ -234,18 +270,20 @@ namespace KardashevAscent.Presentation.UI
 
             bool panelMode = placer.Mode == BuildMode.SolarPanel;
             bool workshopMode = placer.Mode == BuildMode.Workshop;
-            string thing = panelMode ? "panel" : workshopMode ? "Workshop" : "battery yard";
+            bool stationMode = placer.Mode == BuildMode.ChargingStation;
+            string thing = panelMode ? "panel" : workshopMode ? "Workshop" : stationMode ? "charging station" : "battery yard";
             int selected = 0, empty = 0, withPanels = 0, withBatteries = 0;
             if (multi)
             {
                 placer.CountSelection(out selected, out empty, out withPanels, out withBatteries);
                 plannerTitle.text = $"{selected} slots selected";
-                string adds = !placer.Preview.CanPlace || empty == 0 ? ""
-                    : panelMode ? $"\nBuilding on the empty ones adds {Format.Energy(placer.Preview.EnergyPerYearWh * empty)} a year"
-                    : workshopMode ? ""
-                    : $"\nBuilding on the empty ones adds {Format.Energy(placer.BatteryUnitWh * empty)} of storage";
+                int planned = placer.PlannedBuildings;
+                string adds = !placer.Preview.CanPlace || planned == 0 ? ""
+                    : panelMode ? $"\nBuilding on the empty ones adds {Format.Energy(placer.Preview.EnergyPerYearWh * planned)} a year"
+                    : workshopMode || stationMode ? ""
+                    : $"\nBuilding on the empty ones adds {Format.Energy(placer.BatteryUnitWh * planned)} of storage";
                 multiText.text = $"{empty} empty · {withPanels} panels · {withBatteries} battery yards" + adds;
-                placeButton.text = $"Place {empty} {thing}s (P)";
+                placeButton.text = $"Place {planned} {thing}s (P)";
                 removeAllButton.text = $"Remove {withPanels + withBatteries} (Del)";
                 reangleButton.text = $"Set angle on {withPanels}";
                 removeAllButton.SetEnabled(withPanels + withBatteries > 0);
@@ -253,10 +291,15 @@ namespace KardashevAscent.Presentation.UI
             }
             else
             {
-                plannerTitle.text = panelMode ? $"Plan a {placer.NewPanelName} · slot {slot}" : $"Plan a {thing} · slot {slot}";
+                int n = placer.ModeFootprint;
+                string covers = n > 1 ? $" · covers {n} slots" : "";
+                plannerTitle.text = (panelMode ? $"Plan a {placer.NewPanelName} · slot {slot}" : $"Plan a {thing} · slot {slot}") + covers;
                 placeButton.text = $"Place {thing} (P)";
             }
-            batteryText.text = workshopMode
+            batteryText.text = stationMode
+                ? $"Costs {Format.Energy(placer.BuildCostWh)} of build parts. Charges robots from the grid, faster than a " +
+                  "battery yard and more at once. Build one near where robots work: they drive to the nearest charger."
+                : workshopMode
                 ? $"Costs {Format.Energy(placer.BuildCostWh)} of build parts. Makes new robots, upgrades, and aluminium " +
                   "or sodium from rock. Order jobs in the Robots panel (G)."
                 : $"Stores {Format.Energy(placer.BatteryUnitWh)}: charges from surplus by day, " +
@@ -336,5 +379,29 @@ namespace KardashevAscent.Presentation.UI
         }
 
         static void Show(VisualElement element, bool visible) => element?.EnableInClassList("hidden", !visible);
+
+        /// <summary>A build button's name and how many slots that building covers.</summary>
+        void NameButton(Button button, string name, BuildMode what)
+        {
+            if (button == null)
+                return;
+            int n = placer.FootprintOf(what);
+            string text = n > 1 ? $"{name} · {n} slots" : name;
+            if (button.text != text)
+                button.text = text;
+        }
+
+        /// <summary>Pressing this build button starts dragging that building (trickle-down: before the button's own click).</summary>
+        void DragFrom(Button button, BuildMode what)
+        {
+            if (button == null)
+                return;
+            button.RegisterCallback<PointerDownEvent>(e =>
+            {
+                if (placer != null && e.button == 0)
+                    placer.BeginDrag(what);
+            }, TrickleDown.TrickleDown);
+            button.tooltip = "Drag onto the site to build";
+        }
     }
 }

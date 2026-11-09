@@ -96,23 +96,43 @@ namespace KardashevAscent.Simulation.Tests.Resources
             Assert.Greater(Count(wet, Material.Lithium), 0);
             Assert.Greater(Count(wet, Material.Water), 0);
             var dry = new DepositMap(Sphere, Dry, new PlanetChemistry(0.0, 0.32, false, false), 7);
-            Assert.AreEqual(0, Count(dry, Material.Copper), "porphyry copper needs water (claim 1)");
+            for (int t = 0; t < dry.TileCount; t++)
+                Assert.LessOrEqual(dry.GradeOf(t, Material.Copper), DepositMap.SulfideCopperGrade * (1.0 + DepositMap.Spread),
+                                   "dry planets get only the poorer magmatic copper (no arcs without water, claim 1)");
             Assert.AreEqual(0, Count(dry, Material.Lithium), "lithium brines need a water history (claim 2)");
         }
 
         [Test]
-        public void Copper_OnlyOnCoastalHighGround()
+        public void Copper_OnlyInHighGround_RicherNearTheSea()
         {
             var map = new DepositMap(Sphere, Wet, PlanetChemistry.EarthLike, 7);
+            int rich = 0;
             for (int t = 0; t < map.TileCount; t++)
             {
-                if (map.GradeOf(t, Material.Copper) <= 0.0) continue;
+                double g = map.GradeOf(t, Material.Copper);
+                if (g <= 0.0) continue;
                 TerrainType here = Wet.Terrain[t];
                 Assert.IsTrue(here == TerrainType.Highland || here == TerrainType.Mountain);
-                bool coast = false;
-                foreach (int n in Sphere.Neighbors[t]) coast |= Terrains.IsWater(Wet.Terrain[n]);
-                Assert.IsTrue(coast);
+                if (g > DepositMap.SulfideCopperGrade * (1.0 + DepositMap.Spread)) rich++;
             }
+            Assert.Greater(rich, 0, "arc copper near the sea");
+        }
+
+        [Test]
+        public void EveryPlanet_HasSomeCopper_OnTheRealMapSize()
+        {
+            var sphere = HexSphere.Create(24);
+            var wet = PlanetSurface.Generate(sphere, SurfaceSettings.ForClimate(7, 25.0, false, true, 0.62));
+            var dry = PlanetSurface.Generate(sphere, SurfaceSettings.ForClimate(7, -8.0, false, false, 0.45));
+            int Cu(PlanetSurface s, bool water)
+            {
+                var m = new DepositMap(sphere, s, new PlanetChemistry(0.0, 0.32, false, water), 7);
+                int n = 0;
+                for (int t = 0; t < m.TileCount; t++) if (m.GradeOf(t, Material.Copper) > 0.0) n++;
+                return n;
+            }
+            Assert.Greater(Cu(wet, true), 20, "an Earth-like planet has plenty of copper sites");
+            Assert.Greater(Cu(dry, false), 0, "a dry planet has a few poorer ones");
         }
 
         [Test]
@@ -247,7 +267,7 @@ namespace KardashevAscent.Simulation.Tests.Resources
             a.Tick(1.5);
             if (!a.GetTile(other).IsWater) a.OrderSurvey(other);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(14, state.Version);
+            Assert.AreEqual(16, state.Version);
 
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));
