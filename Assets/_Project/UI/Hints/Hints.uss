@@ -1,6 +1,6 @@
 .hints {
     position: absolute;
-    bottom: 16px;
+    bottom: 96px;   /* above the build bar */
     left: 50%;
     translate: -50% 0;
     width: 440px;
