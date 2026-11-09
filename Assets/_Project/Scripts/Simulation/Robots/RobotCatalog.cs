@@ -122,6 +122,8 @@ namespace KardashevAscent.Simulation.Robots
             new Capability(RobotKind.Maintenance, TaskKind.Adjust),
             new Capability(RobotKind.Mining, TaskKind.Mine),
             new Capability(RobotKind.Research, TaskKind.Survey),
+            new Capability(RobotKind.Research, TaskKind.Measure),
+            new Capability(RobotKind.General, TaskKind.Measure),   // research robots are twice as quick (sensor quality)
 
             // Secondary capabilities, unlocked by research (milestones, D8). TBD.
             new Capability(RobotKind.Mining, TaskKind.Salvage, 0.5, 4, true),
@@ -138,7 +140,8 @@ namespace KardashevAscent.Simulation.Robots
             switch (task)
             {
                 case TaskKind.Mine: return RobotAttribute.MiningPower;
-                case TaskKind.Survey: return RobotAttribute.SensorQuality;
+                case TaskKind.Survey:
+                case TaskKind.Measure: return RobotAttribute.SensorQuality;
                 default: return RobotAttribute.Construction;   // build, salvage, Workshop work
             }
         }
@@ -173,6 +176,7 @@ namespace KardashevAscent.Simulation.Robots
                 case TaskKind.Build:
                 case TaskKind.Salvage: return 1.5;
                 case TaskKind.Survey:
+                case TaskKind.Measure:
                 case TaskKind.Adjust: return 0.5;
                 default: return 1.0;
             }

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using KardashevAscent.Simulation.Game;
 using KardashevAscent.Simulation.Resources;
 using KardashevAscent.Simulation.Robots;
+using KardashevAscent.Simulation.Solar;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Material = KardashevAscent.Simulation.Resources.Material;
@@ -187,7 +188,10 @@ namespace KardashevAscent.Presentation.UI
         }
     }
 
-    /// <summary>Research (T): not designed yet; the tab is there so the window has its place.</summary>
+    /// <summary>
+    /// Research (T): the solar parameters (docs/design/solar-measurements.md). For the selected tile (or the base),
+    /// each parameter's status and how much its uncertainty can change a panel's yearly energy; order a robot to measure.
+    /// </summary>
     public sealed class ResearchWindow : SystemWindow
     {
         public override string Id => "research";
@@ -195,14 +199,101 @@ namespace KardashevAscent.Presentation.UI
         public override KeyCode Key => KeyCode.T;
         public override int Order => 40;
 
-        public override string LockedReason(IPlanetSimulation sim) => "not built yet.";
+        Label where, total;
+        VisualElement rows;
+        readonly Dictionary<SolarParameter, Label> status = new Dictionary<SolarParameter, Label>();
+        readonly Dictionary<SolarParameter, Button> buttons = new Dictionary<SolarParameter, Button>();
+        List<ParameterEffect> effects;
+        int effectsTile = -2;
+        float nextEffects;
+        KardashevAscent.Presentation.Planet.TilePicker picker;
 
-        protected override void BuildBody() =>
-            Text().text = "Research will live here: what the colony is studying and what each discovery unlocks. " +
-                          "Today, upgrades unlock at Kardashev milestones (see Overview) and Research robots can be built " +
-                          "in Manufacturing, but they have no research to do yet.";
+        protected override void BuildBody()
+        {
+            where = Text();
+            total = Text();
+            Heading("WHAT A PANEL HERE DEPENDS ON");
+            rows = new VisualElement();
+            Body.Add(rows);
+            foreach (SolarParameter p in (SolarParameter[])System.Enum.GetValues(typeof(SolarParameter)))
+            {
+                SolarParameter param = p;
+                var row = new VisualElement();
+                row.AddToClassList("job");
+                var text = new VisualElement();
+                text.style.flexGrow = 1;
+                text.style.flexShrink = 1;
+                text.Add(Label(SolarUnknowns.Name(p), "robot-name"));
+                Label st = Label("", "job-text");
+                text.Add(st);
+                row.Add(text);
+                Button b = MakeButton("Measure", () => Toggle(param));
+                row.Add(b);
+                rows.Add(row);
+                status[p] = st;
+                buttons[p] = b;
+            }
+            Text("caption").text =
+                "Spread = how far the yearly energy of a 30°-tilted panel facing the equator could be off while the value is " +
+                "only an estimate (the model run at both ends of the range). A robot measures one value at a time; research " +
+                "robots are twice as quick as General ones. Next: each measurement ends with a puzzle where you work the value " +
+                "out from the readings. Ranges and hours are placeholder values.";
+        }
 
-        protected override void RefreshBody(IPlanetSimulation sim) { }
+        IPlanetSimulation lastSim;
+        int Tile(IPlanetSimulation sim)
+        {
+            if (picker == null) picker = Object.FindFirstObjectByType<KardashevAscent.Presentation.Planet.TilePicker>();
+            int t = picker != null ? picker.SelectedTile : -1;
+            return t >= 0 && !sim.GetTile(t).IsWater ? t : sim.BaseTileId;
+        }
+
+        void Toggle(SolarParameter p)
+        {
+            if (lastSim == null) return;
+            if (lastSim.IsMeasureOrdered(p)) lastSim.CancelMeasure(p);
+            else lastSim.OrderMeasure(p, Tile(lastSim));
+            effectsTile = -2;
+        }
+
+        protected override void RefreshBody(IPlanetSimulation sim)
+        {
+            lastSim = sim;
+            int tile = Tile(sim);
+            double lat = sim.Sphere.Latitude(tile);
+            if (tile != effectsTile || Time.unscaledTime >= nextEffects)
+            {
+                // A 30° panel facing the equator: a typical panel, so the spreads compare across parameters.
+                effects = sim.ParameterEffects(tile, 30.0 * Mathf.Deg2Rad, lat >= 0.0 ? Mathf.PI : 0.0);
+                effectsTile = tile;
+                nextEffects = Time.unscaledTime + 3f;
+            }
+            where.text = $"Tile #{tile}{(tile == sim.BaseTileId ? " (base)" : "")} · select another tile on the map to see it there.";
+            double baseWh = 0.0, sq = 0.0;
+            foreach (ParameterEffect e in effects)
+            {
+                baseWh = System.Math.Max(baseWh, (e.LowWh + e.HighWh) / 2.0);
+                sq += e.HalfRangeWh * e.HalfRangeWh;
+            }
+            double spread = System.Math.Sqrt(sq);
+            total.text = baseWh > 0.0
+                ? $"One panel here: about {Format.Energy(baseWh)} a year, ± {Format.Energy(spread)} ({spread / baseWh * 100.0:0.0} %) from what is still unknown."
+                : "No sunlight model for this tile.";
+            foreach (ParameterEffect e in effects)
+            {
+                SolarParameter p = e.Parameter;
+                bool ordered = sim.IsMeasureOrdered(p);
+                string share = baseWh > 0.0 ? $"± {e.HalfRangeWh / baseWh * 100.0:0.0} %" : "";
+                status[p].text = e.Known
+                    ? (p == SolarParameter.Clouds && !sim.Parameters.IsMeasured(p) ? "No clouds on this planet's model." : "Measured.")
+                    : ordered ? $"Measuring with {SolarUnknowns.Instrument(p)}: {sim.MeasureProgress(p) * 100.0:0} %"
+                    : $"Estimate · spread {share} · measured with {SolarUnknowns.Instrument(p)}";
+                Button b = buttons[p];
+                bool latitude = p == SolarParameter.Latitude;
+                b.text = ordered ? "Cancel" : latitude ? "Sky view (V)" : "Measure";
+                b.SetEnabled(!e.Known && !latitude);
+            }
+        }
     }
 
     /// <summary>Network (N): workforce v2 stage E. Shows what it will do until it is built.</summary>

@@ -46,7 +46,7 @@ deposit's grade.
 
 - **A. Re-angle built panels (done):** sliders with the live gain in the panel's box; a robot drives out and turns
   the panel (task kind `Adjust`, save version 17). Sites under construction take new angles at once.
-- **B. Parameter book:** every parameter above has an estimate and a range; previews show ranges; the Research window
+- **B. Parameter book (done, except per-panel ranges in the panel box):** every parameter above has an estimate and a range; previews show ranges; the Research window
   lists the parameters with their effect on the selected tile. A `Measure` task for Research robots.
 - **C. Latitude puzzle:** the noon shadow, replacing the instant sky-view sighting as the main way.
 - **D. Light puzzles:** Langley plot (τ), shaded sensor (k), light log (clouds).

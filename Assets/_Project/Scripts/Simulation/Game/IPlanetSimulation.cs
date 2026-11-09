@@ -189,6 +189,30 @@ namespace KardashevAscent.Simulation.Game
 
         bool CancelAdjust(int tileId, int slot);
 
+        // Solar parameters (docs/design/solar-measurements.md, stage B)
+
+        /// <summary>Planet-wide parameters measured so far (latitude is in <see cref="Notebook"/>).</summary>
+        Solar.ParameterBook Parameters { get; }
+
+        /// <summary>Is this parameter known for this tile (latitude per tile, the rest for the planet)?</summary>
+        bool IsParameterKnown(Solar.SolarParameter parameter, int tileId);
+
+        /// <summary>Send a robot to measure a parameter, working on this tile. False if known, ordered or on water.</summary>
+        bool OrderMeasure(Solar.SolarParameter parameter, int tileId);
+        bool IsMeasureOrdered(Solar.SolarParameter parameter);
+        bool CancelMeasure(Solar.SolarParameter parameter);
+        /// <summary>0–1 while a robot measures (1 once known).</summary>
+        double MeasureProgress(Solar.SolarParameter parameter);
+
+        /// <summary>
+        /// What each parameter's uncertainty can change about a panel's yearly energy here (Earth years, Wh): the model
+        /// run at both ends of each range. Known parameters have no spread.
+        /// </summary>
+        System.Collections.Generic.List<Solar.ParameterEffect> ParameterEffects(int tileId, double tilt, double azimuth);
+
+        /// <summary>A measurement finished (the parameter).</summary>
+        event Action<Solar.SolarParameter> ParameterMeasured;
+
         /// <summary>A panel's angles now (radians), if a panel stands there.</summary>
         bool TryGetPanelAngles(int tileId, int slot, out double tilt, out double azimuth);
 
