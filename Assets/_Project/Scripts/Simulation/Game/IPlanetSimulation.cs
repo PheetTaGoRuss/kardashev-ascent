@@ -178,6 +178,20 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Turn a built panel (or a panel site) to new angles; free, nothing is rebuilt. Returns false if no panel is there or the angles are not allowed.</summary>
         bool SetPanelAngles(int tileId, int slot, double tilt, double azimuth);
 
+        /// <summary>
+        /// Ask a robot to turn a built panel to new angles (radians). The panel keeps its old angles until a robot
+        /// gets there. A site not yet built just takes the new angles. Asking again replaces the order.
+        /// </summary>
+        bool OrderPanelAngles(int tileId, int slot, double tilt, double azimuth);
+
+        /// <summary>The angles a panel is waiting to be turned to, if a robot has been asked to.</summary>
+        bool TryGetAdjustOrder(int tileId, int slot, out double tilt, out double azimuth);
+
+        bool CancelAdjust(int tileId, int slot);
+
+        /// <summary>A panel's angles now (radians), if a panel stands there.</summary>
+        bool TryGetPanelAngles(int tileId, int slot, out double tilt, out double azimuth);
+
         // Construction (see Construction and BuildCosts)
 
         /// <summary>Build parts on hand, Wh. Spare power is turned into parts; new buildings take their cost from them.</summary>
@@ -329,6 +343,9 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>A robot took down an ordered building (tile, slot); the slot is empty now.</summary>
         event Action<int, int> BuildingSalvaged;
+
+        /// <summary>A robot turned a panel to its ordered angles (tile, slot).</summary>
+        event Action<int, int> PanelAdjusted;
 
         /// <summary>A robot finished surveying a tile: its deposits are known now.</summary>
         event Action<int> TileSurveyed;

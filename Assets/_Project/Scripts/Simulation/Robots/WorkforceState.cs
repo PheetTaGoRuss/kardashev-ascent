@@ -119,6 +119,16 @@ namespace KardashevAscent.Simulation.Robots
         public TaskPriority Priority;
     }
 
+    /// <summary>A panel the player asked a robot to turn to new angles (save version 17), radians.</summary>
+    [Serializable]
+    public sealed class AdjustOrderRecord
+    {
+        public int Tile;
+        public int Slot;
+        public double Tilt;
+        public double Azimuth;
+    }
+
     /// <summary>A building the player asked a robot to take down (save version 7).</summary>
     [Serializable]
     public sealed class SalvageOrderRecord
