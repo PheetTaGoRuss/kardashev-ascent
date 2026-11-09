@@ -157,6 +157,9 @@ namespace KardashevAscent.Presentation.Planet
         public double Max => max;
         public KeyCode ToggleKey => toggleKey;
 
+        /// <summary>The unlit tile-colour material maps are drawn with.</summary>
+        public Material MapMaterial => mapMaterial;
+
         /// <summary>The colour ramp as a 256×1 texture, for a legend.</summary>
         public Texture2D LegendTexture => legendTexture != null ? legendTexture : (legendTexture = BuildLegendTexture());
 
