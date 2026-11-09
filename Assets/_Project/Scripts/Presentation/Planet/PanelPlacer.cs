@@ -73,6 +73,26 @@ namespace KardashevAscent.Presentation.Planet
         }
 
         bool dragging;
+        bool padsDirty = true;
+
+        /// <summary>Pad colour of a built-on slot: one colour per kind of building, fainter while it is a site.</summary>
+        Color32? PadTintOf(int s)
+        {
+            if (simulation == null || tile < 0)
+                return null;
+            BuildingType type = simulation.GetBuilding(tile, s);
+            if (type == BuildingType.None)
+                return null;
+            byte a = simulation.IsUnderConstruction(tile, s) ? (byte)90 : (byte)190;
+            switch (type)
+            {
+                case BuildingType.SolarPanel: return new Color32(70, 110, 200, a);
+                case BuildingType.Battery: return new Color32(70, 160, 100, a);
+                case BuildingType.Workshop: return new Color32(210, 140, 60, a);
+                case BuildingType.ChargingStation: return new Color32(200, 190, 70, a);
+                default: return new Color32(160, 160, 160, a);
+            }
+        }
 
         /// <summary>
         /// Start dragging a building of this kind from the build bar: it follows the mouse over the site and is built
@@ -215,6 +235,7 @@ namespace KardashevAscent.Presentation.Planet
         /// <summary>A construction site got its parts: swap its see-through look for the real building.</summary>
         void OnBuildingCompleted(int doneTile, int doneSlot)
         {
+            padsDirty = true;
             TileSite site = siteView.SiteFor(doneTile);
             if (placed.TryGetValue((doneTile, doneSlot), out Placed p))
             {
@@ -299,6 +320,7 @@ namespace KardashevAscent.Presentation.Planet
                 return;
             }
             ghost = new SolarPanelVisual("Panel Ghost", transform, ghostMaterial, ghostMaterial);
+            siteView.PadTint = PadTintOf;
             if (runner.Simulation != null)
                 OnSimulationCreated();
         }
@@ -366,11 +388,13 @@ namespace KardashevAscent.Presentation.Planet
                 }
             }
             previewDirty = true;
+            padsDirty = true;
         }
 
         void OnSiteChanged(int newTile)
         {
             tile = newTile;
+            padsDirty = true;
             slot = -1;
             bestReady = false;
             bestTask = null;
@@ -477,6 +501,11 @@ namespace KardashevAscent.Presentation.Planet
             }
 
             UpdateGhost();
+            if (padsDirty)
+            {
+                padsDirty = false;
+                siteView.RefreshPads();
+            }
         }
 
         bool SlotHasPanel => placed.ContainsKey((tile, Anchor(tile, slot)));
@@ -629,8 +658,8 @@ namespace KardashevAscent.Presentation.Planet
         }
 
         /// <summary>
-        /// Where a building over these slots stands: the middle of the footprint, sized so its area grows with the
-        /// number of slots (one slot's width × √n).
+        /// Where a building over these slots stands: the middle of the footprint, as wide as the footprint (from the
+        /// middle to the farthest slot's centre, plus half a slot each side), so the model fills its patch of the tile.
         /// </summary>
         void FootprintPlace(TileSite site, IReadOnlyList<int> slots, out Vector3 direction, out float size)
         {
@@ -641,7 +670,13 @@ namespace KardashevAscent.Presentation.Planet
                 sum += new Vector3(d.X, d.Y, d.Z);
             }
             direction = sum.normalized;
-            size = (float)site.Spacing * planet.Radius * panelScale * Mathf.Sqrt(Mathf.Max(1, slots.Count));
+            float reach = 0f;   // angle from the middle to the farthest slot centre, radians
+            foreach (int s in slots)
+            {
+                System.Numerics.Vector3 d = site.SlotDirections[s];
+                reach = Mathf.Max(reach, Vector3.Angle(direction, new Vector3(d.X, d.Y, d.Z)) * Mathf.Deg2Rad);
+            }
+            size = (2f * reach + (float)site.Spacing) * planet.Radius * 0.95f;
         }
 
         void ShowBattery(BatteryVisual visual, TileSite site, IReadOnlyList<int> slots)
@@ -718,6 +753,7 @@ namespace KardashevAscent.Presentation.Planet
         {
             if (simulation == null || tile < 0 || s < 0 || Occupied(s) || siteView.Site == null)
                 return false;
+            padsDirty = true;
             if (mode == BuildMode.Battery || mode == BuildMode.Workshop || mode == BuildMode.ChargingStation)
             {
                 if (!(mode == BuildMode.Battery ? simulation.PlaceBattery(tile, s)
@@ -765,6 +801,7 @@ namespace KardashevAscent.Presentation.Planet
         /// <summary>A building is gone (cancelled, or salvaged by a robot): drop its visual.</summary>
         void RemoveVisual(int atTile, int s)
         {
+            padsDirty = true;
             if (batteryVisuals.TryGetValue((atTile, s), out BatteryVisual yard))
             {
                 yard.Destroy();

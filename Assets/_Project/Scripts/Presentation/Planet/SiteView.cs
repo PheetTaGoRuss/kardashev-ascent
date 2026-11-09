@@ -40,6 +40,19 @@ namespace KardashevAscent.Presentation.Planet
 
         /// <summary>The site being shown, or null in the planet view.</summary>
         public TileSite Site { get; private set; }
+
+        /// <summary>
+        /// Colour of a slot's pad, or null for an empty slot. Built-on slots are drawn whole (no gap), so a building's
+        /// slots join into one patch the shape of its footprint.
+        /// </summary>
+        public Func<int, Color32?> PadTint { get; set; }
+
+        /// <summary>Redraw the pads (after something was built or taken down).</summary>
+        public void RefreshPads()
+        {
+            if (Site != null)
+                BuildPads();
+        }
         public int HoveredSlot { get; private set; } = -1;
         /// <summary>The selected slot when exactly one is selected, else −1.</summary>
         public int SelectedSlot { get; private set; } = -1;
@@ -395,7 +408,10 @@ namespace KardashevAscent.Presentation.Planet
             var triangles = new List<int>();
             float lift = (float)Site.Spacing * planet.Radius * 0.02f;
             for (int s = 0; s < Site.SlotCount; s++)
-                AddSlotShape(s, padScale, 0f, lift, vertices, normals, colors, triangles, padColor);
+            {
+                Color32? tint = PadTint?.Invoke(s);
+                AddSlotShape(s, tint.HasValue ? 1f : padScale, 0f, lift, vertices, normals, colors, triangles, tint ?? padColor);
+            }
             padsMesh.Clear();
             padsMesh.SetVertices(vertices);
             padsMesh.SetNormals(normals);
