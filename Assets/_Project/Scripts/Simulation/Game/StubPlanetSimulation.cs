@@ -446,6 +446,58 @@ namespace KardashevAscent.Simulation.Game
         public event Action<SolarParameter> PuzzleReady;
         readonly List<LatitudePuzzle> latitudePuzzles = new List<LatitudePuzzle>();
         public IReadOnlyList<LatitudePuzzle> LatitudePuzzles => latitudePuzzles;
+        readonly List<ParameterPuzzle> parameterPuzzles = new List<ParameterPuzzle>();
+        public IReadOnlyList<ParameterPuzzle> ParameterPuzzles => parameterPuzzles;
+
+        /// <summary>Parameters whose readings end in a puzzle (stages C and D); the rest are known when measured.</summary>
+        static bool HasPuzzle(SolarParameter p) =>
+            p == SolarParameter.OpticalDepth || p == SolarParameter.DiffuseShare || p == SolarParameter.Clouds;
+
+        public string AnswerParameterPuzzle(SolarParameter parameter, double value, out LatitudePuzzle.Grade grade)
+        {
+            grade = LatitudePuzzle.Grade.Wrong;
+            ParameterPuzzle p = parameterPuzzles.Find(q => q.Parameter == parameter);
+            if (p == null)
+                return "No readings waiting for that.";
+            grade = p.Check(value);
+            if (grade == LatitudePuzzle.Grade.Wrong)
+            {
+                p.Attempts++;
+                return $"{value:0.###} doesn't fit the readings. Check the formula and the units.";
+            }
+            parameterPuzzles.Remove(p);
+            if (grade == LatitudePuzzle.Grade.Precise)
+            {
+                Parameters.MarkMeasured(parameter);
+                ParameterMeasured?.Invoke(parameter);
+                return $"{SolarUnknowns.Name(parameter)} = {value:0.###}: known now, its spread is gone.";
+            }
+            Parameters.MarkRough(parameter);
+            ParameterMeasured?.Invoke(parameter);
+            return $"{SolarUnknowns.Name(parameter)} ≈ {value:0.###}: close, half its spread is left (measure again to pin it down).";
+        }
+
+        /// <summary>The readings a robot brings back for a light puzzle, from this planet's own values.</summary>
+        ParameterPuzzle MakeLightPuzzle(SolarParameter p, int tile)
+        {
+            double g0 = Orbit.ExtraterrestrialIrradiance(planet.Luminosity, planet.SemiMajorAxis);
+            double pressure = MakePanel(tile, 0.0, 0.0, 1.0, 1.0).PressureRatio;
+            switch (p)
+            {
+                case SolarParameter.OpticalDepth:
+                    return ParameterPuzzle.Haze(tile, g0, planet.OpticalDepth, pressure);
+                case SolarParameter.DiffuseShare:
+                    return ParameterPuzzle.Diffuse(tile, g0, planet.OpticalDepth, planet.DiffuseK, pressure);
+                default:
+                {
+                    // Clear-sky light on flat ground per day: a flat 1 m² panel's year without clouds, per unit efficiency.
+                    PanelParams flat = MakePanel(tile, 0.0, 0.0, 1.0, 1.0);
+                    double days = YearLengthHours > 0.0 && DayLengthHours > 0.0 ? YearLengthHours / DayLengthHours : 365.25;
+                    double kwhPerDay = AnnualYield.Calculate(planet, flat).EnergyWh / PanelEfficiency / 1000.0 / days;
+                    return ParameterPuzzle.Clouds(tile, kwhPerDay, CloudFactor(tile, CurrentMeanAnomaly()));
+                }
+            }
+        }
 
         public string AnswerLatitudePuzzle(int tileId, double latitudeDeg, out LatitudePuzzle.Grade grade)
         {
@@ -475,6 +527,8 @@ namespace KardashevAscent.Simulation.Game
         public bool OrderMeasure(SolarParameter parameter, int tileId)
         {
             if (parameter == SolarParameter.Latitude && latitudePuzzles.Exists(q => q.Tile == tileId))
+                return false;   // the readings are in: solve the puzzle
+            if (parameterPuzzles.Exists(q => q.Parameter == parameter))
                 return false;   // the readings are in: solve the puzzle
             if (tileId < 0 || tileId >= TileCount || GetTile(tileId).IsWater
                 || IsParameterKnown(parameter, tileId) || IsMeasureOrdered(parameter))
@@ -587,7 +641,13 @@ namespace KardashevAscent.Simulation.Game
                             break;
                     }
                 }
-                list.Add(new ParameterEffect(p, Math.Min(lo, hi), Math.Max(lo, hi), known));
+                bool rough = !known && Parameters.IsRough(p);
+                if (rough)
+                {
+                    lo = baseWh - (baseWh - lo) * ParameterBook.RoughRangeLeft;
+                    hi = baseWh + (hi - baseWh) * ParameterBook.RoughRangeLeft;
+                }
+                list.Add(new ParameterEffect(p, Math.Min(lo, hi), Math.Max(lo, hi), known, rough));
             }
             return list;
         }
@@ -726,6 +786,13 @@ namespace KardashevAscent.Simulation.Game
                 fieldWork.Remove(t);
                 measureOrders.Remove(mo);
                 Workforce.Release(t);
+                if (HasPuzzle(mo.Parameter))
+                {
+                    parameterPuzzles.RemoveAll(q => q.Parameter == mo.Parameter);
+                    parameterPuzzles.Add(MakeLightPuzzle(mo.Parameter, mo.Tile));
+                    PuzzleReady?.Invoke(mo.Parameter);
+                    continue;
+                }
                 if (mo.Parameter == SolarParameter.Latitude)
                 {
                     // The readings are in; the player works out the latitude (stage C).
@@ -1304,6 +1371,8 @@ namespace KardashevAscent.Simulation.Game
             state.SurveyOrders.AddRange(surveyOrders);
             state.MeasuredParameters = Parameters.Capture();
             state.LatitudePuzzles.AddRange(latitudePuzzles);
+            state.ParameterPuzzles.AddRange(parameterPuzzles);
+            state.RoughParameters = Parameters.CaptureRough();
             foreach (var mo in measureOrders)
                 state.MeasureOrders.Add(new MeasureOrderRecord { Parameter = mo.Parameter, Tile = mo.Tile });
             foreach (var mo in miningOrders)
@@ -1410,6 +1479,12 @@ namespace KardashevAscent.Simulation.Game
             miningOrders.Clear();
             fieldWork.Clear();
             Parameters.Restore(state.MeasuredParameters);   // version 18
+            Parameters.RestoreRough(state.RoughParameters);   // version 20
+            parameterPuzzles.Clear();
+            if (state.ParameterPuzzles != null)
+                foreach (ParameterPuzzle p in state.ParameterPuzzles)
+                    if (p != null && p.Tile >= 0 && p.Tile < TileCount)
+                        parameterPuzzles.Add(p);
             latitudePuzzles.Clear();
             if (state.LatitudePuzzles != null)   // version 19
                 foreach (LatitudePuzzle p in state.LatitudePuzzles)

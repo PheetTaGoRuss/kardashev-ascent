@@ -49,7 +49,7 @@ deposit's grade.
 - **B. Parameter book (done, except per-panel ranges in the panel box):** every parameter above has an estimate and a range; previews show ranges; the Research window
   lists the parameters with their effect on the selected tile. A `Measure` task for Research robots.
 - **C. Latitude puzzle (done):** a robot takes noon-shadow readings; the player works out h and φ in the Research window. The sky view (V) still works.
-- **D. Light puzzles:** Langley plot (τ), shaded sensor (k), light log (clouds).
+- **D. Light puzzles (done):** Langley plot (τ), shaded sensor (k), light log (clouds). Within 5 %: known; within 15 %: half the range is left (can be measured again).
 - **E. Ground and heat puzzles:** albedo, air temperature, dust.
 - **F. Star spectrum puzzle**, and the ground survey puzzle.
 

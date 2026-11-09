@@ -72,13 +72,16 @@ namespace KardashevAscent.Simulation.Solar
         public readonly SolarParameter Parameter;
         public readonly double LowWh, HighWh;
         public readonly bool Known;
+        /// <summary>Measured roughly: half the range is left.</summary>
+        public readonly bool Rough;
 
-        public ParameterEffect(SolarParameter parameter, double lowWh, double highWh, bool known)
+        public ParameterEffect(SolarParameter parameter, double lowWh, double highWh, bool known, bool rough = false)
         {
             Parameter = parameter;
             LowWh = lowWh;
             HighWh = highWh;
             Known = known;
+            Rough = rough;
         }
 
         /// <summary>Half the spread, Wh.</summary>
@@ -88,10 +91,47 @@ namespace KardashevAscent.Simulation.Solar
     /// <summary>Which planet-wide parameters have been measured (latitude lives in <see cref="SkyNotebook"/>).</summary>
     public sealed class ParameterBook
     {
-        readonly HashSet<SolarParameter> measured = new HashSet<SolarParameter>();
+        /// <summary>Share of the range left after a rough measurement. TBD.</summary>
+        public const double RoughRangeLeft = 0.5;
 
+        readonly HashSet<SolarParameter> measured = new HashSet<SolarParameter>();
+        readonly HashSet<SolarParameter> rough = new HashSet<SolarParameter>();
+
+        /// <summary>Measured precisely (no range left).</summary>
         public bool IsMeasured(SolarParameter p) => measured.Contains(p);
-        public void MarkMeasured(SolarParameter p) => measured.Add(p);
+        /// <summary>Measured roughly (part of the range left; can be measured again).</summary>
+        public bool IsRough(SolarParameter p) => rough.Contains(p);
+
+        public void MarkMeasured(SolarParameter p)
+        {
+            measured.Add(p);
+            rough.Remove(p);
+        }
+
+        public void MarkRough(SolarParameter p)
+        {
+            if (!measured.Contains(p))
+                rough.Add(p);
+        }
+
+        public List<int> CaptureRough()
+        {
+            var list = new List<int>();
+            foreach (SolarParameter p in rough)
+                list.Add((int)p);
+            list.Sort();
+            return list;
+        }
+
+        public void RestoreRough(IEnumerable<int> values)
+        {
+            rough.Clear();
+            if (values == null)
+                return;
+            foreach (int v in values)
+                if (v >= 0 && v <= (int)SolarParameter.Spectrum && !measured.Contains((SolarParameter)v))
+                    rough.Add((SolarParameter)v);
+        }
 
         public List<int> Capture()
         {
@@ -105,6 +145,7 @@ namespace KardashevAscent.Simulation.Solar
         public void Restore(IEnumerable<int> values)
         {
             measured.Clear();
+            rough.Clear();
             if (values == null)
                 return;
             foreach (int v in values)
