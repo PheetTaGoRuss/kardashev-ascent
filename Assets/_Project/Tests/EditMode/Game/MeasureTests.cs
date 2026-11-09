@@ -61,11 +61,10 @@ namespace KardashevAscent.Simulation.Tests.Game
         }
 
         [Test]
-        public void Latitude_IsNotOrderedHere_AndCancelWorks()
+        public void CancelWorks()
         {
             var sim = Create();
             int t = sim.BaseTileId;
-            Assert.IsFalse(sim.OrderMeasure(SolarParameter.Latitude, t), "latitude comes from the sky view until its puzzle");
             sim.Workforce.Pause(sim.Workforce.Robots[0].GroupId);
             Assert.IsTrue(sim.OrderMeasure(SolarParameter.Dust, t));
             Assert.IsTrue(sim.CancelMeasure(SolarParameter.Dust));
@@ -92,7 +91,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             a.Workforce.Pause(a.Workforce.Robots[0].GroupId);
             a.OrderMeasure(SolarParameter.Albedo, t);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(18, state.Version);
+            Assert.AreEqual(19, state.Version);
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));
             Assert.IsTrue(b.Parameters.IsMeasured(SolarParameter.Spectrum));

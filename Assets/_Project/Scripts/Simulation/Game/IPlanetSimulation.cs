@@ -213,6 +213,18 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>A measurement finished (the parameter).</summary>
         event Action<Solar.SolarParameter> ParameterMeasured;
 
+        /// <summary>Shadow readings waiting for the player to work out the latitude (stage C).</summary>
+        System.Collections.Generic.IReadOnlyList<Solar.LatitudePuzzle> LatitudePuzzles { get; }
+
+        /// <summary>
+        /// Answer a latitude puzzle (degrees, + north). A close answer fixes the tile's latitude; a wrong one keeps
+        /// the puzzle open. Returns what happened, for the player.
+        /// </summary>
+        string AnswerLatitudePuzzle(int tileId, double latitudeDeg, out Solar.LatitudePuzzle.Grade grade);
+
+        /// <summary>A robot finished readings and a puzzle is waiting.</summary>
+        event Action<Solar.SolarParameter> PuzzleReady;
+
         /// <summary>A panel's angles now (radians), if a panel stands there.</summary>
         bool TryGetPanelAngles(int tileId, int slot, out double tilt, out double azimuth);
 

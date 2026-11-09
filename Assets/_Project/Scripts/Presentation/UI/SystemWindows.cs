@@ -199,7 +199,9 @@ namespace KardashevAscent.Presentation.UI
         public override KeyCode Key => KeyCode.T;
         public override int Order => 40;
 
-        Label where, total;
+        Label where, total, puzzleHead, solvedText;
+        VisualElement puzzles;
+        int shownPuzzles = -1;
         VisualElement rows;
         readonly Dictionary<SolarParameter, Label> status = new Dictionary<SolarParameter, Label>();
         readonly Dictionary<SolarParameter, Button> buttons = new Dictionary<SolarParameter, Button>();
@@ -210,6 +212,11 @@ namespace KardashevAscent.Presentation.UI
 
         protected override void BuildBody()
         {
+            puzzleHead = Heading("PUZZLES");
+            puzzles = new VisualElement();
+            Body.Add(puzzles);
+            solvedText = Text();
+            solvedText.AddToClassList("good");
             where = Text();
             total = Text();
             Heading("WHAT A PANEL HERE DEPENDS ON");
@@ -236,8 +243,8 @@ namespace KardashevAscent.Presentation.UI
             Text("caption").text =
                 "Spread = how far the yearly energy of a 30°-tilted panel facing the equator could be off while the value is " +
                 "only an estimate (the model run at both ends of the range). A robot measures one value at a time; research " +
-                "robots are twice as quick as General ones. Next: each measurement ends with a puzzle where you work the value " +
-                "out from the readings. Ranges and hours are placeholder values.";
+                "robots are twice as quick as General ones. Latitude ends with a puzzle: work it out from the robot's readings " +
+                "(the sky view, V, still works too). The other values get their puzzles next. Ranges and hours are placeholder values.";
         }
 
         IPlanetSimulation lastSim;
@@ -246,6 +253,13 @@ namespace KardashevAscent.Presentation.UI
             if (picker == null) picker = Object.FindFirstObjectByType<KardashevAscent.Presentation.Planet.TilePicker>();
             int t = picker != null ? picker.SelectedTile : -1;
             return t >= 0 && !sim.GetTile(t).IsWater ? t : sim.BaseTileId;
+        }
+
+        static bool HasPuzzle(IPlanetSimulation sim, int tile)
+        {
+            foreach (LatitudePuzzle q in sim.LatitudePuzzles)
+                if (q.Tile == tile) return true;
+            return false;
         }
 
         void Toggle(SolarParameter p)
@@ -259,6 +273,14 @@ namespace KardashevAscent.Presentation.UI
         protected override void RefreshBody(IPlanetSimulation sim)
         {
             lastSim = sim;
+            if (sim.LatitudePuzzles.Count != shownPuzzles)
+            {
+                shownPuzzles = sim.LatitudePuzzles.Count;
+                puzzles.Clear();
+                foreach (LatitudePuzzle p in sim.LatitudePuzzles)
+                    puzzles.Add(new LatitudePuzzleView(sim, p, result => { solvedText.text = result; effectsTile = -2; }));
+                puzzleHead.style.display = shownPuzzles > 0 || solvedText.text.Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+            }
             int tile = Tile(sim);
             double lat = sim.Sphere.Latitude(tile);
             if (tile != effectsTile || Time.unscaledTime >= nextEffects)
@@ -289,9 +311,9 @@ namespace KardashevAscent.Presentation.UI
                     : ordered ? $"Measuring with {SolarUnknowns.Instrument(p)}: {sim.MeasureProgress(p) * 100.0:0} %"
                     : $"Estimate · spread {share} · measured with {SolarUnknowns.Instrument(p)}";
                 Button b = buttons[p];
-                bool latitude = p == SolarParameter.Latitude;
-                b.text = ordered ? "Cancel" : latitude ? "Sky view (V)" : "Measure";
-                b.SetEnabled(!e.Known && !latitude);
+                bool waitingPuzzle = p == SolarParameter.Latitude && HasPuzzle(sim, tile);
+                b.text = ordered ? "Cancel" : waitingPuzzle ? "Solve above" : "Measure";
+                b.SetEnabled(!e.Known && !waitingPuzzle);
             }
         }
     }
