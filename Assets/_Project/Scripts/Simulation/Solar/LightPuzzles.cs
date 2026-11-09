@@ -8,6 +8,10 @@ namespace KardashevAscent.Simulation.Solar
     /// - Haze, Langley method: DNI = G₀·e^(−τ·m), so τ = ln(G₀ / DNI) / m (or the slope of ln DNI against m).
     /// - Diffuse share: DHI = k·G₀·sin h·(1 − e^(−τ·m)) and e^(−τ·m) = DNI / G₀, so k = DHI / (G₀·sin h·(1 − DNI / G₀)).
     /// - Clouds: the share of clear-sky light that got through, f = Σ measured / Σ clear-sky over the logged days.
+    /// Stage E (ground and heat):
+    /// - Ground reflectance: ρ = Σ reflected / Σ incoming, from light sensors facing down and up.
+    /// - Air temperature: the daily mean of eight weather-station readings, three hours apart.
+    /// - Dust: the share of light a dusty reference cell loses next to a clean one, 1 − dusty / clean.
     /// Answers are checked against what the readings give (rounding is not the player's fault).
     /// </summary>
     [Serializable]
@@ -26,6 +30,12 @@ namespace KardashevAscent.Simulation.Solar
         public double[] Dhi = new double[0];
         public double[] ClearKwh = new double[0];
         public double[] MeasuredKwh = new double[0];
+        public double[] Incoming = new double[0];
+        public double[] Reflected = new double[0];
+        public double[] HourOfDay = new double[0];
+        public double[] TemperatureC = new double[0];
+        public double[] CleanW = new double[0];
+        public double[] DustyW = new double[0];
         public int Attempts;
 
         /// <summary>Sun altitudes the robot reads at, degrees.</summary>
@@ -82,6 +92,59 @@ namespace KardashevAscent.Simulation.Solar
             return p;
         }
 
+        /// <summary>Air temperature: day–night swing around the mean, ± °C (placeholder until climate is modelled).</summary>
+        public const double DaySwingC = 6.0;
+
+        public static ParameterPuzzle Albedo(int tile, double g0, double albedo)
+        {
+            var p = new ParameterPuzzle { Parameter = SolarParameter.Albedo, Tile = tile, G0 = Math.Round(g0) };
+            double[] share = { 0.62, 0.45, 0.22 };   // morning to afternoon: incoming light on flat ground, × G₀
+            p.Incoming = new double[share.Length];
+            p.Reflected = new double[share.Length];
+            for (int i = 0; i < share.Length; i++)
+            {
+                p.Incoming[i] = Math.Round(g0 * share[i]);
+                p.Reflected[i] = Math.Round(p.Incoming[i] * albedo, 1);
+            }
+            return p;
+        }
+
+        public static ParameterPuzzle AirTemperature(int tile, double meanC)
+        {
+            var p = new ParameterPuzzle { Parameter = SolarParameter.AirTemperature, Tile = tile };
+            p.HourOfDay = new double[8];
+            p.TemperatureC = new double[8];
+            for (int i = 0; i < 8; i++)
+            {
+                double hour = 3.0 * i;   // warmest mid-afternoon
+                p.HourOfDay[i] = hour;
+                p.TemperatureC[i] = Math.Round(meanC + DaySwingC * Math.Cos(2.0 * Math.PI * (hour - 15.0) / 24.0), 1);
+            }
+            return p;
+        }
+
+        public static ParameterPuzzle Dust(int tile, double g0, double dustShare)
+        {
+            var p = new ParameterPuzzle { Parameter = SolarParameter.Dust, Tile = tile, G0 = Math.Round(g0) };
+            double[] share = { 0.55, 0.70, 0.40 };
+            p.CleanW = new double[share.Length];
+            p.DustyW = new double[share.Length];
+            for (int i = 0; i < share.Length; i++)
+            {
+                double clean = g0 * share[i] * 0.2;   // a 1 m² cell at 20 %
+                p.CleanW[i] = Math.Round(clean, 1);
+                p.DustyW[i] = Math.Round(clean * (1.0 - dustShare), 1);
+            }
+            return p;
+        }
+
+        /// <summary>Temperature and dust are checked in absolute terms (their answers can be near zero).</summary>
+        public bool AbsoluteCheck => Parameter == SolarParameter.AirTemperature || Parameter == SolarParameter.Dust;
+
+        /// <summary>Precise and rough limits: a share of the answer, or absolute (°C, or share of light for dust). TBD.</summary>
+        public double PreciseLimit => Parameter == SolarParameter.AirTemperature ? 1.0 : Parameter == SolarParameter.Dust ? 0.005 : PreciseShare;
+        public double RoughLimit => Parameter == SolarParameter.AirTemperature ? 3.0 : Parameter == SolarParameter.Dust ? 0.015 : RoughShare;
+
         /// <summary>The value the readings give.</summary>
         public double Answer
         {
@@ -114,6 +177,24 @@ namespace KardashevAscent.Simulation.Solar
                         for (int d = 0; d < ClearKwh.Length; d++) { clear += ClearKwh[d]; measured += MeasuredKwh[d]; }
                         return clear > 0.0 ? measured / clear : 1.0;
                     }
+                    case SolarParameter.Albedo:
+                    {
+                        double incoming = 0.0, reflected = 0.0;
+                        for (int i = 0; i < Incoming.Length; i++) { incoming += Incoming[i]; reflected += Reflected[i]; }
+                        return incoming > 0.0 ? reflected / incoming : 0.0;
+                    }
+                    case SolarParameter.AirTemperature:
+                    {
+                        double sum = 0.0;
+                        foreach (double t in TemperatureC) sum += t;
+                        return TemperatureC.Length > 0 ? sum / TemperatureC.Length : 0.0;
+                    }
+                    case SolarParameter.Dust:
+                    {
+                        double clean = 0.0, dusty = 0.0;
+                        for (int i = 0; i < CleanW.Length; i++) { clean += CleanW[i]; dusty += DustyW[i]; }
+                        return clean > 0.0 ? 1.0 - dusty / clean : 0.0;
+                    }
                     default:
                         return double.NaN;
                 }
@@ -123,9 +204,9 @@ namespace KardashevAscent.Simulation.Solar
         public LatitudePuzzle.Grade Check(double value)
         {
             double answer = Answer;
-            double error = Math.Abs(value - answer) / Math.Max(1e-9, Math.Abs(answer));
-            return error <= PreciseShare ? LatitudePuzzle.Grade.Precise
-                 : error <= RoughShare ? LatitudePuzzle.Grade.Rough : LatitudePuzzle.Grade.Wrong;
+            double error = AbsoluteCheck ? Math.Abs(value - answer) : Math.Abs(value - answer) / Math.Max(1e-9, Math.Abs(answer));
+            return error <= PreciseLimit ? LatitudePuzzle.Grade.Precise
+                 : error <= RoughLimit ? LatitudePuzzle.Grade.Rough : LatitudePuzzle.Grade.Wrong;
         }
     }
 }

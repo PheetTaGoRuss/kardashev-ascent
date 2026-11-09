@@ -59,6 +59,40 @@ namespace KardashevAscent.Presentation.UI
                                "the ground, which the sun meets at sin h:\n  DHI = k · G₀ · sin h · (1 − DNI / G₀)\n" +
                                "So k = DHI / (G₀ · sin h · (1 − DNI / G₀)). Work it out for each row and average.";
                     break;
+                case SolarParameter.Albedo:
+                    title = "Ground reflectance ρ_g";
+                    intro = "A robot set two light sensors over open ground: one facing up (light coming in) and one facing " +
+                            "down (light the ground throws back), read three times through the day.";
+                    head.AddRange(new[] { "reading", "incoming (up)", "reflected (down)" });
+                    for (int i = 0; i < puzzle.Incoming.Length; i++)
+                        rows.Add(new[] { $"{i + 1}", $"{puzzle.Incoming[i]:0} W/m²", $"{puzzle.Reflected[i]:0.0} W/m²" });
+                    ask = "Reflectance ρ (0–1):";
+                    formulas = "Reflectance is the share of the light that bounces back: ρ = reflected / incoming.\n" +
+                               "Add up all readings first (single readings carry small sensor errors): ρ = Σ reflected / Σ incoming.\n" +
+                               "Tilted panels catch some of this light from the ground in front of them.";
+                    break;
+                case SolarParameter.AirTemperature:
+                    title = "Air temperature: the weather station";
+                    intro = "A robot set up a weather station and read it every 3 hours through one day.";
+                    head.AddRange(new[] { "time", "air temperature", "" });
+                    for (int i = 0; i < puzzle.TemperatureC.Length; i++)
+                        rows.Add(new[] { $"{puzzle.HourOfDay[i]:00}:00", $"{puzzle.TemperatureC[i]:0.0} °C", "" });
+                    ask = "Daily mean temperature (°C):";
+                    formulas = "The readings are evenly spaced through the whole day, so the daily mean is their average:\n" +
+                               "  T_mean = (sum of the 8 readings) / 8.\n" +
+                               "Panels run hotter than the air; each °C over 25 °C costs a silicon cell about 0.4 % of its output.";
+                    break;
+                case SolarParameter.Dust:
+                    title = "Dust on panels";
+                    intro = "A robot left two reference cells side by side for a week: one wiped clean every day, one left " +
+                            "alone. Their output was read three times.";
+                    head.AddRange(new[] { "reading", "clean cell", "dusty cell" });
+                    for (int i = 0; i < puzzle.CleanW.Length; i++)
+                        rows.Add(new[] { $"{i + 1}", $"{puzzle.CleanW[i]:0.0} W", $"{puzzle.DustyW[i]:0.0} W" });
+                    ask = "Share of light the dust blocks (0–1):";
+                    formulas = "The dusty cell loses a share of its light: f_dust = 1 − (dusty / clean).\n" +
+                               "Use the sums of all readings: f_dust = 1 − Σ dusty / Σ clean. 0 means the dust does nothing.";
+                    break;
                 default:
                     title = "Clouds: the light log";
                     intro = "A robot logged the light on flat ground for five days, next to what a clear sky would have given.";

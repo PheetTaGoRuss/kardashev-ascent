@@ -450,8 +450,10 @@ namespace KardashevAscent.Simulation.Game
         public IReadOnlyList<ParameterPuzzle> ParameterPuzzles => parameterPuzzles;
 
         /// <summary>Parameters whose readings end in a puzzle (stages C and D); the rest are known when measured.</summary>
-        static bool HasPuzzle(SolarParameter p) =>
-            p == SolarParameter.OpticalDepth || p == SolarParameter.DiffuseShare || p == SolarParameter.Clouds;
+        static bool HasPuzzle(SolarParameter p) => p != SolarParameter.Latitude && p != SolarParameter.Spectrum;
+
+        /// <summary>Dust the model's panels carry: none (robots keep them clean). A dust model would set this per planet.</summary>
+        const double ModelDustShare = 0.0;
 
         public string AnswerParameterPuzzle(SolarParameter parameter, double value, out LatitudePuzzle.Grade grade)
         {
@@ -488,6 +490,12 @@ namespace KardashevAscent.Simulation.Game
                     return ParameterPuzzle.Haze(tile, g0, planet.OpticalDepth, pressure);
                 case SolarParameter.DiffuseShare:
                     return ParameterPuzzle.Diffuse(tile, g0, planet.OpticalDepth, planet.DiffuseK, pressure);
+                case SolarParameter.Albedo:
+                    return ParameterPuzzle.Albedo(tile, g0, MakePanel(tile, 0.0, 0.0, 1.0, 1.0).Albedo);
+                case SolarParameter.AirTemperature:
+                    return ParameterPuzzle.AirTemperature(tile, planet.AirTemperatureC);
+                case SolarParameter.Dust:
+                    return ParameterPuzzle.Dust(tile, g0, ModelDustShare);
                 default:
                 {
                     // Clear-sky light on flat ground per day: a flat 1 m² panel's year without clouds, per unit efficiency.

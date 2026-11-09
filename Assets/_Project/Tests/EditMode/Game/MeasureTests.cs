@@ -46,18 +46,18 @@ namespace KardashevAscent.Simulation.Tests.Game
             int t = sim.BaseTileId;
             var heard = new List<SolarParameter>();
             sim.ParameterMeasured += heard.Add;
-            Assert.IsTrue(sim.OrderMeasure(SolarParameter.AirTemperature, t));
-            Assert.IsFalse(sim.OrderMeasure(SolarParameter.AirTemperature, t), "already ordered");
-            Assert.IsTrue(sim.IsMeasureOrdered(SolarParameter.AirTemperature));
-            for (int i = 0; i < 40 && !sim.Parameters.IsMeasured(SolarParameter.AirTemperature); i++)
+            Assert.IsTrue(sim.OrderMeasure(SolarParameter.Spectrum, t));
+            Assert.IsFalse(sim.OrderMeasure(SolarParameter.Spectrum, t), "already ordered");
+            Assert.IsTrue(sim.IsMeasureOrdered(SolarParameter.Spectrum));
+            for (int i = 0; i < 40 && !sim.Parameters.IsMeasured(SolarParameter.Spectrum); i++)
                 sim.Tick(1.0);
-            Assert.IsTrue(sim.Parameters.IsMeasured(SolarParameter.AirTemperature), "the General robot measured it");
-            Assert.AreEqual(1.0, sim.MeasureProgress(SolarParameter.AirTemperature));
-            CollectionAssert.AreEqual(new[] { SolarParameter.AirTemperature }, heard);
-            ParameterEffect e = Effect(sim.ParameterEffects(t, 0.5, Math.PI), SolarParameter.AirTemperature);
+            Assert.IsTrue(sim.Parameters.IsMeasured(SolarParameter.Spectrum), "the General robot measured it");
+            Assert.AreEqual(1.0, sim.MeasureProgress(SolarParameter.Spectrum));
+            CollectionAssert.AreEqual(new[] { SolarParameter.Spectrum }, heard);
+            ParameterEffect e = Effect(sim.ParameterEffects(t, 0.5, Math.PI), SolarParameter.Spectrum);
             Assert.IsTrue(e.Known);
             Assert.AreEqual(0.0, e.HalfRangeWh, 1e-9);
-            Assert.IsFalse(sim.OrderMeasure(SolarParameter.AirTemperature, t), "known now");
+            Assert.IsFalse(sim.OrderMeasure(SolarParameter.Spectrum, t), "known now");
         }
 
         [Test]
