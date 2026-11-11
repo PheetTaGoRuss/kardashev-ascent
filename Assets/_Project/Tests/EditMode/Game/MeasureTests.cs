@@ -49,9 +49,13 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.IsTrue(sim.OrderMeasure(SolarParameter.Spectrum, t));
             Assert.IsFalse(sim.OrderMeasure(SolarParameter.Spectrum, t), "already ordered");
             Assert.IsTrue(sim.IsMeasureOrdered(SolarParameter.Spectrum));
-            for (int i = 0; i < 40 && !sim.Parameters.IsMeasured(SolarParameter.Spectrum); i++)
+            for (int i = 0; i < 40 && sim.ParameterPuzzles.Count == 0; i++)
                 sim.Tick(1.0);
-            Assert.IsTrue(sim.Parameters.IsMeasured(SolarParameter.Spectrum), "the General robot measured it");
+            Assert.AreEqual(1, sim.ParameterPuzzles.Count, "the General robot brought the spectrometer reading back");
+            Assert.IsFalse(sim.Parameters.IsMeasured(SolarParameter.Spectrum), "not until the player works it out");
+            sim.AnswerParameterPuzzle(SolarParameter.Spectrum, sim.ParameterPuzzles[0].Answer, out LatitudePuzzle.Grade g);
+            Assert.AreEqual(LatitudePuzzle.Grade.Precise, g);
+            Assert.IsTrue(sim.Parameters.IsMeasured(SolarParameter.Spectrum));
             Assert.AreEqual(1.0, sim.MeasureProgress(SolarParameter.Spectrum));
             CollectionAssert.AreEqual(new[] { SolarParameter.Spectrum }, heard);
             ParameterEffect e = Effect(sim.ParameterEffects(t, 0.5, Math.PI), SolarParameter.Spectrum);
@@ -91,7 +95,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             a.Workforce.Pause(a.Workforce.Robots[0].GroupId);
             a.OrderMeasure(SolarParameter.Albedo, t);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(20, state.Version);
+            Assert.AreEqual(21, state.Version);
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));
             Assert.IsTrue(b.Parameters.IsMeasured(SolarParameter.Spectrum));

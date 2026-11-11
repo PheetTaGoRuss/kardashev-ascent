@@ -270,7 +270,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             a.Workforce.Reserve(b.Id, new WorkTask(TaskKind.Mine, t, (int)Material.Rock));
             r.ResumeTask = new WorkTask(TaskKind.Build, t, 3);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(20, state.Version);
+            Assert.AreEqual(21, state.Version);
             var c = new StubPlanetSimulation(Sphere, Surface, Earthlike);
             Assert.IsTrue(c.RestoreState(state));
             Assert.AreEqual(new WorkTask(TaskKind.Mine, t, (int)Material.Rock), c.Workforce.GetRobot(b.Id).ReservedTask);

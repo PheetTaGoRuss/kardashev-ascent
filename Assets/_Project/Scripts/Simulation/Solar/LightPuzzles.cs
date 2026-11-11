@@ -12,6 +12,9 @@ namespace KardashevAscent.Simulation.Solar
     /// - Ground reflectance: ρ = Σ reflected / Σ incoming, from light sensors facing down and up.
     /// - Air temperature: the daily mean of eight weather-station readings, three hours apart.
     /// - Dust: the share of light a dusty reference cell loses next to a clean one, 1 − dusty / clean.
+    /// Stage F (the star):
+    /// - Spectrum: the wavelength the starlight peaks at, then Wien's law T = b / λ_peak (b = 2898 µm·K) gives the
+    ///   star's temperature, which sets how well the cell material suits the star (f_spec).
     /// Answers are checked against what the readings give (rounding is not the player's fault).
     /// </summary>
     [Serializable]
@@ -36,6 +39,9 @@ namespace KardashevAscent.Simulation.Solar
         public double[] TemperatureC = new double[0];
         public double[] CleanW = new double[0];
         public double[] DustyW = new double[0];
+        /// <summary>Spectrometer: wavelengths (nm) and the brightness read at each (relative).</summary>
+        public double[] WavelengthNm = new double[0];
+        public double[] Brightness = new double[0];
         public int Attempts;
 
         /// <summary>Sun altitudes the robot reads at, degrees.</summary>
@@ -138,6 +144,34 @@ namespace KardashevAscent.Simulation.Solar
             return p;
         }
 
+        /// <summary>Wien's displacement constant b, µm·K (the puzzle gives it in the formulas).</summary>
+        public const double WienMicronK = 2898.0;
+
+        public static ParameterPuzzle Spectrum(int tile, double starTemperatureK)
+        {
+            var p = new ParameterPuzzle { Parameter = SolarParameter.Spectrum, Tile = tile };
+            double peak = SpectralMatch.WienPeakNm(starTemperatureK);
+            // Readings around the peak, on a Planck curve: the peak reading is the one to find.
+            double[] steps = { 0.55, 0.7, 0.85, 1.0, 1.2, 1.45, 1.8 };
+            p.WavelengthNm = new double[steps.Length];
+            p.Brightness = new double[steps.Length];
+            for (int i = 0; i < steps.Length; i++)
+            {
+                double lambda = Math.Round(peak * steps[i] / 10.0) * 10.0;   // a spectrometer's 10 nm bins
+                p.WavelengthNm[i] = lambda;
+                p.Brightness[i] = Math.Round(Planck(lambda, starTemperatureK) / Planck(peak, starTemperatureK) * 100.0, 1);
+            }
+            return p;
+        }
+
+        /// <summary>Planck spectral radiance per wavelength (relative; constants dropped).</summary>
+        static double Planck(double lambdaNm, double tK)
+        {
+            double lambda = lambdaNm * 1e-9;
+            const double h = 6.62607015e-34, c = 2.99792458e8, kB = 1.380649e-23;
+            return 1.0 / (Math.Pow(lambda, 5) * (Math.Exp(h * c / (lambda * kB * tK)) - 1.0));
+        }
+
         /// <summary>Temperature and dust are checked in absolute terms (their answers can be near zero).</summary>
         public bool AbsoluteCheck => Parameter == SolarParameter.AirTemperature || Parameter == SolarParameter.Dust;
 
@@ -192,6 +226,14 @@ namespace KardashevAscent.Simulation.Solar
                         double sum = 0.0;
                         foreach (double t in TemperatureC) sum += t;
                         return TemperatureC.Length > 0 ? sum / TemperatureC.Length : 0.0;
+                    }
+                    case SolarParameter.Spectrum:
+                    {
+                        // The brightest bin is the peak: T = b / λ_peak.
+                        int best = 0;
+                        for (int i = 1; i < Brightness.Length; i++)
+                            if (Brightness[i] > Brightness[best]) best = i;
+                        return WavelengthNm.Length > 0 ? WienMicronK / (WavelengthNm[best] / 1000.0) : double.NaN;
                     }
                     case SolarParameter.Dust:
                     {

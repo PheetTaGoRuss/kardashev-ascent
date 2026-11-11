@@ -93,7 +93,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             a.Parameters.MarkRough(SolarParameter.Dust);
             MeasureUntilPuzzle(a, SolarParameter.OpticalDepth);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(20, state.Version);
+            Assert.AreEqual(21, state.Version);
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));
             Assert.AreEqual(1, b.ParameterPuzzles.Count);

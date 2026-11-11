@@ -160,6 +160,13 @@ namespace KardashevAscent.Presentation.UI
         /// What is known about the tile's ground (phase 3a): rock always; the rest after a robot surveys it. Buttons
         /// order a survey or keep robots mining a material here (click again to stop).
         /// </summary>
+        static bool CoresWaiting(IPlanetSimulation sim, int tile)
+        {
+            foreach (KardashevAscent.Simulation.Solar.SurveyPuzzle p in sim.SurveyPuzzles)
+                if (p.Tile == tile) return true;
+            return false;
+        }
+
         void RefreshGround(IPlanetSimulation sim, int tile)
         {
             if (ground == null || groundActions == null)
@@ -173,12 +180,18 @@ namespace KardashevAscent.Presentation.UI
             else if (!surveyed)
                 text = sim.IsSurveyOrdered(tile)
                     ? $"Survey under way: {sim.SurveyProgress(tile) * 100.0:0} % (a robot takes cores and scans the ground).\nRock: yes, everywhere on land."
+                    : CoresWaiting(sim, tile)
+                    ? "Cores are in: estimate the grades in Research (T) to finish the survey.\nRock: yes, everywhere on land."
                     : "Not surveyed: only rock is known. Survey to find iron, water ice, copper or lithium.";
             else
             {
                 text = "";
+                bool rough = sim.IsRoughSurvey(tile);
                 foreach (Deposit d in map.At(tile))
-                    text += $"{Materials.Name(d.Material)}: grade {d.Grade:0.00}{(sim.IsMiningOrdered(tile, d.Material) ? " · being mined" : "")}\n";
+                    text += $"{Materials.Name(d.Material)}: grade {(rough && d.Material != Material.Rock ? "±" : "")}{d.Grade:0.00}" +
+                            $"{(sim.IsMiningOrdered(tile, d.Material) ? " · being mined" : "")}\n";
+                if (rough)
+                    text += "± : surveyed from a rough estimate (the mine pays by the real grade).\n";
                 if (map.At(tile).Count <= 2)
                     text += "No water, copper or lithium here.\n";
                 text += $"Grade 1 = an ordinary deposit on Earth. This planet: metals ×{map.Chemistry.MetalFactor:0.00} " +
@@ -189,7 +202,7 @@ namespace KardashevAscent.Presentation.UI
             text += $"\nOn hand: {Stock(sim)}";
             ground.text = text;
 
-            string shape = $"{tile}|{water}|{surveyed}|{sim.IsSurveyOrdered(tile)}";
+            string shape = $"{tile}|{water}|{surveyed}|{sim.IsSurveyOrdered(tile)}|{CoresWaiting(sim, tile)}";
             foreach (Material m in Materials.Mined)
                 shape += sim.IsMiningOrdered(tile, m) ? "1" : "0";
             if (shape == groundShape)
@@ -198,7 +211,7 @@ namespace KardashevAscent.Presentation.UI
             groundActions.Clear();
             if (water)
                 return;
-            if (!surveyed)
+            if (!surveyed && !CoresWaiting(sim, tile))
             {
                 bool ordered = sim.IsSurveyOrdered(tile);
                 AddGroundButton(ordered ? "Cancel survey" : "Survey (robot)", ordered,
