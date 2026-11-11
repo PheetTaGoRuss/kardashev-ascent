@@ -142,7 +142,11 @@ namespace KardashevAscent.Simulation.Solar
         public bool AbsoluteCheck => Parameter == SolarParameter.AirTemperature || Parameter == SolarParameter.Dust;
 
         /// <summary>Precise and rough limits: a share of the answer, or absolute (°C, or share of light for dust). TBD.</summary>
-        public double PreciseLimit => Parameter == SolarParameter.AirTemperature ? 1.0 : Parameter == SolarParameter.Dust ? 0.005 : PreciseShare;
+        /// <summary>Reflectance reads to two decimals, so 0.21 for 0.20 is already 5 % off: it gets a wider precise band. TBD.</summary>
+        public const double AlbedoPreciseShare = 0.10;
+
+        public double PreciseLimit => Parameter == SolarParameter.AirTemperature ? 1.0 : Parameter == SolarParameter.Dust ? 0.005
+                                    : Parameter == SolarParameter.Albedo ? AlbedoPreciseShare : PreciseShare;
         public double RoughLimit => Parameter == SolarParameter.AirTemperature ? 3.0 : Parameter == SolarParameter.Dust ? 0.015 : RoughShare;
 
         /// <summary>The value the readings give.</summary>
