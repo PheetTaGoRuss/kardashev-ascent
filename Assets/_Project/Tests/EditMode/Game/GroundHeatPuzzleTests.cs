@@ -21,7 +21,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         {
             ParameterPuzzle p = ParameterPuzzle.Albedo(0, 1361.0, 0.25);
             Assert.AreEqual(0.25, p.Answer, 0.002);
-            Assert.AreEqual(LatitudePuzzle.Grade.Precise, p.Check(0.26));
+            Assert.AreEqual(LatitudePuzzle.Grade.Precise, p.Check(0.27), "within 10 %: two-decimal readings");
             Assert.AreEqual(LatitudePuzzle.Grade.Rough, p.Check(0.28));
         }
 
