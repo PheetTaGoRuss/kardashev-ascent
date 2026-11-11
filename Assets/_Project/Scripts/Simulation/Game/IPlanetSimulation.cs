@@ -228,6 +228,18 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Answer a light puzzle. Precise: the value is known; rough: half its range is left; wrong: try again.</summary>
         string AnswerParameterPuzzle(Solar.SolarParameter parameter, double value, out Solar.LatitudePuzzle.Grade grade);
 
+        /// <summary>Core samples waiting for the player to estimate the tile's grades (stage F).</summary>
+        System.Collections.Generic.IReadOnlyList<Solar.SurveyPuzzle> SurveyPuzzles { get; }
+
+        /// <summary>
+        /// Answer a survey puzzle: one grade estimate per material in the puzzle's order. A close answer surveys the
+        /// tile; a rough one surveys it marked ±; a wrong one keeps the cores waiting.
+        /// </summary>
+        string AnswerSurveyPuzzle(int tileId, System.Collections.Generic.IReadOnlyList<double> estimates, out Solar.LatitudePuzzle.Grade grade);
+
+        /// <summary>The tile was surveyed from a rough estimate: its grades are shown as ±.</summary>
+        bool IsRoughSurvey(int tileId);
+
         /// <summary>A robot finished readings and a puzzle is waiting.</summary>
         event Action<Solar.SolarParameter> PuzzleReady;
 

@@ -77,7 +77,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             for (int i = 0; i < 40 && a.LatitudePuzzles.Count == 0; i++)
                 a.Tick(1.0);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(20, state.Version);
+            Assert.AreEqual(21, state.Version);
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));
             Assert.AreEqual(1, b.LatitudePuzzles.Count);

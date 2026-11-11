@@ -93,6 +93,20 @@ namespace KardashevAscent.Presentation.UI
                     formulas = "The dusty cell loses a share of its light: f_dust = 1 − (dusty / clean).\n" +
                                "Use the sums of all readings: f_dust = 1 − Σ dusty / Σ clean. 0 means the dust does nothing.";
                     break;
+                case SolarParameter.Spectrum:
+                    title = "The star's spectrum";
+                    intro = "A robot pointed a spectrometer at the star and read its brightness in 10 nm steps across the " +
+                            "spectrum (100 = the brightest bin). A star glows like a blackbody: hotter stars peak at " +
+                            "shorter (bluer) wavelengths.";
+                    head.AddRange(new[] { "wavelength", "brightness", "" });
+                    for (int i = 0; i < puzzle.WavelengthNm.Length; i++)
+                        rows.Add(new[] { $"{puzzle.WavelengthNm[i]:0} nm", $"{puzzle.Brightness[i]:0.0}", "" });
+                    ask = "Star temperature (K):";
+                    formulas = "Find the wavelength where the brightness peaks, λ_peak. Wien's displacement law:\n" +
+                               $"  T = b / λ_peak, with b = {ParameterPuzzle.WienMicronK:0} µm·K (so divide by λ in µm: 500 nm = 0.5 µm).\n" +
+                               "The Sun peaks near 500 nm → about 5800 K. A red dwarf peaks past 1000 nm → under 2900 K.\n" +
+                               "The star's temperature sets how well the cell material matches its light (f_spec).";
+                    break;
                 default:
                     title = "Clouds: the light log";
                     intro = "A robot logged the light on flat ground for five days, next to what a clear sky would have given.";
@@ -109,6 +123,8 @@ namespace KardashevAscent.Presentation.UI
             Add(MakeLabel(intro, "job-text"));
             if (puzzle.Parameter == SolarParameter.OpticalDepth)
                 Add(new LangleyPlot(puzzle));
+            if (puzzle.Parameter == SolarParameter.Spectrum)
+                Add(new SpectrumPlot(puzzle));
             Add(Table(head, rows));
 
             var row = new VisualElement();
@@ -192,6 +208,53 @@ namespace KardashevAscent.Presentation.UI
             l.AddToClassList(cls);
             l.AddToClassList("wrap");
             return l;
+        }
+
+        /// <summary>Brightness against wavelength: a hump whose top is λ_peak.</summary>
+        sealed class SpectrumPlot : VisualElement
+        {
+            readonly ParameterPuzzle p;
+
+            public SpectrumPlot(ParameterPuzzle p)
+            {
+                this.p = p;
+                style.height = 110;
+                style.marginTop = 4;
+                generateVisualContent += Draw;
+                Add(new Label("brightness ↑") { style = { position = Position.Absolute, left = 0, top = 0, fontSize = 10 } });
+                Add(new Label("wavelength →") { style = { position = Position.Absolute, right = 0, bottom = 0, fontSize = 10 } });
+            }
+
+            void Draw(MeshGenerationContext ctx)
+            {
+                Rect r = contentRect;
+                if (r.width <= 0f || p.WavelengthNm.Length == 0)
+                    return;
+                float left = 30f, right = r.width - 20f, top = 22f, bottom = r.height - 22f;
+                double xMin = p.WavelengthNm[0], xMax = p.WavelengthNm[p.WavelengthNm.Length - 1];
+                Vector2 At(double x, double y) => new Vector2(
+                    left + (float)((x - xMin) / Math.Max(1e-9, xMax - xMin)) * (right - left),
+                    bottom - (float)(y / 100.0) * (bottom - top));
+
+                var g = ctx.painter2D;
+                g.lineWidth = 1f;
+                g.strokeColor = new Color(1f, 1f, 1f, 0.35f);
+                g.BeginPath(); g.MoveTo(new Vector2(left, top)); g.LineTo(new Vector2(left, bottom)); g.LineTo(new Vector2(right, bottom)); g.Stroke();
+                g.lineWidth = 1.5f;
+                g.strokeColor = new Color(1f, 0.85f, 0.35f, 0.6f);
+                g.BeginPath();
+                for (int i = 0; i < p.WavelengthNm.Length; i++)
+                {
+                    Vector2 v = At(p.WavelengthNm[i], p.Brightness[i]);
+                    if (i == 0) g.MoveTo(v); else g.LineTo(v);
+                }
+                g.Stroke();
+                g.fillColor = new Color(1f, 0.85f, 0.35f);
+                for (int i = 0; i < p.WavelengthNm.Length; i++)
+                {
+                    g.BeginPath(); g.Arc(At(p.WavelengthNm[i], p.Brightness[i]), 3.5f, Angle.Degrees(0f), Angle.Degrees(360f)); g.Fill();
+                }
+            }
         }
 
         /// <summary>ln DNI against air mass: the readings fall on a straight line whose slope is −τ.</summary>

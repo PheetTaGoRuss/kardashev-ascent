@@ -51,6 +51,6 @@ deposit's grade.
 - **C. Latitude puzzle (done):** a robot takes noon-shadow readings; the player works out h and φ in the Research window. The sky view (V) still works.
 - **D. Light puzzles (done):** Langley plot (τ), shaded sensor (k), light log (clouds). Within 5 %: known; within 15 %: half the range is left (can be measured again).
 - **E. Ground and heat puzzles (done):** albedo, air temperature, dust. The game has no dust model yet, so dust reads 0 everywhere.
-- **F. Star spectrum puzzle**, and the ground survey puzzle.
+- **F. Star spectrum puzzle and the ground survey puzzle (done):** Wien's law from a spectrometer's peak bin; core samples averaged per material. A rough survey marks the tile ±; the estimate never replaces the real grade.
 
 Effect sizes, robot hours and puzzle tolerances are placeholders until tuned in play.

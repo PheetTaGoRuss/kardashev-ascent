@@ -89,7 +89,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             a.Workforce.Pause(GroupId(a));
             a.OrderPanelAngles(t, 0, 0.6, 3.0);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(20, state.Version);
+            Assert.AreEqual(21, state.Version);
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));
             Assert.IsTrue(b.TryGetAdjustOrder(t, 0, out double tilt, out double az));

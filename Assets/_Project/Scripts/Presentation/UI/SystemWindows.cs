@@ -243,9 +243,9 @@ namespace KardashevAscent.Presentation.UI
             Text("caption").text =
                 "Spread = how far the yearly energy of a 30°-tilted panel facing the equator could be off while the value is " +
                 "only an estimate (the model run at both ends of the range). A robot measures one value at a time; research " +
-                "robots are twice as quick as General ones. Every value but the star spectrum ends with a puzzle: work the value " +
-                "out from the robot's readings (within 5 %: known; within 15 %: half the spread is left). The spectrum puzzle comes next; " +
-                "it is known as soon as it is measured. Ranges and hours are placeholder values.";
+                "robots are twice as quick as General ones. Every value ends with a puzzle: work the value " +
+                "out from the robot's readings (within 5 %: known; within 15 %: half the spread is left). Ground surveys " +
+                "end here too: the robot's cores wait for your grade estimates. Ranges and hours are placeholder values.";
         }
 
         IPlanetSimulation lastSim;
@@ -281,14 +281,17 @@ namespace KardashevAscent.Presentation.UI
         protected override void RefreshBody(IPlanetSimulation sim)
         {
             lastSim = sim;
-            if (sim.LatitudePuzzles.Count + sim.ParameterPuzzles.Count * 100 != shownPuzzles)
+            int puzzleShape = sim.LatitudePuzzles.Count + sim.ParameterPuzzles.Count * 100 + sim.SurveyPuzzles.Count * 10000;
+            if (puzzleShape != shownPuzzles)
             {
-                shownPuzzles = sim.LatitudePuzzles.Count + sim.ParameterPuzzles.Count * 100;
+                shownPuzzles = puzzleShape;
                 puzzles.Clear();
                 foreach (LatitudePuzzle p in sim.LatitudePuzzles)
                     puzzles.Add(new LatitudePuzzleView(sim, p, result => { solvedText.text = result; effectsTile = -2; }));
                 foreach (ParameterPuzzle p in sim.ParameterPuzzles)
                     puzzles.Add(new LightPuzzleView(sim, p, result => { solvedText.text = result; effectsTile = -2; }));
+                foreach (SurveyPuzzle p in sim.SurveyPuzzles)
+                    puzzles.Add(new SurveyPuzzleView(sim, p, result => { solvedText.text = result; effectsTile = -2; }));
                 puzzleHead.style.display = shownPuzzles > 0 || solvedText.text.Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
             }
             int tile = Tile(sim);

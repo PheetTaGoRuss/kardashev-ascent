@@ -447,10 +447,38 @@ namespace KardashevAscent.Simulation.Game
         readonly List<LatitudePuzzle> latitudePuzzles = new List<LatitudePuzzle>();
         public IReadOnlyList<LatitudePuzzle> LatitudePuzzles => latitudePuzzles;
         readonly List<ParameterPuzzle> parameterPuzzles = new List<ParameterPuzzle>();
+        readonly List<SurveyPuzzle> surveyPuzzles = new List<SurveyPuzzle>();
+        readonly HashSet<int> roughSurveys = new HashSet<int>();
+        public IReadOnlyList<SurveyPuzzle> SurveyPuzzles => surveyPuzzles;
+        public bool IsRoughSurvey(int tileId) => roughSurveys.Contains(tileId);
+
+        public string AnswerSurveyPuzzle(int tileId, IReadOnlyList<double> estimates, out LatitudePuzzle.Grade grade)
+        {
+            grade = LatitudePuzzle.Grade.Wrong;
+            SurveyPuzzle p = surveyPuzzles.Find(q => q.Tile == tileId);
+            if (p == null)
+                return "No core samples waiting for that tile.";
+            grade = p.Check(estimates);
+            if (grade == LatitudePuzzle.Grade.Wrong)
+            {
+                p.Attempts++;
+                return "Those grades don't fit the cores. Average every core, counting a core without the material as 0.";
+            }
+            surveyPuzzles.Remove(p);
+            Deposits.MarkSurveyed(tileId);
+            if (grade == LatitudePuzzle.Grade.Rough)
+                roughSurveys.Add(tileId);
+            else
+                roughSurveys.Remove(tileId);
+            TileSurveyed?.Invoke(tileId);
+            return grade == LatitudePuzzle.Grade.Precise
+                ? $"Tile #{tileId} surveyed: the assays match your estimates."
+                : $"Tile #{tileId} surveyed roughly: your estimates are within {SurveyPuzzle.RoughShare * 100.0:0} %, so its grades show as ±.";
+        }
         public IReadOnlyList<ParameterPuzzle> ParameterPuzzles => parameterPuzzles;
 
         /// <summary>Parameters whose readings end in a puzzle (stages C and D); the rest are known when measured.</summary>
-        static bool HasPuzzle(SolarParameter p) => p != SolarParameter.Latitude && p != SolarParameter.Spectrum;
+        static bool HasPuzzle(SolarParameter p) => p != SolarParameter.Latitude;
 
         /// <summary>Dust the model's panels carry: none (robots keep them clean). A dust model would set this per planet.</summary>
         const double ModelDustShare = 0.0;
@@ -496,6 +524,8 @@ namespace KardashevAscent.Simulation.Game
                     return ParameterPuzzle.AirTemperature(tile, planet.AirTemperatureC);
                 case SolarParameter.Dust:
                     return ParameterPuzzle.Dust(tile, g0, ModelDustShare);
+                case SolarParameter.Spectrum:
+                    return ParameterPuzzle.Spectrum(tile, StarTemperatureK > 0.0 ? StarTemperatureK : 5778.0);
                 default:
                 {
                     // Clear-sky light on flat ground per day: a flat 1 m² panel's year without clouds, per unit efficiency.
@@ -663,7 +693,8 @@ namespace KardashevAscent.Simulation.Game
 
         public bool OrderSurvey(int tileId)
         {
-            if (tileId < 0 || tileId >= TileCount || GetTile(tileId).IsWater || Deposits.IsSurveyed(tileId) || surveyOrders.Contains(tileId))
+            if (tileId < 0 || tileId >= TileCount || GetTile(tileId).IsWater || Deposits.IsSurveyed(tileId) || surveyOrders.Contains(tileId)
+                || surveyPuzzles.Exists(q => q.Tile == tileId))
                 return false;
             surveyOrders.Add(tileId);
             Settle(null);
@@ -782,8 +813,17 @@ namespace KardashevAscent.Simulation.Game
                 {
                     fieldWork.Remove(t);
                     surveyOrders.Remove(tile);
-                    Deposits.MarkSurveyed(tile);
-                    TileSurveyed?.Invoke(tile);
+                    SurveyPuzzle puzzle = SurveyPuzzle.Make(tile, Deposits.At(tile));
+                    if (puzzle.Materials.Count == 0)
+                    {
+                        // Only rock here: nothing to estimate, the survey is simply done.
+                        Deposits.MarkSurveyed(tile);
+                        TileSurveyed?.Invoke(tile);
+                        continue;
+                    }
+                    surveyPuzzles.RemoveAll(q => q.Tile == tile);
+                    surveyPuzzles.Add(puzzle);
+                    PuzzleReady?.Invoke(SolarParameter.Latitude);   // "a puzzle is waiting"; the kind is in SurveyPuzzles
                 }
             }
             foreach (var mo in measureOrders.ToArray())
@@ -1381,6 +1421,9 @@ namespace KardashevAscent.Simulation.Game
             state.LatitudePuzzles.AddRange(latitudePuzzles);
             state.ParameterPuzzles.AddRange(parameterPuzzles);
             state.RoughParameters = Parameters.CaptureRough();
+            state.SurveyPuzzles.AddRange(surveyPuzzles);
+            state.RoughSurveys.AddRange(roughSurveys);
+            state.RoughSurveys.Sort();
             foreach (var mo in measureOrders)
                 state.MeasureOrders.Add(new MeasureOrderRecord { Parameter = mo.Parameter, Tile = mo.Tile });
             foreach (var mo in miningOrders)
@@ -1488,6 +1531,16 @@ namespace KardashevAscent.Simulation.Game
             fieldWork.Clear();
             Parameters.Restore(state.MeasuredParameters);   // version 18
             Parameters.RestoreRough(state.RoughParameters);   // version 20
+            surveyPuzzles.Clear();
+            roughSurveys.Clear();
+            if (state.SurveyPuzzles != null)   // version 21
+                foreach (SurveyPuzzle p in state.SurveyPuzzles)
+                    if (p != null && p.Tile >= 0 && p.Tile < TileCount && !Deposits.IsSurveyed(p.Tile))
+                        surveyPuzzles.Add(p);
+            if (state.RoughSurveys != null)
+                foreach (int tile in state.RoughSurveys)
+                    if (Deposits.IsSurveyed(tile))
+                        roughSurveys.Add(tile);
             parameterPuzzles.Clear();
             if (state.ParameterPuzzles != null)
                 foreach (ParameterPuzzle p in state.ParameterPuzzles)
