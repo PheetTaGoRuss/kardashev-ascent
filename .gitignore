@@ -49,3 +49,8 @@ Thumbs.db
 # Python prototypes
 prototypes/**/.venv/
 __pycache__/
+
+# Out-of-Unity test project (tools/simtests): keep the project file, ignore its build output
+!/tools/simtests/SimTests.csproj
+/tools/simtests/bin/
+/tools/simtests/obj/
