@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Compiles the Simulation and EditMode test sources with the .NET SDK, without Unity.
+    A fast check for developers and sessions that cannot open the editor; the Unity Test Runner stays authoritative.
+    Run from the repository root:  dotnet test tools/simtests/SimTests.csproj
+  -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <RepoRoot Condition="'$(RepoRoot)'==''">$(MSBuildThisFileDirectory)../..</RepoRoot>
+    <!-- Unused events and fields are normal in code that Unity drives; SYSLIB0050 is a .NET-only obsoletion. -->
+    <NoWarn>CS0067;CS0414;SYSLIB0050</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(RepoRoot)/Assets/_Project/Scripts/Simulation/**/*.cs" />
+    <Compile Include="$(RepoRoot)/Assets/_Project/Tests/EditMode/**/*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+</Project>

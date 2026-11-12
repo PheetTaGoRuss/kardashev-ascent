@@ -3,6 +3,10 @@
 ชั้นภาพ (Presentation) คุยกับชั้นจำลอง (Simulation) ผ่าน `IPlanetSimulation` เท่านั้น
 ส่งคำสั่งลงไป แล้วอ่านสถานะและฟัง event กลับขึ้นมา ชั้นจำลองไม่รู้จัก Unity และไม่อ้าง Presentation (บังคับด้วย `.asmdef`)
 
+> **เอกสารนี้ยังตามโค้ดไม่ทัน (ตรวจเมื่อ 12 พ.ย. 2026)** ยังไม่มีเรื่องหุ่นยนต์ ทรัพยากร การผลิต footprint ของสิ่งก่อสร้าง และเซฟ version 4–16
+> ส่วนที่ขาดให้ดูจากคอมเมนต์ใน `Simulation/Game/IPlanetSimulation.cs` ไปก่อน
+> ภาพรวมสถาปัตยกรรมและลำดับการทำงานในหนึ่ง step อยู่ใน `docs/architecture/system-architecture.md` และ `docs/architecture/system-interactions.md`
+
 ```
 Presentation (MonoBehaviour)                 Simulation (C# ล้วน)
     │  Tick(hours), PlacePanel, PreviewPanel ...  ▼
