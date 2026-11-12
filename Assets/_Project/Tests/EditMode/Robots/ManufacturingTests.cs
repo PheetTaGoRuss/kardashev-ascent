@@ -247,7 +247,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             a.OrderRobot(RobotKind.Mining);
             a.Tick(5.0);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(22, state.Version);
+            Assert.AreEqual(SimulationState.CurrentVersion, state.Version);
 
             var b = new StubPlanetSimulation(Sphere, Surface, Earthlike);
             Assert.IsTrue(b.RestoreState(state));

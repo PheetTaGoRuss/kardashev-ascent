@@ -182,7 +182,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             r.HoursOffline = 4.5;
             r.CachedPriorities[TaskKind.Mine] = TaskPriority.Low;
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(22, state.Version);
+            Assert.AreEqual(SimulationState.CurrentVersion, state.Version);
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));
             Assert.AreEqual(BuildingType.Relay, b.GetBuilding(t, 5));

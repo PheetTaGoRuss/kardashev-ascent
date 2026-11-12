@@ -95,7 +95,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             a.Workforce.Pause(a.Workforce.Robots[0].GroupId);
             a.OrderMeasure(SolarParameter.Albedo, t);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(22, state.Version);
+            Assert.AreEqual(SimulationState.CurrentVersion, state.Version);
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));
             Assert.IsTrue(b.Parameters.IsMeasured(SolarParameter.Spectrum));

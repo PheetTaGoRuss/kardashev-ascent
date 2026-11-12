@@ -206,10 +206,15 @@ namespace KardashevAscent.Simulation.Game
             return true;
         }
         readonly List<ManufacturingJob> jobs = new List<ManufacturingJob>();
+        readonly IndustrialReportLog industrialReports = new IndustrialReportLog();
 
         // ---- Manufacturing (phase 3b) ----
 
         public IReadOnlyList<ManufacturingJob> Jobs => jobs;
+        public IReadOnlyList<IndustrialReport> IndustrialReports => industrialReports.Reports;
+
+        void ReportIndustry(IndustrialBlocker blocker, string message) =>
+            industrialReports.Add(TimeHours, "Robot Workshop", blocker, message);
 
         /// <summary>Finished Workshops in a fixed order (tile, then slot): job i is worked at Workshop i.</summary>
         List<(int Tile, int Slot)> FinishedWorkshops()
@@ -303,13 +308,22 @@ namespace KardashevAscent.Simulation.Game
         public string OrderRefine(Material output)
         {
             if (MilestonesReached < RobotTech.UnlockMilestone(output))
-                return RobotTech.UnlockMilestone(output) == int.MaxValue
+            {
+                string locked = RobotTech.UnlockMilestone(output) == int.MaxValue
                     ? $"{Resources.Materials.Name(output)} can't be refined."
                     : $"Refining {Resources.Materials.Name(output).ToLowerInvariant()} unlocks at milestone {RobotTech.UnlockMilestone(output)}.";
+                ReportIndustry(IndustrialBlocker.EnvironmentUnavailable, locked);
+                return locked;
+            }
             Recipe recipe = RobotTech.Refine(output);
             string why = TakeInputs(recipe);
-            if (why != null) return why;
+            if (why != null)
+            {
+                ReportIndustry(IndustrialBlocker.MissingInput, why);
+                return why;
+            }
             jobs.Add(new ManufacturingJob { Kind = JobKind.Refine, Output = output, OutputKg = RobotTech.RefineBatchKg(output), Recipe = recipe });
+            ReportIndustry(IndustrialBlocker.None, $"Queued {RobotTech.RefineBatchKg(output):0} kg {Resources.Materials.Name(output).ToLowerInvariant()} for refining.");
             Settle(null);
             return null;
         }
@@ -355,6 +369,7 @@ namespace KardashevAscent.Simulation.Game
                     break;
                 default:
                     Materials.Add(j.Output, j.OutputKg);
+                    ReportIndustry(IndustrialBlocker.None, $"Refining completed: {j.OutputKg:0} kg {Resources.Materials.Name(j.Output).ToLowerInvariant()} is available.");
                     break;
             }
         }
@@ -1500,6 +1515,14 @@ namespace KardashevAscent.Simulation.Game
                     Kind = j.Kind, RobotKind = j.RobotKind, SodiumBattery = j.SodiumBattery, AluminiumWiring = j.AluminiumWiring,
                     RobotId = j.RobotId, Module = j.Module, Output = j.Output, OutputKg = j.OutputKg, DoneHours = j.DoneHours,
                 });
+            foreach (IndustrialReport report in IndustrialReports)
+                state.IndustrialReports.Add(new IndustrialReport
+                {
+                    TimeHours = report.TimeHours,
+                    Facility = report.Facility,
+                    Blocker = report.Blocker,
+                    Message = report.Message,
+                });
             state.Buildings.Sort((a, b) => a.Tile != b.Tile ? a.Tile.CompareTo(b.Tile) : a.Slot.CompareTo(b.Slot));
             foreach (BuildingRecord r in state.Buildings)
                 if (footprints.TryGetValue((r.Tile, r.Slot), out List<int> f))
@@ -1637,6 +1660,7 @@ namespace KardashevAscent.Simulation.Game
                     j.Recipe = RecipeOf(j);
                     jobs.Add(j);
                 }
+            industrialReports.Restore(state.IndustrialReports);
             Workforce.GroupCapacity = Math.Max(Workforce.GroupCapacity, RobotTech.GroupCapacity(MilestonesReached));
             Workforce.Movement = CurrentMovement();
             Workforce.Milestones = MilestonesReached;
