@@ -30,6 +30,8 @@ namespace KardashevAscent.Presentation.Planet
         Workshop,
         /// <summary>Robot charging station (spec v2 §7).</summary>
         ChargingStation,
+        /// <summary>Network relay (workforce v2 stage E).</summary>
+        Relay,
     }
 
     [RequireComponent(typeof(PlanetView))]
@@ -90,6 +92,7 @@ namespace KardashevAscent.Presentation.Planet
                 case BuildingType.Battery: return new Color32(70, 160, 100, a);
                 case BuildingType.Workshop: return new Color32(210, 140, 60, a);
                 case BuildingType.ChargingStation: return new Color32(200, 190, 70, a);
+                case BuildingType.Relay: return new Color32(120, 200, 220, a);
                 default: return new Color32(160, 160, 160, a);
             }
         }
@@ -109,7 +112,8 @@ namespace KardashevAscent.Presentation.Planet
 
         static BuildingType TypeOf(BuildMode m) =>
             m == BuildMode.Battery ? BuildingType.Battery : m == BuildMode.Workshop ? BuildingType.Workshop
-            : m == BuildMode.ChargingStation ? BuildingType.ChargingStation : BuildingType.SolarPanel;
+            : m == BuildMode.ChargingStation ? BuildingType.ChargingStation
+            : m == BuildMode.Relay ? BuildingType.Relay : BuildingType.SolarPanel;
 
         /// <summary>The slot a building covering this one is keyed by (its anchor), or the slot itself when empty.</summary>
         int Anchor(int t, int s)
@@ -140,6 +144,48 @@ namespace KardashevAscent.Presentation.Planet
 
         /// <summary>The tile whose site is open, or −1.</summary>
         public int Tile => tile;
+
+        // ---- Re-angling a built panel (a robot does it) ----
+
+        /// <summary>A panel's visual and numbers follow its angles in the simulation (after a robot turned it).</summary>
+        void RefreshPanel(int atTile, int s)
+        {
+            if (!placed.TryGetValue((atTile, s), out Placed p) || !simulation.TryGetPanelAngles(atTile, s, out double t, out double a))
+                return;
+            if (p.Rating == AngleRating.Optimal) BestAnglePanels--;
+            p.Tilt = t;
+            p.Azimuth = a;
+            p.Preview = PreviewBuilt(atTile, s, t, a);
+            p.Rating = atTile == tile ? RatingOf(p.Preview) : AngleRating.Off;
+            if (p.Rating == AngleRating.Optimal) BestAnglePanels++;
+            ShowOnSlot(p.Visual, siteView.SiteFor(atTile), simulation.FootprintAt(atTile, s), t, a);
+            placed[(atTile, s)] = p;
+        }
+
+        /// <summary>What the selected panel would make at these angles (radians).</summary>
+        public PanelPreview PreviewSelectedAt(double tilt, double azimuth) =>
+            simulation != null && tile >= 0 && slot >= 0 ? PreviewBuilt(tile, Anchor(tile, slot), tilt, azimuth) : default;
+
+        /// <summary>Ask a robot to turn the selected panel to these angles (a site just takes them).</summary>
+        public bool OrderSelectedAngles(double tilt, double azimuth)
+        {
+            if (simulation == null || tile < 0 || slot < 0)
+                return false;
+            int a = Anchor(tile, slot);
+            if (!simulation.OrderPanelAngles(tile, a, tilt, azimuth))
+                return false;
+            RefreshPanel(tile, a);   // a site changes at once; a built panel waits for its robot
+            return true;
+        }
+
+        /// <summary>The angles the selected panel is waiting to be turned to, if any.</summary>
+        public bool SelectedAdjustOrder(out double tilt, out double azimuth)
+        {
+            tilt = azimuth = 0.0;
+            return simulation != null && tile >= 0 && slot >= 0 && simulation.TryGetAdjustOrder(tile, slot, out tilt, out azimuth);
+        }
+
+        public bool CancelSelectedAdjust() => simulation != null && tile >= 0 && slot >= 0 && simulation.CancelAdjust(tile, slot);
 
         /// <summary>The best angles for <see cref="Tile"/>, once the background search has found them.</summary>
         public bool TryGetBest(out PanelAngles angles)
@@ -223,12 +269,14 @@ namespace KardashevAscent.Presentation.Planet
             {
                 listeningTo.BuildingCompleted -= OnBuildingCompleted;
                 listeningTo.BuildingSalvaged -= RemoveVisual;
+                listeningTo.PanelAdjusted -= RefreshPanel;
             }
             listeningTo = sim;
             if (listeningTo != null)
             {
                 listeningTo.BuildingCompleted += OnBuildingCompleted;
                 listeningTo.BuildingSalvaged += RemoveVisual;
+                listeningTo.PanelAdjusted += RefreshPanel;
             }
         }
 
@@ -301,10 +349,12 @@ namespace KardashevAscent.Presentation.Planet
         BatteryVisual MakeBattery(int t, int s, bool constructionSite)
         {
             BuildingType type = simulation != null ? simulation.GetBuilding(t, s) : BuildingType.Battery;
-            string what = type == BuildingType.Workshop ? "Workshop" : type == BuildingType.ChargingStation ? "Charger" : "Battery";
+            string what = type == BuildingType.Workshop ? "Workshop" : type == BuildingType.ChargingStation ? "Charger"
+                        : type == BuildingType.Relay ? "Relay" : "Battery";
             if (!constructionSite)
                 return type == BuildingType.Workshop ? new BatteryVisual($"{what} {t}.{s}", transform, cellMaterial, frameMaterial)
                      : type == BuildingType.ChargingStation ? new BatteryVisual($"{what} {t}.{s}", transform, frameMaterial, frameMaterial)
+                     : type == BuildingType.Relay ? new BatteryVisual($"{what} {t}.{s}", transform, cellMaterial, cellMaterial)
                      : new BatteryVisual($"{what} {t}.{s}", transform, frameMaterial, cellMaterial);
             var visual = new BatteryVisual($"{what} Site {t}.{s}", transform, ghostMaterial, ghostMaterial);
             visual.SetTint(siteTint);
@@ -370,7 +420,7 @@ namespace KardashevAscent.Presentation.Planet
             foreach (BuildingRecord r in simulation.CaptureState().Buildings)
             {
                 TileSite site = siteView.SiteFor(r.Tile);
-                if (r.Type == BuildingType.Battery || r.Type == BuildingType.Workshop || r.Type == BuildingType.ChargingStation)
+                if (r.Type == BuildingType.Battery || r.Type == BuildingType.Workshop || r.Type == BuildingType.ChargingStation || r.Type == BuildingType.Relay)
                 {
                     BatteryVisual yard = MakeBattery(r.Tile, r.Slot, r.UnderConstruction);
                     ShowBattery(yard, site, simulation.FootprintAt(r.Tile, r.Slot));
@@ -463,7 +513,8 @@ namespace KardashevAscent.Presentation.Planet
 
             if (tile >= 0 && Input.GetKeyDown(KeyCode.Tab))
                 mode = mode == BuildMode.SolarPanel ? BuildMode.Battery : mode == BuildMode.Battery ? BuildMode.Workshop
-                     : mode == BuildMode.Workshop ? BuildMode.ChargingStation : BuildMode.SolarPanel;
+                     : mode == BuildMode.Workshop ? BuildMode.ChargingStation
+                     : mode == BuildMode.ChargingStation ? BuildMode.Relay : BuildMode.SolarPanel;
 
             if (dragging)
             {
@@ -722,7 +773,7 @@ namespace KardashevAscent.Presentation.Planet
             return removed;
         }
 
-        /// <summary>Turn the selected panels to the planned angles (free: nothing is rebuilt). Returns how many were changed.</summary>
+        /// <summary>Ask robots to turn the selected panels to the planned angles (sites take them at once). Returns how many.</summary>
         public int ReangleSelection()
         {
             if (simulation == null || siteView.Site == null)
@@ -734,16 +785,9 @@ namespace KardashevAscent.Presentation.Planet
                 anchors.Add(Anchor(tile, selected));
             foreach (int s in anchors)
             {
-                if (!placed.TryGetValue((tile, s), out Placed p) || !simulation.SetPanelAngles(tile, s, tilt, azimuth))
+                if (!placed.ContainsKey((tile, s)) || !simulation.OrderPanelAngles(tile, s, tilt, azimuth))
                     continue;
-                if (p.Rating == AngleRating.Optimal) BestAnglePanels--;
-                p.Tilt = tilt;
-                p.Azimuth = azimuth;
-                p.Preview = PreviewBuilt(tile, s, tilt, azimuth);
-                p.Rating = RatingOf(p.Preview);
-                if (p.Rating == AngleRating.Optimal) BestAnglePanels++;
-                ShowOnSlot(p.Visual, siteView.Site, simulation.FootprintAt(tile, s), tilt, azimuth);
-                placed[(tile, s)] = p;
+                RefreshPanel(tile, s);
                 changed++;
             }
             return changed;
@@ -754,10 +798,11 @@ namespace KardashevAscent.Presentation.Planet
             if (simulation == null || tile < 0 || s < 0 || Occupied(s) || siteView.Site == null)
                 return false;
             padsDirty = true;
-            if (mode == BuildMode.Battery || mode == BuildMode.Workshop || mode == BuildMode.ChargingStation)
+            if (mode == BuildMode.Battery || mode == BuildMode.Workshop || mode == BuildMode.ChargingStation || mode == BuildMode.Relay)
             {
                 if (!(mode == BuildMode.Battery ? simulation.PlaceBattery(tile, s)
-                      : mode == BuildMode.Workshop ? simulation.PlaceWorkshop(tile, s) : simulation.PlaceChargingStation(tile, s)))
+                      : mode == BuildMode.Workshop ? simulation.PlaceWorkshop(tile, s)
+                      : mode == BuildMode.Relay ? simulation.PlaceRelay(tile, s) : simulation.PlaceChargingStation(tile, s)))
                     return false;
                 BatteryVisual yard = MakeBattery(tile, s, simulation.IsUnderConstruction(tile, s));
                 ShowBattery(yard, siteView.Site, simulation.FootprintAt(tile, s));

@@ -90,6 +90,18 @@ Each stage raises `SimulationState.Version` by one and keeps reading older saves
 
 ## 6. Questions that change what gets built
 
+- **Stage E, first part — BUILT 2026-11-12** (`Robots/ColonyNetwork.cs`, save version 22): the hub, relays, range, brownout, and
+  cut-off robots on cached rules (below). Still to come from stage E: AI levels and the processor module, onboard AI power
+  draw, nearby robot-to-robot exchange, individual memory and the colony database with backups, the failure ladder, and
+  colony computing as a grid load. Design notes from building it:
+  - The network's draw (hub + relays) is served as a **priority load** next to critical robot charging, not as part of the
+    growable colony demand: the hub is the last thing to lose power, and it goes down only when the colony itself browns out.
+  - A cut-off robot keeps the program and priorities it last synced (`Robot.CachedProgram`/`CachedPriorities`). Under a
+    cached Demand program it works at Normal priority, since it can't hear the colony's needs. It syncs on reconnect.
+  - **A colony that can't power itself loses its network**: a fresh colony with no panels browns out within a day on the
+    lander's RTGs, and the hub goes with it. This is by design (Q1), and the Network window says so. Tests that need the
+    network up give the colony panels first.
+  - Survey and measurement results still land at once while cut off; "unsynced findings" is counted but not yet delayed.
 - **Q1 (network): DECIDED 2026-11-08: relay range + hub power.** Stage E builds it like this; the details below are design choices, and the numbers are configurable TBD placeholders.
   - **Hub:** the lander is the network hub. It draws a small load from `PowerGrid` as part of colony demand. When the colony is in brownout, the hub is unpowered and the whole network is down.
   - **Range:** a robot is connected while it is within the relay range of the hub or of a powered **Relay** (a new building). Range is counted in tiles along `HexSphere.Neighbors` (TBD). Relays extend coverage and need power too; a relay on a browned-out grid is down.

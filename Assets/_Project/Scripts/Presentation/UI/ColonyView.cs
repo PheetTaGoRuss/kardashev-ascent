@@ -27,6 +27,14 @@ namespace KardashevAscent.Presentation.UI
         Label subtitle, demand, demandCaption, growth, growthCaption, supply, supplyCaption, chartCaption, energy, buildings, tiles,
               kardashev, kardashevNotes;
         PowerHistoryChart chart;
+        Label robotsText, resourcesText;
+        readonly Dictionary<string, List<VisualElement>> sections = new Dictionary<string, List<VisualElement>>();
+        readonly Dictionary<string, Button> subTabs = new Dictionary<string, Button>();
+        string section = "summary";
+
+        /// <summary>Overview sub-categories: (id, title). Each shows part of the overview.</summary>
+        static readonly (string Id, string Title)[] Sections =
+            { ("summary", "Summary"), ("power", "Power"), ("robots", "Robots"), ("resources", "Resources"), ("buildings", "Buildings") };
         float nextRefresh;
 
         /// <summary>True while the overview is shown.</summary>
@@ -63,11 +71,81 @@ namespace KardashevAscent.Presentation.UI
             chart = new PowerHistoryChart();
             chart.style.flexGrow = 1;
             holder?.Add(chart);
+            BuildSections(root);
             SetVisible(Visible);
+            SystemTabs.Register(new SystemTabs.Tab
+            {
+                Id = "overview", Title = "Overview", Key = toggleKey, Order = 0,
+                IsOpen = () => Visible, SetOpen = SetVisible,
+            });
+        }
+
+        /// <summary>
+        /// Splits the overview into sub-categories: each heading starts a section, and a row of buttons above the
+        /// list shows one section at a time.
+        /// </summary>
+        void BuildSections(VisualElement root)
+        {
+            var scroll = root.Q<ScrollView>("scroll");
+            if (scroll == null)
+                return;
+            VisualElement content = scroll.contentContainer;
+            robotsText = new Label { name = "robots-text" };
+            robotsText.AddToClassList("body");
+            resourcesText = new Label { name = "resources-text" };
+            resourcesText.AddToClassList("body");
+            foreach (var (title, label) in new[] { ("ROBOTS", robotsText), ("RESOURCES", resourcesText) })
+            {
+                var head = new Label(title);
+                head.AddToClassList("heading");
+                head.AddToClassList("section");
+                content.Add(head);
+                content.Add(label);
+            }
+
+            string current = "summary";
+            foreach (VisualElement e in new List<VisualElement>(content.Children()))
+            {
+                if (e is Label l && l.ClassListContains("section"))
+                    current = l.text == "POWER" || l.text == "ENERGY SINCE LANDING" ? "power"
+                            : l.text == "BUILDINGS" ? "buildings" : l.text == "ROBOTS" ? "robots"
+                            : l.text == "RESOURCES" ? "resources" : "summary";
+                if (!sections.TryGetValue(current, out List<VisualElement> list))
+                    sections[current] = list = new List<VisualElement>();
+                list.Add(e);
+            }
+
+            var row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.flexWrap = Wrap.Wrap;
+            row.style.marginTop = 4;
+            foreach (var (id, title) in Sections)
+            {
+                string s = id;
+                var b = new Button(() => ShowSection(s)) { text = title };
+                b.AddToClassList("tab");
+                subTabs[id] = b;
+                row.Add(b);
+            }
+            scroll.parent.Insert(scroll.parent.IndexOf(scroll), row);
+            ShowSection(section);
+        }
+
+        /// <summary>Show one overview sub-category.</summary>
+        public void ShowSection(string id)
+        {
+            section = id;
+            foreach (var pair in sections)
+                foreach (VisualElement e in pair.Value)
+                    e.style.display = pair.Key == id ? DisplayStyle.Flex : DisplayStyle.None;
+            foreach (var pair in subTabs)
+                pair.Value.EnableInClassList("selected", pair.Key == id);
+            nextRefresh = 0f;
         }
 
         void OnDisable()
         {
+            SystemTabs.Unregister("overview");
             UIDocument document = GetComponent<UIDocument>();
             if (document != null && document.rootVisualElement != null)
                 ScreenInput.Unregister(document.rootVisualElement.panel);
@@ -83,7 +161,7 @@ namespace KardashevAscent.Presentation.UI
         void Update()
         {
             if (Input.GetKeyDown(toggleKey))
-                SetVisible(!Visible);
+                SystemTabs.Toggle("overview");
             if (!Visible || panelRoot == null || Time.unscaledTime < nextRefresh)
                 return;
             nextRefresh = Time.unscaledTime + refreshInterval;
@@ -126,6 +204,7 @@ namespace KardashevAscent.Presentation.UI
                 : "of demand met · no brownouts";
 
             chart.SetHistory(h, sim.TimeHours, dayHours);
+            RefreshRobotsAndResources(sim);
             double spanHours = h.Capacity * h.SampleHours;
             chartCaption.text = $"Last {spanHours / dayHours:0} days, one point per {FormatHours(h.SampleHours, dayHours)}";
 
@@ -247,6 +326,31 @@ namespace KardashevAscent.Presentation.UI
 
         static string FormatHours(double hours, double dayHours) =>
             hours >= 2.0 * dayHours ? $"{hours / dayHours:0.#} days" : $"{hours:0.#} h";
+
+        void RefreshRobotsAndResources(IPlanetSimulation sim)
+        {
+            if (robotsText == null)
+                return;
+            var w = sim.Workforce;
+            int working = 0, charging = 0, down = 0;
+            foreach (var r in w.Robots)
+            {
+                if (r.State == KardashevAscent.Simulation.Robots.RobotState.Working) working++;
+                else if (r.State == KardashevAscent.Simulation.Robots.RobotState.Charging) charging++;
+                else if (r.State == KardashevAscent.Simulation.Robots.RobotState.Shutdown) down++;
+            }
+            robotsText.text = $"{w.Robots.Count} robots in {w.Groups.Count} group{(w.Groups.Count == 1 ? "" : "s")} · {working} working · " +
+                              $"{charging} charging · {down} shut down\n{sim.ConstructionQueueCount} construction sites waiting.\n" +
+                              "Details and orders: Robots (G).";
+            string stock = "";
+            foreach (var m in KardashevAscent.Simulation.Resources.Materials.All)
+                if (sim.Materials[m] > 0.0)
+                    stock += (stock.Length > 0 ? ", " : "") + $"{KardashevAscent.Simulation.Resources.Materials.Name(m).ToLowerInvariant()} {sim.Materials[m]:0} kg";
+            int surveyed = 0;
+            foreach (int _ in sim.Deposits.Surveyed) surveyed++;
+            resourcesText.text = $"Build parts {Format.Energy(sim.BuildStockWh)}\nMaterials: {(stock.Length > 0 ? stock : "none yet")}\n" +
+                                 $"{surveyed} tile{(surveyed == 1 ? "" : "s")} surveyed. Workshops and jobs: Manufacturing (U).";
+        }
     }
 
     /// <summary>
@@ -406,5 +510,6 @@ namespace KardashevAscent.Presentation.UI
                     return m * scale;
             return 10.0 * scale;
         }
+
     }
 }

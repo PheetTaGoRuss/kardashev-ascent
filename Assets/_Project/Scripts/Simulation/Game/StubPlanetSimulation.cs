@@ -95,10 +95,41 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>Finished buildings the player asked a robot to take down, in the order asked.</summary>
         readonly List<(int Tile, int Slot)> salvageOrders = new List<(int, int)>();
+        readonly List<(int Tile, int Slot, double Tilt, double Azimuth)> adjustOrders = new List<(int, int, double, double)>();
 
         readonly HashSet<(int Tile, int Slot)> batteries = new HashSet<(int, int)>();
         readonly HashSet<(int Tile, int Slot)> workshops = new HashSet<(int, int)>();
         readonly HashSet<(int Tile, int Slot)> stations = new HashSet<(int, int)>();
+        readonly HashSet<(int Tile, int Slot)> relays = new HashSet<(int, int)>();
+
+        // ---- Colony network (stage E) ----
+
+        public ColonyNetwork Network { get; private set; }
+
+        public bool PlaceRelay(int tileId, int slot)
+        {
+            if (!CanPlace(BuildingType.Relay, tileId, slot))
+                return false;
+            Build.Start(tileId, slot, BuildCostWh(BuildingType.Relay), 0.0, false);
+            relays.Add((tileId, slot));
+            Occupy(tileId, FootprintFor(BuildingType.Relay, tileId, slot));
+            Settle((tileId, slot));
+            RefreshNetwork();
+            return true;
+        }
+
+        /// <summary>Finished relays relay; sites don't. Power follows the grid: a brownout takes the whole network down.</summary>
+        void RefreshNetwork()
+        {
+            if (Network == null)
+                return;
+            var live = new List<int>();
+            foreach (var r in relays)
+                if (!Build.IsQueued(r.Tile, r.Slot))
+                    live.Add(r.Tile);
+            Network.SetRelays(live);
+            Network.SetPowered(!Grid.IsBrownout);
+        }
 
         // ---- Footprints: a building covers several slots of its tile (stored at its anchor slot) ----
 
@@ -175,10 +206,15 @@ namespace KardashevAscent.Simulation.Game
             return true;
         }
         readonly List<ManufacturingJob> jobs = new List<ManufacturingJob>();
+        readonly IndustrialReportLog industrialReports = new IndustrialReportLog();
 
         // ---- Manufacturing (phase 3b) ----
 
         public IReadOnlyList<ManufacturingJob> Jobs => jobs;
+        public IReadOnlyList<IndustrialReport> IndustrialReports => industrialReports.Reports;
+
+        void ReportIndustry(IndustrialBlocker blocker, string message) =>
+            industrialReports.Add(TimeHours, "Robot Workshop", blocker, message);
 
         /// <summary>Finished Workshops in a fixed order (tile, then slot): job i is worked at Workshop i.</summary>
         List<(int Tile, int Slot)> FinishedWorkshops()
@@ -272,13 +308,22 @@ namespace KardashevAscent.Simulation.Game
         public string OrderRefine(Material output)
         {
             if (MilestonesReached < RobotTech.UnlockMilestone(output))
-                return RobotTech.UnlockMilestone(output) == int.MaxValue
+            {
+                string locked = RobotTech.UnlockMilestone(output) == int.MaxValue
                     ? $"{Resources.Materials.Name(output)} can't be refined."
                     : $"Refining {Resources.Materials.Name(output).ToLowerInvariant()} unlocks at milestone {RobotTech.UnlockMilestone(output)}.";
+                ReportIndustry(IndustrialBlocker.EnvironmentUnavailable, locked);
+                return locked;
+            }
             Recipe recipe = RobotTech.Refine(output);
             string why = TakeInputs(recipe);
-            if (why != null) return why;
+            if (why != null)
+            {
+                ReportIndustry(IndustrialBlocker.MissingInput, why);
+                return why;
+            }
             jobs.Add(new ManufacturingJob { Kind = JobKind.Refine, Output = output, OutputKg = RobotTech.RefineBatchKg(output), Recipe = recipe });
+            ReportIndustry(IndustrialBlocker.None, $"Queued {RobotTech.RefineBatchKg(output):0} kg {Resources.Materials.Name(output).ToLowerInvariant()} for refining.");
             Settle(null);
             return null;
         }
@@ -324,6 +369,7 @@ namespace KardashevAscent.Simulation.Game
                     break;
                 default:
                     Materials.Add(j.Output, j.OutputKg);
+                    ReportIndustry(IndustrialBlocker.None, $"Refining completed: {j.OutputKg:0} kg {Resources.Materials.Name(j.Output).ToLowerInvariant()} is available.");
                     break;
             }
         }
@@ -340,6 +386,8 @@ namespace KardashevAscent.Simulation.Game
             BaseTileId = baseTileId >= 0 ? baseTileId : PickBaseTile();
             Workforce.Reset(BaseTileId);
             Workforce.CapacityOf = t => FacilityStaffing.CapacityFor(t.Kind);
+            Network = new ColonyNetwork(sphere, BaseTileId);
+            Workforce.Network = Network;
             Deposits = new DepositMap(sphere, surface, PlanetChemistry.EarthLike, 7);
             Routes = new RouteFinder(sphere, surface);
 
@@ -436,11 +484,264 @@ namespace KardashevAscent.Simulation.Game
         public event Action<ManufacturingJob> JobFinished;
 
         static WorkTask SurveyTask(int tile) => new WorkTask(TaskKind.Survey, tile, -1);
+
+        // ---- Solar parameters (stage B of docs/design/solar-measurements.md) ----
+
+        public ParameterBook Parameters { get; } = new ParameterBook();
+        readonly List<(SolarParameter Parameter, int Tile)> measureOrders = new List<(SolarParameter, int)>();
+        public event Action<SolarParameter> ParameterMeasured;
+        public event Action<SolarParameter> PuzzleReady;
+        readonly List<LatitudePuzzle> latitudePuzzles = new List<LatitudePuzzle>();
+        public IReadOnlyList<LatitudePuzzle> LatitudePuzzles => latitudePuzzles;
+        readonly List<ParameterPuzzle> parameterPuzzles = new List<ParameterPuzzle>();
+        readonly List<SurveyPuzzle> surveyPuzzles = new List<SurveyPuzzle>();
+        readonly HashSet<int> roughSurveys = new HashSet<int>();
+        public IReadOnlyList<SurveyPuzzle> SurveyPuzzles => surveyPuzzles;
+        public bool IsRoughSurvey(int tileId) => roughSurveys.Contains(tileId);
+
+        public string AnswerSurveyPuzzle(int tileId, IReadOnlyList<double> estimates, out LatitudePuzzle.Grade grade)
+        {
+            grade = LatitudePuzzle.Grade.Wrong;
+            SurveyPuzzle p = surveyPuzzles.Find(q => q.Tile == tileId);
+            if (p == null)
+                return "No core samples waiting for that tile.";
+            grade = p.Check(estimates);
+            if (grade == LatitudePuzzle.Grade.Wrong)
+            {
+                p.Attempts++;
+                return "Those grades don't fit the cores. Average every core, counting a core without the material as 0.";
+            }
+            surveyPuzzles.Remove(p);
+            Deposits.MarkSurveyed(tileId);
+            if (grade == LatitudePuzzle.Grade.Rough)
+                roughSurveys.Add(tileId);
+            else
+                roughSurveys.Remove(tileId);
+            TileSurveyed?.Invoke(tileId);
+            return grade == LatitudePuzzle.Grade.Precise
+                ? $"Tile #{tileId} surveyed: the assays match your estimates."
+                : $"Tile #{tileId} surveyed roughly: your estimates are within {SurveyPuzzle.RoughShare * 100.0:0} %, so its grades show as ±.";
+        }
+        public IReadOnlyList<ParameterPuzzle> ParameterPuzzles => parameterPuzzles;
+
+        /// <summary>Parameters whose readings end in a puzzle (stages C and D); the rest are known when measured.</summary>
+        static bool HasPuzzle(SolarParameter p) => p != SolarParameter.Latitude;
+
+        /// <summary>Dust the model's panels carry: none (robots keep them clean). A dust model would set this per planet.</summary>
+        const double ModelDustShare = 0.0;
+
+        public string AnswerParameterPuzzle(SolarParameter parameter, double value, out LatitudePuzzle.Grade grade)
+        {
+            grade = LatitudePuzzle.Grade.Wrong;
+            ParameterPuzzle p = parameterPuzzles.Find(q => q.Parameter == parameter);
+            if (p == null)
+                return "No readings waiting for that.";
+            grade = p.Check(value);
+            if (grade == LatitudePuzzle.Grade.Wrong)
+            {
+                p.Attempts++;
+                return $"{value:0.###} doesn't fit the readings. Check the formula and the units.";
+            }
+            parameterPuzzles.Remove(p);
+            if (grade == LatitudePuzzle.Grade.Precise)
+            {
+                Parameters.MarkMeasured(parameter);
+                ParameterMeasured?.Invoke(parameter);
+                return $"{SolarUnknowns.Name(parameter)} = {value:0.###}: known now, its spread is gone.";
+            }
+            Parameters.MarkRough(parameter);
+            ParameterMeasured?.Invoke(parameter);
+            return $"{SolarUnknowns.Name(parameter)} ≈ {value:0.###}: close, half its spread is left (measure again to pin it down).";
+        }
+
+        /// <summary>The readings a robot brings back for a light puzzle, from this planet's own values.</summary>
+        ParameterPuzzle MakeLightPuzzle(SolarParameter p, int tile)
+        {
+            double g0 = Orbit.ExtraterrestrialIrradiance(planet.Luminosity, planet.SemiMajorAxis);
+            double pressure = MakePanel(tile, 0.0, 0.0, 1.0, 1.0).PressureRatio;
+            switch (p)
+            {
+                case SolarParameter.OpticalDepth:
+                    return ParameterPuzzle.Haze(tile, g0, planet.OpticalDepth, pressure);
+                case SolarParameter.DiffuseShare:
+                    return ParameterPuzzle.Diffuse(tile, g0, planet.OpticalDepth, planet.DiffuseK, pressure);
+                case SolarParameter.Albedo:
+                    return ParameterPuzzle.Albedo(tile, g0, MakePanel(tile, 0.0, 0.0, 1.0, 1.0).Albedo);
+                case SolarParameter.AirTemperature:
+                    return ParameterPuzzle.AirTemperature(tile, planet.AirTemperatureC);
+                case SolarParameter.Dust:
+                    return ParameterPuzzle.Dust(tile, g0, ModelDustShare);
+                case SolarParameter.Spectrum:
+                    return ParameterPuzzle.Spectrum(tile, StarTemperatureK > 0.0 ? StarTemperatureK : 5778.0);
+                default:
+                {
+                    // Clear-sky light on flat ground per day: a flat 1 m² panel's year without clouds, per unit efficiency.
+                    PanelParams flat = MakePanel(tile, 0.0, 0.0, 1.0, 1.0);
+                    double days = YearLengthHours > 0.0 && DayLengthHours > 0.0 ? YearLengthHours / DayLengthHours : 365.25;
+                    double kwhPerDay = AnnualYield.Calculate(planet, flat).EnergyWh / PanelEfficiency / 1000.0 / days;
+                    return ParameterPuzzle.Clouds(tile, kwhPerDay, CloudFactor(tile, CurrentMeanAnomaly()));
+                }
+            }
+        }
+
+        public string AnswerLatitudePuzzle(int tileId, double latitudeDeg, out LatitudePuzzle.Grade grade)
+        {
+            grade = LatitudePuzzle.Grade.Wrong;
+            LatitudePuzzle p = latitudePuzzles.Find(q => q.Tile == tileId);
+            if (p == null)
+                return "No shadow readings for that tile.";
+            grade = p.Check(latitudeDeg);
+            if (grade == LatitudePuzzle.Grade.Wrong)
+            {
+                p.Attempts++;
+                return $"φ = {latitudeDeg:0.0}° doesn't fit the readings. Check which way the shadow points, and the sign of δ.";
+            }
+            latitudePuzzles.Remove(p);
+            string method = grade == LatitudePuzzle.Grade.Precise
+                ? "noon shadow, worked out"
+                : $"noon shadow, worked out roughly (±{LatitudePuzzle.RoughDeg:0}°)";
+            return Notebook.RecordLatitude(tileId, latitudeDeg, method);
+        }
+
+        static WorkTask MeasureTask(SolarParameter p, int tile) => new WorkTask(TaskKind.Measure, tile, (int)p);
+
+        public bool IsParameterKnown(SolarParameter parameter, int tileId) =>
+            parameter == SolarParameter.Latitude ? Notebook.KnowsLatitude(tileId)
+            : parameter == SolarParameter.Clouds && Clouds == CloudModel.None || Parameters.IsMeasured(parameter);
+
+        public bool OrderMeasure(SolarParameter parameter, int tileId)
+        {
+            if (parameter == SolarParameter.Latitude && latitudePuzzles.Exists(q => q.Tile == tileId))
+                return false;   // the readings are in: solve the puzzle
+            if (parameterPuzzles.Exists(q => q.Parameter == parameter))
+                return false;   // the readings are in: solve the puzzle
+            if (tileId < 0 || tileId >= TileCount || GetTile(tileId).IsWater
+                || IsParameterKnown(parameter, tileId) || IsMeasureOrdered(parameter))
+                return false;
+            measureOrders.Add((parameter, tileId));
+            Settle(null);
+            return true;
+        }
+
+        public bool IsMeasureOrdered(SolarParameter parameter) => measureOrders.Exists(o => o.Parameter == parameter);
+
+        public bool CancelMeasure(SolarParameter parameter)
+        {
+            int i = measureOrders.FindIndex(o => o.Parameter == parameter);
+            if (i < 0)
+                return false;
+            WorkTask t = MeasureTask(parameter, measureOrders[i].Tile);
+            measureOrders.RemoveAt(i);
+            Workforce.Tasks.MarkCancelled(t);
+            fieldWork.Remove(t);
+            Settle(null);
+            return true;
+        }
+
+        public double MeasureProgress(SolarParameter parameter)
+        {
+            if (Parameters.IsMeasured(parameter))
+                return 1.0;
+            int i = measureOrders.FindIndex(o => o.Parameter == parameter);
+            return i >= 0 && fieldWork.TryGetValue(MeasureTask(parameter, measureOrders[i].Tile), out double h)
+                ? Math.Min(1.0, h / SolarUnknowns.MeasureHours) : 0.0;
+        }
+
+        /// <summary>A copy of the planet's solar values with the atmosphere and air changed.</summary>
+        static PlanetSolarParams WithAir(in PlanetSolarParams p, double opticalDepth, double diffuseK, double airTemperatureC) =>
+            new PlanetSolarParams(p.Luminosity, p.SemiMajorAxis, p.Eccentricity, p.Obliquity, p.PerihelionLongitude,
+                                  p.DayLengthHours, p.YearLengthHours, opticalDepth, diffuseK, airTemperatureC,
+                                  p.TidallyLocked, p.SurfacePressureEarth);
+
+        static PanelParams WithPanel(in PanelParams p, double latitude, double albedo, double fSpec, double fDust) =>
+            new PanelParams(latitude, p.Tilt, p.Azimuth, p.Area, p.Efficiency, p.Noct, p.TempCoefficient, albedo,
+                            p.PressureRatio, fSpec, fDust, p.FShade, p.Longitude);
+
+        /// <summary>A panel's yearly energy, Earth years, Wh: the preview's sum, with clouds month by month.</summary>
+        double YearEnergyWh(int tileId, in PlanetSolarParams pl, in PanelParams panel)
+        {
+            double energy = AnnualYield.Calculate(pl, panel).EnergyWh;
+            if (Clouds == CloudModel.EarthClimatology && energy > 0.0)
+            {
+                double[] months = MonthlyYield.Calculate(pl, panel);
+                double clear = 0.0, cloudy = 0.0;
+                for (int m = 0; m < months.Length; m++)
+                {
+                    clear += months[m];
+                    cloudy += months[m] * CloudFactor(tileId, MonthMeanAnomaly(m, months.Length));
+                }
+                energy *= clear > 0.0 ? cloudy / clear : 1.0;
+            }
+            if (YearLengthHours > 0.0)
+                energy *= SolarConstants.EarthYearHours / YearLengthHours;
+            return energy;
+        }
+
+        public List<ParameterEffect> ParameterEffects(int tileId, double tilt, double azimuth)
+        {
+            var list = new List<ParameterEffect>();
+            if (tileId < 0 || tileId >= TileCount || GetTile(tileId).IsWater)
+                return list;
+            PanelParams panel = MakePanel(tileId, tilt, azimuth, 1.0, NewPanelAreaM2(tileId));
+            double baseWh = YearEnergyWh(tileId, planet, panel);
+            const double Deg = Math.PI / 180.0;
+            foreach (SolarParameter p in (SolarParameter[])Enum.GetValues(typeof(SolarParameter)))
+            {
+                bool known = IsParameterKnown(p, tileId);
+                double lo = baseWh, hi = baseWh;
+                if (!known)
+                {
+                    switch (p)
+                    {
+                        case SolarParameter.Latitude:
+                            lo = YearEnergyWh(tileId, planet, WithPanel(panel, panel.Latitude - SolarUnknowns.LatitudeDeg * Deg, panel.Albedo, panel.FSpec, panel.FDust));
+                            hi = YearEnergyWh(tileId, planet, WithPanel(panel, panel.Latitude + SolarUnknowns.LatitudeDeg * Deg, panel.Albedo, panel.FSpec, panel.FDust));
+                            break;
+                        case SolarParameter.OpticalDepth:
+                            lo = YearEnergyWh(tileId, WithAir(planet, planet.OpticalDepth * (1.0 + SolarUnknowns.OpticalDepthShare), planet.DiffuseK, planet.AirTemperatureC), panel);
+                            hi = YearEnergyWh(tileId, WithAir(planet, planet.OpticalDepth * (1.0 - SolarUnknowns.OpticalDepthShare), planet.DiffuseK, planet.AirTemperatureC), panel);
+                            break;
+                        case SolarParameter.DiffuseShare:
+                            lo = YearEnergyWh(tileId, WithAir(planet, planet.OpticalDepth, Math.Min(1.0, planet.DiffuseK * (1.0 + SolarUnknowns.DiffuseShare)), planet.AirTemperatureC), panel);
+                            hi = YearEnergyWh(tileId, WithAir(planet, planet.OpticalDepth, planet.DiffuseK * (1.0 - SolarUnknowns.DiffuseShare), planet.AirTemperatureC), panel);
+                            break;
+                        case SolarParameter.Clouds:
+                            lo = baseWh * (1.0 - SolarUnknowns.CloudShare);
+                            hi = baseWh * (1.0 + SolarUnknowns.CloudShare);
+                            break;
+                        case SolarParameter.Albedo:
+                            lo = YearEnergyWh(tileId, planet, WithPanel(panel, panel.Latitude, Math.Max(0.0, panel.Albedo - SolarUnknowns.Albedo), panel.FSpec, panel.FDust));
+                            hi = YearEnergyWh(tileId, planet, WithPanel(panel, panel.Latitude, Math.Min(1.0, panel.Albedo + SolarUnknowns.Albedo), panel.FSpec, panel.FDust));
+                            break;
+                        case SolarParameter.AirTemperature:
+                            lo = YearEnergyWh(tileId, WithAir(planet, planet.OpticalDepth, planet.DiffuseK, planet.AirTemperatureC + SolarUnknowns.AirTemperatureC), panel);
+                            hi = YearEnergyWh(tileId, WithAir(planet, planet.OpticalDepth, planet.DiffuseK, planet.AirTemperatureC - SolarUnknowns.AirTemperatureC), panel);
+                            break;
+                        case SolarParameter.Dust:
+                            lo = YearEnergyWh(tileId, planet, WithPanel(panel, panel.Latitude, panel.Albedo, panel.FSpec, Math.Min(1.0, panel.FDust + SolarUnknowns.Dust)));
+                            break;
+                        case SolarParameter.Spectrum:
+                            lo = YearEnergyWh(tileId, planet, WithPanel(panel, panel.Latitude, panel.Albedo, panel.FSpec * (1.0 - SolarUnknowns.Spectrum), panel.FDust));
+                            hi = YearEnergyWh(tileId, planet, WithPanel(panel, panel.Latitude, panel.Albedo, Math.Min(1.0, panel.FSpec * (1.0 + SolarUnknowns.Spectrum)), panel.FDust));
+                            break;
+                    }
+                }
+                bool rough = !known && Parameters.IsRough(p);
+                if (rough)
+                {
+                    lo = baseWh - (baseWh - lo) * ParameterBook.RoughRangeLeft;
+                    hi = baseWh + (hi - baseWh) * ParameterBook.RoughRangeLeft;
+                }
+                list.Add(new ParameterEffect(p, Math.Min(lo, hi), Math.Max(lo, hi), known, rough));
+            }
+            return list;
+        }
         static WorkTask MineTask(int tile, Material m) => new WorkTask(TaskKind.Mine, tile, (int)m);
 
         public bool OrderSurvey(int tileId)
         {
-            if (tileId < 0 || tileId >= TileCount || GetTile(tileId).IsWater || Deposits.IsSurveyed(tileId) || surveyOrders.Contains(tileId))
+            if (tileId < 0 || tileId >= TileCount || GetTile(tileId).IsWater || Deposits.IsSurveyed(tileId) || surveyOrders.Contains(tileId)
+                || surveyPuzzles.Exists(q => q.Tile == tileId))
                 return false;
             surveyOrders.Add(tileId);
             Settle(null);
@@ -503,6 +804,12 @@ namespace KardashevAscent.Simulation.Game
                 if (!TaskPolicy.For(TaskKind.Survey).KeepsProgress && fieldWork.ContainsKey(st) && !Workforce.IsWorkedOnSite(st))
                     fieldWork.Remove(st);
             }
+            foreach (var mo in measureOrders)
+            {
+                WorkTask mt = MeasureTask(mo.Parameter, mo.Tile);
+                if (fieldWork.ContainsKey(mt) && !Workforce.IsWorkedOnSite(mt))
+                    fieldWork.Remove(mt);   // a measurement restarts if the robot leaves
+            }
             // Each task's crew on site works together, with diminishing returns (spec v2 §5).
             var crews = new Dictionary<WorkTask, List<double>>();
             foreach (Robot r in Workforce.Robots)
@@ -533,7 +840,7 @@ namespace KardashevAscent.Simulation.Game
                     }
                     continue;
                 }
-                if (t.Kind != TaskKind.Survey && t.Kind != TaskKind.Mine)
+                if (t.Kind != TaskKind.Survey && t.Kind != TaskKind.Mine && t.Kind != TaskKind.Measure)
                     continue;
                 fieldWork[t] = (fieldWork.TryGetValue(t, out double h) ? h : 0.0) + dt * speed;
             }
@@ -553,9 +860,44 @@ namespace KardashevAscent.Simulation.Game
                 {
                     fieldWork.Remove(t);
                     surveyOrders.Remove(tile);
-                    Deposits.MarkSurveyed(tile);
-                    TileSurveyed?.Invoke(tile);
+                    SurveyPuzzle puzzle = SurveyPuzzle.Make(tile, Deposits.At(tile));
+                    if (puzzle.Materials.Count == 0)
+                    {
+                        // Only rock here: nothing to estimate, the survey is simply done.
+                        Deposits.MarkSurveyed(tile);
+                        TileSurveyed?.Invoke(tile);
+                        continue;
+                    }
+                    surveyPuzzles.RemoveAll(q => q.Tile == tile);
+                    surveyPuzzles.Add(puzzle);
+                    PuzzleReady?.Invoke(SolarParameter.Latitude);   // "a puzzle is waiting"; the kind is in SurveyPuzzles
                 }
+            }
+            foreach (var mo in measureOrders.ToArray())
+            {
+                WorkTask t = MeasureTask(mo.Parameter, mo.Tile);
+                if (!fieldWork.TryGetValue(t, out double h) || h < SolarUnknowns.MeasureHours - 1e-9)
+                    continue;
+                fieldWork.Remove(t);
+                measureOrders.Remove(mo);
+                Workforce.Release(t);
+                if (HasPuzzle(mo.Parameter))
+                {
+                    parameterPuzzles.RemoveAll(q => q.Parameter == mo.Parameter);
+                    parameterPuzzles.Add(MakeLightPuzzle(mo.Parameter, mo.Tile));
+                    PuzzleReady?.Invoke(mo.Parameter);
+                    continue;
+                }
+                if (mo.Parameter == SolarParameter.Latitude)
+                {
+                    // The readings are in; the player works out the latitude (stage C).
+                    double lat = Sphere.Latitude(mo.Tile) * 180.0 / Math.PI;
+                    latitudePuzzles.Add(LatitudePuzzle.Make(mo.Tile, lat, DescribeSky(mo.Tile, 0.0, 0.0).DeclinationDeg));
+                    PuzzleReady?.Invoke(mo.Parameter);
+                    continue;
+                }
+                Parameters.MarkMeasured(mo.Parameter);
+                ParameterMeasured?.Invoke(mo.Parameter);
             }
             foreach (var order in miningOrders.ToArray())
             {
@@ -594,6 +936,7 @@ namespace KardashevAscent.Simulation.Game
         public event Action TargetReached;
         public event Action<int, int> BuildingCompleted;
         public event Action<int, int> BuildingSalvaged;
+        public event Action<int, int> PanelAdjusted;
 
         public TileInfo GetTile(int tileId) =>
             new TileInfo(tileId, Sphere.Latitude(tileId), Sphere.Longitude(tileId),
@@ -621,7 +964,8 @@ namespace KardashevAscent.Simulation.Game
             Movement moving = CurrentMovement();
             Workforce.Movement = moving;
             Upkeep.Plan(Workforce, RobotFacilities(), dt, moving);
-            GridStep grid = Grid.Step(ComputeGeneration(), dt, TimeHours / Rtg.HoursPerYear, Upkeep.CriticalRequestW, Upkeep.DockRequestW);
+            // The network hub and relays draw as a priority load: they stay up until the colony itself browns out.
+            GridStep grid = Grid.Step(ComputeGeneration(), dt, TimeHours / Rtg.HoursPerYear, Upkeep.CriticalRequestW + Network.PowerW, Upkeep.DockRequestW);
             GenerationW = grid.GenerationW;
             RtgW = grid.RtgW;
             DemandW = grid.DemandW;
@@ -633,6 +977,8 @@ namespace KardashevAscent.Simulation.Game
             Upkeep.Apply(Workforce, dt, grid.DockServedW, grid.PriorityServedW, topUpW, IsFlaringStar, Build, moving,
                          Materials, planet.AirTemperatureC);
             RobotChargingW = Upkeep.ChargingW;
+            Network.SetPowered(!Grid.IsBrownout);
+            Workforce.UpdateConnections(dt);
             AdvanceFieldWork(dt);
             Build.AddParts(BuildPowerW, dt);
             Settle(null);
@@ -784,6 +1130,53 @@ namespace KardashevAscent.Simulation.Game
             return true;
         }
 
+        public bool OrderPanelAngles(int tileId, int slot, double tilt, double azimuth)
+        {
+            slot = A(tileId, slot);
+            if (!panels.ContainsKey((tileId, slot)) || !PreviewPanel(tileId, tilt, azimuth).CanPlace)
+                return false;
+            if (Build.IsQueued(tileId, slot))
+            {
+                CancelAdjust(tileId, slot);
+                return SetPanelAngles(tileId, slot, tilt, azimuth);   // not built yet: it is just built that way
+            }
+            int i = adjustOrders.FindIndex(o => o.Tile == tileId && o.Slot == slot);
+            if (i >= 0)
+                adjustOrders[i] = (tileId, slot, tilt, azimuth);
+            else
+                adjustOrders.Add((tileId, slot, tilt, azimuth));
+            Settle(null);
+            return true;
+        }
+
+        public bool TryGetPanelAngles(int tileId, int slot, out double tilt, out double azimuth)
+        {
+            slot = A(tileId, slot);
+            bool found = panels.TryGetValue((tileId, slot), out var p);
+            tilt = found ? p.Tilt : 0.0;
+            azimuth = found ? p.Azimuth : 0.0;
+            return found;
+        }
+
+        public bool TryGetAdjustOrder(int tileId, int slot, out double tilt, out double azimuth)
+        {
+            slot = A(tileId, slot);
+            int i = adjustOrders.FindIndex(o => o.Tile == tileId && o.Slot == slot);
+            tilt = i >= 0 ? adjustOrders[i].Tilt : 0.0;
+            azimuth = i >= 0 ? adjustOrders[i].Azimuth : 0.0;
+            return i >= 0;
+        }
+
+        public bool CancelAdjust(int tileId, int slot)
+        {
+            slot = A(tileId, slot);
+            if (adjustOrders.RemoveAll(o => o.Tile == tileId && o.Slot == slot) == 0)
+                return false;
+            Workforce.Tasks.MarkCancelled(new WorkTask(TaskKind.Adjust, tileId, slot));
+            Settle(null);
+            return true;
+        }
+
         // ---- Construction ----
 
         public double BuildStockWh => Build.StockWh;
@@ -801,6 +1194,7 @@ namespace KardashevAscent.Simulation.Game
                 case BuildingType.Battery: return BuildCosts.Battery(BatteryUnitWh);
                 case BuildingType.Workshop: return RobotTech.WorkshopPartsWh;
                 case BuildingType.ChargingStation: return RobotTech.ChargingStationPartsWh;
+                case BuildingType.Relay: return RobotTech.RelayPartsWh;
                 default: return 0.0;
             }
         }
@@ -812,6 +1206,8 @@ namespace KardashevAscent.Simulation.Game
                 Grid.Battery.AddCapacity(BatteryUnitWh);
             else
                 GenerationW = ComputeGeneration() + RtgW;
+            if (relays.Contains((tileId, slot)))
+                RefreshNetwork();
             if (raise)
                 BuildingCompleted?.Invoke(tileId, slot);
         }
@@ -827,8 +1223,12 @@ namespace KardashevAscent.Simulation.Game
                 tasks.Add(new WorkTask(TaskKind.Build, site.Tile, site.Slot, i++));
             for (int k = 0; k < salvageOrders.Count; k++)
                 tasks.Add(new WorkTask(TaskKind.Salvage, salvageOrders[k].Tile, salvageOrders[k].Slot, k));
+            for (int k = 0; k < adjustOrders.Count; k++)
+                tasks.Add(new WorkTask(TaskKind.Adjust, adjustOrders[k].Tile, adjustOrders[k].Slot, k));
             for (int k = 0; k < surveyOrders.Count; k++)
                 tasks.Add(new WorkTask(TaskKind.Survey, surveyOrders[k], -1, k));
+            for (int k = 0; k < measureOrders.Count; k++)
+                tasks.Add(new WorkTask(TaskKind.Measure, measureOrders[k].Tile, (int)measureOrders[k].Parameter, k));
             for (int k = 0; k < miningOrders.Count; k++)
                 tasks.Add(new WorkTask(TaskKind.Mine, miningOrders[k].Tile, (int)miningOrders[k].Material, k));
             List<(int Tile, int Slot)> shops = FinishedWorkshops();
@@ -862,6 +1262,15 @@ namespace KardashevAscent.Simulation.Game
                     any = true;
                     RemoveBuilding(order.Tile, order.Slot);
                     BuildingSalvaged?.Invoke(order.Tile, order.Slot);
+                }
+                foreach (var order in adjustOrders.ToArray())
+                {
+                    if (!Workforce.IsWorkedOnSite(new WorkTask(TaskKind.Adjust, order.Tile, order.Slot)))
+                        continue;
+                    any = true;
+                    adjustOrders.Remove(order);
+                    SetPanelAngles(order.Tile, order.Slot, order.Tilt, order.Azimuth);
+                    PanelAdjusted?.Invoke(order.Tile, order.Slot);
                 }
                 if (!any)
                     return;
@@ -910,6 +1319,7 @@ namespace KardashevAscent.Simulation.Game
         void Dismantle(int tileId, int slot, BuildingType type)
         {
             salvageOrders.Remove((tileId, slot));
+            adjustOrders.RemoveAll(o => o.Tile == tileId && o.Slot == slot);
             if (Build.IsQueued(tileId, slot))
             {
                 Build.Cancel(tileId, slot);
@@ -976,6 +1386,7 @@ namespace KardashevAscent.Simulation.Game
             : batteries.Contains((tileId, slot)) ? BuildingType.Battery
             : workshops.Contains((tileId, slot)) ? BuildingType.Workshop
             : stations.Contains((tileId, slot)) ? BuildingType.ChargingStation
+            : relays.Contains((tileId, slot)) ? BuildingType.Relay
             : BuildingType.None;
 
         public bool PlaceBattery(int tileId, int slot)
@@ -1009,6 +1420,14 @@ namespace KardashevAscent.Simulation.Game
                 Dismantle(tileId, slot, BuildingType.Workshop);
                 workshops.Remove((tileId, slot));
                 Vacate(tileId, slot);
+                return true;
+            }
+            if (relays.Contains((tileId, slot)))
+            {
+                Dismantle(tileId, slot, BuildingType.Relay);
+                relays.Remove((tileId, slot));
+                Vacate(tileId, slot);
+                RefreshNetwork();
                 return true;
             }
             if (stations.Contains((tileId, slot)))
@@ -1060,6 +1479,15 @@ namespace KardashevAscent.Simulation.Game
                 state.SurveyedTiles.Add(tile);
             state.SurveyedTiles.Sort();
             state.SurveyOrders.AddRange(surveyOrders);
+            state.MeasuredParameters = Parameters.Capture();
+            state.LatitudePuzzles.AddRange(latitudePuzzles);
+            state.ParameterPuzzles.AddRange(parameterPuzzles);
+            state.RoughParameters = Parameters.CaptureRough();
+            state.SurveyPuzzles.AddRange(surveyPuzzles);
+            state.RoughSurveys.AddRange(roughSurveys);
+            state.RoughSurveys.Sort();
+            foreach (var mo in measureOrders)
+                state.MeasureOrders.Add(new MeasureOrderRecord { Parameter = mo.Parameter, Tile = mo.Tile });
             foreach (var mo in miningOrders)
                 state.MiningOrders.Add(new MiningOrderRecord { Tile = mo.Tile, Material = mo.Material });
             foreach (Material m in Resources.Materials.All)
@@ -1069,6 +1497,8 @@ namespace KardashevAscent.Simulation.Game
                 state.FieldWork.Add(new FieldWorkRecord { Kind = kv.Key.Kind, Tile = kv.Key.Tile, Slot = kv.Key.Slot, Hours = kv.Value });
             foreach (var salvage in salvageOrders)
                 state.SalvageOrders.Add(new SalvageOrderRecord { Tile = salvage.Tile, Slot = salvage.Slot });
+            foreach (var adjust in adjustOrders)
+                state.AdjustOrders.Add(new AdjustOrderRecord { Tile = adjust.Tile, Slot = adjust.Slot, Tilt = adjust.Tilt, Azimuth = adjust.Azimuth });
             foreach (var kv in panels)
                 state.Buildings.Add(new BuildingRecord { Tile = kv.Key.Tile, Slot = kv.Key.Slot, Type = BuildingType.SolarPanel, Tilt = kv.Value.Tilt, Azimuth = kv.Value.Azimuth, AreaM2 = kv.Value.Area });
             foreach (var b in batteries)
@@ -1077,11 +1507,21 @@ namespace KardashevAscent.Simulation.Game
                 state.Buildings.Add(new BuildingRecord { Tile = w.Tile, Slot = w.Slot, Type = BuildingType.Workshop });
             foreach (var c in stations)
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.ChargingStation });
+            foreach (var c in relays)
+                state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.Relay });
             foreach (ManufacturingJob j in jobs)
                 state.Jobs.Add(new JobRecord
                 {
                     Kind = j.Kind, RobotKind = j.RobotKind, SodiumBattery = j.SodiumBattery, AluminiumWiring = j.AluminiumWiring,
                     RobotId = j.RobotId, Module = j.Module, Output = j.Output, OutputKg = j.OutputKg, DoneHours = j.DoneHours,
+                });
+            foreach (IndustrialReport report in IndustrialReports)
+                state.IndustrialReports.Add(new IndustrialReport
+                {
+                    TimeHours = report.TimeHours,
+                    Facility = report.Facility,
+                    Blocker = report.Blocker,
+                    Message = report.Message,
                 });
             state.Buildings.Sort((a, b) => a.Tile != b.Tile ? a.Tile.CompareTo(b.Tile) : a.Slot.CompareTo(b.Slot));
             foreach (BuildingRecord r in state.Buildings)
@@ -1116,6 +1556,8 @@ namespace KardashevAscent.Simulation.Game
                 RemoveBuilding(key.Tile, key.Slot);
             foreach (var key in new List<(int Tile, int Slot)>(stations))
                 RemoveBuilding(key.Tile, key.Slot);
+            foreach (var key in new List<(int Tile, int Slot)>(relays))
+                RemoveBuilding(key.Tile, key.Slot);
             TimeHours = state.TimeHours;
             MilestonesReached = Math.Max(0, Math.Min(10, state.MilestonesReached));
             DayAveragePowerW = Math.Max(0.0, state.DayAveragePowerW);
@@ -1145,6 +1587,13 @@ namespace KardashevAscent.Simulation.Game
             // Version 7 added robots; an older save starts with the one General robot at the base.
             if (state.Version < 7 || !Workforce.Restore(state.Workforce))
                 Workforce.Reset(BaseTileId);
+            Workforce.Network = Network;
+            RefreshNetwork();   // the relays restored above start relaying; power follows the restored grid
+            adjustOrders.Clear();
+            if (state.AdjustOrders != null)   // version 17
+                foreach (AdjustOrderRecord o in state.AdjustOrders)
+                    if (panels.ContainsKey((o.Tile, o.Slot)))
+                        adjustOrders.Add((o.Tile, o.Slot, o.Tilt, o.Azimuth));
             salvageOrders.Clear();
             if (state.SalvageOrders != null)
                 foreach (SalvageOrderRecord o in state.SalvageOrders)
@@ -1156,6 +1605,33 @@ namespace KardashevAscent.Simulation.Game
             surveyOrders.Clear();
             miningOrders.Clear();
             fieldWork.Clear();
+            Parameters.Restore(state.MeasuredParameters);   // version 18
+            Parameters.RestoreRough(state.RoughParameters);   // version 20
+            surveyPuzzles.Clear();
+            roughSurveys.Clear();
+            if (state.SurveyPuzzles != null)   // version 21
+                foreach (SurveyPuzzle p in state.SurveyPuzzles)
+                    if (p != null && p.Tile >= 0 && p.Tile < TileCount && !Deposits.IsSurveyed(p.Tile))
+                        surveyPuzzles.Add(p);
+            if (state.RoughSurveys != null)
+                foreach (int tile in state.RoughSurveys)
+                    if (Deposits.IsSurveyed(tile))
+                        roughSurveys.Add(tile);
+            parameterPuzzles.Clear();
+            if (state.ParameterPuzzles != null)
+                foreach (ParameterPuzzle p in state.ParameterPuzzles)
+                    if (p != null && p.Tile >= 0 && p.Tile < TileCount)
+                        parameterPuzzles.Add(p);
+            latitudePuzzles.Clear();
+            if (state.LatitudePuzzles != null)   // version 19
+                foreach (LatitudePuzzle p in state.LatitudePuzzles)
+                    if (p != null && p.Tile >= 0 && p.Tile < TileCount)
+                        latitudePuzzles.Add(p);
+            measureOrders.Clear();
+            if (state.MeasureOrders != null)
+                foreach (MeasureOrderRecord mo in state.MeasureOrders)
+                    if (mo.Tile >= 0 && mo.Tile < TileCount && !Parameters.IsMeasured(mo.Parameter) && !IsMeasureOrdered(mo.Parameter))
+                        measureOrders.Add((mo.Parameter, mo.Tile));
             if (state.MaterialsKg != null)
                 foreach (MaterialRecord m in state.MaterialsKg)
                     Materials.Set(m.Material, m.Kg);
@@ -1184,6 +1660,7 @@ namespace KardashevAscent.Simulation.Game
                     j.Recipe = RecipeOf(j);
                     jobs.Add(j);
                 }
+            industrialReports.Restore(state.IndustrialReports);
             Workforce.GroupCapacity = Math.Max(Workforce.GroupCapacity, RobotTech.GroupCapacity(MilestonesReached));
             Workforce.Movement = CurrentMovement();
             Workforce.Milestones = MilestonesReached;
@@ -1210,6 +1687,13 @@ namespace KardashevAscent.Simulation.Game
                     return;
                 if (site) Build.RestoreSite(r.Tile, r.Slot, BuildCostWh(BuildingType.ChargingStation), r.PaidWh);
                 stations.Add((r.Tile, r.Slot));
+            }
+            else if (r.Type == BuildingType.Relay)
+            {
+                if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
+                    return;
+                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildCostWh(BuildingType.Relay), r.PaidWh);
+                relays.Add((r.Tile, r.Slot));
             }
             else if (r.Type == BuildingType.Workshop)
             {

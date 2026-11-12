@@ -26,7 +26,7 @@ namespace KardashevAscent.Simulation.Robots
         /// is a measurement and starts again, so Critical tasks don't pull a robot off one.
         /// </summary>
         public static TaskPolicy For(TaskKind kind) =>
-            kind == TaskKind.Survey ? new TaskPolicy(false, false) : new TaskPolicy(true, true);
+            kind == TaskKind.Survey || kind == TaskKind.Measure ? new TaskPolicy(false, false) : new TaskPolicy(true, true);
     }
 
     /// <summary>One task as the monitor shows it.</summary>

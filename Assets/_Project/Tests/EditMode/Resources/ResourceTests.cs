@@ -190,10 +190,14 @@ namespace KardashevAscent.Simulation.Tests.Resources
             Assert.AreEqual(0.5, sim.SurveyProgress(t), 1e-9);
             Assert.IsFalse(sim.Deposits.IsSurveyed(t));
             sim.Tick(1.0);
-            Assert.IsTrue(sim.Deposits.IsSurveyed(t));
-            Assert.AreEqual(t, seen);
             Assert.IsFalse(sim.IsSurveyOrdered(t));
             Assert.IsNull(sim.Workforce.Robots[0].Task, "free again");
+            Assert.AreEqual(1, sim.SurveyPuzzles.Count, "the cores are in; the player estimates the grades (stage F)");
+            Assert.IsFalse(sim.Deposits.IsSurveyed(t), "not until the estimate is in");
+            Assert.IsFalse(sim.OrderSurvey(t), "cores already waiting");
+            PuzzleSolving.SolveSurvey(sim, t);
+            Assert.IsTrue(sim.Deposits.IsSurveyed(t));
+            Assert.AreEqual(t, seen);
             Assert.IsFalse(sim.OrderSurvey(t), "already surveyed");
         }
 
@@ -262,12 +266,13 @@ namespace KardashevAscent.Simulation.Tests.Resources
             int t = a.BaseTileId;
             a.OrderSurvey(t);
             a.Tick(2.0);
+            PuzzleSolving.SolveSurvey(a, t);
             int other = LandTileWith(a, Material.Iron) == t ? t + 1 : LandTileWith(a, Material.Iron);
             a.OrderMining(t, Material.Iron);
             a.Tick(1.5);
             if (!a.GetTile(other).IsWater) a.OrderSurvey(other);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(16, state.Version);
+            Assert.AreEqual(SimulationState.CurrentVersion, state.Version);
 
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));
