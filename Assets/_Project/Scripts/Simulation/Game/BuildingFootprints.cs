@@ -12,6 +12,7 @@ namespace KardashevAscent.Simulation.Game
         public const int BatteryYard = 2;
         public const int Workshop = 3;
         public const int ChargingStation = 1;
+        public const int Relay = 1;
 
         public static int SlotsFor(BuildingType type, int panelTier)
         {
@@ -22,6 +23,7 @@ namespace KardashevAscent.Simulation.Game
                 case BuildingType.Battery: return BatteryYard;
                 case BuildingType.Workshop: return Workshop;
                 case BuildingType.ChargingStation: return ChargingStation;
+                case BuildingType.Relay: return Relay;
                 default: return 1;
             }
         }

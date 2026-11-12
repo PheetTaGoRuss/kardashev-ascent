@@ -8,7 +8,7 @@ namespace KardashevAscent.Simulation.Game
     public sealed class SimulationState
     {
         /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished. 7 added robots; 8 their batteries and condition; 9 resources; 10 the Workshop; 11 programs (facility, ranking, queue); 12 movement; 13 critical damage (stage A); 14 reservations and tasks to go back to (stage B); 15 battery ageing by depth, maintenance rules (stage D); 16 building footprints.</summary>
-        public int Version = 16;
+        public int Version = 22;
         /// <summary>Planet id from planets.json (version 3); empty in older saves.</summary>
         public string PlanetId = "";
         /// <summary>Milestones reached and the day-average power behind them (version 4; 0 in older saves).</summary>
@@ -42,6 +42,19 @@ namespace KardashevAscent.Simulation.Game
         public Robots.WorkforceState Workforce = new Robots.WorkforceState();
         /// <summary>Finished buildings waiting for a robot to take them down (version 7).</summary>
         public List<Robots.SalvageOrderRecord> SalvageOrders = new List<Robots.SalvageOrderRecord>();
+        /// <summary>Panels waiting for a robot to turn them to new angles (version 17; older saves have none).</summary>
+        public List<Robots.AdjustOrderRecord> AdjustOrders = new List<Robots.AdjustOrderRecord>();
+        /// <summary>Solar parameters measured (version 18; older saves: none) and measurements under way.</summary>
+        public List<int> MeasuredParameters = new List<int>();
+        public List<MeasureOrderRecord> MeasureOrders = new List<MeasureOrderRecord>();
+        /// <summary>Latitude puzzles waiting for the player (version 19).</summary>
+        public List<Solar.LatitudePuzzle> LatitudePuzzles = new List<Solar.LatitudePuzzle>();
+        /// <summary>Light puzzles waiting, and parameters measured roughly (version 20).</summary>
+        public List<Solar.ParameterPuzzle> ParameterPuzzles = new List<Solar.ParameterPuzzle>();
+        public List<int> RoughParameters = new List<int>();
+        /// <summary>Core samples waiting for the player's grade estimate, and tiles surveyed only roughly (version 21).</summary>
+        public List<Solar.SurveyPuzzle> SurveyPuzzles = new List<Solar.SurveyPuzzle>();
+        public List<int> RoughSurveys = new List<int>();
         /// <summary>Resources (version 9): surveyed tiles, orders, materials on hand and work done on field tasks.</summary>
         public List<int> SurveyedTiles = new List<int>();
         public List<int> SurveyOrders = new List<int>();
@@ -50,6 +63,13 @@ namespace KardashevAscent.Simulation.Game
         public List<FieldWorkRecord> FieldWork = new List<FieldWorkRecord>();
         /// <summary>Workshop jobs in order (version 10).</summary>
         public List<Robots.JobRecord> Jobs = new List<Robots.JobRecord>();
+    }
+
+    [Serializable]
+    public sealed class MeasureOrderRecord
+    {
+        public Solar.SolarParameter Parameter;
+        public int Tile;
     }
 
     [Serializable]

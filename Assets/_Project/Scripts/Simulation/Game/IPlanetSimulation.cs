@@ -178,6 +178,74 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Turn a built panel (or a panel site) to new angles; free, nothing is rebuilt. Returns false if no panel is there or the angles are not allowed.</summary>
         bool SetPanelAngles(int tileId, int slot, double tilt, double azimuth);
 
+        /// <summary>
+        /// Ask a robot to turn a built panel to new angles (radians). The panel keeps its old angles until a robot
+        /// gets there. A site not yet built just takes the new angles. Asking again replaces the order.
+        /// </summary>
+        bool OrderPanelAngles(int tileId, int slot, double tilt, double azimuth);
+
+        /// <summary>The angles a panel is waiting to be turned to, if a robot has been asked to.</summary>
+        bool TryGetAdjustOrder(int tileId, int slot, out double tilt, out double azimuth);
+
+        bool CancelAdjust(int tileId, int slot);
+
+        // Solar parameters (docs/design/solar-measurements.md, stage B)
+
+        /// <summary>Planet-wide parameters measured so far (latitude is in <see cref="Notebook"/>).</summary>
+        Solar.ParameterBook Parameters { get; }
+
+        /// <summary>Is this parameter known for this tile (latitude per tile, the rest for the planet)?</summary>
+        bool IsParameterKnown(Solar.SolarParameter parameter, int tileId);
+
+        /// <summary>Send a robot to measure a parameter, working on this tile. False if known, ordered or on water.</summary>
+        bool OrderMeasure(Solar.SolarParameter parameter, int tileId);
+        bool IsMeasureOrdered(Solar.SolarParameter parameter);
+        bool CancelMeasure(Solar.SolarParameter parameter);
+        /// <summary>0–1 while a robot measures (1 once known).</summary>
+        double MeasureProgress(Solar.SolarParameter parameter);
+
+        /// <summary>
+        /// What each parameter's uncertainty can change about a panel's yearly energy here (Earth years, Wh): the model
+        /// run at both ends of each range. Known parameters have no spread.
+        /// </summary>
+        System.Collections.Generic.List<Solar.ParameterEffect> ParameterEffects(int tileId, double tilt, double azimuth);
+
+        /// <summary>A measurement finished (the parameter).</summary>
+        event Action<Solar.SolarParameter> ParameterMeasured;
+
+        /// <summary>Shadow readings waiting for the player to work out the latitude (stage C).</summary>
+        System.Collections.Generic.IReadOnlyList<Solar.LatitudePuzzle> LatitudePuzzles { get; }
+
+        /// <summary>
+        /// Answer a latitude puzzle (degrees, + north). A close answer fixes the tile's latitude; a wrong one keeps
+        /// the puzzle open. Returns what happened, for the player.
+        /// </summary>
+        string AnswerLatitudePuzzle(int tileId, double latitudeDeg, out Solar.LatitudePuzzle.Grade grade);
+
+        /// <summary>Readings waiting for the player to work out haze, diffuse share or clouds (stage D).</summary>
+        System.Collections.Generic.IReadOnlyList<Solar.ParameterPuzzle> ParameterPuzzles { get; }
+
+        /// <summary>Answer a light puzzle. Precise: the value is known; rough: half its range is left; wrong: try again.</summary>
+        string AnswerParameterPuzzle(Solar.SolarParameter parameter, double value, out Solar.LatitudePuzzle.Grade grade);
+
+        /// <summary>Core samples waiting for the player to estimate the tile's grades (stage F).</summary>
+        System.Collections.Generic.IReadOnlyList<Solar.SurveyPuzzle> SurveyPuzzles { get; }
+
+        /// <summary>
+        /// Answer a survey puzzle: one grade estimate per material in the puzzle's order. A close answer surveys the
+        /// tile; a rough one surveys it marked ±; a wrong one keeps the cores waiting.
+        /// </summary>
+        string AnswerSurveyPuzzle(int tileId, System.Collections.Generic.IReadOnlyList<double> estimates, out Solar.LatitudePuzzle.Grade grade);
+
+        /// <summary>The tile was surveyed from a rough estimate: its grades are shown as ±.</summary>
+        bool IsRoughSurvey(int tileId);
+
+        /// <summary>A robot finished readings and a puzzle is waiting.</summary>
+        event Action<Solar.SolarParameter> PuzzleReady;
+
+        /// <summary>A panel's angles now (radians), if a panel stands there.</summary>
+        bool TryGetPanelAngles(int tileId, int slot, out double tilt, out double azimuth);
+
         // Construction (see Construction and BuildCosts)
 
         /// <summary>Build parts on hand, Wh. Spare power is turned into parts; new buildings take their cost from them.</summary>
@@ -283,6 +351,12 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Build a robot charging station in an empty land slot (a construction site until a robot finishes it).</summary>
         bool PlaceChargingStation(int tileId, int slot);
 
+        /// <summary>A network relay on an empty slot (stage E). One per tile is enough: coverage is per tile.</summary>
+        bool PlaceRelay(int tileId, int slot);
+
+        /// <summary>The colony network: hub, relays, coverage, power (stage E).</summary>
+        Robots.ColonyNetwork Network { get; }
+
         /// <summary>Finished Workshops (each works one job at a time).</summary>
         int WorkshopCount { get; }
 
@@ -330,6 +404,9 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>A robot took down an ordered building (tile, slot); the slot is empty now.</summary>
         event Action<int, int> BuildingSalvaged;
 
+        /// <summary>A robot turned a panel to its ordered angles (tile, slot).</summary>
+        event Action<int, int> PanelAdjusted;
+
         /// <summary>A robot finished surveying a tile: its deposits are known now.</summary>
         event Action<int> TileSurveyed;
     }
@@ -344,6 +421,8 @@ namespace KardashevAscent.Simulation.Game
         Workshop,
         /// <summary>Dedicated robot charging station (spec v2 §7).</summary>
         ChargingStation,
+        /// <summary>Network relay (workforce v2 stage E): extends the colony network's reach; needs grid power.</summary>
+        Relay,
     }
 
     /// <summary>Static facts about one tile.</summary>

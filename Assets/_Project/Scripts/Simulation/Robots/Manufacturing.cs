@@ -96,6 +96,8 @@ namespace KardashevAscent.Simulation.Robots
 
         /// <summary>Charging station building: build parts, Wh. TBD.</summary>
         public const double ChargingStationPartsWh = 500_000.0;
+        /// <summary>Build parts for a network relay, Wh. TBD.</summary>
+        public const double RelayPartsWh = 200_000.0;
 
         /// <summary>Refining a substitute: aluminium (for copper) at 1, sodium (for lithium) at 2.</summary>
         public static int UnlockMilestone(Material refined) =>

@@ -23,12 +23,21 @@ namespace KardashevAscent.Presentation.UI
         [Range(0.02f, 0.5f)] [SerializeField] float textInterval = 0.1f;
 
         VisualElement hoverBox, siteBox, plannerBox, placedBox, legend, legendBar, dragRect, multiButtons, buildBar;
+        // Re-angling a built panel: sliders, the gain, and a robot to do it.
+        VisualElement adjustBox;
+        Slider adjustTilt, adjustFacing;
+        Label adjustTiltLabel, adjustFacingLabel, adjustGain;
+        Button adjustBest, adjustApply, adjustCancel;
+        (int Tile, int Slot) adjustFor = (-1, -1);
+        bool adjustDirty;
+        float nextAdjustPreview;
+        PanelPreview adjustPreview;
         Label buildHint;
         Label hoverText, siteTitle, siteText, plannerTitle, tiltLabel, facingLabel, plannerNumbers, plannerBest,
               plannerReason, placedTitle, placedAngles, placedNumbers, placedBonus, totals, mapHint, help,
               legendMin, legendMax, legendTile, multiText, batteryText, plannerCost;
         Slider tilt, facing;
-        Button bestButton, placeButton, removeAllButton, reangleButton, modePanel, modeBattery, modeWorkshop, modeStation;
+        Button bestButton, placeButton, removeAllButton, reangleButton, modePanel, modeBattery, modeWorkshop, modeStation, modeRelay;
         float nextText;
 
         void OnEnable()
@@ -68,6 +77,10 @@ namespace KardashevAscent.Presentation.UI
             DragFrom(modeBattery, BuildMode.Battery);
             DragFrom(modeWorkshop, BuildMode.Workshop);
             DragFrom(modeStation, BuildMode.ChargingStation);
+            modeRelay = root.Q<Button>("mode-relay");
+            if (modeRelay != null)
+                modeRelay.clicked += () => { if (placer != null) placer.Mode = BuildMode.Relay; };
+            DragFrom(modeRelay, BuildMode.Relay);
             hoverText = root.Q<Label>("hover-text");
             siteTitle = root.Q<Label>("site-title");
             siteText = root.Q<Label>("site-text");
@@ -82,6 +95,30 @@ namespace KardashevAscent.Presentation.UI
             placedAngles = root.Q<Label>("placed-angles");
             placedNumbers = root.Q<Label>("placed-numbers");
             placedBonus = root.Q<Label>("placed-bonus");
+            adjustBox = root.Q("adjust-box");
+            adjustTilt = root.Q<Slider>("adjust-tilt");
+            adjustFacing = root.Q<Slider>("adjust-facing");
+            adjustTiltLabel = root.Q<Label>("adjust-tilt-label");
+            adjustFacingLabel = root.Q<Label>("adjust-facing-label");
+            adjustGain = root.Q<Label>("adjust-gain");
+            adjustBest = root.Q<Button>("adjust-best");
+            adjustApply = root.Q<Button>("adjust-apply");
+            adjustCancel = root.Q<Button>("adjust-cancel");
+            adjustTilt?.RegisterValueChangedCallback(e => adjustDirty = true);
+            adjustFacing?.RegisterValueChangedCallback(e => adjustDirty = true);
+            if (adjustBest != null)
+                adjustBest.clicked += () =>
+                {
+                    if (placer != null && placer.TryGetBest(out PanelAngles b))
+                    {
+                        adjustTilt.value = Mathf.Round((float)(b.Tilt * Mathf.Rad2Deg));
+                        adjustFacing.value = Mathf.Round((float)(b.Azimuth * Mathf.Rad2Deg)) % 360f;
+                    }
+                };
+            if (adjustApply != null)
+                adjustApply.clicked += () => placer?.OrderSelectedAngles(adjustTilt.value * Mathf.Deg2Rad, adjustFacing.value * Mathf.Deg2Rad);
+            if (adjustCancel != null)
+                adjustCancel.clicked += () => { if (placer != null && placer.CancelSelectedAdjust()) adjustFor = (-1, -1); };
             totals = root.Q<Label>("totals");
             mapHint = root.Q<Label>("map-hint");
             help = root.Q<Label>("help");
@@ -161,6 +198,7 @@ namespace KardashevAscent.Presentation.UI
                 NameButton(modeBattery, "Battery yard", BuildMode.Battery);
                 NameButton(modeWorkshop, "Workshop", BuildMode.Workshop);
                 NameButton(modeStation, "Charger", BuildMode.ChargingStation);
+                NameButton(modeRelay, "Relay", BuildMode.Relay);
                 if (buildHint != null)
                     buildHint.text = placer.Dragging
                         ? "Let go over the site to build · Esc or right-click: cancel"
@@ -178,6 +216,7 @@ namespace KardashevAscent.Presentation.UI
             modeBattery.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.Battery);
             modeWorkshop?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.Workshop);
             modeStation?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.ChargingStation);
+            modeRelay?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.Relay);
 
             // Keep the sliders on the planned angles (keys and "best angle" move them too).
             if (siteOpen)
@@ -210,6 +249,7 @@ namespace KardashevAscent.Presentation.UI
 
         void UpdateSite(int slot, bool hasPanel, bool multi)
         {
+            Show(adjustBox, hasPanel && placer.SelectedBuilding == BuildingType.SolarPanel);
             int tile = siteView.Site.Tile;
             siteTitle.text = $"Building site · tile #{tile}";
             siteText.text = $"{placer.PanelsOnTile} panels · {placer.BatteriesOnTile} battery yards · " +
@@ -230,6 +270,15 @@ namespace KardashevAscent.Presentation.UI
             }
             if (hasPanel && placer.SelectedSalvageOrdered)
                 siteLine = "Salvage ordered: it works until a robot takes it down (Del again to cancel).\n" + siteLine;
+            if (hasPanel && placer.SelectedBuilding == BuildingType.Relay)
+            {
+                placedTitle.text = isSite ? $"Network relay site · slot {slot}" : $"Network relay · slot {slot}";
+                placedAngles.text = $"Extends the colony network {KardashevAscent.Simulation.Robots.ColonyNetwork.RangeTiles} tiles around it";
+                placedNumbers.text = siteLine + "Robots within range of the lander or a powered relay stay connected: they hear new " +
+                                     "orders and the colony's needs. Relays need grid power; in a brownout the whole network is down.";
+                Show(placedBonus, false);
+                return;
+            }
             if (hasPanel && placer.SelectedBuilding == BuildingType.ChargingStation)
             {
                 placedTitle.text = isSite ? $"Charging station site · slot {slot}" : $"Charging station · slot {slot}";
@@ -263,6 +312,7 @@ namespace KardashevAscent.Presentation.UI
                 placedAngles.text = $"Tilt {t * Mathf.Rad2Deg:0}° · facing {a * Mathf.Rad2Deg:0}° {Compass((float)(a * Mathf.Rad2Deg))}";
                 placedNumbers.text = siteLine + Numbers(p);
                 Show(placedBonus, rating == AngleRating.Optimal && placer.BestAngleUnlocked);
+                UpdateAdjust(tile, slot, t, a, p, isSite);
                 return;
             }
             if (slot < 0 && !multi)
@@ -271,7 +321,8 @@ namespace KardashevAscent.Presentation.UI
             bool panelMode = placer.Mode == BuildMode.SolarPanel;
             bool workshopMode = placer.Mode == BuildMode.Workshop;
             bool stationMode = placer.Mode == BuildMode.ChargingStation;
-            string thing = panelMode ? "panel" : workshopMode ? "Workshop" : stationMode ? "charging station" : "battery yard";
+            bool relayMode = placer.Mode == BuildMode.Relay;
+            string thing = panelMode ? "panel" : workshopMode ? "Workshop" : stationMode ? "charging station" : relayMode ? "relay" : "battery yard";
             int selected = 0, empty = 0, withPanels = 0, withBatteries = 0;
             if (multi)
             {
@@ -280,7 +331,7 @@ namespace KardashevAscent.Presentation.UI
                 int planned = placer.PlannedBuildings;
                 string adds = !placer.Preview.CanPlace || planned == 0 ? ""
                     : panelMode ? $"\nBuilding on the empty ones adds {Format.Energy(placer.Preview.EnergyPerYearWh * planned)} a year"
-                    : workshopMode || stationMode ? ""
+                    : workshopMode || stationMode || relayMode ? ""
                     : $"\nBuilding on the empty ones adds {Format.Energy(placer.BatteryUnitWh * planned)} of storage";
                 multiText.text = $"{empty} empty · {withPanels} panels · {withBatteries} battery yards" + adds;
                 placeButton.text = $"Place {planned} {thing}s (P)";
@@ -296,7 +347,11 @@ namespace KardashevAscent.Presentation.UI
                 plannerTitle.text = (panelMode ? $"Plan a {placer.NewPanelName} · slot {slot}" : $"Plan a {thing} · slot {slot}") + covers;
                 placeButton.text = $"Place {thing} (P)";
             }
-            batteryText.text = stationMode
+            batteryText.text = relayMode
+                ? $"Costs {Format.Energy(placer.BuildCostWh)} of build parts. Extends the colony network " +
+                  $"{KardashevAscent.Simulation.Robots.ColonyNetwork.RangeTiles} tiles around it, so robots working out there stay connected. " +
+                  "Draws a little grid power; the Network window (N) shows the coverage."
+                : stationMode
                 ? $"Costs {Format.Energy(placer.BuildCostWh)} of build parts. Charges robots from the grid, faster than a " +
                   "battery yard and more at once. Build one near where robots work: they drive to the nearest charger."
                 : workshopMode
@@ -402,6 +457,48 @@ namespace KardashevAscent.Presentation.UI
                     placer.BeginDrag(what);
             }, TrickleDown.TrickleDown);
             button.tooltip = "Drag onto the site to build";
+        }
+
+        /// <summary>
+        /// The ADJUST ANGLES part of a selected solar panel: sliders start at its angles (or the ones it waits for),
+        /// the gain against today's angles updates as they move, and a robot is sent to turn it.
+        /// </summary>
+        void UpdateAdjust(int tile, int slot, double tilt, double azimuth, PanelPreview now, bool isSite)
+        {
+            if (adjustBox == null)
+                return;
+            bool waiting = placer.SelectedAdjustOrder(out double wantTilt, out double wantAzimuth);
+            if (adjustFor != (tile, slot))
+            {
+                adjustFor = (tile, slot);
+                adjustTilt.SetValueWithoutNotify(Mathf.Round((float)((waiting ? wantTilt : tilt) * Mathf.Rad2Deg)));
+                adjustFacing.SetValueWithoutNotify(Mathf.Round((float)((waiting ? wantAzimuth : azimuth) * Mathf.Rad2Deg)));
+                adjustDirty = true;
+            }
+            adjustTiltLabel.text = $"Tilt β  {adjustTilt.value:0}°  (now {tilt * Mathf.Rad2Deg:0}°)";
+            adjustFacingLabel.text = $"Facing γ  {adjustFacing.value:0}° {Compass(adjustFacing.value)}  (now {azimuth * Mathf.Rad2Deg:0}°)";
+            if (adjustDirty && Time.unscaledTime >= nextAdjustPreview)
+            {
+                adjustPreview = placer.PreviewSelectedAt(adjustTilt.value * Mathf.Deg2Rad, adjustFacing.value * Mathf.Deg2Rad);
+                adjustDirty = false;
+                nextAdjustPreview = Time.unscaledTime + 0.15f;
+            }
+            double before = now.EnergyPerYearWh, after = adjustPreview.EnergyPerYearWh;
+            bool same = Mathf.Abs(adjustTilt.value - (float)(tilt * Mathf.Rad2Deg)) < 0.5f
+                        && Mathf.Abs(Mathf.DeltaAngle(adjustFacing.value, (float)(azimuth * Mathf.Rad2Deg))) < 0.5f;
+            string gain = before > 0.0 && after > 0.0
+                ? $"{Format.Energy(before)} → {Format.Energy(after)} a year ({(after / before - 1.0) * 100.0:+0.0;-0.0;0.0} %)"
+                : "working out…";
+            adjustGain.text = same ? "Move the sliders to try other angles." : gain;
+            adjustGain.EnableInClassList("warn", !same && after < before);
+            adjustBest.SetEnabled(placer.BestAngleUnlocked);
+            adjustBest.tooltip = placer.BestAngleUnlocked ? "" : "Needs this tile's latitude (V: sky view).";
+            adjustApply.text = isSite ? "Build it at these angles" : waiting ? "Change the order" : "Send a robot to turn it";
+            adjustApply.SetEnabled(!same || waiting);
+            Show(adjustCancel, waiting);
+            if (waiting)
+                adjustGain.text = $"Waiting for a robot to turn it to {wantTilt * Mathf.Rad2Deg:0}°, {wantAzimuth * Mathf.Rad2Deg:0}° " +
+                                  "(it keeps its old angles until then).\n" + adjustGain.text;
         }
     }
 }
