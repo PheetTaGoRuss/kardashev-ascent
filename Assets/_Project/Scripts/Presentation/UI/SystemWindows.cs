@@ -20,7 +20,7 @@ namespace KardashevAscent.Presentation.UI
         static readonly RobotKind[] Buildable =
             { RobotKind.General, RobotKind.Construction, RobotKind.Mining, RobotKind.Research, RobotKind.Maintenance };
 
-        Label status, stock, message;
+        Label status, stock, message, reports;
         VisualElement jobs, orders;
         readonly List<Label> jobLabels = new List<Label>();
         string shownShape;
@@ -38,6 +38,8 @@ namespace KardashevAscent.Presentation.UI
             Body.Add(orders);
             message = Text("caption");
             message.AddToClassList("message");
+            Heading("REPORTS");
+            reports = Text();
             Text("caption").text = "Each Workshop works on one job at a time, in queue order. Jobs use materials from mining " +
                                    "(Robots window, or Mine in the tile panel) and build parts. Recipes, times and unlock milestones " +
                                    "are placeholder values.";
@@ -59,6 +61,19 @@ namespace KardashevAscent.Presentation.UI
             }
             for (int i = 0; i < jobLabels.Count && i < sim.Jobs.Count; i++)
                 jobLabels[i].text = JobText(sim, i);
+            reports.text = Reports(sim);
+        }
+
+        /// <summary>The last few industry reports, newest first, each with the day it was made.</summary>
+        static string Reports(IPlanetSimulation sim)
+        {
+            var list = sim.IndustrialReports;
+            if (list.Count == 0)
+                return "No reports yet.";
+            string s = "";
+            for (int i = list.Count - 1; i >= 0 && i >= list.Count - 4; i--)
+                s += (s.Length > 0 ? "\n" : "") + $"Day {(int)(list[i].TimeHours / 24.0) + 1} · {list[i].Message}";
+            return s;
         }
 
         static string Stock(IPlanetSimulation sim)

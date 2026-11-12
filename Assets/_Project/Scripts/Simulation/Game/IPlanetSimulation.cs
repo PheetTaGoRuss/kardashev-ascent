@@ -313,6 +313,9 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Materials on hand, kg.</summary>
         Resources.MaterialStock Materials { get; }
 
+        /// <summary>Recent facility and robot reports explaining industrial outcomes and constraints.</summary>
+        System.Collections.Generic.IReadOnlyList<Resources.IndustrialReport> IndustrialReports { get; }
+
         /// <summary>Ask a robot to survey a land tile's ground. False if it is water, surveyed or already ordered.</summary>
         bool OrderSurvey(int tileId);
         bool IsSurveyOrdered(int tileId);

@@ -92,7 +92,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             for (int i = 0; i < 10 && a.SurveyPuzzles.Count == 0; i++)
                 a.Tick(1.0);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(22, state.Version);
+            Assert.AreEqual(SimulationState.CurrentVersion, state.Version);
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));
             Assert.AreEqual(1, b.SurveyPuzzles.Count);

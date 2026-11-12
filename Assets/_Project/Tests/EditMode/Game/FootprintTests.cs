@@ -109,7 +109,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             a.PlaceWorkshop(t, 0);
             a.PlaceBattery(t, 30);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(22, state.Version);
+            Assert.AreEqual(SimulationState.CurrentVersion, state.Version);
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));
             CollectionAssert.AreEqual(a.FootprintAt(t, 0), b.FootprintAt(t, 0));
