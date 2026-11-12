@@ -27,13 +27,12 @@ namespace KardashevAscent.Presentation.UI
         [Tooltip("Seconds between refreshes while open.")]
         [Range(0.1f, 2f)] [SerializeField] float refreshInterval = 0.5f;
 
-        VisualElement panelRoot, groupsHolder, workshopHolder, groupActions, tasksHolder;
+        VisualElement panelRoot, groupsHolder, groupActions, tasksHolder;
         /// <summary>The group the TASKS buttons act on (interrupt, queue).</summary>
         int targetGroupId = -1;
         /// <summary>The robot the TASKS Reserve buttons act on.</summary>
         int targetRobotId = -1;
-        Label subtitle, summary, notes, workshopStatus, workshopMessage;
-        readonly List<Label> jobLabels = new List<Label>();
+        Label subtitle, summary, notes, workshopMessage;
         float nextRefresh;
         string shownShape;
         readonly Dictionary<int, Label> taskLabels = new Dictionary<int, Label>();
@@ -54,20 +53,24 @@ namespace KardashevAscent.Presentation.UI
             subtitle = root.Q<Label>("subtitle");
             summary = root.Q<Label>("summary");
             notes = root.Q<Label>("notes");
-            workshopHolder = root.Q("workshop");
+            workshopMessage = root.Q<Label>("workshop-message");
             groupActions = root.Q("group-actions");
             tasksHolder = root.Q("tasks");
-            workshopStatus = root.Q<Label>("workshop-status");
-            workshopMessage = root.Q<Label>("workshop-message");
             Button close = root.Q<Button>("close");
             if (close != null)
                 close.clicked += () => SetVisible(false);
             shownShape = null;
             SetVisible(Visible);
+            SystemTabs.Register(new SystemTabs.Tab
+            {
+                Id = "robots", Title = "Robots", Key = toggleKey, Order = 20,
+                IsOpen = () => Visible, SetOpen = SetVisible,
+            });
         }
 
         void OnDisable()
         {
+            SystemTabs.Unregister("robots");
             UIDocument document = GetComponent<UIDocument>();
             if (document != null && document.rootVisualElement != null)
                 ScreenInput.Unregister(document.rootVisualElement.panel);
@@ -83,7 +86,7 @@ namespace KardashevAscent.Presentation.UI
         void Update()
         {
             if (Input.GetKeyDown(toggleKey))
-                SetVisible(!Visible);
+                SystemTabs.Toggle("robots");
             if (!Visible || panelRoot == null || Time.unscaledTime < nextRefresh)
                 return;
             nextRefresh = Time.unscaledTime + refreshInterval;
@@ -125,7 +128,7 @@ namespace KardashevAscent.Presentation.UI
                 openKeys.Append(t).Append(rec?.State).Append(rec?.RobotId).Append(rec?.ReservedFor).Append(';');
             }
             openKeys.Append(w.Changes.Count > 0 ? w.Changes[w.Changes.Count - 1].Hours : -1.0).Append(targetRobotId);
-            string shape = Shape(w) + "|" + sim.MilestonesReached + "|" + sim.WorkshopCount + "|" + sim.Jobs.Count + "|" + openKeys
+            string shape = Shape(w) + "|" + openKeys
                            + "|" + targetGroupId + "|" + (picker != null ? picker.SelectedTile : -1);
             if (shape != shownShape)
             {
@@ -139,83 +142,6 @@ namespace KardashevAscent.Presentation.UI
                 if (vitalLabels.TryGetValue(r.Id, out Label v))
                     v.text = Vitals(r);
             }
-            workshopStatus.text =
-                $"{sim.WorkshopCount} Workshop{(sim.WorkshopCount == 1 ? "" : "s")} · milestone {sim.MilestonesReached} · materials: {Stock(sim)}" +
-                (sim.WorkshopCount == 0 ? "\nBuild a Robot Workshop on a site (Tab to Workshop, then P)." : "");
-            for (int i = 0; i < jobLabels.Count && i < sim.Jobs.Count; i++)
-                jobLabels[i].text = JobText(sim, i);
-        }
-
-        // ---- Workshop (phase 3b) ----
-
-        static string Stock(IPlanetSimulation sim)
-        {
-            string s = "";
-            foreach (Material m in Materials.All)
-                if (sim.Materials[m] > 0.0)
-                    s += (s.Length > 0 ? ", " : "") + $"{Materials.Name(m).ToLowerInvariant()} {sim.Materials[m]:0} kg";
-            return s.Length > 0 ? s : "none (survey and mine from the tile panel)";
-        }
-
-        static string JobText(IPlanetSimulation sim, int i)
-        {
-            ManufacturingJob j = sim.Jobs[i];
-            string where = i < sim.WorkshopCount ? $"{j.Progress * 100.0:0} % of {j.Recipe.WorkHours:0} h of work" : "waiting for a free Workshop";
-            return $"{i + 1}. {j.Describe()} · {where}";
-        }
-
-        static readonly RobotKind[] Buildable =
-            { RobotKind.General, RobotKind.Construction, RobotKind.Mining, RobotKind.Research, RobotKind.Maintenance };
-
-        void RebuildWorkshop(IPlanetSimulation sim, Workforce w)
-        {
-            workshopHolder.Clear();
-            jobLabels.Clear();
-            for (int i = 0; i < sim.Jobs.Count; i++)
-            {
-                int index = i;
-                var row = new VisualElement();
-                row.AddToClassList("job");
-                Label text = MakeLabel(JobText(sim, i), "job-text");
-                jobLabels.Add(text);
-                row.Add(text);
-                row.Add(MakeButton("Cancel", () => { sim.CancelJob(index); Changed(sim); }));
-                workshopHolder.Add(row);
-            }
-
-            var robots = new VisualElement();
-            robots.AddToClassList("button-row");
-            robots.Add(MakeLabel("New robot:", "priority-label"));
-            foreach (RobotKind kind in Buildable)
-            {
-                RobotKind k = kind;
-                int unlock = RobotTech.UnlockMilestone(kind);
-                Button b = MakeButton(kind.ToString(), () => Order(sim, sim.OrderRobot(k), $"{k} robot ordered."));
-                b.EnableInClassList("locked", sim.MilestonesReached < unlock);
-                b.tooltip = $"Iron 400 kg, rock 200 kg, copper (or aluminium) 40 kg, lithium 2 kg (or sodium 6 kg), 50 kWh of parts, 24 h of work. Unlocks at milestone {unlock}.";
-                robots.Add(b);
-            }
-            workshopHolder.Add(robots);
-
-            var refine = new VisualElement();
-            refine.AddToClassList("button-row");
-            refine.Add(MakeLabel("Refine from rock:", "priority-label"));
-            foreach (Material m in new[] { Material.Aluminium, Material.Sodium })
-            {
-                Material material = m;
-                Button b = MakeButton($"{RobotTech.RefineBatchKg(m):0} kg {Materials.Name(m).ToLowerInvariant()}",
-                                      () => Order(sim, sim.OrderRefine(material), $"{Materials.Name(material)} batch ordered."));
-                b.EnableInClassList("locked", sim.MilestonesReached < RobotTech.UnlockMilestone(m));
-                b.tooltip = Materials.Origin(m) + $" Unlocks at milestone {RobotTech.UnlockMilestone(m)}.";
-                refine.Add(b);
-            }
-            workshopHolder.Add(refine);
-        }
-
-        void Order(IPlanetSimulation sim, string why, string ok)
-        {
-            workshopMessage.text = why ?? ok;
-            Changed(sim);
         }
 
         /// <summary>Everything the buttons and rows depend on; the list is rebuilt only when it changes.</summary>
@@ -311,7 +237,6 @@ namespace KardashevAscent.Presentation.UI
             groupActions.Clear();
             groupActions.Add(MakeButton("New group", () => { w.CreateGroup($"Group {w.Groups.Count + 1}"); Changed(sim); }));
             RebuildTasks(sim, w);
-            RebuildWorkshop(sim, w);
         }
 
         // ---- Phase 4: programs, ranking, queue, groups, tasks ----
@@ -405,6 +330,7 @@ namespace KardashevAscent.Presentation.UI
             {
                 case TaskKind.Build: return $"Build a {BuildingName(sim.GetBuilding(t.Tile, t.Slot))} · tile {t.Tile}, slot {t.Slot}";
                 case TaskKind.Salvage: return $"Take down a {BuildingName(sim.GetBuilding(t.Tile, t.Slot))} · tile {t.Tile}, slot {t.Slot}";
+                case TaskKind.Adjust: return $"Turn a solar panel to new angles · tile {t.Tile}, slot {t.Slot}";
                 case TaskKind.Survey: return $"Survey tile {t.Tile}";
                 case TaskKind.Mine: return $"Mine {Materials.Name((Material)t.Slot).ToLowerInvariant()} · tile {t.Tile}";
                 case TaskKind.Manufacture:
@@ -692,6 +618,12 @@ namespace KardashevAscent.Presentation.UI
 
         /// <summary>Critical → High → Normal → Low → Disabled → Critical.</summary>
         static TaskPriority Next(TaskPriority p) => p == TaskPriority.Disabled ? TaskPriority.Critical : p + 1;
+
+        void Order(IPlanetSimulation sim, string why, string ok)
+        {
+            workshopMessage.text = why ?? ok;
+            Changed(sim);
+        }
 
         void Changed(IPlanetSimulation sim)
         {
