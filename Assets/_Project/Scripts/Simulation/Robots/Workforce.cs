@@ -298,12 +298,82 @@ namespace KardashevAscent.Simulation.Robots
             return true;
         }
 
+        // ---- Colony network (stage E) ----
+
+        /// <summary>The network, or null when not modelled (tests without one: every robot is connected).</summary>
+        public ColonyNetwork Network { get; set; }
+
+        /// <summary>Robots that lost or regained the network this check (robot, connected now).</summary>
+        public event System.Action<Robot, bool> ConnectionChanged;
+
+        /// <summary>
+        /// Check every robot against the network: a connected robot syncs its rules (and anything it found);
+        /// a robot that drops out keeps the rules it last synced. Call once per tick, after movement.
+        /// </summary>
+        public void UpdateConnections(double hours)
+        {
+            foreach (Robot r in robots)
+            {
+                bool now = Network == null || Network.IsConnected(r.Tile);
+                if (now)
+                {
+                    Sync(r);
+                    if (!r.Connected)
+                    {
+                        r.Connected = true;
+                        r.HoursOffline = 0.0;
+                        ConnectionChanged?.Invoke(r, true);
+                    }
+                }
+                else
+                {
+                    if (r.Connected)
+                    {
+                        if (r.CachedPriorities.Count == 0)
+                            Sync(r);   // never synced (a new robot): it starts with what it was made with
+                        r.Connected = false;
+                        ConnectionChanged?.Invoke(r, false);
+                    }
+                    r.HoursOffline += hours;
+                }
+            }
+        }
+
+        /// <summary>A connected robot takes the live program and priorities, and hands over what it found.</summary>
+        void Sync(Robot r)
+        {
+            r.CachedProgram = EffectiveProgram(r);
+            foreach (TaskKind k in (TaskKind[])System.Enum.GetValues(typeof(TaskKind)))
+                r.CachedPriorities[k] = EffectivePriority(r, k);
+            r.UnsyncedFindings = 0;
+        }
+
+        /// <summary>How many robots are cut off now.</summary>
+        public int DisconnectedCount
+        {
+            get
+            {
+                int n = 0;
+                foreach (Robot r in robots) if (!r.Connected) n++;
+                return n;
+            }
+        }
+
         /// <summary>
         /// The priority a robot gives a kind of task under its program: its own or its group's priority, except
         /// under Demand, where the colony's needs decide (a Disabled kind stays disabled).
+        /// A cut-off robot follows the rules it last synced, and can't react to the colony's needs (it doesn't
+        /// hear about them): under a cached Demand program it works at Normal priority.
         /// </summary>
         public TaskPriority ProgramPriority(Robot r, TaskKind kind)
         {
+            if (!r.Connected)
+            {
+                TaskPriority cached = r.CachedPriorities.TryGetValue(kind, out TaskPriority c) ? c : TaskPriority.Normal;
+                if (r.CachedProgram != OperatingProgram.Demand || cached == TaskPriority.Disabled)
+                    return cached;
+                return kind == TaskKind.Mine ? TaskPriority.Low : TaskPriority.Normal;
+            }
             TaskPriority p = EffectivePriority(r, kind);
             if (EffectiveProgram(r) != OperatingProgram.Demand || p == TaskPriority.Disabled)
                 return p;
@@ -1060,6 +1130,12 @@ namespace KardashevAscent.Simulation.Robots
                 }
                 foreach (var kv in r.PriorityOverrides)
                     rs.PriorityOverrides.Add(new PriorityRecord { Kind = kv.Key, Priority = kv.Value });
+                rs.Connected = r.Connected;
+                rs.HoursOffline = r.HoursOffline;
+                rs.CachedProgram = r.CachedProgram;
+                rs.UnsyncedFindings = r.UnsyncedFindings;
+                foreach (var kv in r.CachedPriorities)
+                    rs.CachedPriorities.Add(new PriorityRecord { Kind = kv.Key, Priority = kv.Value });
                 rs.Route.AddRange(r.Route);
                 s.Robots.Add(rs);
             }
@@ -1111,6 +1187,14 @@ namespace KardashevAscent.Simulation.Robots
                 if (rs.PriorityOverrides != null)
                     foreach (PriorityRecord p in rs.PriorityOverrides)
                         r.PriorityOverrides[p.Kind] = p.Priority;
+                // Saves before version 22 have no network: the robot comes back connected (UpdateConnections syncs it).
+                r.Connected = rs.Connected;
+                r.HoursOffline = rs.HoursOffline;
+                r.CachedProgram = rs.CachedProgram;
+                r.UnsyncedFindings = rs.UnsyncedFindings;
+                if (rs.CachedPriorities != null)
+                    foreach (PriorityRecord p in rs.CachedPriorities)
+                        r.CachedPriorities[p.Kind] = p.Priority;
                 // Saves before version 8 have no battery or condition: the robot comes back charged and like new.
                 r.Modules = rs.Modules;
                 r.SodiumBattery = rs.SodiumBattery;

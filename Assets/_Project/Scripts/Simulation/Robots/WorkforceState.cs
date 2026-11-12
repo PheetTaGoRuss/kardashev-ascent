@@ -27,6 +27,12 @@ namespace KardashevAscent.Simulation.Robots
         public int TaskTile;
         public int TaskSlot;
         public bool OnTemporaryTask;
+        /// <summary>Colony network (stage E, save version 22).</summary>
+        public bool Connected = true;
+        public double HoursOffline;
+        public OperatingProgram CachedProgram;
+        public List<PriorityRecord> CachedPriorities = new List<PriorityRecord>();
+        public int UnsyncedFindings;
         public bool HasProgramOverride;
         public OperatingProgram ProgramOverride;
         public List<PriorityRecord> PriorityOverrides = new List<PriorityRecord>();

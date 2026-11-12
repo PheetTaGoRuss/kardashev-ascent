@@ -75,6 +75,7 @@
                 <ui:Button name="mode-battery" class="action-button mode" text="Battery yard" />
                 <ui:Button name="mode-workshop" class="action-button mode" text="Workshop" />
                 <ui:Button name="mode-station" class="action-button mode" text="Charger" />
+                <ui:Button name="mode-relay" class="action-button mode" text="Relay" />
             </ui:VisualElement>
             <ui:Label name="build-hint" class="caption" text="Drag a building onto the site · Tab: switch" />
         </ui:VisualElement>

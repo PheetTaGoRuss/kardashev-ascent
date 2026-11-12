@@ -30,6 +30,8 @@ namespace KardashevAscent.Presentation.Planet
         Workshop,
         /// <summary>Robot charging station (spec v2 §7).</summary>
         ChargingStation,
+        /// <summary>Network relay (workforce v2 stage E).</summary>
+        Relay,
     }
 
     [RequireComponent(typeof(PlanetView))]
@@ -90,6 +92,7 @@ namespace KardashevAscent.Presentation.Planet
                 case BuildingType.Battery: return new Color32(70, 160, 100, a);
                 case BuildingType.Workshop: return new Color32(210, 140, 60, a);
                 case BuildingType.ChargingStation: return new Color32(200, 190, 70, a);
+                case BuildingType.Relay: return new Color32(120, 200, 220, a);
                 default: return new Color32(160, 160, 160, a);
             }
         }
@@ -109,7 +112,8 @@ namespace KardashevAscent.Presentation.Planet
 
         static BuildingType TypeOf(BuildMode m) =>
             m == BuildMode.Battery ? BuildingType.Battery : m == BuildMode.Workshop ? BuildingType.Workshop
-            : m == BuildMode.ChargingStation ? BuildingType.ChargingStation : BuildingType.SolarPanel;
+            : m == BuildMode.ChargingStation ? BuildingType.ChargingStation
+            : m == BuildMode.Relay ? BuildingType.Relay : BuildingType.SolarPanel;
 
         /// <summary>The slot a building covering this one is keyed by (its anchor), or the slot itself when empty.</summary>
         int Anchor(int t, int s)
@@ -345,10 +349,12 @@ namespace KardashevAscent.Presentation.Planet
         BatteryVisual MakeBattery(int t, int s, bool constructionSite)
         {
             BuildingType type = simulation != null ? simulation.GetBuilding(t, s) : BuildingType.Battery;
-            string what = type == BuildingType.Workshop ? "Workshop" : type == BuildingType.ChargingStation ? "Charger" : "Battery";
+            string what = type == BuildingType.Workshop ? "Workshop" : type == BuildingType.ChargingStation ? "Charger"
+                        : type == BuildingType.Relay ? "Relay" : "Battery";
             if (!constructionSite)
                 return type == BuildingType.Workshop ? new BatteryVisual($"{what} {t}.{s}", transform, cellMaterial, frameMaterial)
                      : type == BuildingType.ChargingStation ? new BatteryVisual($"{what} {t}.{s}", transform, frameMaterial, frameMaterial)
+                     : type == BuildingType.Relay ? new BatteryVisual($"{what} {t}.{s}", transform, cellMaterial, cellMaterial)
                      : new BatteryVisual($"{what} {t}.{s}", transform, frameMaterial, cellMaterial);
             var visual = new BatteryVisual($"{what} Site {t}.{s}", transform, ghostMaterial, ghostMaterial);
             visual.SetTint(siteTint);
@@ -414,7 +420,7 @@ namespace KardashevAscent.Presentation.Planet
             foreach (BuildingRecord r in simulation.CaptureState().Buildings)
             {
                 TileSite site = siteView.SiteFor(r.Tile);
-                if (r.Type == BuildingType.Battery || r.Type == BuildingType.Workshop || r.Type == BuildingType.ChargingStation)
+                if (r.Type == BuildingType.Battery || r.Type == BuildingType.Workshop || r.Type == BuildingType.ChargingStation || r.Type == BuildingType.Relay)
                 {
                     BatteryVisual yard = MakeBattery(r.Tile, r.Slot, r.UnderConstruction);
                     ShowBattery(yard, site, simulation.FootprintAt(r.Tile, r.Slot));
@@ -507,7 +513,8 @@ namespace KardashevAscent.Presentation.Planet
 
             if (tile >= 0 && Input.GetKeyDown(KeyCode.Tab))
                 mode = mode == BuildMode.SolarPanel ? BuildMode.Battery : mode == BuildMode.Battery ? BuildMode.Workshop
-                     : mode == BuildMode.Workshop ? BuildMode.ChargingStation : BuildMode.SolarPanel;
+                     : mode == BuildMode.Workshop ? BuildMode.ChargingStation
+                     : mode == BuildMode.ChargingStation ? BuildMode.Relay : BuildMode.SolarPanel;
 
             if (dragging)
             {
@@ -791,10 +798,11 @@ namespace KardashevAscent.Presentation.Planet
             if (simulation == null || tile < 0 || s < 0 || Occupied(s) || siteView.Site == null)
                 return false;
             padsDirty = true;
-            if (mode == BuildMode.Battery || mode == BuildMode.Workshop || mode == BuildMode.ChargingStation)
+            if (mode == BuildMode.Battery || mode == BuildMode.Workshop || mode == BuildMode.ChargingStation || mode == BuildMode.Relay)
             {
                 if (!(mode == BuildMode.Battery ? simulation.PlaceBattery(tile, s)
-                      : mode == BuildMode.Workshop ? simulation.PlaceWorkshop(tile, s) : simulation.PlaceChargingStation(tile, s)))
+                      : mode == BuildMode.Workshop ? simulation.PlaceWorkshop(tile, s)
+                      : mode == BuildMode.Relay ? simulation.PlaceRelay(tile, s) : simulation.PlaceChargingStation(tile, s)))
                     return false;
                 BatteryVisual yard = MakeBattery(tile, s, simulation.IsUnderConstruction(tile, s));
                 ShowBattery(yard, siteView.Site, simulation.FootprintAt(tile, s));

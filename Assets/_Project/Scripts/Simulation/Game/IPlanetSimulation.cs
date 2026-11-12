@@ -351,6 +351,12 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Build a robot charging station in an empty land slot (a construction site until a robot finishes it).</summary>
         bool PlaceChargingStation(int tileId, int slot);
 
+        /// <summary>A network relay on an empty slot (stage E). One per tile is enough: coverage is per tile.</summary>
+        bool PlaceRelay(int tileId, int slot);
+
+        /// <summary>The colony network: hub, relays, coverage, power (stage E).</summary>
+        Robots.ColonyNetwork Network { get; }
+
         /// <summary>Finished Workshops (each works one job at a time).</summary>
         int WorkshopCount { get; }
 
@@ -415,6 +421,8 @@ namespace KardashevAscent.Simulation.Game
         Workshop,
         /// <summary>Dedicated robot charging station (spec v2 §7).</summary>
         ChargingStation,
+        /// <summary>Network relay (workforce v2 stage E): extends the colony network's reach; needs grid power.</summary>
+        Relay,
     }
 
     /// <summary>Static facts about one tile.</summary>

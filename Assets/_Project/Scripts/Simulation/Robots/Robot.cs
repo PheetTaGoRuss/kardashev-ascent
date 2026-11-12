@@ -124,6 +124,25 @@ namespace KardashevAscent.Simulation.Robots
 
         public bool NeedsMaintenance => Condition < MaintenanceBelow || Battery.WornOut || CriticallyDamaged;
 
+        // ---- Colony network (stage E) ----
+
+        /// <summary>Reached the network at the last check. A cut-off robot keeps working on cached rules.</summary>
+        public bool Connected { get; internal set; } = true;
+
+        /// <summary>Hours it has been cut off (0 while connected).</summary>
+        public double HoursOffline { get; internal set; }
+
+        /// <summary>
+        /// The program and priorities it synced last time it was connected: what it follows while cut off, however
+        /// the player changes the group meanwhile. Null until the first sync.
+        /// </summary>
+        public OperatingProgram CachedProgram { get; internal set; }
+        internal readonly System.Collections.Generic.Dictionary<TaskKind, TaskPriority> CachedPriorities =
+            new System.Collections.Generic.Dictionary<TaskKind, TaskPriority>();
+
+        /// <summary>Survey and measurement results it found while cut off, waiting to sync (counts; the data itself lands at once in this stage).</summary>
+        public int UnsyncedFindings { get; internal set; }
+
         /// <summary>Free to take colony work: not shut down, charging, in maintenance or low on charge.</summary>
         public bool Available => Activity == RobotActivity.None && !IsShutDown && !NeedsCharge && !ManualTarget.HasValue;
 

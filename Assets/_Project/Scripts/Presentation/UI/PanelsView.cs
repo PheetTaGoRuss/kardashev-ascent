@@ -37,7 +37,7 @@ namespace KardashevAscent.Presentation.UI
               plannerReason, placedTitle, placedAngles, placedNumbers, placedBonus, totals, mapHint, help,
               legendMin, legendMax, legendTile, multiText, batteryText, plannerCost;
         Slider tilt, facing;
-        Button bestButton, placeButton, removeAllButton, reangleButton, modePanel, modeBattery, modeWorkshop, modeStation;
+        Button bestButton, placeButton, removeAllButton, reangleButton, modePanel, modeBattery, modeWorkshop, modeStation, modeRelay;
         float nextText;
 
         void OnEnable()
@@ -77,6 +77,10 @@ namespace KardashevAscent.Presentation.UI
             DragFrom(modeBattery, BuildMode.Battery);
             DragFrom(modeWorkshop, BuildMode.Workshop);
             DragFrom(modeStation, BuildMode.ChargingStation);
+            modeRelay = root.Q<Button>("mode-relay");
+            if (modeRelay != null)
+                modeRelay.clicked += () => { if (placer != null) placer.Mode = BuildMode.Relay; };
+            DragFrom(modeRelay, BuildMode.Relay);
             hoverText = root.Q<Label>("hover-text");
             siteTitle = root.Q<Label>("site-title");
             siteText = root.Q<Label>("site-text");
@@ -194,6 +198,7 @@ namespace KardashevAscent.Presentation.UI
                 NameButton(modeBattery, "Battery yard", BuildMode.Battery);
                 NameButton(modeWorkshop, "Workshop", BuildMode.Workshop);
                 NameButton(modeStation, "Charger", BuildMode.ChargingStation);
+                NameButton(modeRelay, "Relay", BuildMode.Relay);
                 if (buildHint != null)
                     buildHint.text = placer.Dragging
                         ? "Let go over the site to build · Esc or right-click: cancel"
@@ -211,6 +216,7 @@ namespace KardashevAscent.Presentation.UI
             modeBattery.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.Battery);
             modeWorkshop?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.Workshop);
             modeStation?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.ChargingStation);
+            modeRelay?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.Relay);
 
             // Keep the sliders on the planned angles (keys and "best angle" move them too).
             if (siteOpen)
@@ -264,6 +270,15 @@ namespace KardashevAscent.Presentation.UI
             }
             if (hasPanel && placer.SelectedSalvageOrdered)
                 siteLine = "Salvage ordered: it works until a robot takes it down (Del again to cancel).\n" + siteLine;
+            if (hasPanel && placer.SelectedBuilding == BuildingType.Relay)
+            {
+                placedTitle.text = isSite ? $"Network relay site · slot {slot}" : $"Network relay · slot {slot}";
+                placedAngles.text = $"Extends the colony network {KardashevAscent.Simulation.Robots.ColonyNetwork.RangeTiles} tiles around it";
+                placedNumbers.text = siteLine + "Robots within range of the lander or a powered relay stay connected: they hear new " +
+                                     "orders and the colony's needs. Relays need grid power; in a brownout the whole network is down.";
+                Show(placedBonus, false);
+                return;
+            }
             if (hasPanel && placer.SelectedBuilding == BuildingType.ChargingStation)
             {
                 placedTitle.text = isSite ? $"Charging station site · slot {slot}" : $"Charging station · slot {slot}";
@@ -306,7 +321,8 @@ namespace KardashevAscent.Presentation.UI
             bool panelMode = placer.Mode == BuildMode.SolarPanel;
             bool workshopMode = placer.Mode == BuildMode.Workshop;
             bool stationMode = placer.Mode == BuildMode.ChargingStation;
-            string thing = panelMode ? "panel" : workshopMode ? "Workshop" : stationMode ? "charging station" : "battery yard";
+            bool relayMode = placer.Mode == BuildMode.Relay;
+            string thing = panelMode ? "panel" : workshopMode ? "Workshop" : stationMode ? "charging station" : relayMode ? "relay" : "battery yard";
             int selected = 0, empty = 0, withPanels = 0, withBatteries = 0;
             if (multi)
             {
@@ -315,7 +331,7 @@ namespace KardashevAscent.Presentation.UI
                 int planned = placer.PlannedBuildings;
                 string adds = !placer.Preview.CanPlace || planned == 0 ? ""
                     : panelMode ? $"\nBuilding on the empty ones adds {Format.Energy(placer.Preview.EnergyPerYearWh * planned)} a year"
-                    : workshopMode || stationMode ? ""
+                    : workshopMode || stationMode || relayMode ? ""
                     : $"\nBuilding on the empty ones adds {Format.Energy(placer.BatteryUnitWh * planned)} of storage";
                 multiText.text = $"{empty} empty · {withPanels} panels · {withBatteries} battery yards" + adds;
                 placeButton.text = $"Place {planned} {thing}s (P)";
@@ -331,7 +347,11 @@ namespace KardashevAscent.Presentation.UI
                 plannerTitle.text = (panelMode ? $"Plan a {placer.NewPanelName} · slot {slot}" : $"Plan a {thing} · slot {slot}") + covers;
                 placeButton.text = $"Place {thing} (P)";
             }
-            batteryText.text = stationMode
+            batteryText.text = relayMode
+                ? $"Costs {Format.Energy(placer.BuildCostWh)} of build parts. Extends the colony network " +
+                  $"{KardashevAscent.Simulation.Robots.ColonyNetwork.RangeTiles} tiles around it, so robots working out there stay connected. " +
+                  "Draws a little grid power; the Network window (N) shows the coverage."
+                : stationMode
                 ? $"Costs {Format.Energy(placer.BuildCostWh)} of build parts. Charges robots from the grid, faster than a " +
                   "battery yard and more at once. Build one near where robots work: they drive to the nearest charger."
                 : workshopMode
