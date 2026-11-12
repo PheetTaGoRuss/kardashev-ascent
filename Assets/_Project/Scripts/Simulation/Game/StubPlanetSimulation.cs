@@ -100,6 +100,36 @@ namespace KardashevAscent.Simulation.Game
         readonly HashSet<(int Tile, int Slot)> batteries = new HashSet<(int, int)>();
         readonly HashSet<(int Tile, int Slot)> workshops = new HashSet<(int, int)>();
         readonly HashSet<(int Tile, int Slot)> stations = new HashSet<(int, int)>();
+        readonly HashSet<(int Tile, int Slot)> relays = new HashSet<(int, int)>();
+
+        // ---- Colony network (stage E) ----
+
+        public ColonyNetwork Network { get; private set; }
+
+        public bool PlaceRelay(int tileId, int slot)
+        {
+            if (!CanPlace(BuildingType.Relay, tileId, slot))
+                return false;
+            Build.Start(tileId, slot, BuildCostWh(BuildingType.Relay), 0.0, false);
+            relays.Add((tileId, slot));
+            Occupy(tileId, FootprintFor(BuildingType.Relay, tileId, slot));
+            Settle((tileId, slot));
+            RefreshNetwork();
+            return true;
+        }
+
+        /// <summary>Finished relays relay; sites don't. Power follows the grid: a brownout takes the whole network down.</summary>
+        void RefreshNetwork()
+        {
+            if (Network == null)
+                return;
+            var live = new List<int>();
+            foreach (var r in relays)
+                if (!Build.IsQueued(r.Tile, r.Slot))
+                    live.Add(r.Tile);
+            Network.SetRelays(live);
+            Network.SetPowered(!Grid.IsBrownout);
+        }
 
         // ---- Footprints: a building covers several slots of its tile (stored at its anchor slot) ----
 
@@ -341,6 +371,8 @@ namespace KardashevAscent.Simulation.Game
             BaseTileId = baseTileId >= 0 ? baseTileId : PickBaseTile();
             Workforce.Reset(BaseTileId);
             Workforce.CapacityOf = t => FacilityStaffing.CapacityFor(t.Kind);
+            Network = new ColonyNetwork(sphere, BaseTileId);
+            Workforce.Network = Network;
             Deposits = new DepositMap(sphere, surface, PlanetChemistry.EarthLike, 7);
             Routes = new RouteFinder(sphere, surface);
 
@@ -917,7 +949,8 @@ namespace KardashevAscent.Simulation.Game
             Movement moving = CurrentMovement();
             Workforce.Movement = moving;
             Upkeep.Plan(Workforce, RobotFacilities(), dt, moving);
-            GridStep grid = Grid.Step(ComputeGeneration(), dt, TimeHours / Rtg.HoursPerYear, Upkeep.CriticalRequestW, Upkeep.DockRequestW);
+            // The network hub and relays draw as a priority load: they stay up until the colony itself browns out.
+            GridStep grid = Grid.Step(ComputeGeneration(), dt, TimeHours / Rtg.HoursPerYear, Upkeep.CriticalRequestW + Network.PowerW, Upkeep.DockRequestW);
             GenerationW = grid.GenerationW;
             RtgW = grid.RtgW;
             DemandW = grid.DemandW;
@@ -929,6 +962,8 @@ namespace KardashevAscent.Simulation.Game
             Upkeep.Apply(Workforce, dt, grid.DockServedW, grid.PriorityServedW, topUpW, IsFlaringStar, Build, moving,
                          Materials, planet.AirTemperatureC);
             RobotChargingW = Upkeep.ChargingW;
+            Network.SetPowered(!Grid.IsBrownout);
+            Workforce.UpdateConnections(dt);
             AdvanceFieldWork(dt);
             Build.AddParts(BuildPowerW, dt);
             Settle(null);
@@ -1144,6 +1179,7 @@ namespace KardashevAscent.Simulation.Game
                 case BuildingType.Battery: return BuildCosts.Battery(BatteryUnitWh);
                 case BuildingType.Workshop: return RobotTech.WorkshopPartsWh;
                 case BuildingType.ChargingStation: return RobotTech.ChargingStationPartsWh;
+                case BuildingType.Relay: return RobotTech.RelayPartsWh;
                 default: return 0.0;
             }
         }
@@ -1155,6 +1191,8 @@ namespace KardashevAscent.Simulation.Game
                 Grid.Battery.AddCapacity(BatteryUnitWh);
             else
                 GenerationW = ComputeGeneration() + RtgW;
+            if (relays.Contains((tileId, slot)))
+                RefreshNetwork();
             if (raise)
                 BuildingCompleted?.Invoke(tileId, slot);
         }
@@ -1333,6 +1371,7 @@ namespace KardashevAscent.Simulation.Game
             : batteries.Contains((tileId, slot)) ? BuildingType.Battery
             : workshops.Contains((tileId, slot)) ? BuildingType.Workshop
             : stations.Contains((tileId, slot)) ? BuildingType.ChargingStation
+            : relays.Contains((tileId, slot)) ? BuildingType.Relay
             : BuildingType.None;
 
         public bool PlaceBattery(int tileId, int slot)
@@ -1366,6 +1405,14 @@ namespace KardashevAscent.Simulation.Game
                 Dismantle(tileId, slot, BuildingType.Workshop);
                 workshops.Remove((tileId, slot));
                 Vacate(tileId, slot);
+                return true;
+            }
+            if (relays.Contains((tileId, slot)))
+            {
+                Dismantle(tileId, slot, BuildingType.Relay);
+                relays.Remove((tileId, slot));
+                Vacate(tileId, slot);
+                RefreshNetwork();
                 return true;
             }
             if (stations.Contains((tileId, slot)))
@@ -1445,6 +1492,8 @@ namespace KardashevAscent.Simulation.Game
                 state.Buildings.Add(new BuildingRecord { Tile = w.Tile, Slot = w.Slot, Type = BuildingType.Workshop });
             foreach (var c in stations)
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.ChargingStation });
+            foreach (var c in relays)
+                state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.Relay });
             foreach (ManufacturingJob j in jobs)
                 state.Jobs.Add(new JobRecord
                 {
@@ -1484,6 +1533,8 @@ namespace KardashevAscent.Simulation.Game
                 RemoveBuilding(key.Tile, key.Slot);
             foreach (var key in new List<(int Tile, int Slot)>(stations))
                 RemoveBuilding(key.Tile, key.Slot);
+            foreach (var key in new List<(int Tile, int Slot)>(relays))
+                RemoveBuilding(key.Tile, key.Slot);
             TimeHours = state.TimeHours;
             MilestonesReached = Math.Max(0, Math.Min(10, state.MilestonesReached));
             DayAveragePowerW = Math.Max(0.0, state.DayAveragePowerW);
@@ -1513,6 +1564,8 @@ namespace KardashevAscent.Simulation.Game
             // Version 7 added robots; an older save starts with the one General robot at the base.
             if (state.Version < 7 || !Workforce.Restore(state.Workforce))
                 Workforce.Reset(BaseTileId);
+            Workforce.Network = Network;
+            RefreshNetwork();   // the relays restored above start relaying; power follows the restored grid
             adjustOrders.Clear();
             if (state.AdjustOrders != null)   // version 17
                 foreach (AdjustOrderRecord o in state.AdjustOrders)
@@ -1610,6 +1663,13 @@ namespace KardashevAscent.Simulation.Game
                     return;
                 if (site) Build.RestoreSite(r.Tile, r.Slot, BuildCostWh(BuildingType.ChargingStation), r.PaidWh);
                 stations.Add((r.Tile, r.Slot));
+            }
+            else if (r.Type == BuildingType.Relay)
+            {
+                if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
+                    return;
+                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildCostWh(BuildingType.Relay), r.PaidWh);
+                relays.Add((r.Tile, r.Slot));
             }
             else if (r.Type == BuildingType.Workshop)
             {

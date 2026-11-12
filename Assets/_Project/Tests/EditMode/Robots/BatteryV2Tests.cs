@@ -209,7 +209,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
                 found |= f.Tile == t && f.Slot == 6 && f.Capability.PowerW == ChargingCapability.Station.PowerW;
             Assert.IsTrue(found);
             SimulationState state = sim.CaptureState();
-            Assert.AreEqual(21, state.Version);
+            Assert.AreEqual(22, state.Version);
             var b = new StubPlanetSimulation(Sphere, Surface, Planet(25.0));
             Assert.IsTrue(b.RestoreState(state));
             Assert.AreEqual(BuildingType.ChargingStation, b.GetBuilding(t, 6));

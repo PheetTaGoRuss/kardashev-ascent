@@ -272,7 +272,7 @@ namespace KardashevAscent.Simulation.Tests.Resources
             a.Tick(1.5);
             if (!a.GetTile(other).IsWater) a.OrderSurvey(other);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(21, state.Version);
+            Assert.AreEqual(22, state.Version);
 
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));

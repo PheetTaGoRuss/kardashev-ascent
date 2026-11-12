@@ -341,13 +341,49 @@ namespace KardashevAscent.Presentation.UI
         public override KeyCode Key => KeyCode.N;
         public override int Order => 50;
 
-        public override string LockedReason(IPlanetSimulation sim) => "coming in workforce stage E.";
+        Label status, coverage, power, robots;
 
-        protected override void BuildBody() =>
-            Text().text = "The robot network will live here: relays, their range and the hub's power. A robot out of " +
-                          "relay range, or cut off when the hub has no power, works on its own with simpler rules. " +
-                          "Today every robot is always connected.";
+        protected override void BuildBody()
+        {
+            status = Text();
+            Heading("COVERAGE");
+            coverage = Text();
+            Heading("POWER");
+            power = Text();
+            Heading("ROBOTS");
+            robots = Text();
+            Text("caption").text =
+                "The lander is the network hub. A robot within range of the hub or a powered relay is connected: it hears " +
+                "new orders, rule changes and the colony's needs, and hands in what it found. A robot out of range keeps " +
+                "working on the program and priorities it last synced, and can't react to the colony's needs until it is " +
+                "back in range. The hub and relays need grid power: in a brownout the whole network is down. " +
+                "Build relays from the build bar to extend coverage. Range and power draws are placeholder values.";
+        }
 
-        protected override void RefreshBody(IPlanetSimulation sim) { }
+        protected override void RefreshBody(IPlanetSimulation sim)
+        {
+            var net = sim.Network;
+            var w = sim.Workforce;
+            int off = w.DisconnectedCount;
+            status.text = net.Powered
+                ? (off == 0 ? "Network up · every robot connected." : $"Network up · {off} robot{(off == 1 ? "" : "s")} out of range.")
+                : "NETWORK DOWN: the grid is in brownout, so the hub and relays are unpowered. Robots work on cached rules.";
+            status.EnableInClassList("message", !net.Powered || off > 0);
+            int relays = net.Relays.Count;
+            coverage.text = $"{net.Coverage.Count} tiles covered (range {KardashevAscent.Simulation.Robots.ColonyNetwork.RangeTiles} tiles from each node) · " +
+                            $"hub at tile #{net.HubTile} · {relays} relay{(relays == 1 ? "" : "s")}" +
+                            (relays == 0 ? ".\nNo relays yet: robots working more than " + KardashevAscent.Simulation.Robots.ColonyNetwork.RangeTiles + " tiles from the lander drop off the network." : ".");
+            power.text = $"Hub {Format.Power(KardashevAscent.Simulation.Robots.ColonyNetwork.HubPowerW)} · relays {Format.Power(relays * KardashevAscent.Simulation.Robots.ColonyNetwork.RelayPowerW)} · " +
+                         $"total {Format.Power(net.PowerW)}, served before the colony's other loads.";
+            var sb = new System.Text.StringBuilder();
+            foreach (var r in w.Robots)
+            {
+                sb.Append(r.Name).Append(": ");
+                if (r.Connected) sb.Append("connected");
+                else sb.Append($"out of range for {r.HoursOffline:0.0} h on tile #{r.Tile} · running cached rules ({r.CachedProgram})");
+                sb.Append('\n');
+            }
+            robots.text = sb.Length > 0 ? sb.ToString().TrimEnd() : "No robots.";
+        }
     }
 }
