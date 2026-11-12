@@ -85,7 +85,8 @@ namespace KardashevAscent.Simulation.Tests.Robots
             Assert.AreEqual(n, r.Tile);
             Assert.IsFalse(r.IsTravelling);
             sim.Tick(RobotSpecs.SurveyWorkHours + 0.25);
-            Assert.IsTrue(sim.Deposits.IsSurveyed(n));
+            PuzzleSolving.SolveSurvey(sim, n);
+            Assert.IsTrue(sim.Deposits.IsSurveyed(n), "the cores are in, and the right estimate surveys the tile");
         }
 
         [Test]
@@ -196,7 +197,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             a.SendRobot(r.Id, m >= 0 ? m : n);
             a.Tick(1.0);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(16, state.Version);
+            Assert.AreEqual(22, state.Version);
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));
             Robot c = b.Workforce.Robots[0];

@@ -99,6 +99,15 @@ namespace KardashevAscent.Simulation.Solar
                         (first ? " Best angles unlocked, and the survey now gives every tile's latitude." : ""));
         }
 
+        /// <summary>A latitude worked out from a robot's measurement (the shadow puzzle).</summary>
+        public string RecordLatitude(int tile, double latitudeDeg, string method)
+        {
+            bool first = !Surveyed;
+            Fix(tile, latitudeDeg, method);
+            return Note($"Tile #{tile}: φ = {latitudeDeg:+0.0;−0.0}° ({method})." +
+                        (first ? " Best angles unlocked, and the survey now gives every tile's latitude." : ""));
+        }
+
         void Fix(int tile, double latitudeDeg, string method)
         {
             latitudes[tile] = (latitudeDeg, method);

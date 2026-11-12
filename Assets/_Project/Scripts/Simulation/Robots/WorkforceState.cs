@@ -27,6 +27,12 @@ namespace KardashevAscent.Simulation.Robots
         public int TaskTile;
         public int TaskSlot;
         public bool OnTemporaryTask;
+        /// <summary>Colony network (stage E, save version 22).</summary>
+        public bool Connected = true;
+        public double HoursOffline;
+        public OperatingProgram CachedProgram;
+        public List<PriorityRecord> CachedPriorities = new List<PriorityRecord>();
+        public int UnsyncedFindings;
         public bool HasProgramOverride;
         public OperatingProgram ProgramOverride;
         public List<PriorityRecord> PriorityOverrides = new List<PriorityRecord>();
@@ -117,6 +123,16 @@ namespace KardashevAscent.Simulation.Robots
     {
         public TaskKind Kind;
         public TaskPriority Priority;
+    }
+
+    /// <summary>A panel the player asked a robot to turn to new angles (save version 17), radians.</summary>
+    [Serializable]
+    public sealed class AdjustOrderRecord
+    {
+        public int Tile;
+        public int Slot;
+        public double Tilt;
+        public double Azimuth;
     }
 
     /// <summary>A building the player asked a robot to take down (save version 7).</summary>
