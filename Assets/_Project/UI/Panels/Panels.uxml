@@ -29,7 +29,7 @@
                 <ui:Label name="multi-text" class="body hidden" text="" />
                 <ui:Label name="planner-cost" class="body" text="" />
                 <ui:VisualElement class="button-row">
-                    <ui:Button name="best-button" class="action-button" text="Best angle (B)" />
+                    <ui:Button name="best-button" class="action-button" text="Edit angle" />
                     <ui:Button name="place-button" class="action-button primary" text="Place panel (P)" />
                 </ui:VisualElement>
                 <ui:VisualElement name="multi-buttons" class="button-row hidden">
@@ -51,7 +51,7 @@
                     <ui:Slider name="adjust-facing" class="slider" low-value="0" high-value="359" />
                     <ui:Label name="adjust-gain" class="body numbers" text="" />
                     <ui:VisualElement class="button-row">
-                        <ui:Button name="adjust-best" class="action-button" text="Best angle" />
+                        <ui:Button name="adjust-best" class="action-button" text="Edit angle" />
                         <ui:Button name="adjust-apply" class="action-button primary" text="Send a robot to turn it" />
                         <ui:Button name="adjust-cancel" class="action-button hidden" text="Cancel" />
                     </ui:VisualElement>

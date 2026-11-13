@@ -160,7 +160,7 @@ namespace KardashevAscent.Presentation.UI
 
         void Update()
         {
-            if (Input.GetKeyDown(toggleKey))
+            if (ScreenInput.KeyDown(toggleKey))
                 SystemTabs.Toggle("overview");
             if (!Visible || panelRoot == null || Time.unscaledTime < nextRefresh)
                 return;

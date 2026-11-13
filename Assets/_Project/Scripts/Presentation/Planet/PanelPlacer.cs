@@ -162,6 +162,20 @@ namespace KardashevAscent.Presentation.Planet
             placed[(atTile, s)] = p;
         }
 
+        /// <summary>Where the selected slot (or the building covering it) is in the world, for things drawn over it.</summary>
+        public bool TryGetSelectedWorldPosition(out Vector3 world)
+        {
+            world = default;
+            if (simulation == null || siteView.Site == null || tile < 0 || slot < 0)
+                return false;
+            TileSite site = siteView.SiteFor(tile);
+            IReadOnlyList<int> slots = simulation.GetBuilding(tile, slot) != BuildingType.None
+                ? simulation.FootprintAt(tile, slot) : new List<int> { slot };
+            FootprintPlace(site, slots, out Vector3 direction, out _);
+            world = transform.TransformPoint(direction * siteView.GroundRadius(site, direction));
+            return true;
+        }
+
         /// <summary>What the selected panel would make at these angles (radians).</summary>
         public PanelPreview PreviewSelectedAt(double tilt, double azimuth) =>
             simulation != null && tile >= 0 && slot >= 0 ? PreviewBuilt(tile, Anchor(tile, slot), tilt, azimuth) : default;
@@ -511,14 +525,14 @@ namespace KardashevAscent.Presentation.Planet
                 bestTask = null;
             }
 
-            if (tile >= 0 && Input.GetKeyDown(KeyCode.Tab))
+            if (tile >= 0 && ScreenInput.KeyDown(KeyCode.Tab))
                 mode = mode == BuildMode.SolarPanel ? BuildMode.Battery : mode == BuildMode.Battery ? BuildMode.Workshop
                      : mode == BuildMode.Workshop ? BuildMode.ChargingStation
                      : mode == BuildMode.ChargingStation ? BuildMode.Relay : BuildMode.SolarPanel;
 
             if (dragging)
             {
-                if (tile < 0 || Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1))
+                if (tile < 0 || ScreenInput.KeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1))
                 {
                     dragging = false;
                 }
@@ -533,15 +547,15 @@ namespace KardashevAscent.Presentation.Planet
 
             if (MultiSelect)
             {
-                if (Input.GetKeyDown(placeKey)) PlaceSelection();
-                if (Input.GetKeyDown(bestKey)) UseBestAngle();
-                if (Input.GetKeyDown(removeKey) || Input.GetKeyDown(KeyCode.Backspace)) RemoveSelection();
+                if (ScreenInput.KeyDown(placeKey)) PlaceSelection();
+                if (ScreenInput.KeyDown(bestKey)) UseBestAngle();
+                if (ScreenInput.KeyDown(removeKey) || ScreenInput.KeyDown(KeyCode.Backspace)) RemoveSelection();
             }
             else if (slot >= 0)
             {
-                if (Input.GetKeyDown(placeKey)) Place();
-                if (Input.GetKeyDown(bestKey)) UseBestAngle();
-                if (Input.GetKeyDown(removeKey) || Input.GetKeyDown(KeyCode.Backspace)) Remove();
+                if (ScreenInput.KeyDown(placeKey)) Place();
+                if (ScreenInput.KeyDown(bestKey)) UseBestAngle();
+                if (ScreenInput.KeyDown(removeKey) || ScreenInput.KeyDown(KeyCode.Backspace)) Remove();
             }
 
             if (previewDirty && tile >= 0 && Time.unscaledTime - lastPreviewTime >= previewInterval)

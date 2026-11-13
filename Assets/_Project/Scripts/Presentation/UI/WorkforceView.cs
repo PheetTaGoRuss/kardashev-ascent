@@ -87,7 +87,7 @@ namespace KardashevAscent.Presentation.UI
 
         void Update()
         {
-            if (Input.GetKeyDown(toggleKey))
+            if (ScreenInput.KeyDown(toggleKey))
                 SystemTabs.Toggle("robots");
             if (!Visible || panelRoot == null || Time.unscaledTime < nextRefresh)
                 return;

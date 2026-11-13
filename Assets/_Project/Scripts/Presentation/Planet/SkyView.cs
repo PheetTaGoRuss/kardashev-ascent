@@ -1,3 +1,4 @@
+using KardashevAscent.Presentation.UI;
 using System;
 using System.Collections.Generic;
 using KardashevAscent.Presentation.Game;
@@ -144,12 +145,12 @@ namespace KardashevAscent.Presentation.Planet
                 lastTilt = lastAzimuth = float.NaN;
                 return;
             }
-            if (Input.GetKeyDown(toggleKey) && selected >= 0)
+            if (ScreenInput.KeyDown(toggleKey) && selected >= 0)
             {
                 if (Active) Close();
                 else Open(selected);
             }
-            else if (Active && Input.GetKeyDown(KeyCode.Escape))
+            else if (Active && ScreenInput.KeyDown(KeyCode.Escape))
             {
                 Close();
             }

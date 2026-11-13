@@ -31,6 +31,27 @@ namespace KardashevAscent.Presentation.UI
 
         public static void Unregister(IPanel panel) => panels.Remove(panel);
 
+        /// <summary>True while a text box on screen has the keyboard (typing a name must not trigger hotkeys).</summary>
+        public static bool TypingInTextField
+        {
+            get
+            {
+                foreach (IPanel panel in panels)
+                {
+                    Focusable focused = panel.focusController?.focusedElement;
+                    if (focused is TextField || (focused is VisualElement element && element.GetFirstAncestorOfType<TextField>() != null))
+                        return true;
+                }
+                return false;
+            }
+        }
+
+        /// <summary>Like <c>Input.GetKeyDown</c>, but false while the player is typing in a text box.</summary>
+        public static bool KeyDown(KeyCode key) => !TypingInTextField && Input.GetKeyDown(key);
+
+        /// <summary>Like <c>Input.GetKey</c>, but false while the player is typing in a text box.</summary>
+        public static bool Key(KeyCode key) => !TypingInTextField && Input.GetKey(key);
+
         /// <summary>True while the mouse is over a UI Toolkit element or an IMGUI area claimed this frame or last.</summary>
         public static bool PointerOverUi
         {

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using KardashevAscent.Simulation.Resources;
 using KardashevAscent.Simulation.Energy;
 using System;
@@ -379,6 +380,25 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>The tile was surveyed from a rough estimate: its grades are shown as ±.</summary>
         bool IsRoughSurvey(int tileId);
+    }
+
+    /// <summary>Saved panel angle layouts: the player's names and notes, with the tile's latitude and longitude.</summary>
+    public interface IAnglePresets
+    {
+        IReadOnlyList<AnglePreset> AnglePresets { get; }
+
+        /// <summary>Save the angles of the panel in a slot as a named layout. Null if no panel stands there.</summary>
+        AnglePreset SaveAnglePreset(int tileId, int slot, string name, string note);
+
+        /// <summary>Save a layout with these angles (radians) for a slot of a tile, whether or not a panel stands there yet.</summary>
+        AnglePreset SaveAnglePresetAt(int tileId, int slot, string name, string note, double tilt, double azimuth);
+
+        bool UpdateAnglePreset(int id, string name, string note);
+
+        bool DeleteAnglePreset(int id);
+
+        /// <summary>Ask a robot to turn the panel in a slot to a saved layout's angles (same rules as <see cref="IBuildingCommands.OrderPanelAngles"/>).</summary>
+        bool ApplyAnglePreset(int id, int tileId, int slot);
     }
 
     /// <summary>Capturing and restoring the whole colony.</summary>
