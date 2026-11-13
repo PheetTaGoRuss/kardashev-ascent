@@ -138,6 +138,9 @@ namespace KardashevAscent.Presentation.UI
             gizmoLabel.style.left = 0; gizmoLabel.style.right = 0; gizmoLabel.style.bottom = -26;
             gizmoLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
             gizmoLabel.style.color = new Color(0.9f, 0.93f, 1f);
+            gizmoLabel.style.backgroundColor = new Color(0.04f, 0.06f, 0.1f, 0.85f);
+            gizmoLabel.style.borderTopLeftRadius = gizmoLabel.style.borderTopRightRadius = 4;
+            gizmoLabel.style.borderBottomLeftRadius = gizmoLabel.style.borderBottomRightRadius = 4;
             gizmo.Add(gizmoLabel);
             root.Add(gizmo);
         }
@@ -278,16 +281,22 @@ namespace KardashevAscent.Presentation.UI
             how.style.whiteSpace = WhiteSpace.Normal;
             layoutsPanel.Add(how);
 
+            var nameCaption = new Label("Slot / layout name");
+            nameCaption.AddToClassList("caption");
+            nameCaption.style.marginTop = 6;
+            layoutsPanel.Add(nameCaption);
             nameField = new TextField { maxLength = AnglePreset.MaxNameLength, value = "" };
             nameField.label = "";
             nameField.AddToClassList("puzzle-field");
-            nameField.style.marginTop = 6;
             nameField.tooltip = "Name for this slot or layout";
             layoutsPanel.Add(nameField);
+            var noteCaption = new Label("Your note");
+            noteCaption.AddToClassList("caption");
+            noteCaption.style.marginTop = 4;
+            layoutsPanel.Add(noteCaption);
             noteField = new TextField { maxLength = AnglePreset.MaxNoteLength, multiline = true, value = "" };
             noteField.AddToClassList("puzzle-field");
             noteField.style.height = 46;
-            noteField.style.marginTop = 4;
             noteField.tooltip = "Your note";
             layoutsPanel.Add(noteField);
 
@@ -398,7 +407,7 @@ namespace KardashevAscent.Presentation.UI
                 row.style.borderLeftColor = new Color(1f, 1f, 1f, 0.15f);
 
                 var title = new Label($"{preset.Name} · β {preset.TiltDeg:0}° γ {preset.FacingDeg:0}° {Compass((float)preset.FacingDeg)}");
-                title.style.unityFontStyle = FontStyle.Bold;
+                title.style.unityFontStyleAndWeight = FontStyle.Bold;
                 title.style.whiteSpace = WhiteSpace.Normal;
                 row.Add(title);
                 var where = new Label($"{Place(preset)} · tile #{preset.TileId} slot {preset.Slot + 1} · day {(int)(preset.SavedHours / 24.0) + 1}");
