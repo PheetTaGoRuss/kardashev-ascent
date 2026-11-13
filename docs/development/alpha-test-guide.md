@@ -17,7 +17,7 @@ What to try in the first playable build, and what is known to be rough. Checked 
 | 4 | Press `4` to run a day per second | Power at night comes from the battery; no brownout if you built enough |
 | 5 | Press `C` | The colony overview: demand, growth, the week's power graph |
 | 6 | Reach milestone 1 (planet K 0.1) | New robot kinds and bigger panels unlock |
-| 6b | Select a panel and press **Edit angle**; drag the red ring (tilt) or green ring (facing). Open **Angle layouts** (bottom left), type a name and a note, press **Save layout** | The layout appears with its latitude, longitude, slot and angles; **Apply** sends a robot to turn a panel to it |
+| 6b | Select a panel and press **Edit angle**; drag the red ring (tilt) or green ring (facing). The view zooms in like **V**, and a see-through copy of the panel shows the new angles (it stays while a robot is on its way to turn the real one). Open **Angle layouts** (bottom left), type a name and a note, press **Save layout** | The layout appears with its latitude, longitude, slot and angles; **Apply** sends a robot to turn a panel to it |
 | 7 | Press `G`, then `U` | Robots and the Workshop: order a robot, refine aluminium (leaves slag) |
 
 Other keys: `V` sky view, `M` light map, `F10` god mode (shows hidden ground), `F5` / `F9` save and load, `H` hide help.

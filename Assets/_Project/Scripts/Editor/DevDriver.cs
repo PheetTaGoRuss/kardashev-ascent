@@ -193,6 +193,10 @@ namespace KardashevAscent.EditorTools
                     Log("nudge " + (pv != null && pv.TryNudgeAngles(float.Parse(w[0], System.Globalization.CultureInfo.InvariantCulture), float.Parse(w[1], System.Globalization.CultureInfo.InvariantCulture))));
                     return true;
                 }
+                case "place":
+                    // Build in the selected slot the way a click and P would (a panel at the planned angles).
+                    Log("place " + UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.PanelPlacer>()?.Place());
+                    return true;
                 case "refresh":
                     // Import changed files and recompile without the editor being in front.
                     AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);

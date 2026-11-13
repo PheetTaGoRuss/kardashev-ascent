@@ -505,10 +505,64 @@ namespace KardashevAscent.Presentation.Planet
         /// <summary>True when more than one slot is selected.</summary>
         public bool MultiSelect => siteView != null && siteView.Selection.Count > 1;
 
+        // ---- Angle previews: a see-through copy of a panel at the angles being set, until a robot turns the real one ----
+
+        static readonly Color PreviewTint = new Color(0.4f, 0.9f, 1f, 0.55f);
+        readonly Dictionary<int, (SolarPanelVisual Visual, double Tilt, double Azimuth)> angleGhosts =
+            new Dictionary<int, (SolarPanelVisual, double, double)>();
+        (int Slot, double Tilt, double Azimuth)? editPreview;
+
+        /// <summary>Show a see-through panel at these angles (radians) over a built panel while the player is editing them.</summary>
+        public void SetEditPreview(int slotAnchor, double tilt, double azimuth) => editPreview = (slotAnchor, tilt, azimuth);
+
+        public void ClearEditPreview() => editPreview = null;
+
+        /// <summary>The preview angles for each built panel of the open site: the edit in progress, or an order a robot has yet to carry out.</summary>
+        void UpdateAngleGhosts()
+        {
+            var wanted = new Dictionary<int, (double Tilt, double Azimuth)>();
+            if (tile >= 0 && siteView != null && siteView.Site != null && siteView.Site.Tile == tile)
+            {
+                foreach (var key in placed.Keys)
+                    if (key.Tile == tile && simulation.TryGetAdjustOrder(tile, key.Slot, out double ot, out double oa))
+                        wanted[key.Slot] = (ot, oa);
+                if (editPreview.HasValue && placed.ContainsKey((tile, editPreview.Value.Slot)))
+                    wanted[editPreview.Value.Slot] = (editPreview.Value.Tilt, editPreview.Value.Azimuth);
+            }
+
+            List<int> gone = null;
+            foreach (int s in angleGhosts.Keys)
+                if (!wanted.ContainsKey(s))
+                    (gone ?? (gone = new List<int>())).Add(s);
+            if (gone != null)
+                foreach (int s in gone)
+                {
+                    angleGhosts[s].Visual.Destroy();
+                    angleGhosts.Remove(s);
+                }
+
+            foreach (var pair in wanted)
+            {
+                if (angleGhosts.TryGetValue(pair.Key, out var shown) && shown.Tilt == pair.Value.Tilt && shown.Azimuth == pair.Value.Azimuth)
+                    continue;
+                SolarPanelVisual visual = shown.Visual;
+                if (visual == null)
+                {
+                    visual = new SolarPanelVisual($"Angle Preview {tile}.{pair.Key}", transform, ghostMaterial, ghostMaterial);
+                    visual.SetTint(PreviewTint);
+                }
+                ShowOnSlot(visual, siteView.SiteFor(tile), simulation.FootprintAt(tile, pair.Key), pair.Value.Tilt, pair.Value.Azimuth);
+                angleGhosts[pair.Key] = (visual, pair.Value.Tilt, pair.Value.Azimuth);
+            }
+        }
+
+
         void Update()
         {
             if (simulation == null)
                 return;
+
+            UpdateAngleGhosts();
 
             if (bestTask != null && bestTask.IsCompleted)
             {

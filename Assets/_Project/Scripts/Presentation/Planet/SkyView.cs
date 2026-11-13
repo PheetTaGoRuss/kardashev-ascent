@@ -122,6 +122,13 @@ namespace KardashevAscent.Presentation.Planet
 
         Vector2 siteViewBefore;
 
+        (double Tilt, double Azimuth)? editedAngles;
+
+        /// <summary>Aim the sky view at these angles (radians) instead of the panel's own while the player edits them.</summary>
+        public void SetEditedAngles(double tilt, double azimuth) => editedAngles = (tilt, azimuth);
+
+        public void ClearEditedAngles() => editedAngles = null;
+
         int CurrentTile()
         {
             var pickerTile = GetComponent<TilePicker>();
@@ -172,7 +179,14 @@ namespace KardashevAscent.Presentation.Planet
             if (!Active || runner == null || runner.Simulation == null)
                 return;
 
-            if (placer != null && placer.TryGetSelectedPanel(out double t, out double a, out _, out _))
+            if (editedAngles.HasValue)
+            {
+                // The angles being set with the rings, not yet carried out by a robot.
+                Tilt = editedAngles.Value.Tilt;
+                Azimuth = editedAngles.Value.Azimuth;
+                PanelBuilt = true;
+            }
+            else if (placer != null && placer.TryGetSelectedPanel(out double t, out double a, out _, out _))
             {
                 Tilt = t;
                 Azimuth = a;
