@@ -15,7 +15,9 @@
             <ui:Label name="workshop-message" class="caption wrap message" text="" />
             <ui:Label class="heading section-head" text="TASKS" />
             <ui:VisualElement name="tasks" />
-            <ui:Label name="notes" class="caption wrap notes" text="" />
+            <ui:Foldout text="How robots work" value="false" class="how-it-works">
+                <ui:Label name="notes" class="caption wrap notes" text="" />
+            </ui:Foldout>
         </ui:ScrollView>
     </ui:VisualElement>
 </ui:UXML>

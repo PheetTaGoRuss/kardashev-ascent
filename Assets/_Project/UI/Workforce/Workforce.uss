@@ -1,6 +1,6 @@
 .workforce {
     position: absolute;
-    top: 92px;   /* under the system tab bar */
+    top: 116px;   /* under the system tab bar, which sits under the HUD */
     left: 50%;
     translate: -50% 0;
     width: 440px;
@@ -90,3 +90,7 @@
 .robot-name { font-size: 12px; -unity-font-style: bold; padding: 0; margin: 0; }
 .robot-line { font-size: 11px; padding: 0; margin: 1px 0 0 0; white-space: normal; }
 .muted { color: var(--text-muted); }
+
+/* Long help text sits in a folded section so the window starts with what matters. */
+.how-it-works { margin-top: 10px; }
+.how-it-works .unity-foldout__text { font-size: 11px; color: var(--text-muted); }
