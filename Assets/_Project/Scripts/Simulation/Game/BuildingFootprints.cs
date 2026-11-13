@@ -20,11 +20,7 @@ namespace KardashevAscent.Simulation.Game
             {
                 case BuildingType.SolarPanel:
                     return SolarByTier[System.Math.Max(0, System.Math.Min(SolarByTier.Length - 1, panelTier))];
-                case BuildingType.Battery: return BatteryYard;
-                case BuildingType.Workshop: return Workshop;
-                case BuildingType.ChargingStation: return ChargingStation;
-                case BuildingType.Relay: return Relay;
-                default: return 1;
+                default: return BuildingCatalog.Get(type)?.FootprintSlots ?? 1;
             }
         }
     }

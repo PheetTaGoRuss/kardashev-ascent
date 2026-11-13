@@ -25,10 +25,7 @@ namespace KardashevAscent.Simulation.Game
             {
                 case BuildingType.SolarPanel: return PanelCost(PanelAreaM2 * PanelTiers.All[PanelTier].Scale);
                 case BuildingType.Battery: return BuildCosts.Battery(BatteryUnitWh);
-                case BuildingType.Workshop: return RobotTech.WorkshopPartsWh;
-                case BuildingType.ChargingStation: return RobotTech.ChargingStationPartsWh;
-                case BuildingType.Relay: return RobotTech.RelayPartsWh;
-                default: return 0.0;
+                default: return BuildingCatalog.Get(type)?.FixedPartsWh ?? 0.0;
             }
         }
 
