@@ -45,6 +45,9 @@ namespace KardashevAscent.Presentation.UI
         SimulationRunner runner;
         PanelsView panels;
         PanelPlacer placer;
+        SkyView sky;
+        bool openedSkyForEdit;
+        bool wasEditing;
         SiteView siteView;
         Camera cam;
 
@@ -82,6 +85,7 @@ namespace KardashevAscent.Presentation.UI
             panels = FindFirstObjectByType<PanelsView>();
             placer = FindFirstObjectByType<PanelPlacer>();
             siteView = FindFirstObjectByType<SiteView>();
+            sky = FindFirstObjectByType<SkyView>();
             cam = Camera.main;
 
             VisualElement root = GetComponent<UIDocument>().rootVisualElement;
@@ -453,6 +457,35 @@ namespace KardashevAscent.Presentation.UI
         {
             IPlanetSimulation sim = Sim;
             bool siteOpen = sim != null && siteView != null && siteView.Site != null;
+
+            // While editing: zoom in like the V view, and show the angles being set on the panel until a robot turns it.
+            bool editing = siteOpen && panels != null && panels.EditAngles && siteView.SelectedSlot >= 0 && siteView.Selection.Count == 1;
+            if (editing && !wasEditing && sky != null && !sky.Active)
+            {
+                sky.Open(siteView.SelectedSlot);
+                openedSkyForEdit = true;
+            }
+            if (!editing && wasEditing && openedSkyForEdit && sky != null)
+            {
+                sky.Close();
+                openedSkyForEdit = false;
+            }
+            wasEditing = editing;
+            if (editing && panels.TryGetEditedAngles(out float editTilt, out float editFacing))
+            {
+                double tiltRad = editTilt * Mathf.Deg2Rad, facingRad = editFacing * Mathf.Deg2Rad;
+                int anchor = sim.AnchorOf(siteView.Site.Tile, siteView.SelectedSlot);
+                if (anchor >= 0 && sim.HasPanel(siteView.Site.Tile, anchor))
+                    placer?.SetEditPreview(anchor, tiltRad, facingRad);
+                else
+                    placer?.ClearEditPreview();
+                sky?.SetEditedAngles(tiltRad, facingRad);
+            }
+            else
+            {
+                placer?.ClearEditPreview();
+                sky?.ClearEditedAngles();
+            }
 
             // The rings.
             bool show = false;
