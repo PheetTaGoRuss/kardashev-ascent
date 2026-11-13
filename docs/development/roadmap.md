@@ -61,7 +61,7 @@ Exit: no unmerged feature branch older than the newest merge; the interface docu
 
 ### Phase 1: structure (partly done 2026-11-13)
 
-Done: orchestrator split into partial files and renamed (M1 first half, M2), namespace cycles broken (M3), energy ledger and determinism tests (M8), continuous integration, layer check. Also done: building definitions table (M6 part), role interfaces for readouts, events and saves (M4 part). Still to do: M1 second half, rest of M4, M5, M6 (unlock table, robot catalogue), M7, mass ledger, performance budget, workforce stages E–G.
+Done: orchestrator split into partial files and renamed (M1 first half, M2), namespace cycles broken (M3), energy ledger and determinism tests (M8), continuous integration, layer check. Also done: building definitions table (M6 part), role interfaces for readouts, events and saves (M4 part). Role interfaces are complete (M4). Still to do: M1 second half, M5, M6 (unlock table, robot catalogue), M7, mass ledger, performance budget, workforce stages E–G.
 
 | Milestone | Detail | Kind |
 | --- | --- | --- |
