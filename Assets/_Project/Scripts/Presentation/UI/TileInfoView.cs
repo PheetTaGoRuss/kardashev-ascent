@@ -162,7 +162,7 @@ namespace KardashevAscent.Presentation.UI
         /// </summary>
         static bool CoresWaiting(IPlanetSimulation sim, int tile)
         {
-            foreach (KardashevAscent.Simulation.Solar.SurveyPuzzle p in sim.SurveyPuzzles)
+            foreach (KardashevAscent.Simulation.Resources.SurveyPuzzle p in sim.SurveyPuzzles)
                 if (p.Tile == tile) return true;
             return false;
         }

@@ -1,3 +1,5 @@
+using KardashevAscent.Simulation.Resources;
+using KardashevAscent.Simulation.Energy;
 using System;
 using System.Numerics;
 using KardashevAscent.Simulation.Planet;
@@ -229,7 +231,7 @@ namespace KardashevAscent.Simulation.Game
         string AnswerParameterPuzzle(Solar.SolarParameter parameter, double value, out Solar.LatitudePuzzle.Grade grade);
 
         /// <summary>Core samples waiting for the player to estimate the tile's grades (stage F).</summary>
-        System.Collections.Generic.IReadOnlyList<Solar.SurveyPuzzle> SurveyPuzzles { get; }
+        System.Collections.Generic.IReadOnlyList<Resources.SurveyPuzzle> SurveyPuzzles { get; }
 
         /// <summary>
         /// Answer a survey puzzle: one grade estimate per material in the puzzle's order. A close answer surveys the

@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using KardashevAscent.Simulation.Resources;
+using KardashevAscent.Simulation.Solar;
 
-namespace KardashevAscent.Simulation.Solar
+namespace KardashevAscent.Simulation.Resources
 {
     /// <summary>
     /// The ground-survey puzzle (docs/design/solar-measurements.md, stage F). A robot drills cores across a tile and
