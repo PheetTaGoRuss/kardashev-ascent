@@ -12,7 +12,7 @@ What gets tested, how, and what "done" means for a change. Sections 1–2 descri
 | Data validation | `Planet/PlanetRecordTests.cs`; `tools/exoplanets/test_convert.py` (Python `unittest`) | Planets only |
 | Presentation tests | — | None |
 | Whole-simulation determinism | `Game/ConservationAndDeterminismTests.cs` | Same inputs give the same colony; chunked ticking gives the same time |
-| Performance | — | None (planned as workforce stage H) |
+| Performance | `Game/PerformanceTests.cs` | A first loose budget: one step with 1 robot (0.02 ms) and with 300 robots (5 ms) must stay under 50 ms |
 | Conservation balances | same file | Energy balances on every step (found and fixed a 2 kW accounting gap); mass checked only for non-negative stock |
 | Continuous integration | `.github/workflows/tests.yml` | Runs the simulation tests, `tools/check_layers.py` and the Python tests on pull requests (written, not yet seen to run on GitHub) |
 
