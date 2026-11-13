@@ -197,6 +197,14 @@ namespace KardashevAscent.EditorTools
                     // Build in the selected slot the way a click and P would (a panel at the planned angles).
                     Log("place " + UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.PanelPlacer>()?.Place());
                     return true;
+                case "selects":
+                {
+                    // selects 1 2 3: select several slots of the open site.
+                    var slots = new List<int>();
+                    foreach (string w in argument.Split(' ')) slots.Add(int.Parse(w));
+                    UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.SiteView>()?.SetSelection(slots);
+                    return true;
+                }
                 case "refresh":
                     // Import changed files and recompile without the editor being in front.
                     AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);

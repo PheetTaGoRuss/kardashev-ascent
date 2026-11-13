@@ -166,11 +166,12 @@ namespace KardashevAscent.Presentation.Planet
         public bool TryGetSelectedWorldPosition(out Vector3 world)
         {
             world = default;
-            if (simulation == null || siteView.Site == null || tile < 0 || slot < 0)
+            if (simulation == null || siteView.Site == null || tile < 0 || (slot < 0 && siteView.Selection.Count == 0))
                 return false;
             TileSite site = siteView.SiteFor(tile);
-            IReadOnlyList<int> slots = simulation.GetBuilding(tile, slot) != BuildingType.None
-                ? simulation.FootprintAt(tile, slot) : new List<int> { slot };
+            // One slot: the building on it. Several selected slots: the middle of the selection.
+            IReadOnlyList<int> slots = slot < 0 ? new List<int>(siteView.Selection)
+                : simulation.GetBuilding(tile, slot) != BuildingType.None ? simulation.FootprintAt(tile, slot) : new List<int> { slot };
             FootprintPlace(site, slots, out Vector3 direction, out _);
             world = transform.TransformPoint(direction * siteView.GroundRadius(site, direction));
             return true;
@@ -510,10 +511,10 @@ namespace KardashevAscent.Presentation.Planet
         static readonly Color PreviewTint = new Color(0.4f, 0.9f, 1f, 0.55f);
         readonly Dictionary<int, (SolarPanelVisual Visual, double Tilt, double Azimuth)> angleGhosts =
             new Dictionary<int, (SolarPanelVisual, double, double)>();
-        (int Slot, double Tilt, double Azimuth)? editPreview;
+        (HashSet<int> Slots, double Tilt, double Azimuth)? editPreview;
 
-        /// <summary>Show a see-through panel at these angles (radians) over a built panel while the player is editing them.</summary>
-        public void SetEditPreview(int slotAnchor, double tilt, double azimuth) => editPreview = (slotAnchor, tilt, azimuth);
+        /// <summary>Show see-through panels at these angles (radians) over the built panels (by anchor slot) while the player is editing them.</summary>
+        public void SetEditPreview(IEnumerable<int> slotAnchors, double tilt, double azimuth) => editPreview = (new HashSet<int>(slotAnchors), tilt, azimuth);
 
         public void ClearEditPreview() => editPreview = null;
 
@@ -526,8 +527,10 @@ namespace KardashevAscent.Presentation.Planet
                 foreach (var key in placed.Keys)
                     if (key.Tile == tile && simulation.TryGetAdjustOrder(tile, key.Slot, out double ot, out double oa))
                         wanted[key.Slot] = (ot, oa);
-                if (editPreview.HasValue && placed.ContainsKey((tile, editPreview.Value.Slot)))
-                    wanted[editPreview.Value.Slot] = (editPreview.Value.Tilt, editPreview.Value.Azimuth);
+                if (editPreview.HasValue)
+                    foreach (int s in editPreview.Value.Slots)
+                        if (placed.ContainsKey((tile, s)))
+                            wanted[s] = (editPreview.Value.Tilt, editPreview.Value.Azimuth);
             }
 
             List<int> gone = null;
