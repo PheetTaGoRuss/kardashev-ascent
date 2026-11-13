@@ -92,7 +92,7 @@ Not everything should be a file. Move a table when at least one of these is true
 | Step | Change | Unblocks |
 | --- | --- | --- |
 | D1 | **Material definitions.** One catalogue with id, name, phase, density, storage class and origin text. The uncommitted industrial-production work already starts a `MaterialCatalog`; align with it instead of making a second | Industry, storage, logistics, water |
-| D2 | **Building definitions.** One table: id, footprint, cost, staffing, charging capability, unlock | Every new building; removes the per-type bookkeeping in the orchestrator |
+| D2 | **Started (2026-11-13):** `BuildingCatalog` holds name, footprint and fixed cost. Staffing, charging capability and unlock are still elsewhere | Every new building; removes the per-type bookkeeping in the orchestrator |
 | D3 | **Recipe definitions.** Inputs, outputs, byproducts, electricity, heat, work hours, required facility. Validated for mass balance | Industry and chemical processing |
 | D4 | **String ids in saves** for materials, buildings and recipes, with a migration from enum integers | Safe growth of every content list |
 | D5 | **One unlock table** replacing the three found by the audit | Technology and research |
