@@ -64,3 +64,6 @@
 
 .formulas { margin-top: 12px; }
 .formula { white-space: normal; font-size: 11px; color: var(--text-muted); margin: 3px 0; padding: 0; }
+
+/* Captions under the big numbers wrap instead of running off the panel. */
+.stat .caption { white-space: normal; }

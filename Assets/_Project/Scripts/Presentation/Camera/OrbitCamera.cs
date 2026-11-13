@@ -94,7 +94,11 @@ namespace KardashevAscent.Presentation.CameraControl
         /// <summary>Raised when the player zooms out past the site view's limit.</summary>
         public event System.Action SiteExitRequested;
 
-        void Awake() => cam = GetComponent<Camera>();
+        void Awake()
+        {
+            cam = GetComponent<Camera>();
+            showHelp = false;   // the full controls list is one key away (H); the first-steps hints teach the basics
+        }
 
         void Start()
         {

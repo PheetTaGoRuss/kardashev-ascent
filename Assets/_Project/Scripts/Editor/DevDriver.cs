@@ -23,6 +23,7 @@ namespace KardashevAscent.EditorTools
     /// <item><c>tick 240</c>: advance the simulation by that many game hours at once.</item>
     /// <item><c>site</c>: fly the camera to the colony's base tile; <c>planet</c>: back out to the planet.</item>
     /// <item><c>click text</c>: press the first visible button whose text contains this.</item>
+    /// <item><c>refresh</c>: import changed files and recompile (works while the editor is in the background).</item>
     /// <item><c>tests</c>: run every EditMode test (stop Play mode first); see the TESTS line in the log.</item>
     /// <item><c>save</c>: save the open scene.</item>
     /// </list>
@@ -180,6 +181,10 @@ namespace KardashevAscent.EditorTools
                         Log($"STATUS t={sim.TimeHours:0}h gen={sim.GenerationW:0}W demand={sim.DemandW:0}W battery={sim.BatteryStoredWh / 1e6:0.0}MWh brownout={sim.IsBrownout} K={sim.PlanetK:0.000} milestones={sim.MilestonesReached} parts={sim.BuildStockWh / 1e6:0.0}MWh queue={sim.ConstructionQueueCount} robots={sim.Workforce.Robots.Count}");
                     return true;
                 }
+                case "refresh":
+                    // Import changed files and recompile without the editor being in front.
+                    AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+                    return true;
                 case "tests":
                 {
                     // Run every EditMode test in this editor; the result goes to the log (TESTS passed=... failed=...).
