@@ -12,12 +12,29 @@ namespace KardashevAscent.Simulation.Game
 {
     public sealed partial class PlanetSimulation
     {
-        public PanelPreview PreviewPanel(int tileId, double tilt, double azimuth)
+        /// <summary>Output of a floating panel is this much higher than a land panel's: the water keeps the cells cooler (game rule; about 10 °C cooler at -0.35 %/°C). TBD.</summary>
+        public const double FloatingCoolingGain = 0.04;
+
+        /// <summary>Pontoons, moorings and cables: a floating panel costs this many times a land panel's build parts (game rule, decided 2026-11-13).</summary>
+        public const double FloatingCostFactor = 1.5;
+
+        public PanelPreview PreviewPanel(int tileId, double tilt, double azimuth) => PreviewPanelCore(tileId, tilt, azimuth, false);
+
+        public PanelPreview PreviewFloatingPanel(int tileId, double tilt, double azimuth) => PreviewPanelCore(tileId, tilt, azimuth, true);
+
+        PanelPreview PreviewPanelCore(int tileId, double tilt, double azimuth, bool floating)
         {
             if (tileId < 0 || tileId >= TileCount)
                 return new PanelPreview(false, "No such tile.", 0, 0, 0, 0);
-            if (GetTile(tileId).IsWater)
-                return new PanelPreview(false, "Panels cannot go on water yet.", 0, 0, 0, 0);
+            TerrainType ground = GetTile(tileId).Terrain;
+            if (floating)
+            {
+                if (!Terrains.AllowsFloating(ground))
+                    return new PanelPreview(false, "Floating solar needs shallow sea or wetland.", 0, 0, 0, 0);
+            }
+            // Saved colonies keep what they built, even on ground that is wetland now.
+            else if (restoringState ? GetTile(tileId).IsWater : !GetTile(tileId).IsBuildableLand)
+                return new PanelPreview(false, "Land panels cannot go on water or wetland (floating solar can).", 0, 0, 0, 0);
             double area = NewPanelAreaM2(tileId);
             PanelParams panel = MakePanel(tileId, tilt, azimuth, 1.0, area);
             AnnualYieldResult year = AnnualYield.Calculate(planet, panel);
@@ -40,7 +57,9 @@ namespace KardashevAscent.Simulation.Game
             // EROI mean the same on every planet (Proxima b's year is 11 days).
             if (YearLengthHours > 0.0)
                 energy *= SolarConstants.EarthYearHours / YearLengthHours;
-            double embodied = EmbodiedWhPerM2 * area;
+            if (floating)
+                energy *= 1.0 + FloatingCoolingGain;
+            double embodied = EmbodiedWhPerM2 * area * (floating ? FloatingCostFactor : 1.0);
             double eroi = energy > 0 ? Economics.Eroi(energy * PanelLifetimeYears, embodied) : 0.0;
             double payback = energy > 0 ? Economics.PaybackYears(embodied, energy) : double.PositiveInfinity;
             return new PanelPreview(true, "", energy, capacityFactor, eroi, payback);
@@ -81,7 +100,8 @@ namespace KardashevAscent.Simulation.Game
                     continue;
                 PanelParams p = MakePanel(pair.Key.Tile, pair.Value.Tilt, pair.Value.Azimuth,
                                           CloudFactor(pair.Key.Tile, meanAnomaly), pair.Value.Area);
-                total += PanelPowerNow(p, sun, out _, out _, out _, out _);
+                double power = PanelPowerNow(p, sun, out _, out _, out _, out _);
+                total += floatingPanels.Contains(pair.Key) ? power * (1.0 + FloatingCoolingGain) : power;
             }
             return total;
         }

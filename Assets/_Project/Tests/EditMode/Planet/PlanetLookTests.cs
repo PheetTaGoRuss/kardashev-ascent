@@ -21,7 +21,11 @@ namespace KardashevAscent.Simulation.Tests.Planet
             Assert.AreEqual(before.IceLatitudeDeg, s.IceLatitudeDeg);
             Assert.AreEqual(before.NoiseScale, s.NoiseScale);
             Assert.IsFalse(s.IceAroundSubStellar);
-            CollectionAssert.AreEqual(PlanetSurface.Generate(Sphere, before).Terrain, PlanetSurface.Generate(Sphere, s).Terrain);
+            // The second terrain pass only turns lowland, highland and mountain into forest, wetland, beach or volcanic rock.
+            TerrainType[] plain = PlanetSurface.Generate(Sphere, before).Terrain, rich = PlanetSurface.Generate(Sphere, s).Terrain;
+            for (int t = 0; t < plain.Length; t++)
+                if (plain[t] != rich[t])
+                    Assert.GreaterOrEqual(Array.IndexOf(new[] { TerrainType.Forest, TerrainType.Wetland, TerrainType.Beach, TerrainType.VolcanicRock }, rich[t]), 0, "tile " + t);
         }
 
         [TestCase(0.0, 70.0)]

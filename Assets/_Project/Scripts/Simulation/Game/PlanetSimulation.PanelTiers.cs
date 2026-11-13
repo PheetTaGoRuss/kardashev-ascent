@@ -33,9 +33,9 @@ namespace KardashevAscent.Simulation.Game
             CanPlace(BuildingType.SolarPanel, tileId, slot) && PreviewPanel(tileId, tilt, azimuth).CanPlace;
 
         /// <summary>A saved panel's own slot is free and allowed (its footprint is put back from the save).</summary>
-        bool CanRestorePanel(int tileId, int slot, double tilt, double azimuth) =>
+        bool CanRestorePanel(int tileId, int slot, double tilt, double azimuth, bool floating = false) =>
             tileId >= 0 && tileId < TileCount && slot >= 0 && slot < SlotCount(tileId) && GetBuilding(tileId, slot) == BuildingType.None
-            && PreviewPanel(tileId, tilt, azimuth).CanPlace;
+            && PreviewPanelCore(tileId, tilt, azimuth, floating).CanPlace;
 
         void AddPanel(int tileId, int slot, double tilt, double azimuth, double area)
         {
@@ -47,7 +47,7 @@ namespace KardashevAscent.Simulation.Game
         public bool SetPanelAngles(int tileId, int slot, double tilt, double azimuth)
         {
             slot = A(tileId, slot);
-            if (!panels.ContainsKey((tileId, slot)) || !PreviewPanel(tileId, tilt, azimuth).CanPlace)
+            if (!panels.ContainsKey((tileId, slot)) || !PreviewPanelCore(tileId, tilt, azimuth, floatingPanels.Contains((tileId, slot))).CanPlace)
                 return false;
             panels[(tileId, slot)] = (tilt, azimuth, panels[(tileId, slot)].Area);
             GenerationW = ComputeGeneration() + RtgW;
@@ -57,10 +57,11 @@ namespace KardashevAscent.Simulation.Game
         public bool OrderPanelAngles(int tileId, int slot, double tilt, double azimuth)
         {
             slot = A(tileId, slot);
-            if (!panels.ContainsKey((tileId, slot)) || !PreviewPanel(tileId, tilt, azimuth).CanPlace)
+            bool floating = floatingPanels.Contains((tileId, slot));
+            if (!panels.ContainsKey((tileId, slot)) || !PreviewPanelCore(tileId, tilt, azimuth, floating).CanPlace)
                 return false;
-            if (Build.IsQueued(tileId, slot))
-            {
+            if (Build.IsQueued(tileId, slot) || floating)
+            {   // not built yet, or floating (turned by raft crews at once)
                 CancelAdjust(tileId, slot);
                 return SetPanelAngles(tileId, slot, tilt, azimuth);   // not built yet: it is just built that way
             }

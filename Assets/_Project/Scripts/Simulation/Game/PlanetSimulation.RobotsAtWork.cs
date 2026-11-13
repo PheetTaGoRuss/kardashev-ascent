@@ -20,7 +20,11 @@ namespace KardashevAscent.Simulation.Game
             var tasks = new List<WorkTask>(Build.QueueCount + salvageOrders.Count);
             int i = 0;
             foreach (var site in Build.Sites())
+            {
+                if (floatingPanels.Contains((site.Tile, site.Slot)))
+                    continue;   // raft crews build these; no robot needs to reach the sea
                 tasks.Add(new WorkTask(TaskKind.Build, site.Tile, site.Slot, i++));
+            }
             for (int k = 0; k < salvageOrders.Count; k++)
                 tasks.Add(new WorkTask(TaskKind.Salvage, salvageOrders[k].Tile, salvageOrders[k].Slot, k));
             for (int k = 0; k < adjustOrders.Count; k++)
@@ -50,7 +54,8 @@ namespace KardashevAscent.Simulation.Game
                 Workforce.NowHours = TimeHours;
                 Workforce.Assign(OpenTasks(), Needs());
                 bool any = false;
-                foreach (var done in Build.Pay(key => Workforce.IsWorkedOnSite(new WorkTask(TaskKind.Build, key.Tile, key.Slot))))
+                // Floating panels are towed out and anchored by raft crews: no robot drives onto the sea (game rule, 2026-11-13).
+                foreach (var done in Build.Pay(key => floatingPanels.Contains((key.Tile, key.Slot)) || Workforce.IsWorkedOnSite(new WorkTask(TaskKind.Build, key.Tile, key.Slot))))
                 {
                     any = true;
                     Finish(done.Tile, done.Slot, !(silent.HasValue && silent.Value == done));
@@ -94,8 +99,8 @@ namespace KardashevAscent.Simulation.Game
             slot = A(tileId, slot);
             if (GetBuilding(tileId, slot) == BuildingType.None)
                 return false;
-            if (Build.IsQueued(tileId, slot))
-                return RemoveBuilding(tileId, slot);   // a site is simply cancelled; its parts come back
+            if (Build.IsQueued(tileId, slot) || floatingPanels.Contains((tileId, slot)))
+                return RemoveBuilding(tileId, slot);   // a site is simply cancelled (its parts come back); raft crews take floating panels down at once
             if (salvageOrders.Contains((tileId, slot)))
                 return false;
             salvageOrders.Add((tileId, slot));

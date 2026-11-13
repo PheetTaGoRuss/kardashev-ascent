@@ -19,6 +19,7 @@ namespace KardashevAscent.Simulation.Game
             switch (type)
             {
                 case BuildingType.SolarPanel:
+                case BuildingType.FloatingSolar:
                     return SolarByTier[System.Math.Max(0, System.Math.Min(SolarByTier.Length - 1, panelTier))];
                 default: return BuildingCatalog.Get(type)?.FootprintSlots ?? 1;
             }

@@ -40,6 +40,7 @@ namespace KardashevAscent.Simulation.Game
             { BuildingType.Workshop, new BuildingDefinition(BuildingType.Workshop, "Robot Workshop", BuildingFootprints.Workshop, Robots.RobotTech.WorkshopPartsWh) },
             { BuildingType.ChargingStation, new BuildingDefinition(BuildingType.ChargingStation, "charging station", BuildingFootprints.ChargingStation, Robots.RobotTech.ChargingStationPartsWh) },
             { BuildingType.Relay, new BuildingDefinition(BuildingType.Relay, "relay", BuildingFootprints.Relay, Robots.RobotTech.RelayPartsWh) },
+            { BuildingType.FloatingSolar, new BuildingDefinition(BuildingType.FloatingSolar, "floating solar", 1) },
         };
 
         /// <summary>Every building the player can build.</summary>

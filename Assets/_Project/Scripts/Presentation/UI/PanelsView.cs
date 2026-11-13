@@ -37,7 +37,7 @@ namespace KardashevAscent.Presentation.UI
               plannerReason, placedTitle, placedAngles, placedNumbers, placedBonus, totals, mapHint, help,
               legendMin, legendMax, legendTile, multiText, batteryText, plannerCost;
         Slider tilt, facing;
-        Button bestButton, placeButton, removeAllButton, reangleButton, modePanel, modeBattery, modeWorkshop, modeStation, modeRelay;
+        Button bestButton, placeButton, removeAllButton, reangleButton, modePanel, modeBattery, modeWorkshop, modeStation, modeRelay, modeFloating;
         float nextText;
 
         void OnEnable()
@@ -81,6 +81,10 @@ namespace KardashevAscent.Presentation.UI
             if (modeRelay != null)
                 modeRelay.clicked += () => { if (placer != null) placer.Mode = BuildMode.Relay; };
             DragFrom(modeRelay, BuildMode.Relay);
+            modeFloating = root.Q<Button>("mode-floating");
+            if (modeFloating != null)
+                modeFloating.clicked += () => { if (placer != null) placer.Mode = BuildMode.FloatingSolar; };
+            DragFrom(modeFloating, BuildMode.FloatingSolar);
             hoverText = root.Q<Label>("hover-text");
             siteTitle = root.Q<Label>("site-title");
             siteText = root.Q<Label>("site-text");
@@ -192,6 +196,7 @@ namespace KardashevAscent.Presentation.UI
                 NameButton(modeWorkshop, "Workshop", BuildMode.Workshop);
                 NameButton(modeStation, "Charger", BuildMode.ChargingStation);
                 NameButton(modeRelay, "Relay", BuildMode.Relay);
+                NameButton(modeFloating, "Floating solar", BuildMode.FloatingSolar);
                 if (buildHint != null)
                     buildHint.text = placer.Dragging
                         ? "Let go over the site to build · Esc or right-click: cancel"
@@ -200,12 +205,13 @@ namespace KardashevAscent.Presentation.UI
             Show(mapHint, lightMap != null && !mapOn);
 
             // Panel-only controls hide while building batteries.
-            bool panelMode = !siteOpen || placer.Mode == BuildMode.SolarPanel;
+            bool panelMode = !siteOpen || PanelPlacer.IsPanel(placer.Mode);
             foreach (VisualElement e in new VisualElement[] { tiltLabel, tilt, facingLabel, facing, plannerBest, bestButton })
                 Show(e, panelMode);
             Show(batteryText, !panelMode);
             Show(reangleButton, panelMode);
-            modePanel.EnableInClassList("selected", panelMode);
+            modePanel.EnableInClassList("selected", panelMode && (!siteOpen || placer.Mode == BuildMode.SolarPanel));
+            modeFloating?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.FloatingSolar);
             modeBattery.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.Battery);
             modeWorkshop?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.Workshop);
             modeStation?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.ChargingStation);
@@ -242,7 +248,7 @@ namespace KardashevAscent.Presentation.UI
 
         void UpdateSite(int slot, bool hasPanel, bool multi)
         {
-            Show(adjustBox, hasPanel && placer.SelectedBuilding == BuildingType.SolarPanel);
+            Show(adjustBox, hasPanel && (placer.SelectedBuilding == BuildingType.SolarPanel || placer.SelectedBuilding == BuildingType.FloatingSolar));
             int tile = siteView.Site.Tile;
             siteTitle.text = $"Building site · tile #{tile}";
             siteText.text = $"{placer.PanelsOnTile} panels · {placer.BatteriesOnTile} battery yards · " +
@@ -311,7 +317,7 @@ namespace KardashevAscent.Presentation.UI
             if (slot < 0 && !multi)
                 return;
 
-            bool panelMode = placer.Mode == BuildMode.SolarPanel;
+            bool panelMode = PanelPlacer.IsPanel(placer.Mode);
             bool workshopMode = placer.Mode == BuildMode.Workshop;
             bool stationMode = placer.Mode == BuildMode.ChargingStation;
             bool relayMode = placer.Mode == BuildMode.Relay;

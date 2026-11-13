@@ -49,6 +49,9 @@ namespace KardashevAscent.Simulation.Robots
                 case TerrainType.ShallowOcean: return double.PositiveInfinity;
                 case TerrainType.Highland: return FlatHopHours * 1.5;
                 case TerrainType.Mountain: return FlatHopHours * 2.5;
+                case TerrainType.Wetland: return FlatHopHours * 2.0;
+                case TerrainType.Forest: return FlatHopHours * 1.4;
+                case TerrainType.VolcanicRock: return FlatHopHours * 1.8;
                 case TerrainType.Ice:
                 case TerrainType.FrozenSea: return FlatHopHours * 2.0;
                 default: return FlatHopHours;

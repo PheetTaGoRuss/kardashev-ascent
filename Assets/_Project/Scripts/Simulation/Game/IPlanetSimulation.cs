@@ -33,6 +33,8 @@ namespace KardashevAscent.Simulation.Game
         ChargingStation,
         /// <summary>Network relay (workforce v2 stage E): extends the colony network's reach; needs grid power.</summary>
         Relay,
+        /// <summary>Solar panels on pontoons over shallow sea or wetland (decided 2026-11-13): 1.5 times the cost, cooler cells.</summary>
+        FloatingSolar,
     }
 
     /// <summary>Static facts about one tile.</summary>
@@ -60,6 +62,9 @@ namespace KardashevAscent.Simulation.Game
         }
 
         public bool IsWater => Terrains.IsWater(Terrain);
+
+        /// <summary>Ground a normal building can stand on (not open water, not wetland).</summary>
+        public bool IsBuildableLand => Terrains.IsBuildableLand(Terrain);
     }
 
     /// <summary>What one panel on one tile would produce; shown before placing.</summary>

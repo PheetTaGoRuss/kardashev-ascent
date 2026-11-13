@@ -76,6 +76,7 @@
                 <ui:Button name="mode-workshop" class="action-button mode" text="Workshop" />
                 <ui:Button name="mode-station" class="action-button mode" text="Charger" />
                 <ui:Button name="mode-relay" class="action-button mode" text="Relay" />
+                <ui:Button name="mode-floating" class="action-button mode" text="Floating solar" />
             </ui:VisualElement>
             <ui:Label name="build-hint" class="caption" text="Drag a building onto the site · Tab: switch" />
         </ui:VisualElement>

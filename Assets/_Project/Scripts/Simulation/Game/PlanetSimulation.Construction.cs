@@ -25,6 +25,7 @@ namespace KardashevAscent.Simulation.Game
             {
                 case BuildingType.SolarPanel: return PanelCost(PanelAreaM2 * PanelTiers.All[PanelTier].Scale);
                 case BuildingType.Battery: return BuildCosts.Battery(BatteryUnitWh);
+                case BuildingType.FloatingSolar: return PanelCost(PanelAreaM2 * PanelTiers.All[PanelTier].Scale) * FloatingCostFactor;
                 default: return BuildingCatalog.Get(type)?.FixedPartsWh ?? 0.0;
             }
         }

@@ -205,6 +205,20 @@ namespace KardashevAscent.EditorTools
                     UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.SiteView>()?.SetSelection(slots);
                     return true;
                 }
+                case "terrain":
+                {
+                    // terrain ShallowOcean: open the site of the first tile of that terrain.
+                    var sim = Runner()?.Simulation;
+                    var picker = UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.TilePicker>();
+                    var kind = (Simulation.Planet.TerrainType)Enum.Parse(typeof(Simulation.Planet.TerrainType), argument);
+                    for (int t = 0; sim != null && picker != null && t < sim.TileCount; t++)
+                        if (sim.GetTile(t).Terrain == kind) { picker.Select(t); Log("terrain tile " + t); break; }
+                    return true;
+                }
+                case "mode":
+                    UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.PanelPlacer>().Mode =
+                        (Presentation.Planet.BuildMode)Enum.Parse(typeof(Presentation.Planet.BuildMode), argument);
+                    return true;
                 case "refresh":
                     // Import changed files and recompile without the editor being in front.
                     AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);

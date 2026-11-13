@@ -28,7 +28,7 @@ namespace KardashevAscent.Simulation.Game
         }
 
         /// <summary>A building is going away: a site gives back its parts, a finished one is salvaged.</summary>
-        void Dismantle(int tileId, int slot, BuildingType type)
+        void Dismantle(int tileId, int slot, BuildingType type, bool wasFloating = false)
         {
             salvageOrders.Remove((tileId, slot));
             adjustOrders.RemoveAll(o => o.Tile == tileId && o.Slot == slot);
@@ -39,10 +39,26 @@ namespace KardashevAscent.Simulation.Game
                 return;
             }
             // A panel gives back a share of what its own size cost, not the current tier's.
-            Build.Salvage(type == BuildingType.SolarPanel && panels.TryGetValue((tileId, slot), out var p)
-                ? PanelCost(p.Area) : BuildCostWh(type));
+            Build.Salvage((type == BuildingType.SolarPanel || type == BuildingType.FloatingSolar) && panels.TryGetValue((tileId, slot), out var p)
+                ? PanelCost(p.Area) * (wasFloating ? FloatingCostFactor : 1.0) : BuildCostWh(type));
             if (type == BuildingType.Battery)
                 Grid.Battery.RemoveCapacity(BatteryUnitWh);
+        }
+
+        /// <summary>Panels that float (anchor slots): the Solar and cost rules differ a little.</summary>
+        readonly HashSet<(int Tile, int Slot)> floatingPanels = new HashSet<(int, int)>();
+
+        public bool PlaceFloatingPanel(int tileId, int slot, double tilt, double azimuth)
+        {
+            if (!CanPlace(BuildingType.FloatingSolar, tileId, slot) || !PreviewFloatingPanel(tileId, tilt, azimuth).CanPlace)
+                return false;
+            double area = NewPanelAreaM2(tileId);
+            Build.Start(tileId, slot, PanelCost(area) * FloatingCostFactor, 0.0, false);
+            AddPanel(tileId, slot, tilt, azimuth, area);
+            floatingPanels.Add((tileId, slot));
+            Occupy(tileId, FootprintFor(BuildingType.FloatingSolar, tileId, slot));
+            Settle((tileId, slot));
+            return true;
         }
 
         public bool RemovePanel(int tileId, int slot)
@@ -50,7 +66,8 @@ namespace KardashevAscent.Simulation.Game
             slot = A(tileId, slot);
             if (!panels.ContainsKey((tileId, slot)))
                 return false;
-            Dismantle(tileId, slot, BuildingType.SolarPanel);
+            bool floating = floatingPanels.Remove((tileId, slot));
+            Dismantle(tileId, slot, floating ? BuildingType.FloatingSolar : BuildingType.SolarPanel, floating);
             panels.Remove((tileId, slot));
             Vacate(tileId, slot);
             panelsPerTile[tileId] = PanelCount(tileId) - 1;
@@ -76,7 +93,7 @@ namespace KardashevAscent.Simulation.Game
         public BuildingType GetBuilding(int tileId, int slot) => GetBuildingAt(tileId, A(tileId, slot));
 
         BuildingType GetBuildingAt(int tileId, int slot) =>
-            panels.ContainsKey((tileId, slot)) ? BuildingType.SolarPanel
+            panels.ContainsKey((tileId, slot)) ? (floatingPanels.Contains((tileId, slot)) ? BuildingType.FloatingSolar : BuildingType.SolarPanel)
             : batteries.Contains((tileId, slot)) ? BuildingType.Battery
             : workshops.Contains((tileId, slot)) ? BuildingType.Workshop
             : stations.Contains((tileId, slot)) ? BuildingType.ChargingStation

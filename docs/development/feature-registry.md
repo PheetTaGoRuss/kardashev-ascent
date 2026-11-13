@@ -57,6 +57,8 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | PL-04 | Choose the planet and the landing tile | CONFIRMED | PR #43, #55 | Tested (simulation side) | `SimulationRunner`, `PlanetChooserView` |
 | PL-05 | Building slots per tile; multi-slot footprints | CONFIRMED | PR #28, #33, #61 | Tested | `Planet/TileSite.cs`, `Game/BuildingFootprints.cs` |
 | PL-06 | Earth cloud climatology on Earth-like planets | CONFIRMED | PR #23 | Tested | `Climate/CloudClimate.cs` |
+| PL-10 | New terrain: forest, wetland, beach, volcanic rock (second terrain pass on warm wet planets; volcanic rock anywhere). Wetland is too soft for land buildings; forest and beach keep the landing rank of lowland; forest, wetland and volcanic rock slow robots; albedo and names per terrain | CONFIRMED (director's choice of all four, 2026-11-13) | chat 2026-11-13 | Tested; seen in Play mode | `Planet/PlanetSurface.cs` |
+| EN-14 | Floating solar on shallow sea and wetland: 1.5 times the cost of a land panel (game rule), 4 % more output from cooler cells (game rule, TBD), built, turned and taken down by raft crews with no robot driving onto the sea (game rule) | CONFIRMED (director's choice, 2026-11-13) | chat 2026-11-13 | Tested; seen in Play mode | `Game/PlanetSimulation.Buildings.cs` |
 | PL-07 | Atmosphere, climate, temperature and pressure simulation | FUTURE | V | Not started | — |
 | PL-08 | Subsurface exploration | FUTURE | V | Not started | — |
 | PL-09 | Greenhouse offset for air temperature of real planets | PROPOSED | physics report P1 item 14 | Not started | — |
