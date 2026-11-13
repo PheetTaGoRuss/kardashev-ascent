@@ -67,3 +67,7 @@
 
 /* Captions under the big numbers wrap instead of running off the panel. */
 .stat .caption { white-space: normal; }
+
+/* Sections fold shut so the panel can be as short as the player wants. */
+.tile-fold { margin-top: 10px; }
+.tile-fold .unity-foldout__text { font-size: 10px; letter-spacing: 1px; color: var(--text-muted); -unity-font-style: bold; }
