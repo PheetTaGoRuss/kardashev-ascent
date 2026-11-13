@@ -151,6 +151,33 @@ namespace KardashevAscent.EditorTools
                     Log("no button: " + argument);
                     return true;
                 }
+                case "build":
+                {
+                    // build panel 5  /  build battery 2  /  build workshop 1: fill free slots of the base tile.
+                    string[] w = argument.Split(' ');
+                    int count = w.Length > 1 ? int.Parse(w[1]) : 1;
+                    var sim = Runner()?.Simulation;
+                    if (sim == null) return true;
+                    int tile = sim.BaseTileId, done = 0;
+                    for (int slot = 0; slot < sim.SlotCount(tile) && done < count; slot++)
+                    {
+                        if (sim.GetBuilding(tile, slot) != Simulation.Game.BuildingType.None) continue;
+                        bool ok = w[0] == "battery" ? sim.PlaceBattery(tile, slot)
+                                : w[0] == "workshop" ? sim.PlaceWorkshop(tile, slot)
+                                : w[0] == "charger" ? sim.PlaceChargingStation(tile, slot)
+                                : sim.PlacePanel(tile, slot, 0.35, Math.PI);
+                        if (ok) done++;
+                    }
+                    Log($"built {done} {w[0]}");
+                    return true;
+                }
+                case "status":
+                {
+                    var sim = Runner()?.Simulation;
+                    if (sim != null)
+                        Log($"STATUS t={sim.TimeHours:0}h gen={sim.GenerationW:0}W demand={sim.DemandW:0}W battery={sim.BatteryStoredWh / 1e6:0.0}MWh brownout={sim.IsBrownout} K={sim.PlanetK:0.000} milestones={sim.MilestonesReached} parts={sim.BuildStockWh / 1e6:0.0}MWh queue={sim.ConstructionQueueCount} robots={sim.Workforce.Robots.Count}");
+                    return true;
+                }
                 case "save":
                     UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
                     return true;
