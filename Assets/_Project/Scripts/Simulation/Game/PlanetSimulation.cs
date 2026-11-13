@@ -151,7 +151,9 @@ namespace KardashevAscent.Simulation.Game
             double topUpW = Math.Min(grid.CurtailedW, Upkeep.TopUpRequestW);
             BuildPowerW = grid.CurtailedW - topUpW;
             CurtailedW = grid.CurtailedW - topUpW - BuildPowerW;
-            Upkeep.Apply(Workforce, dt, grid.DockServedW, grid.PriorityServedW, topUpW, IsFlaringStar, Build, moving,
+            // The network's hub and relays are served first from the priority power; robots' critical charging gets the rest.
+            double networkServedW = Math.Min(Network.PowerW, grid.PriorityServedW);
+            Upkeep.Apply(Workforce, dt, grid.DockServedW, grid.PriorityServedW - networkServedW, topUpW, IsFlaringStar, Build, moving,
                          Materials, planet.AirTemperatureC);
             RobotChargingW = Upkeep.ChargingW;
             Network.SetPowered(!Grid.IsBrownout);
@@ -160,7 +162,7 @@ namespace KardashevAscent.Simulation.Game
             Build.AddParts(BuildPowerW, dt);
             Settle(null);
             // Used power: what reached the loads, went into the battery or made build parts; curtailed power is not used.
-            KardashevPowerW = grid.ServedW + grid.ChargeW + BuildPowerW + RobotChargingW;
+            KardashevPowerW = grid.ServedW + grid.ChargeW + BuildPowerW + RobotChargingW + networkServedW;
             // Milestones are judged on a whole day's average, so a sunny noon doesn't count.
             dayEnergyWh += KardashevPowerW * dt;
             dayHours += dt;
