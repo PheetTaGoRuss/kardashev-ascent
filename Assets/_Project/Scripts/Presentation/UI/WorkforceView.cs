@@ -33,6 +33,7 @@ namespace KardashevAscent.Presentation.UI
         /// <summary>The robot the TASKS Reserve buttons act on.</summary>
         int targetRobotId = -1;
         Label subtitle, summary, notes, workshopMessage;
+        readonly System.Collections.Generic.HashSet<int> openGroups = new System.Collections.Generic.HashSet<int>();
         float nextRefresh;
         string shownShape;
         readonly Dictionary<int, Label> taskLabels = new Dictionary<int, Label>();
@@ -193,6 +194,16 @@ namespace KardashevAscent.Presentation.UI
                     head.Add(MakeButton("Resume", () => { w.Resume(id); Changed(sim); }));
                 box.Add(head);
 
+                // Priorities, program and repair rules are folded away: most players only need the robots below.
+                var settings = new Foldout { text = "Group settings: priorities, program, repairs", value = openGroups.Contains(id) };
+                settings.AddToClassList("how-it-works");
+                settings.RegisterValueChangedCallback(e =>
+                {
+                    if (e.target != settings) return;
+                    if (e.newValue) openGroups.Add(id); else openGroups.Remove(id);
+                });
+                box.Add(settings);
+
                 var priorities = new VisualElement();
                 priorities.AddToClassList("priority-row");
                 priorities.Add(MakeLabel($"{(g.Automatic ? "Automatic group" : "Your group")} · program {g.Program} ·", "priority-label"));
@@ -211,8 +222,8 @@ namespace KardashevAscent.Presentation.UI
                     chip.tooltip = "Click to change: Critical, High, Normal, Low, Disabled";
                     priorities.Add(chip);
                 }
-                box.Add(priorities);
-                box.Add(MakeProgramRow(sim, w, g));
+                settings.Add(priorities);
+                settings.Add(MakeProgramRow(sim, w, g));
                 double below = g.MaintenanceBelow;
                 double nextBelow = below < 0.25 ? 0.30 : below < 0.4 ? 0.50 : 0.20;
                 var rules = new VisualElement();
@@ -220,10 +231,10 @@ namespace KardashevAscent.Presentation.UI
                 Button rule = MakeButton($"Repair below {below * 100.0:0} % condition", () => { w.SetGroupMaintenance(id, nextBelow); Changed(sim); });
                 rule.tooltip = "Maintenance rule for this group: click to change (20 %, 30 %, 50 %). Repairs use build parts and iron.";
                 rules.Add(rule);
-                box.Add(rules);
-                box.Add(MakeRankingRow(sim, w, g));
+                settings.Add(rules);
+                settings.Add(MakeRankingRow(sim, w, g));
                 if (g.Program == OperatingProgram.TaskQueue)
-                    box.Add(MakeQueue(sim, w, g));
+                    settings.Add(MakeQueue(sim, w, g));
 
                 foreach (int robotId in g.Members)
                 {
