@@ -87,7 +87,7 @@ namespace KardashevAscent.Simulation.Tests.Planet
             PlanetRecord r = PlanetRecordTests.ProximaForOtherTests();
             r.look.terrainSeed = 1697376206;
             PlanetSurface surface = PlanetSurface.Generate(Sphere, r.ToSurfaceSettings());
-            var sim = new StubPlanetSimulation(Sphere, surface, r);
+            var sim = new PlanetSimulation(Sphere, surface, r);
             Assert.AreEqual(TerrainType.Lowland, surface.Terrain[sim.BaseTileId]);
             Assert.IsTrue(sim.IsDayAtBase);
             Assert.Greater(Count(surface, TerrainType.Tundra), 0, "cold bare ground");

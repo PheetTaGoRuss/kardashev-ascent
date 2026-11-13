@@ -14,14 +14,14 @@ namespace KardashevAscent.Simulation.Tests.Game
             SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Deg,
             282.94 * Deg, 24.0, 365.256 * 24.0, 0.32, 0.3, 15.0);
 
-        static StubPlanetSimulation sim;
+        static PlanetSimulation sim;
 
         [OneTimeSetUp]
         public void CreateSimulation()
         {
             var sphere = HexSphere.Create(12);
             var surface = PlanetSurface.Generate(sphere, new SurfaceSettings(7));
-            sim = new StubPlanetSimulation(sphere, surface, Earthlike);
+            sim = new PlanetSimulation(sphere, surface, Earthlike);
         }
 
         static int LandTileNear(double latitudeDeg)

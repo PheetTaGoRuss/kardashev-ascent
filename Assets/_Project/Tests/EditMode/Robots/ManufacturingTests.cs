@@ -17,29 +17,29 @@ namespace KardashevAscent.Simulation.Tests.Robots
             SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Math.PI / 180.0,
             282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0);
 
-        static StubPlanetSimulation WithWorkshop()
+        static PlanetSimulation WithWorkshop()
         {
-            var sim = new StubPlanetSimulation(Sphere, Surface, Earthlike);
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
             Assert.IsTrue(sim.PlaceWorkshop(sim.BaseTileId, 5));
             Assert.AreEqual(1, sim.WorkshopCount, "built from the lander's parts at once");
             return sim;
         }
 
-        static void Stock(StubPlanetSimulation sim, double kg)
+        static void Stock(PlanetSimulation sim, double kg)
         {
             foreach (Material m in Materials.All) sim.Materials.Add(m, kg);
         }
 
         /// <summary>Tick until <paramref name="done"/> (robots stop to charge, so work takes longer than its hours).</summary>
-        static void RunUntil(StubPlanetSimulation sim, Func<bool> done, double maxHours = 96.0)
+        static void RunUntil(PlanetSimulation sim, Func<bool> done, double maxHours = 96.0)
         {
             for (double h = 0.0; h < maxHours && !done(); h += 0.25)
                 sim.Tick(0.25);
             Assert.IsTrue(done(), "did not finish in time");
         }
 
-        static void Unlock(StubPlanetSimulation sim, int milestones) =>
-            typeof(StubPlanetSimulation).GetProperty("MilestonesReached").SetValue(sim, milestones);
+        static void Unlock(PlanetSimulation sim, int milestones) =>
+            typeof(PlanetSimulation).GetProperty("MilestonesReached").SetValue(sim, milestones);
 
         [Test]
         public void Workshop_IsABuilding_SalvagedLikeOthers()
@@ -54,7 +54,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         [Test]
         public void OrderRobot_NeedsAWorkshopAndMaterials()
         {
-            var sim = new StubPlanetSimulation(Sphere, Surface, Earthlike);
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
             StringAssert.Contains("Workshop", sim.OrderRobot(RobotKind.General));
             sim.PlaceWorkshop(sim.BaseTileId, 5);
             StringAssert.StartsWith("Missing", sim.OrderRobot(RobotKind.General));
@@ -278,7 +278,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             SimulationState state = a.CaptureState();
             Assert.AreEqual(SimulationState.CurrentVersion, state.Version);
 
-            var b = new StubPlanetSimulation(Sphere, Surface, Earthlike);
+            var b = new PlanetSimulation(Sphere, Surface, Earthlike);
             Assert.IsTrue(b.RestoreState(state));
             Assert.AreEqual(1, b.WorkshopCount);
             Assert.AreEqual(1, b.Jobs.Count);

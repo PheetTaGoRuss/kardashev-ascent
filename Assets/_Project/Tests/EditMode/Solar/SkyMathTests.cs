@@ -110,14 +110,14 @@ namespace KardashevAscent.Simulation.Tests.Solar
         static readonly HexSphere Sphere = HexSphere.Create(12);
         static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
 
-        static StubPlanetSimulation Earthlike()
+        static PlanetSimulation Earthlike()
         {
             var r = new PlanetRecord { id = "sky" };
             r.solar.eccentricity = 0.0167;
             r.solar.obliquityDeg = 23.44;
             r.solar.perihelionLongitudeDeg = 282.94;
             r.solar.airTemperatureC = 25.0;
-            return new StubPlanetSimulation(Sphere, Surface, r);
+            return new PlanetSimulation(Sphere, Surface, r);
         }
 
         [Test]

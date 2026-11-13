@@ -144,7 +144,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         [Test]
         public void InterruptedSurvey_Restarts_D15()
         {
-            var sim = new StubPlanetSimulation(Sphere, Surface, Earthlike);
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
             int t = sim.BaseTileId;
             sim.OrderSurvey(t);
             sim.Tick(1.0);
@@ -157,7 +157,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         [Test]
         public void OpenWork_ListsEveryKindOfTask()
         {
-            var sim = new StubPlanetSimulation(Sphere, Surface, Earthlike);
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
             int t = sim.BaseTileId;
             sim.Workforce.Pause(sim.Workforce.Robots[0].GroupId);
             sim.PlaceBattery(t, 0);
@@ -171,7 +171,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         [Test]
         public void DemandGroup_InTheColony_BuildsWhileSitesWait()
         {
-            var sim = new StubPlanetSimulation(Sphere, Surface, Earthlike);
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
             int t = sim.BaseTileId;
             Robot r = sim.Workforce.Robots[0];
             sim.Workforce.SetGroupProgram(r.GroupId, OperatingProgram.Demand);

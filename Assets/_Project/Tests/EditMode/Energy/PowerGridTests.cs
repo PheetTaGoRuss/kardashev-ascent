@@ -156,10 +156,10 @@ namespace KardashevAscent.Simulation.Tests.Energy
             SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Math.PI / 180.0,
             282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0);
 
-        static StubPlanetSimulation Create()
+        static PlanetSimulation Create()
         {
             var sphere = HexSphere.Create(12);
-            return new StubPlanetSimulation(sphere, PlanetSurface.Generate(sphere, new SurfaceSettings(7)), Earthlike);
+            return new PlanetSimulation(sphere, PlanetSurface.Generate(sphere, new SurfaceSettings(7)), Earthlike);
         }
 
         [Test]
@@ -213,7 +213,7 @@ namespace KardashevAscent.Simulation.Tests.Energy
         [Test]
         public void ColonyGrows_WithPanels_AndFurtherWithBatteries()
         {
-            StubPlanetSimulation Run(int batteryCount, out int brownouts)
+            PlanetSimulation Run(int batteryCount, out int brownouts)
             {
                 var sim = Create();
                 int tile = sim.BaseTileId;

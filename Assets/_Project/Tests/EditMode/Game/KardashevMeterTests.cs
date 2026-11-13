@@ -20,7 +20,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         [Test]
         public void KAndPlanetK_FollowTheUsedPower()
         {
-            var sim = new StubPlanetSimulation(Sphere, Surface, Star(1.0));
+            var sim = new PlanetSimulation(Sphere, Surface, Star(1.0));
             sim.Tick(36.0);
             Assert.Greater(sim.KardashevPowerW, 0.0);
             Assert.AreEqual(Kardashev.K(sim.KardashevPowerW), sim.KardashevK, 1e-12);
@@ -31,7 +31,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         public void DimStar_PlanetKIsAheadOfAbsoluteK()
         {
             // A star 100× dimmer at 1 AU: the target is 100× lower, so planet K runs 0.2 ahead of absolute K.
-            var sim = new StubPlanetSimulation(Sphere, Surface, Star(0.01));
+            var sim = new PlanetSimulation(Sphere, Surface, Star(0.01));
             sim.Tick(36.0);
             Assert.AreEqual(1e14, sim.TypeITargetW, 1e14 * 0.01);
             Assert.AreEqual(sim.KardashevK + 1.0 - Kardashev.K(sim.TypeITargetW), sim.PlanetK, 1e-9);

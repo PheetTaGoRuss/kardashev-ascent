@@ -103,7 +103,7 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>
         /// Star's ecliptic longitude λ = ν + λₚ at a time, counting time 0 as periapsis
-        /// (the convention <see cref="StubPlanetSimulation"/> uses).
+        /// (the convention <see cref="PlanetSimulation"/> uses).
         /// </summary>
         public static double EclipticLongitude(in PlanetSolarParams planet, double timeHours)
         {

@@ -12,17 +12,17 @@ namespace KardashevAscent.Simulation.Tests.Game
         static readonly HexSphere Sphere = HexSphere.Create(12);
         static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
 
-        static StubPlanetSimulation Create(double luminositySun = 1.0)
+        static PlanetSimulation Create(double luminositySun = 1.0)
         {
             var r = new PlanetRecord { id = "tiers" };
             r.solar.luminosityW = luminositySun * SolarConstants.SolarLuminosity;
             r.solar.obliquityDeg = 23.44;
             r.solar.airTemperatureC = 25.0;
-            return new StubPlanetSimulation(Sphere, Surface, r);
+            return new PlanetSimulation(Sphere, Surface, r);
         }
 
         /// <summary>A star 10⁵× dimmer: the lander's ~100 kW is planet K 0.4, so a day unlocks solar farms (milestone 4).</summary>
-        static StubPlanetSimulation WithFarms()
+        static PlanetSimulation WithFarms()
         {
             var sim = Create(1e-5);
             sim.Tick(24.0);
@@ -30,7 +30,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             return sim;
         }
 
-        static double Tilt(StubPlanetSimulation sim) => Math.Abs(sim.GetTile(sim.BaseTileId).Latitude);
+        static double Tilt(PlanetSimulation sim) => Math.Abs(sim.GetTile(sim.BaseTileId).Latitude);
 
         [TestCase(0, 0)]
         [TestCase(2, 0)]

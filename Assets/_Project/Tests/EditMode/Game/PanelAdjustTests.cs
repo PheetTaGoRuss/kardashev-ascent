@@ -18,11 +18,11 @@ namespace KardashevAscent.Simulation.Tests.Game
         static readonly HexSphere Sphere = HexSphere.Create(12);
         static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
 
-        static StubPlanetSimulation Create() => new StubPlanetSimulation(Sphere, Surface, Earthlike);
+        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike);
 
-        static int GroupId(StubPlanetSimulation sim) => sim.Workforce.Robots[0].GroupId;
+        static int GroupId(PlanetSimulation sim) => sim.Workforce.Robots[0].GroupId;
 
-        static double TiltOf(StubPlanetSimulation sim, int t, int s)
+        static double TiltOf(PlanetSimulation sim, int t, int s)
         {
             foreach (BuildingRecord r in sim.CaptureState().Buildings)
                 if (r.Tile == t && r.Slot == s) return r.Tilt;
