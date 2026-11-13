@@ -21,7 +21,7 @@ Section 1 describes `main` as audited on 2026-11-12. Sections 2–5 are standard
 | Recipes, modules, unlocks | `Robots/Manufacturing.cs` (`RobotTech`) | Methods returning recipes | No |
 | Panel tiers | `Game/PanelTiers.cs` | Static array | Centralised, in code |
 | Lander start values | `PowerGrid.Lander()`, `BuildCosts.LanderStockWh` | Constants | No |
-| Simulation settings | `StubPlanetSimulation` properties, constants such as `MaxStepHours` | Properties and constants | No |
+| Simulation settings | `PlanetSimulation` properties, constants such as `MaxStepHours` | Properties and constants | No |
 | Technology, research discoveries, energy sources other than solar, environment parameters per tile | — | Do not exist | — |
 
 Generated files carry a header that says so. Never edit them by hand; change the tool and run it again.

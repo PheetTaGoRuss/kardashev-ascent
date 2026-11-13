@@ -55,11 +55,13 @@ Phases 2, 3 and 4 can run side by side once phase 1 is done.
 | Merge or close `feature/building-footprints` | Solar measurements, re-angling by robot, system windows, colony network | Gameplay |
 | Decide the industrial-production work (OQ-10) | Specification, then a pull request, or set it aside | Design |
 | Bring `docs/simulation-interface.md` up to the current interface | Robots, resources, manufacturing, footprints, save versions | Documentation |
-| Continuous integration | Run `tools/simtests` and the Python tests on every pull request | Infrastructure |
+| Continuous integration | **Done:** runs `tools/simtests`, the layer check and the Python tests on every pull request | Infrastructure |
 
 Exit: no unmerged feature branch older than the newest merge; the interface document matches the code.
 
-### Phase 1: structure
+### Phase 1: structure (partly done 2026-11-13)
+
+Done: orchestrator split into partial files and renamed (M1 first half, M2), namespace cycles broken (M3), energy ledger and determinism tests (M8), continuous integration, layer check. Still to do: M1 second half, M4–M7, mass ledger, performance budget, workforce stages E–G.
 
 | Milestone | Detail | Kind |
 | --- | --- | --- |

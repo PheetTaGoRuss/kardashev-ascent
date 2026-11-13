@@ -43,7 +43,7 @@
 - `tools/`: สคริปต์ของทีม เช่น ตั้งค่า Git ดึงข้อมูล NASA และ `tools/simtests` สำหรับรันเทสต์นอก Unity
 - `docs/physics/physics-verification.md`: ผลตรวจฟิสิกส์ของเอกสารดีไซน์ รายการแก้โค้ดเรียงตามความสำคัญ และค่า unit test
 
-Presentation คุยกับ Simulation ผ่าน `IPlanetSimulation` ทางเดียว ระบบย่อยใน Simulation ไม่อ้างถึงกันเอง ตัวประสาน (`StubPlanetSimulation`) ส่งค่าระหว่างระบบให้
+Presentation คุยกับ Simulation ผ่าน `IPlanetSimulation` ทางเดียว ระบบย่อยใน Simulation ไม่อ้างถึงกันเอง ตัวประสาน (`PlanetSimulation`) ส่งค่าระหว่างระบบให้
 
 ## กฎ
 
