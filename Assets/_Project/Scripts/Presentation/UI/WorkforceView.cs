@@ -620,8 +620,7 @@ namespace KardashevAscent.Presentation.UI
             return $"Taking down a {what} · tile {t.Tile}, slot {t.Slot}{repairNote}";
         }
 
-        static string BuildingName(BuildingType type) =>
-            type == BuildingType.Battery ? "battery yard" : type == BuildingType.SolarPanel ? "solar panel" : type == BuildingType.Workshop ? "Robot Workshop" : "building";
+        static string BuildingName(BuildingType type) => BuildingCatalog.NameOf(type);
 
         static string KindName(TaskKind k) => k.ToString();
 
