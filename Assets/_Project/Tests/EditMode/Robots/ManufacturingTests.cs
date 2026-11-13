@@ -159,6 +159,35 @@ namespace KardashevAscent.Simulation.Tests.Robots
         }
 
         [Test]
+        public void Refining_ConservesMass_TheRestOfTheRockIsSlag()
+        {
+            var sim = WithWorkshop();
+            Unlock(sim, 1);
+            sim.Materials.Add(Material.Rock, 100.0);
+            double before = sim.Materials[Material.Rock];
+            Assert.IsNull(sim.OrderRefine(Material.Aluminium));
+            RunUntil(sim, () => sim.Jobs.Count == 0);
+            double after = sim.Materials[Material.Rock] + sim.Materials[Material.Aluminium] + sim.Materials[Material.Slag];
+            Assert.AreEqual(before, after, 1e-9, "rock in = rock left + metal + slag");
+            Assert.AreEqual(50.0, sim.Materials[Material.Slag], 1e-9, "60 kg of rock for 10 kg of aluminium leaves 50 kg of slag");
+            Assert.IsTrue(sim.IndustrialReports[sim.IndustrialReports.Count - 1].Message.Contains("slag"));
+        }
+
+        [Test]
+        public void Slag_IsKeptInSaves_AndOldSavesStillLoad()
+        {
+            var sim = WithWorkshop();
+            sim.Materials.Add(Material.Slag, 12.0);
+            var state = sim.CaptureState();
+            var other = WithWorkshop();
+            Assert.IsTrue(other.RestoreState(state));
+            Assert.AreEqual(12.0, other.Materials[Material.Slag], 1e-9);
+            state.MaterialsKg.RemoveAll(m => m.Material == Material.Slag);
+            Assert.IsTrue(other.RestoreState(state), "a save from before slag existed has no slag record");
+            Assert.AreEqual(0.0, other.Materials[Material.Slag], 1e-9);
+        }
+
+        [Test]
         public void CancelJob_GivesEverythingBack()
         {
             var sim = WithWorkshop();

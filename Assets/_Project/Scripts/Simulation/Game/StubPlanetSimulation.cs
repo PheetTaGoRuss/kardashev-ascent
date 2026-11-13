@@ -368,8 +368,15 @@ namespace KardashevAscent.Simulation.Game
                     }
                     break;
                 default:
+                    // Mass is conserved: the rock that went in comes out as the metal plus slag.
+                    double rockInKg = 0.0;
+                    foreach (var input in j.Recipe.Inputs)
+                        if (input.Material == Material.Rock) rockInKg += input.Kg;
+                    double slagKg = Math.Max(0.0, rockInKg - j.OutputKg);
                     Materials.Add(j.Output, j.OutputKg);
-                    ReportIndustry(IndustrialBlocker.None, $"Refining completed: {j.OutputKg:0} kg {Resources.Materials.Name(j.Output).ToLowerInvariant()} is available.");
+                    if (slagKg > 0.0) Materials.Add(Material.Slag, slagKg);
+                    ReportIndustry(IndustrialBlocker.None, $"Refining completed: {j.OutputKg:0} kg {Resources.Materials.Name(j.Output).ToLowerInvariant()} is available" +
+                                   (slagKg > 0.0 ? $", with {slagKg:0} kg of slag." : "."));
                     break;
             }
         }
