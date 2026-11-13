@@ -4,6 +4,7 @@
 .box { padding: 8px 12px; margin-bottom: 8px; }
 .body { font-size: 13px; white-space: normal; padding: 0; margin: 1px 0; }
 .numbers { margin-top: 6px; }
+.box .caption { white-space: normal; margin-top: 2px; }
 .warn { color: var(--critical); }
 .bonus { color: rgb(255, 210, 122); }
 .totals { margin-left: 2px; }

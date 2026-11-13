@@ -255,7 +255,7 @@ namespace KardashevAscent.Presentation.UI
             siteText.text = $"{placer.PanelsOnTile} panels · {placer.BatteriesOnTile} battery yards · " +
                             $"{placer.PanelsOnTile + placer.BatteriesOnTile} of {siteView.Site.SlotCount} slots used";
             totals.text = placer.PanelCount == 0
-                ? "No panels yet"
+                ? ""
                 : placer.BestAngleUnlocked
                     ? $"Panels {placer.PanelCount} ({placer.BestAnglePanels} at best angle) · now {Format.Power(placer.GenerationW)}"
                     : $"Panels {placer.PanelCount} · now {Format.Power(placer.GenerationW)}";
