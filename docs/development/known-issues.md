@@ -16,7 +16,7 @@ Bugs that need tracking by several people also get a GitHub issue; link it here.
 | KI-4 | ~~Namespace cycles~~ | Fixed 2026-11-13; `tools/check_layers.py` keeps it so | — |
 | KI-5 | Unlocks are defined in three places | A new unlock can be added in one and missed in another | Data D5 |
 | KI-6 | Robot numbers are split between `RobotSpecs` and `RobotCatalog` | Two places to look | Data D6 |
-| KI-7 | Each building type has its own set and counter in the orchestrator | Every new building repeats the bookkeeping | Data D2 |
+| KI-7 | Each building type still has its own set and counter in the orchestrator (names, footprints and costs now come from `BuildingCatalog`) | A new building still repeats some bookkeeping | Data D2 |
 
 ## 2. Saves and data
 
