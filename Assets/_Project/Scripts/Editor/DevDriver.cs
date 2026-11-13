@@ -185,6 +185,14 @@ namespace KardashevAscent.EditorTools
                 case "select":
                     UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.SiteView>()?.SetSelected(int.Parse(argument));
                     return true;
+                case "nudge":
+                {
+                    // nudge 30 90: turn the open angle sliders by that many degrees of tilt and facing (what dragging the rings does).
+                    string[] w = argument.Split(' ');
+                    var pv = UnityEngine.Object.FindFirstObjectByType<PanelsView>();
+                    Log("nudge " + (pv != null && pv.TryNudgeAngles(float.Parse(w[0], System.Globalization.CultureInfo.InvariantCulture), float.Parse(w[1], System.Globalization.CultureInfo.InvariantCulture))));
+                    return true;
+                }
                 case "refresh":
                     // Import changed files and recompile without the editor being in front.
                     AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
