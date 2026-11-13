@@ -91,7 +91,7 @@ namespace KardashevAscent.Simulation.Game
                 });
             state.Buildings.Sort((a, b) => a.Tile != b.Tile ? a.Tile.CompareTo(b.Tile) : a.Slot.CompareTo(b.Slot));
             foreach (BuildingRecord r in state.Buildings)
-                if (footprints.TryGetValue((r.Tile, r.Slot), out List<int> f))
+                if (footprintMap.TryGetFootprint(r.Tile, r.Slot, out List<int> f))
                     for (int i = 1; i < f.Count; i++) r.Covered.Add(f[i]);
             int order = 0;
             var sites = new Dictionary<(int, int), (double Paid, int Order)>();

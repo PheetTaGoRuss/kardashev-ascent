@@ -12,10 +12,8 @@ namespace KardashevAscent.Simulation.Game
 {
     public sealed partial class PlanetSimulation
     {
-        /// <summary>Covered slot (not the anchor) → its building's anchor slot.</summary>
-        readonly Dictionary<(int Tile, int Slot), int> coveredBy = new Dictionary<(int, int), int>();
-        /// <summary>Anchor → every slot the building covers (anchor first).</summary>
-        readonly Dictionary<(int Tile, int Slot), List<int>> footprints = new Dictionary<(int, int), List<int>>();
+        /// <summary>Which slots each building covers (stored at its anchor slot).</summary>
+        readonly FootprintMap footprintMap = new FootprintMap();
 
         public int FootprintSize(BuildingType type) => BuildingFootprints.SlotsFor(type, PanelTier);
 
@@ -43,35 +41,28 @@ namespace KardashevAscent.Simulation.Game
 
         public int AnchorOf(int tileId, int slot)
         {
-            int a = coveredBy.TryGetValue((tileId, slot), out int anchor) ? anchor : slot;
+            int a = footprintMap.AnchorOrSelf(tileId, slot);
             return GetBuildingAt(tileId, a) != BuildingType.None ? a : -1;
         }
 
         /// <summary>The anchor of the building covering a slot, or the slot itself (for calls that take any of its slots).</summary>
-        int A(int tileId, int slot) => coveredBy.TryGetValue((tileId, slot), out int anchor) ? anchor : slot;
+        int A(int tileId, int slot) => footprintMap.AnchorOrSelf(tileId, slot);
 
         public IReadOnlyList<int> FootprintAt(int tileId, int slot)
         {
             int a = AnchorOf(tileId, slot);
             if (a < 0) return new List<int>();
-            return footprints.TryGetValue((tileId, a), out List<int> f) ? f : new List<int> { a };
+            return footprintMap.TryGetFootprint(tileId, a, out List<int> f) ? f : new List<int> { a };
         }
 
         void Occupy(int tileId, List<int> footprint)
         {
-            int anchor = footprint[0];
-            footprints[(tileId, anchor)] = new List<int>(footprint);
-            for (int i = 1; i < footprint.Count; i++)
-                coveredBy[(tileId, footprint[i])] = anchor;
+            footprintMap.Occupy(tileId, footprint);
         }
 
         void Vacate(int tileId, int anchor)
         {
-            if (!footprints.TryGetValue((tileId, anchor), out List<int> f))
-                return;
-            for (int i = 1; i < f.Count; i++)
-                coveredBy.Remove((tileId, f[i]));
-            footprints.Remove((tileId, anchor));
+            footprintMap.Vacate(tileId, anchor);
         }
 
         public bool PlaceChargingStation(int tileId, int slot)
