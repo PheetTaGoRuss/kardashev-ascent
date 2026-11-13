@@ -55,6 +55,7 @@ Bugs that need tracking by several people also get a GitHub issue; link it here.
 | --- | --- | --- | --- |
 | KI-24 | ~~No continuous integration~~ | Fixed 2026-11-13: `.github/workflows/tests.yml` (not yet seen to run on GitHub) | — |
 | KI-25 | No performance test; mass balance is only partly tested | Regressions of these kinds are invisible | Testing standards §8 |
+| KI-34 | Stepping 300 robots takes about 5 ms per 0.25 h step (measured 2026-11-13 outside Unity) | Fine at the slower clock speeds; at "1 d/s" (96 steps a second) about half a second of work per real second, and "1 y/min" would not keep up | Aggregate simulation of background work (workforce stage H) |
 | KI-26 | No Presentation tests | UI changes are checked by hand | Testing standards §6 and §8 |
 | KI-27 | Not every save version has its own migration test | An old save could fail to load unnoticed | Add when touching save code |
 
