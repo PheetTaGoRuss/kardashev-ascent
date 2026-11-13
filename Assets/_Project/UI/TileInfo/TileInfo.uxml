@@ -37,7 +37,7 @@
                 </ui:VisualElement>
             </ui:Foldout>
 
-            <ui:Foldout name="monthly-fold" class="tile-fold" text="ENERGY BY MONTH" value="true">
+            <ui:Foldout name="monthly-fold" class="tile-fold" text="ENERGY BY MONTH" value="false">
                 <ui:Label name="monthly-caption" class="caption" text="This panel" />
                 <ui:VisualElement name="monthly" class="chart monthly-chart" />
                 <ui:VisualElement name="month-labels" class="month-labels" />

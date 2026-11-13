@@ -71,3 +71,4 @@
 /* Sections fold shut so the panel can be as short as the player wants. */
 .tile-fold { margin-top: 10px; }
 .tile-fold .unity-foldout__text { font-size: 10px; letter-spacing: 1px; color: var(--text-muted); -unity-font-style: bold; }
+.tile-fold .unity-foldout__content { margin-left: 0; }
