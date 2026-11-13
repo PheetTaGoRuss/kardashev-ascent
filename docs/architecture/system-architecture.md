@@ -35,19 +35,21 @@ Four assemblies are enough today. Do not add an assembly for a category (data, p
 
 | Namespace | Role | Depends on |
 | --- | --- | --- |
-| `Solar` | Light from star to panel: orbit, sun position, atmosphere, panel, yield, spectra, sky knowledge | `Planet` (one file) |
-| `Climate` | Cloud factor, waste heat | — |
-| `Energy` | Battery, RTG, power grid, colony demand | — |
-| `Civilization` | Kardashev mathematics | — |
-| `Planet` | Hex sphere, terrain, building slots, planet records | `Solar`, `Resources`, `Civilization` |
-| `Resources` | Materials, deposits, material stock | `Planet` |
-| `Robots` | Robots, groups, tasks, scheduling, upkeep, movement, manufacturing | `Energy`, `Planet`, `Resources`, `Game` |
+| `Civilization` | Kardashev mathematics | none |
+| `Climate` | Cloud factor, waste heat | none |
+| `Energy` | Battery, RTG, power grid, colony demand, `BuildCosts` | none |
+| `Solar` | Light from star to panel: orbit, sun position, atmosphere, panel, yield, spectra, sky knowledge, measurement puzzles | none |
+| `Planet` | Hex sphere, terrain, building slots, planet records, planet chemistry, the light-potential map | `Civilization`, `Solar` |
+| `Resources` | Materials, deposits, material stock, industry, the survey puzzle | `Planet`, `Solar` |
+| `Robots` | Robots, groups, tasks, scheduling, upkeep, movement, manufacturing, colony network | `Energy`, `Planet`, `Resources` |
 | `Game` | The interface, the orchestrator, construction, save state, panel tiers, history | all of the above |
+
+The dependency order has no cycles. `tools/check_layers.py` enforces it and CI runs it; to allow a new dependency, change the table in that script and this one in the same pull request.
 
 How the pieces run:
 
 - `Game/IPlanetSimulation.cs` is the only door between layers: properties to read, commands that return `bool` or a reason string, and C# events.
-- `Game/StubPlanetSimulation.cs` is the only implementation. It owns one instance of each system and calls them in a fixed order inside `Step`.
+- `Game/PlanetSimulation.cs` is the only implementation, written as one `partial` class in 14 files by system (`PlanetSimulation.Buildings.cs`, `.Construction.cs`, `.Solar.cs`, `.Save.cs` and so on, each under 300 lines). It owns one instance of each system and calls them in a fixed order inside `Step`.
 - `Tick(hours)` cuts time into sub-steps of at most 0.25 h. Presentation calls `Tick` once per frame from `SimulationRunner`.
 - Systems do not hold references to each other. The orchestrator passes each one what it needs every step. Mostly these are values: the grid receives the robots' charging request as watts and returns what was served. In two cases it is an object: robot upkeep is handed the construction queue and the material stock. Values are the pattern to keep.
 
@@ -146,14 +148,14 @@ Each step keeps behaviour and saves unchanged and passes the whole test suite. S
 
 | Step | Change | Why | Risk |
 | --- | --- | --- | --- |
-| M1 | Split `StubPlanetSimulation` into partial files by system, then move each system's bookkeeping into its own class stepped by the orchestrator | The class grows with every feature; workforce plan risk R2 and stage H | Merge conflicts with open branches: do it between features |
-| M2 | Rename the class to `PlanetSimulation` | The name "stub" misleads new readers | A rename touches every test; do it in the same window as M1 |
-| M3 | Break the three namespace cycles: move `PlanetChemistry` to `Planet`, Earth constants to a shared constants class, and the `Game` types that `Robots` needs into `Robots` or a lower namespace | Lets tiers be checked and assemblies be split later | Low |
+| M1 | **Partly done (2026-11-13):** the class is split into partial files by system. Still to do: move each system's bookkeeping into its own class stepped by the orchestrator | The class grows with every feature; workforce plan risk R2 and stage H | Merge conflicts with open branches: do it between features |
+| M2 | **Done:** the class is `PlanetSimulation` | The name "stub" misleads new readers | A rename touches every test; do it in the same window as M1 |
+| M3 | **Done:** the namespace cycles are broken (checked by `tools/check_layers.py`). It was: move `PlanetChemistry` to `Planet`, Earth constants to a shared constants class, and the `Game` types that `Robots` needs into `Robots` or a lower namespace | Lets tiers be checked and assemblies be split later | Low |
 | M4 | Group the interface into role interfaces (`IEnergyReadout`, `IConstructionCommands`, …) that `IPlanetSimulation` inherits | Views depend on what they use; the door stays single | None: additive |
 | M5 | Replace live objects on the interface (`Workforce`, `DepositMap`, `MaterialStock`) with read models and commands | Rule 8; needed before "known versus actual" can be enforced | Medium: Presentation code changes |
 | M6 | One unlock table; one robot data catalogue; a building definition table | Removes the duplication found by the audit; prepares data files | Low |
 | M7 | Named loads and sources on the power grid | Every new consumer otherwise adds an argument to `PowerGrid.Step` | Medium: balance must stay identical |
-| M8 | Add energy and mass ledger tests | Rule 9 has no test today | None |
+| M8 | **Done for energy; mass is checked only for non-negative stock:** `ConservationAndDeterminismTests` | Rule 9 has no test today | None |
 | M9 | A civilization object above planet simulations, with its own save envelope | Needed only when a second colony or planet runs at once | High: design first (OQ-2) |
 
 A further split of the Simulation assembly (models apart from game systems) is worth doing only when compile time hurts or when a second program needs the models alone. It depends on M3.

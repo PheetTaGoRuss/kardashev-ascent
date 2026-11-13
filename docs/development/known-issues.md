@@ -10,10 +10,10 @@ Bugs that need tracking by several people also get a GitHub issue; link it here.
 
 | # | Issue | Effect | Plan |
 | --- | --- | --- | --- |
-| KI-1 | `StubPlanetSimulation` is 1,356 lines and owns every system | Each feature makes it larger; branches conflict in it | Architecture M1 |
-| KI-2 | The class is called "stub" and is the real simulation | Misleads new readers | Architecture M2 |
+| KI-1 | `PlanetSimulation` still owns every system's bookkeeping (split into 14 files, one class) | New features still touch it | Architecture M1, second half |
+| KI-2 | ~~Class called "stub"~~ | Fixed 2026-11-13: renamed `PlanetSimulation` | — |
 | KI-3 | `IPlanetSimulation` hands out live `Workforce`, `DepositMap`, `MaterialStock`, `PowerHistory` and `SkyNotebook` objects | Presentation can change state without a command | Architecture M5 |
-| KI-4 | Namespace cycles: `Planet` ↔ `Solar`, `Planet` ↔ `Resources`, `Robots` ↔ `Game` | Tiers cannot be checked; assemblies cannot be split | Architecture M3 |
+| KI-4 | ~~Namespace cycles~~ | Fixed 2026-11-13; `tools/check_layers.py` keeps it so | — |
 | KI-5 | Unlocks are defined in three places | A new unlock can be added in one and missed in another | Data D5 |
 | KI-6 | Robot numbers are split between `RobotSpecs` and `RobotCatalog` | Two places to look | Data D6 |
 | KI-7 | Each building type has its own set and counter in the orchestrator | Every new building repeats the bookkeeping | Data D2 |
@@ -53,8 +53,8 @@ Bugs that need tracking by several people also get a GitHub issue; link it here.
 
 | # | Issue | Effect | Plan |
 | --- | --- | --- | --- |
-| KI-24 | No continuous integration | A pull request can break tests unnoticed | Roadmap phase 0 |
-| KI-25 | No conservation, determinism or performance tests | Regressions of these kinds are invisible | Testing standards §8 |
+| KI-24 | ~~No continuous integration~~ | Fixed 2026-11-13: `.github/workflows/tests.yml` (not yet seen to run on GitHub) | — |
+| KI-25 | No performance test; mass balance is only partly tested | Regressions of these kinds are invisible | Testing standards §8 |
 | KI-26 | No Presentation tests | UI changes are checked by hand | Testing standards §6 and §8 |
 | KI-27 | Not every save version has its own migration test | An old save could fail to load unnoticed | Add when touching save code |
 

@@ -11,10 +11,10 @@ What gets tested, how, and what "done" means for a change. Sections 1–2 descri
 | Save migration tests | Inside the feature's test file (for example `VersionOneSave_LoadsEverythingFinished_WithTheLanderParts`, `Save_Version6_LoadsWithOneGeneralRobot_AndItsSitesKeepGoing`) | Six found; not every one of the 16 versions has its own |
 | Data validation | `Planet/PlanetRecordTests.cs`; `tools/exoplanets/test_convert.py` (Python `unittest`) | Planets only |
 | Presentation tests | — | None |
-| Whole-simulation determinism | — | None (planned as workforce stage H) |
+| Whole-simulation determinism | `Game/ConservationAndDeterminismTests.cs` | Same inputs give the same colony; chunked ticking gives the same time |
 | Performance | — | None (planned as workforce stage H) |
-| Conservation balances | — | None |
-| Continuous integration | — | None; tests run on a developer's machine |
+| Conservation balances | same file | Energy balances on every step (found and fixed a 2 kW accounting gap); mass checked only for non-negative stock |
+| Continuous integration | `.github/workflows/tests.yml` | Runs the simulation tests, `tools/check_layers.py` and the Python tests on pull requests (written, not yet seen to run on GitHub) |
 
 ## 2. Running the tests
 

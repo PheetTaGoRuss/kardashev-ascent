@@ -59,7 +59,7 @@ flowchart LR
 
 ## 3. Order inside one sub-step
 
-`StubPlanetSimulation.Step(dt)`, with `dt` at most 0.25 h. The order is part of the game's behaviour: changing it changes results and must be treated as a design change with tests.
+`PlanetSimulation.Step(dt)`, with `dt` at most 0.25 h. The order is part of the game's behaviour: changing it changes results and must be treated as a design change with tests.
 
 | # | Action | Reads | Writes |
 | --- | --- | --- | --- |
