@@ -1,3 +1,4 @@
+using KardashevAscent.Simulation.Energy;
 using System;
 using KardashevAscent.Simulation.Game;
 using KardashevAscent.Simulation.Planet;

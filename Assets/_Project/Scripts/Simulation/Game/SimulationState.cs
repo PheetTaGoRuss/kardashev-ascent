@@ -1,3 +1,4 @@
+using KardashevAscent.Simulation.Resources;
 using System;
 using System.Collections.Generic;
 
@@ -56,7 +57,7 @@ namespace KardashevAscent.Simulation.Game
         public List<Solar.ParameterPuzzle> ParameterPuzzles = new List<Solar.ParameterPuzzle>();
         public List<int> RoughParameters = new List<int>();
         /// <summary>Core samples waiting for the player's grade estimate, and tiles surveyed only roughly (version 21).</summary>
-        public List<Solar.SurveyPuzzle> SurveyPuzzles = new List<Solar.SurveyPuzzle>();
+        public List<Resources.SurveyPuzzle> SurveyPuzzles = new List<Resources.SurveyPuzzle>();
         public List<int> RoughSurveys = new List<int>();
         /// <summary>Resources (version 9): surveyed tiles, orders, materials on hand and work done on field tasks.</summary>
         public List<int> SurveyedTiles = new List<int>();

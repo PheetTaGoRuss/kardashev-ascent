@@ -1,6 +1,6 @@
+using KardashevAscent.Simulation.Energy;
 using System;
 using System.Collections.Generic;
-using KardashevAscent.Simulation.Game;
 
 namespace KardashevAscent.Simulation.Robots
 {
