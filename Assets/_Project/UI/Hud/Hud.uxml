@@ -27,10 +27,10 @@
             </ui:VisualElement>
             <ui:VisualElement class="divider" />
             <ui:VisualElement class="block meter-block k-block">
-                <ui:Label class="heading" text="KARDASHEV" />
+                <ui:Label name="k-heading" class="heading" text="KARDASHEV" />
+                <ui:Label name="k" class="value" text="0 W" />
                 <ui:VisualElement class="meter"><ui:VisualElement name="k-fill" class="meter-fill k-fill" /></ui:VisualElement>
-                <ui:Label name="k" class="caption" text="K 0.00" />
-                <ui:Label name="k-planet" class="caption" text="Planet K 0.00" />
+                <ui:Label name="k-planet" class="caption" text="Next milestone" />
             </ui:VisualElement>
             <ui:VisualElement class="spacer" picking-mode="Ignore" />
             <ui:VisualElement class="block speed-block">
