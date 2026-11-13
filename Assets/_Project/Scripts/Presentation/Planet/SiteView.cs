@@ -284,8 +284,8 @@ namespace KardashevAscent.Presentation.Planet
             if (Input.GetMouseButtonUp(0) && pressed)
             {
                 pressed = false;
-                bool add = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-                bool subtract = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+                bool add = ScreenInput.Key(KeyCode.LeftShift) || ScreenInput.Key(KeyCode.RightShift);
+                bool subtract = ScreenInput.Key(KeyCode.LeftControl) || ScreenInput.Key(KeyCode.RightControl);
                 if (dragging)
                 {
                     dragging = false;
@@ -300,8 +300,8 @@ namespace KardashevAscent.Presentation.Planet
                 }
             }
 
-            bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
-            if (ctrl && Input.GetKeyDown(KeyCode.A))
+            bool ctrl = ScreenInput.Key(KeyCode.LeftControl) || ScreenInput.Key(KeyCode.RightControl);
+            if (ctrl && ScreenInput.KeyDown(KeyCode.A))
             {
                 var all = new int[Site.SlotCount];
                 for (int i = 0; i < all.Length; i++)

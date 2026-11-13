@@ -121,7 +121,7 @@ namespace KardashevAscent.Presentation.UI
         void Update()
         {
             foreach (SystemWindow w in windows)
-                if (Input.GetKeyDown(w.Key))
+                if (ScreenInput.KeyDown(w.Key))
                     SystemTabs.Toggle(w.Id);
 
             if (Time.unscaledTime < nextRefresh)

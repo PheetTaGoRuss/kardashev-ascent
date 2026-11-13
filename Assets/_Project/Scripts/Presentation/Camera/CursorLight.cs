@@ -51,7 +51,7 @@ namespace KardashevAscent.Presentation.CameraControl
 
         void Update()
         {
-            if (Input.GetKeyDown(toggleKey))
+            if (ScreenInput.KeyDown(toggleKey))
                 cursorLight.enabled = !cursorLight.enabled;
             if (!cursorLight.enabled || picker == null || planet == null)
                 return;

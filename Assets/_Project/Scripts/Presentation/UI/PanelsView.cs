@@ -107,14 +107,7 @@ namespace KardashevAscent.Presentation.UI
             adjustTilt?.RegisterValueChangedCallback(e => adjustDirty = true);
             adjustFacing?.RegisterValueChangedCallback(e => adjustDirty = true);
             if (adjustBest != null)
-                adjustBest.clicked += () =>
-                {
-                    if (placer != null && placer.TryGetBest(out PanelAngles b))
-                    {
-                        adjustTilt.value = Mathf.Round((float)(b.Tilt * Mathf.Rad2Deg));
-                        adjustFacing.value = Mathf.Round((float)(b.Azimuth * Mathf.Rad2Deg)) % 360f;
-                    }
-                };
+                adjustBest.clicked += ToggleEditAngles;
             if (adjustApply != null)
                 adjustApply.clicked += () => placer?.OrderSelectedAngles(adjustTilt.value * Mathf.Deg2Rad, adjustFacing.value * Mathf.Deg2Rad);
             if (adjustCancel != null)
@@ -132,7 +125,7 @@ namespace KardashevAscent.Presentation.UI
 
             tilt.RegisterValueChangedCallback(e => { if (placer != null) placer.TiltDeg = e.newValue; });
             facing.RegisterValueChangedCallback(e => { if (placer != null) placer.AzimuthDeg = e.newValue; });
-            bestButton.clicked += () => placer?.UseBestAngle();
+            bestButton.clicked += ToggleEditAngles;
             placeButton.clicked += () =>
             {
                 if (placer == null) return;
@@ -375,7 +368,7 @@ namespace KardashevAscent.Presentation.UI
                 // Measuring matters: no angle advice until the colony knows where on the planet it is.
                 plannerBest.text = "Best angle: unknown until you know this place's latitude φ.\n" +
                                    "Press V for the sky view and measure the noon sun (or the celestial pole at night).";
-                bestButton.SetEnabled(false);
+                bestButton.SetEnabled(true);
             }
             else if (placer.TryGetBest(out PanelAngles best))
             {
@@ -392,7 +385,7 @@ namespace KardashevAscent.Presentation.UI
             else
             {
                 plannerBest.text = "Finding the best angle…";
-                bestButton.SetEnabled(false);
+                bestButton.SetEnabled(true);
             }
             placeButton.SetEnabled(preview.CanPlace && (!multi || empty > 0));
 
@@ -431,6 +424,55 @@ namespace KardashevAscent.Presentation.UI
         {
             string[] names = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" };
             return names[Mathf.RoundToInt(Mathf.Repeat(azimuthDeg, 360f) / 45f) % 8];
+        }
+
+        // ---- Angle editing: the rings (AngleEditor) turn whichever tilt and facing sliders are showing ----
+
+        /// <summary>True while the player is dragging the rings to set the angles.</summary>
+        public bool EditAngles { get; private set; }
+
+        public void ToggleEditAngles()
+        {
+            EditAngles = !EditAngles;
+            string text = EditAngles ? "Done editing" : "Edit angle";
+            if (bestButton != null) bestButton.text = text;
+            if (adjustBest != null) adjustBest.text = text;
+        }
+
+        /// <summary>The tilt and facing sliders of whichever panel box is open, or null.</summary>
+        (Slider Tilt, Slider Facing)? ActiveAngleSliders()
+        {
+            if (placedBox != null && !placedBox.ClassListContains("hidden") && adjustBox != null && !adjustBox.ClassListContains("hidden"))
+                return (adjustTilt, adjustFacing);
+            if (plannerBox != null && !plannerBox.ClassListContains("hidden") && tilt != null && !tilt.ClassListContains("hidden"))
+                return (tilt, facing);
+            return null;
+        }
+
+        /// <summary>The angles being set (degrees), if a panel is selected or being planned.</summary>
+        public bool TryGetEditedAngles(out float tiltDeg, out float facingDeg)
+        {
+            var sliders = ActiveAngleSliders();
+            tiltDeg = sliders?.Tilt.value ?? 0f;
+            facingDeg = sliders?.Facing.value ?? 0f;
+            return sliders.HasValue;
+        }
+
+        /// <summary>Turn the open angle sliders by these amounts (degrees); tilt stays in 0–90, facing wraps.</summary>
+        public bool TryNudgeAngles(float dTiltDeg, float dFacingDeg)
+        {
+            var sliders = ActiveAngleSliders();
+            if (!sliders.HasValue) return false;
+            SetEditedAngles(sliders.Value.Tilt.value + dTiltDeg, sliders.Value.Facing.value + dFacingDeg);
+            return true;
+        }
+
+        public void SetEditedAngles(float tiltDeg, float facingDeg)
+        {
+            var sliders = ActiveAngleSliders();
+            if (!sliders.HasValue) return;
+            sliders.Value.Tilt.value = Mathf.Clamp(Mathf.Round(tiltDeg), 0f, 90f);
+            sliders.Value.Facing.value = Mathf.Repeat(Mathf.Round(facingDeg), 360f) % 360f;
         }
 
         static void Show(VisualElement element, bool visible) => element?.EnableInClassList("hidden", !visible);
@@ -491,8 +533,8 @@ namespace KardashevAscent.Presentation.UI
                 : "working out…";
             adjustGain.text = same ? "Move the sliders to try other angles." : gain;
             adjustGain.EnableInClassList("warn", !same && after < before);
-            adjustBest.SetEnabled(placer.BestAngleUnlocked);
-            adjustBest.tooltip = placer.BestAngleUnlocked ? "" : "Needs this tile's latitude (V: sky view).";
+            adjustBest.SetEnabled(true);
+            adjustBest.tooltip = "Drag the rings around the panel to turn it";
             adjustApply.text = isSite ? "Build it at these angles" : waiting ? "Change the order" : "Send a robot to turn it";
             adjustApply.SetEnabled(!same || waiting);
             Show(adjustCancel, waiting);

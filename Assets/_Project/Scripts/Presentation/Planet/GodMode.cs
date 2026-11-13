@@ -1,3 +1,4 @@
+using KardashevAscent.Presentation.UI;
 using KardashevAscent.Presentation.Game;
 using KardashevAscent.Simulation.Resources;
 using UnityEngine;
@@ -49,7 +50,7 @@ namespace KardashevAscent.Presentation.Planet
 
         void Update()
         {
-            if (!Input.GetKeyDown(KeyCode.F10))
+            if (!ScreenInput.KeyDown(KeyCode.F10))
                 return;
             index = index + 1 >= Cycle.Length ? -1 : index + 1;
             Active = index >= 0;

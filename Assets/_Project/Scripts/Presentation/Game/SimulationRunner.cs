@@ -1,3 +1,4 @@
+using KardashevAscent.Presentation.UI;
 using System;
 using System.Collections.Generic;
 using KardashevAscent.Presentation.Planet;
@@ -191,13 +192,13 @@ namespace KardashevAscent.Presentation.Game
 
         void ReadKeys()
         {
-            if (Input.GetKeyDown(KeyCode.Space))
+            if (ScreenInput.KeyDown(KeyCode.Space))
                 SetSpeed(Clock.Speed == ClockSpeed.Paused ? speedBeforePause : ClockSpeed.Paused);
-            if (Input.GetKeyDown(KeyCode.Alpha1)) SetSpeed(ClockSpeed.Paused);
-            if (Input.GetKeyDown(KeyCode.Alpha2)) SetSpeed(ClockSpeed.RealTime);
-            if (Input.GetKeyDown(KeyCode.Alpha3)) SetSpeed(ClockSpeed.HourPerSecond);
-            if (Input.GetKeyDown(KeyCode.Alpha4)) SetSpeed(ClockSpeed.DayPerSecond);
-            if (Input.GetKeyDown(KeyCode.Alpha5)) SetSpeed(ClockSpeed.YearPerMinute);
+            if (ScreenInput.KeyDown(KeyCode.Alpha1)) SetSpeed(ClockSpeed.Paused);
+            if (ScreenInput.KeyDown(KeyCode.Alpha2)) SetSpeed(ClockSpeed.RealTime);
+            if (ScreenInput.KeyDown(KeyCode.Alpha3)) SetSpeed(ClockSpeed.HourPerSecond);
+            if (ScreenInput.KeyDown(KeyCode.Alpha4)) SetSpeed(ClockSpeed.DayPerSecond);
+            if (ScreenInput.KeyDown(KeyCode.Alpha5)) SetSpeed(ClockSpeed.YearPerMinute);
         }
 
         public void SetSpeed(ClockSpeed speed)

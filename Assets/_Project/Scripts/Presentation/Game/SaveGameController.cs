@@ -1,3 +1,4 @@
+using KardashevAscent.Presentation.UI;
 using System;
 using System.IO;
 using KardashevAscent.Simulation.Game;
@@ -24,9 +25,9 @@ namespace KardashevAscent.Presentation.Game
 
         void Update()
         {
-            if (Input.GetKeyDown(saveKey))
+            if (ScreenInput.KeyDown(saveKey))
                 Save();
-            else if (Input.GetKeyDown(loadKey))
+            else if (ScreenInput.KeyDown(loadKey))
                 Load();
         }
 

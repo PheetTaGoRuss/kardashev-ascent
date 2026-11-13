@@ -85,7 +85,7 @@ namespace KardashevAscent.Presentation.Planet
                 if (click && !HoldSelection)
                     Select(HoveredTile);
             }
-            if (Input.GetKeyDown(KeyCode.Escape) && !(EscapeHandler != null && EscapeHandler()))
+            if (ScreenInput.KeyDown(KeyCode.Escape) && !(EscapeHandler != null && EscapeHandler()))
                 Select(-1);
         }
 
