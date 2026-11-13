@@ -357,6 +357,22 @@ namespace KardashevAscent.Presentation.UI
             nextRefresh = 0f;
         }
 
+        /// <summary>The anchor slots of the built panels among the selected slots.</summary>
+        List<int> SelectedPanelAnchors(IPlanetSimulation sim)
+        {
+            var anchors = new List<int>();
+            if (siteView == null || siteView.Site == null)
+                return anchors;
+            int tile = siteView.Site.Tile;
+            foreach (int selected in siteView.Selection)
+            {
+                int anchor = sim.AnchorOf(tile, selected);
+                if (anchor >= 0 && sim.HasPanel(tile, anchor) && !anchors.Contains(anchor))
+                    anchors.Add(anchor);
+            }
+            return anchors;
+        }
+
         void Apply(AnglePreset preset)
         {
             IPlanetSimulation sim = Sim;
@@ -365,10 +381,16 @@ namespace KardashevAscent.Presentation.UI
                 layoutsMessage.text = "Select a slot first.";
                 return;
             }
-            int tile = siteView.Site.Tile, slot = siteView.SelectedSlot;
-            if (sim.HasPanel(tile, slot))
-                layoutsMessage.text = sim.ApplyAnglePreset(preset.Id, tile, slot)
-                    ? "A robot will turn it to this layout." : "Can't turn the panel to that layout here.";
+            int tile = siteView.Site.Tile;
+            List<int> anchors = SelectedPanelAnchors(sim);
+            if (anchors.Count > 0)
+            {
+                int ordered = 0;
+                foreach (int anchor in anchors)
+                    if (sim.ApplyAnglePreset(preset.Id, tile, anchor)) ordered++;
+                layoutsMessage.text = ordered == 0 ? "Can't turn the panels to that layout here."
+                    : ordered == 1 ? "A robot will turn it to this layout." : $"Robots will turn {ordered} panels to this layout.";
+            }
             else if (panels != null && panels.TryGetEditedAngles(out _, out _))
             {
                 panels.SetEditedAngles((float)preset.TiltDeg, (float)preset.FacingDeg);
@@ -459,8 +481,8 @@ namespace KardashevAscent.Presentation.UI
             bool siteOpen = sim != null && siteView != null && siteView.Site != null;
 
             // While editing: zoom in like the V view, and show the angles being set on the panel until a robot turns it.
-            bool editing = siteOpen && panels != null && panels.EditAngles && siteView.SelectedSlot >= 0 && siteView.Selection.Count == 1;
-            if (editing && !wasEditing && sky != null && !sky.Active)
+            bool editing = siteOpen && panels != null && panels.EditAngles && siteView.SelectedSlot >= 0;
+            if (editing && !wasEditing && sky != null && !sky.Active && siteView.Selection.Count == 1)
             {
                 sky.Open(siteView.SelectedSlot);
                 openedSkyForEdit = true;
@@ -474,12 +496,13 @@ namespace KardashevAscent.Presentation.UI
             if (editing && panels.TryGetEditedAngles(out float editTilt, out float editFacing))
             {
                 double tiltRad = editTilt * Mathf.Deg2Rad, facingRad = editFacing * Mathf.Deg2Rad;
-                int anchor = sim.AnchorOf(siteView.Site.Tile, siteView.SelectedSlot);
-                if (anchor >= 0 && sim.HasPanel(siteView.Site.Tile, anchor))
-                    placer?.SetEditPreview(anchor, tiltRad, facingRad);
+                var anchors = SelectedPanelAnchors(sim);
+                if (anchors.Count > 0)
+                    placer?.SetEditPreview(anchors, tiltRad, facingRad);
                 else
                     placer?.ClearEditPreview();
-                sky?.SetEditedAngles(tiltRad, facingRad);
+                if (siteView.Selection.Count == 1)
+                    sky?.SetEditedAngles(tiltRad, facingRad);
             }
             else
             {
