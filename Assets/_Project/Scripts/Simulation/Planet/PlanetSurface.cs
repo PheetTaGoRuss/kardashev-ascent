@@ -20,6 +20,14 @@ namespace KardashevAscent.Simulation.Planet
         Desert,
         /// <summary>A low basin with no water in it (where a sea would be on a wet planet).</summary>
         DryBasin,
+        /// <summary>Dark, humid ground on watery planets (appended 2026-11-13).</summary>
+        Forest,
+        /// <summary>Low, waterlogged ground beside the sea: too soft for land buildings, fine for floating solar.</summary>
+        Wetland,
+        /// <summary>Sandy land right on the shore.</summary>
+        Beach,
+        /// <summary>Dark volcanic rock on high ground.</summary>
+        VolcanicRock,
     }
 
     /// <summary>Names and properties of terrain types, in one place for the simulation and the UI.</summary>
@@ -27,6 +35,12 @@ namespace KardashevAscent.Simulation.Planet
     {
         /// <summary>Open water: no building.</summary>
         public static bool IsWater(TerrainType t) => t == TerrainType.DeepOcean || t == TerrainType.ShallowOcean;
+
+        /// <summary>Ground a normal building can stand on: land that is not open water and not a wetland.</summary>
+        public static bool IsBuildableLand(TerrainType t) => !IsWater(t) && t != TerrainType.Wetland;
+
+        /// <summary>Where floating solar can be built: shallow sea and wetland.</summary>
+        public static bool AllowsFloating(TerrainType t) => t == TerrainType.ShallowOcean || t == TerrainType.Wetland;
 
         /// <summary>Flat, open ground a colony would land on (best first: <see cref="BaseSiteRank"/>).</summary>
         public static int BaseSiteRank(TerrainType t)
@@ -36,6 +50,8 @@ namespace KardashevAscent.Simulation.Planet
                 case TerrainType.Lowland:
                 case TerrainType.Desert:
                 case TerrainType.DryBasin: return 2;
+                case TerrainType.Beach:
+                case TerrainType.Forest: return 2;   // converted lowland: the landing site stays where it was
                 case TerrainType.Tundra: return 1;
                 default: return 0;
             }
@@ -51,6 +67,10 @@ namespace KardashevAscent.Simulation.Planet
                 case TerrainType.Desert: return 0.35;
                 case TerrainType.Tundra: return 0.3;
                 case TerrainType.DryBasin: return 0.25;
+                case TerrainType.Beach: return 0.30;
+                case TerrainType.Forest: return 0.13;
+                case TerrainType.Wetland: return 0.12;
+                case TerrainType.VolcanicRock: return 0.10;
                 default: return 0.2;
             }
         }
@@ -69,6 +89,10 @@ namespace KardashevAscent.Simulation.Planet
                 case TerrainType.Tundra: return "Tundra";
                 case TerrainType.Desert: return "Desert";
                 case TerrainType.DryBasin: return "Dry basin";
+                case TerrainType.Forest: return "Forest";
+                case TerrainType.Wetland: return "Wetland";
+                case TerrainType.Beach: return "Beach";
+                case TerrainType.VolcanicRock: return "Volcanic rock";
                 default: return t.ToString();
             }
         }
@@ -93,9 +117,11 @@ namespace KardashevAscent.Simulation.Planet
         public readonly bool LiquidWater;
         /// <summary>Air temperature, °C: above <see cref="HotDesertC"/> the lowlands are desert even with seas.</summary>
         public readonly double AirTemperatureC;
+        /// <summary>Also make forest, wetland, beach and volcanic rock (<see cref="PlanetSurface"/> second pass). Off for plain test worlds.</summary>
+        public readonly bool RichTerrain;
 
         public SurfaceSettings(int seed, double oceanFraction = 0.62, double iceLatitudeDeg = 70.0, double noiseScale = 1.6,
-                               bool iceAroundSubStellar = false, bool liquidWater = true, double airTemperatureC = 15.0)
+                               bool iceAroundSubStellar = false, bool liquidWater = true, double airTemperatureC = 15.0, bool richTerrain = false)
         {
             Seed = seed;
             OceanFraction = oceanFraction;
@@ -104,6 +130,7 @@ namespace KardashevAscent.Simulation.Planet
             IceAroundSubStellar = iceAroundSubStellar;
             LiquidWater = liquidWater;
             AirTemperatureC = airTemperatureC;
+            RichTerrain = richTerrain;
         }
 
         /// <summary>Lowlands turn to desert above this air temperature, °C (game rule).</summary>
@@ -134,13 +161,13 @@ namespace KardashevAscent.Simulation.Planet
                 : oceanFraction;
             if (tidallyLocked)
                 return new SurfaceSettings(seed, ocean, Math.Max(35.0, Math.Min(180.0, 80.0 + airTemperatureC)), 1.6, true,
-                                           liquidWater, airTemperatureC);
+                                           liquidWater, airTemperatureC, true);
             double ice = airTemperatureC < TemperateMinC
                 ? Math.Max(10.0, TemperateIceLatitudeDeg + 1.5 * (airTemperatureC - TemperateMinC))
                 : airTemperatureC > TemperateMaxC
                     ? TemperateIceLatitudeDeg + 2.0 * (airTemperatureC - TemperateMaxC)
                     : TemperateIceLatitudeDeg;
-            return new SurfaceSettings(seed, ocean, ice, 1.6, false, liquidWater, airTemperatureC);
+            return new SurfaceSettings(seed, ocean, ice, 1.6, false, liquidWater, airTemperatureC, true);
         }
     }
 
@@ -196,7 +223,45 @@ namespace KardashevAscent.Simulation.Planet
                 terrain[t] = Classify(e, latDeg >= iceEdge, latDeg >= iceEdge + settings.GlacierBandDeg, settings);
             }
 
+            if (settings.RichTerrain)
+                Refine(sphere, settings, elevation, terrain);
             return new PlanetSurface(elevation, terrain);
+        }
+
+        /// <summary>
+        /// Second pass (game rules, not geology): shores become beach, low ground behind them wetland, humid land forest,
+        /// and some high ground volcanic rock. Only warm planets with liquid water get beach, wetland and forest; lowland is
+        /// never made dry, so the landing rules and the dry-world checks are unchanged. Reads the first pass, writes a copy.
+        /// </summary>
+        static void Refine(HexSphere sphere, in SurfaceSettings s, float[] elevation, TerrainType[] terrain)
+        {
+            var first = (TerrainType[])terrain.Clone();
+            bool wet = s.LiquidWater && s.AirTemperatureC > 0.0 && s.AirTemperatureC <= SurfaceSettings.HotDesertC;
+            for (int t = 0; t < first.Length; t++)
+            {
+                var c = sphere.Centers[t];
+                double noiseA = Noise3D.Value(c.X * 5.0 + 3.1, c.Y * 5.0 - 8.2, c.Z * 5.0 + 1.7, s.Seed + 1313);
+                double noiseB = Noise3D.Value(c.X * 4.0 - 2.4, c.Y * 4.0 + 5.9, c.Z * 4.0 - 6.3, s.Seed + 2027);
+                float e = elevation[t];
+                TerrainType here = first[t];
+                if (here == TerrainType.Lowland && wet)
+                {
+                    bool nearSea = false, nearSea2 = false;
+                    foreach (int n in sphere.Neighbors[t])
+                    {
+                        if (Terrains.IsWater(first[n])) nearSea = true;
+                        foreach (int m in sphere.Neighbors[n])
+                            if (Terrains.IsWater(first[m])) nearSea2 = true;
+                    }
+                    if (nearSea && e < 0.12) terrain[t] = TerrainType.Beach;
+                    else if ((nearSea || nearSea2) && e < 0.2 && noiseA > -0.1) terrain[t] = TerrainType.Wetland;
+                    else if (noiseB > 0.05) terrain[t] = TerrainType.Forest;
+                }
+                else if (here == TerrainType.Highland && wet && e < 0.5 && noiseB > 0.25)
+                    terrain[t] = TerrainType.Forest;
+                else if ((here == TerrainType.Highland || here == TerrainType.Mountain) && noiseA > 0.4)
+                    terrain[t] = TerrainType.VolcanicRock;
+            }
         }
 
         /// <summary>

@@ -32,7 +32,10 @@ namespace KardashevAscent.Simulation.Game
 
         public bool CanPlace(BuildingType type, int tileId, int slot)
         {
-            if (tileId < 0 || tileId >= TileCount || slot < 0 || slot >= SlotCount(tileId) || GetTile(tileId).IsWater)
+            if (tileId < 0 || tileId >= TileCount || slot < 0 || slot >= SlotCount(tileId))
+                return false;
+            TerrainType ground = GetTile(tileId).Terrain;
+            if (type == BuildingType.FloatingSolar ? !Terrains.AllowsFloating(ground) : !Terrains.IsBuildableLand(ground))
                 return false;
             foreach (int s in FootprintFor(type, tileId, slot))
                 if (GetBuilding(tileId, s) != BuildingType.None) return false;

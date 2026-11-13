@@ -121,7 +121,7 @@ namespace KardashevAscent.Simulation.Resources
             {
                 TerrainType nt = surface.Terrain[n];
                 waterNeighbour |= Terrains.IsWater(nt);
-                highNeighbour |= nt == TerrainType.Highland || nt == TerrainType.Mountain;
+                highNeighbour |= nt == TerrainType.Highland || nt == TerrainType.Mountain || nt == TerrainType.VolcanicRock;
             }
 
             list.Add(new Deposit(Material.Rock, 1.0));
@@ -137,7 +137,7 @@ namespace KardashevAscent.Simulation.Resources
             // Copper (claims 1 and 5). Arc copper (porphyry, epithermal) forms in high ground near a sea on a planet with
             // water; stand-in: highland or mountain within ArcReachTiles of a sea. Magmatic and impact Ni-Cu sulfides
             // form in high ground on any planet, rarer and poorer.
-            bool high = here == TerrainType.Mountain || here == TerrainType.Highland;
+            bool high = here == TerrainType.Mountain || here == TerrainType.Highland || here == TerrainType.VolcanicRock;
             if (high && chem.WaterHistory && tilesToSea <= ArcReachTiles && Hash01(seed, t, 3) < CopperShare)
                 list.Add(new Deposit(Material.Copper, chem.MetalFactor * Vary(seed, t, 4)));
             else if (high && Hash01(seed, t, 7) < SulfideCopperShare)

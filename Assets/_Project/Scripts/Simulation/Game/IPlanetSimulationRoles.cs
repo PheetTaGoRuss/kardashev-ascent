@@ -196,6 +196,9 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Build a Robot Workshop in an empty land slot (a construction site until a robot finishes it).</summary>
         bool PlaceWorkshop(int tileId, int slot);
 
+        /// <summary>Build solar panels on pontoons in a slot of a shallow-sea or wetland tile (1.5 times the cost of a land panel, cooler cells).</summary>
+        bool PlaceFloatingPanel(int tileId, int slot, double tilt, double azimuth);
+
         /// <summary>How many slots a new building of this type covers (solar panels: by tier).</summary>
         int FootprintSize(BuildingType type);
 
@@ -324,6 +327,9 @@ namespace KardashevAscent.Simulation.Game
         /// Must be read-only and safe to call from a worker thread (the best-angle search runs in the background).
         /// </summary>
         PanelPreview PreviewPanel(int tileId, double tilt, double azimuth);
+
+        /// <summary>The same numbers for a floating panel on shallow sea or wetland (read-only, safe from a worker thread).</summary>
+        PanelPreview PreviewFloatingPanel(int tileId, double tilt, double azimuth);
 
         /// <summary>
         /// Energy per "month" (twelfths of the year from periapsis, as the game clock counts) of one panel on a tile at

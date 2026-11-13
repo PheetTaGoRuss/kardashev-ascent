@@ -66,7 +66,7 @@ namespace KardashevAscent.Simulation.Game
             foreach (var adjust in adjustOrders)
                 state.AdjustOrders.Add(new AdjustOrderRecord { Tile = adjust.Tile, Slot = adjust.Slot, Tilt = adjust.Tilt, Azimuth = adjust.Azimuth });
             foreach (var kv in panels)
-                state.Buildings.Add(new BuildingRecord { Tile = kv.Key.Tile, Slot = kv.Key.Slot, Type = BuildingType.SolarPanel, Tilt = kv.Value.Tilt, Azimuth = kv.Value.Azimuth, AreaM2 = kv.Value.Area });
+                state.Buildings.Add(new BuildingRecord { Tile = kv.Key.Tile, Slot = kv.Key.Slot, Type = floatingPanels.Contains(kv.Key) ? BuildingType.FloatingSolar : BuildingType.SolarPanel, Tilt = kv.Value.Tilt, Azimuth = kv.Value.Azimuth, AreaM2 = kv.Value.Area });
             foreach (var b in batteries)
                 state.Buildings.Add(new BuildingRecord { Tile = b.Tile, Slot = b.Slot, Type = BuildingType.Battery });
             foreach (var w in workshops)
@@ -115,7 +115,16 @@ namespace KardashevAscent.Simulation.Game
             return state;
         }
 
+        bool restoringState;
+
         public bool RestoreState(SimulationState state)
+        {
+            restoringState = true;
+            try { return RestoreStateCore(state); }
+            finally { restoringState = false; }
+        }
+
+        bool RestoreStateCore(SimulationState state)
         {
             if (state == null || state.TileCount != TileCount || state.BaseTileId != BaseTileId)
                 return false;
@@ -251,13 +260,15 @@ namespace KardashevAscent.Simulation.Game
 
         void Restore(BuildingRecord r, bool site)
         {
-            if (r.Type == BuildingType.SolarPanel)
+            if (r.Type == BuildingType.SolarPanel || r.Type == BuildingType.FloatingSolar)
             {
-                if (!CanRestorePanel(r.Tile, r.Slot, r.Tilt, r.Azimuth))
+                bool floating = r.Type == BuildingType.FloatingSolar;
+                if (!CanRestorePanel(r.Tile, r.Slot, r.Tilt, r.Azimuth, floating))
                     return;
+                if (floating) floatingPanels.Add((r.Tile, r.Slot));
                 // Saves before version 5 have no area: their panels are base panel fields.
                 double area = r.AreaM2 > 0.0 ? r.AreaM2 : PanelAreaM2;
-                if (site) Build.RestoreSite(r.Tile, r.Slot, PanelCost(area), r.PaidWh);
+                if (site) Build.RestoreSite(r.Tile, r.Slot, PanelCost(area) * (floating ? FloatingCostFactor : 1.0), r.PaidWh);
                 AddPanel(r.Tile, r.Slot, r.Tilt, r.Azimuth, area);
             }
             else if (r.Type == BuildingType.ChargingStation)

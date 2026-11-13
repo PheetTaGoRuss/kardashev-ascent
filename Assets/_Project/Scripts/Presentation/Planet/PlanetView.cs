@@ -154,7 +154,7 @@ namespace KardashevAscent.Presentation.Planet
 
         /// <summary>The surface settings the tiles are generated from.</summary>
         public SurfaceSettings Settings =>
-            new SurfaceSettings(seed, oceanFraction, iceLatitude, continentScale, iceAroundSubStellar, liquidWater, airTemperatureC);
+            new SurfaceSettings(seed, oceanFraction, iceLatitude, continentScale, iceAroundSubStellar, liquidWater, airTemperatureC, true);
 
         /// <summary>Makes sure the tiles exist now (they are otherwise built on the first Update).</summary>
         public void EnsureBuilt()
@@ -192,6 +192,18 @@ namespace KardashevAscent.Presentation.Planet
                     break;
                 case TerrainType.Desert:
                     c = Color.Lerp(desert, highland, Mathf.InverseLerp(0f, 0.35f, elevation) * 0.35f);
+                    break;
+                case TerrainType.Forest:
+                    c = Color.Lerp(new Color32(44, 98, 52, 255), new Color32(60, 116, 60, 255), Mathf.InverseLerp(0f, 0.5f, elevation));
+                    break;
+                case TerrainType.Wetland:
+                    c = new Color32(64, 118, 98, 255);
+                    break;
+                case TerrainType.Beach:
+                    c = new Color32(222, 205, 150, 255);
+                    break;
+                case TerrainType.VolcanicRock:
+                    c = Color.Lerp(new Color32(70, 54, 54, 255), new Color32(96, 76, 70, 255), Mathf.InverseLerp(0.3f, 1f, elevation));
                     break;
                 case TerrainType.DryBasin:
                     // Deeper basins darker.
