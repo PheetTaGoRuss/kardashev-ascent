@@ -236,7 +236,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         [Test]
         public void NearestRobot_TakesARemoteTask()
         {
-            var sim = new StubPlanetSimulation(Sphere, Surface, Earthlike);
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
             int n = -1;
             foreach (int x in Sphere.Neighbors[sim.BaseTileId]) if (!sim.GetTile(x).IsWater) { n = x; break; }
             Robot far = sim.Workforce.Robots[0];
@@ -249,7 +249,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         [Test]
         public void CancelledOrders_AreRecordedAsCancelled()
         {
-            var sim = new StubPlanetSimulation(Sphere, Surface, Earthlike);
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
             int t = sim.BaseTileId;
             sim.Workforce.Pause(sim.Workforce.Robots[0].GroupId);
             sim.OrderMining(t, Material.Rock);
@@ -262,7 +262,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         [Test]
         public void Save_KeepsReservationsAndTasksToGoBackTo()
         {
-            var a = new StubPlanetSimulation(Sphere, Surface, Earthlike);
+            var a = new PlanetSimulation(Sphere, Surface, Earthlike);
             int t = a.BaseTileId;
             Robot r = a.Workforce.Robots[0];
             Robot b = a.Workforce.AddRobot(RobotKind.General, t);
@@ -271,7 +271,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             r.ResumeTask = new WorkTask(TaskKind.Build, t, 3);
             SimulationState state = a.CaptureState();
             Assert.AreEqual(SimulationState.CurrentVersion, state.Version);
-            var c = new StubPlanetSimulation(Sphere, Surface, Earthlike);
+            var c = new PlanetSimulation(Sphere, Surface, Earthlike);
             Assert.IsTrue(c.RestoreState(state));
             Assert.AreEqual(new WorkTask(TaskKind.Mine, t, (int)Material.Rock), c.Workforce.GetRobot(b.Id).ReservedTask);
         }

@@ -14,13 +14,13 @@ namespace KardashevAscent.Simulation.Tests.Game
         static readonly HexSphere Sphere = HexSphere.Create(12);
         static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
 
-        static StubPlanetSimulation Create(double luminositySun, string id = "test")
+        static PlanetSimulation Create(double luminositySun, string id = "test")
         {
             var r = new PlanetRecord { id = id };
             r.solar.luminosityW = luminositySun * SolarConstants.SolarLuminosity;
             r.solar.obliquityDeg = 23.44;
             r.solar.airTemperatureC = 25.0;
-            return new StubPlanetSimulation(Sphere, Surface, r);
+            return new PlanetSimulation(Sphere, Surface, r);
         }
 
         [TestCase(0.0, 0)]

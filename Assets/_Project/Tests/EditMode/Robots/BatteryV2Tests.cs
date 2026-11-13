@@ -187,7 +187,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         [Test]
         public void ColdPlanet_RobotsHaveLessUsableBattery_InsulationHelps()
         {
-            var sim = new StubPlanetSimulation(Sphere, Surface, Planet(-20.0));
+            var sim = new PlanetSimulation(Sphere, Surface, Planet(-20.0));
             Robot r = sim.Workforce.Robots[0];
             Robot insulated = sim.Workforce.AddRobot(RobotKind.General, sim.BaseTileId);
             insulated.Modules = RobotModule.ThermalInsulation;
@@ -200,7 +200,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         [Test]
         public void ChargingStation_IsAFacility_AndSaved()
         {
-            var sim = new StubPlanetSimulation(Sphere, Surface, Planet(25.0));
+            var sim = new PlanetSimulation(Sphere, Surface, Planet(25.0));
             int t = sim.BaseTileId;
             Assert.IsTrue(sim.PlaceChargingStation(t, 6));
             Assert.AreEqual(BuildingType.ChargingStation, sim.GetBuilding(t, 6));
@@ -210,7 +210,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             Assert.IsTrue(found);
             SimulationState state = sim.CaptureState();
             Assert.AreEqual(SimulationState.CurrentVersion, state.Version);
-            var b = new StubPlanetSimulation(Sphere, Surface, Planet(25.0));
+            var b = new PlanetSimulation(Sphere, Surface, Planet(25.0));
             Assert.IsTrue(b.RestoreState(state));
             Assert.AreEqual(BuildingType.ChargingStation, b.GetBuilding(t, 6));
         }

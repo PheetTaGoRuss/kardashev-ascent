@@ -74,17 +74,17 @@ namespace KardashevAscent.Simulation.Tests.Game
         }
     }
 
-    public class StubPlanetSimulationTests
+    public class PlanetSimulationTests
     {
         static readonly PlanetSolarParams Earthlike = new PlanetSolarParams(
             SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Math.PI / 180.0,
             282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.4, 25.0);
 
-        static StubPlanetSimulation Create()
+        static PlanetSimulation Create()
         {
             var sphere = HexSphere.Create(12);
             var surface = PlanetSurface.Generate(sphere, new SurfaceSettings(7));
-            return new StubPlanetSimulation(sphere, surface, Earthlike);
+            return new PlanetSimulation(sphere, surface, Earthlike);
         }
 
         [Test]

@@ -15,12 +15,12 @@ namespace KardashevAscent.Simulation.Tests.Game
         static readonly HexSphere Sphere = HexSphere.Create(12);
         static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
 
-        static StubPlanetSimulation Create() => new StubPlanetSimulation(Sphere, Surface, Earthlike);
+        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike);
 
         static void Near(double expected, double actual, double rel = 1e-6) =>
             Assert.AreEqual(expected, actual, Math.Max(1e-9, Math.Abs(expected) * rel));
 
-        static StubPlanetSimulation Built()
+        static PlanetSimulation Built()
         {
             var a = Create();
             int t = a.BaseTileId;
