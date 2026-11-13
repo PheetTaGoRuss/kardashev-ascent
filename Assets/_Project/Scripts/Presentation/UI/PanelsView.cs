@@ -185,7 +185,7 @@ namespace KardashevAscent.Presentation.UI
                 dragRect.style.height = max.y - min.y;
             }
             Show(totals, siteOpen);
-            Show(help, orbitCamera != null && orbitCamera.ShowHelp);
+            Show(help, orbitCamera != null);
             bool mapOn = lightMap != null && lightMap.Visible;
             Show(legend, mapOn);
             legend?.EnableInClassList("above-build-bar", siteOpen);
@@ -230,7 +230,7 @@ namespace KardashevAscent.Presentation.UI
             nextText = Time.unscaledTime + textInterval;
 
             if (orbitCamera != null)
-                help.text = orbitCamera.HelpText;
+                help.text = orbitCamera.ShowHelp ? orbitCamera.HelpText : "H: all controls";
             if (lightMap != null)
                 mapHint.text = $"{lightMap.ToggleKey}: light-potential map";
 

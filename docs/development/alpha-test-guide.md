@@ -24,7 +24,7 @@ Other keys: `V` sky view, `M` light map, `F10` god mode (shows hidden ground), `
 ## Known rough edges
 
 - Robot, recipe and balance numbers are placeholders; progress may feel too fast or slow.
-- The tile panel (right side) is still text-heavy.
+- The tile panel (right side) is still text-heavy. The full controls list is behind H (a one-line hint shows by default).
 - Most of the vision is not built yet: see `docs/development/feature-registry.md`.
 - No automated UI tests; the simulation has 795 passing tests (run outside Unity).
 - Report anything odd with the game day and what you clicked.
