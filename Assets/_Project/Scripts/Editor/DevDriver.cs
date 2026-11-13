@@ -4,6 +4,7 @@ using System.IO;
 using KardashevAscent.Presentation.Game;
 using KardashevAscent.Presentation.UI;
 using UnityEditor;
+using UnityEditor.TestTools.TestRunner.Api;
 using UnityEngine;
 
 namespace KardashevAscent.EditorTools
@@ -22,6 +23,7 @@ namespace KardashevAscent.EditorTools
     /// <item><c>tick 240</c>: advance the simulation by that many game hours at once.</item>
     /// <item><c>site</c>: fly the camera to the colony's base tile; <c>planet</c>: back out to the planet.</item>
     /// <item><c>click text</c>: press the first visible button whose text contains this.</item>
+    /// <item><c>tests</c>: run every EditMode test (stop Play mode first); see the TESTS line in the log.</item>
     /// <item><c>save</c>: save the open scene.</item>
     /// </list>
     /// </summary>
@@ -178,12 +180,32 @@ namespace KardashevAscent.EditorTools
                         Log($"STATUS t={sim.TimeHours:0}h gen={sim.GenerationW:0}W demand={sim.DemandW:0}W battery={sim.BatteryStoredWh / 1e6:0.0}MWh brownout={sim.IsBrownout} K={sim.PlanetK:0.000} milestones={sim.MilestonesReached} parts={sim.BuildStockWh / 1e6:0.0}MWh queue={sim.ConstructionQueueCount} robots={sim.Workforce.Robots.Count}");
                     return true;
                 }
+                case "tests":
+                {
+                    // Run every EditMode test in this editor; the result goes to the log (TESTS passed=... failed=...).
+                    var api = ScriptableObject.CreateInstance<TestRunnerApi>();
+                    api.RegisterCallbacks(new TestLog());
+                    api.Execute(new ExecutionSettings(new Filter { testMode = TestMode.EditMode }));
+                    return true;
+                }
                 case "save":
                     UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
                     return true;
                 default:
                     Log("unknown command: " + line);
                     return true;
+            }
+        }
+
+        sealed class TestLog : ICallbacks
+        {
+            public void RunStarted(ITestAdaptor testsToRun) { Log("tests started"); }
+            public void RunFinished(ITestResultAdaptor result) { Log($"TESTS passed={result.PassCount} failed={result.FailCount} skipped={result.SkipCount} inconclusive={result.InconclusiveCount}"); }
+            public void TestStarted(ITestAdaptor test) { }
+            public void TestFinished(ITestResultAdaptor result)
+            {
+                if (!result.HasChildren && result.TestStatus == TestStatus.Failed)
+                    Log("FAILED " + result.FullName + " :: " + result.Message);
             }
         }
 
