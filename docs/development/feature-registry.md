@@ -124,7 +124,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | RS-02 | Deposits by terrain; survey reveals them | CONFIRMED | PR #52 | Tested | `Resources/DepositMap.cs` |
 | RS-03 | Copper deposits near seas and in high ground | CONFIRMED | PR #60 | Tested | `DepositMap.cs` |
 | RS-04 | Mining into one colony stock | CONFIRMED | PR #52 | Tested | orchestrator |
-| RS-05 | Robot Workshop: robots, upgrades, substitute materials | CONFIRMED | PR #52 | Tested; placeholder recipes | `Robots/Manufacturing.cs` |
+| RS-05 | Robot Workshop: robots, upgrades, substitute materials. Refining conserves mass: leftover rock is slag (PROPOSED addition, not yet approved) | CONFIRMED | PR #52 | Tested; placeholder recipes | `Robots/Manufacturing.cs` |
 | RS-06 | Industrial production foundation: phases, storage classes, production blockers | Unknown: no decision recorded in the repository | — | In progress (uncommitted, seen locally 2026-11-12) | `Resources/IndustrialProduction.cs` in the main checkout |
 | RS-07 | Deposit depletion; purity | FUTURE | V | Not started | — |
 | RS-08 | Storage and logistics | FUTURE | V | Not started | — |
