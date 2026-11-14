@@ -268,6 +268,7 @@ namespace KardashevAscent.Presentation.UI
                     c.Add(PuzzleGuide.Text("Today's sun declination δ", bold: true, size: PuzzleGuide.TitleSize));
                     c.Add(Line("δ is how far north (+) or south (−) of the equator the sun is today. It comes from how tilted the planet is and where it is on its orbit."));
                     c.Add(Line($"Tilt ε = {r.ObliquityDeg:0.##}°   ·   orbit position λ = {r.EclipticLongitudeDeg:0.#}°", true));
+                    c.Add(CalculatorPad.Values("ε", r.ObliquityDeg.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture), "λ", r.EclipticLongitudeDeg.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)));
                     c.Add(PuzzleGuide.Steps(
                         "Press sin on the tilt ε.",
                         "Press sin on the orbit position λ.",
@@ -292,6 +293,8 @@ namespace KardashevAscent.Presentation.UI
                     c.Add(PuzzleGuide.Text("Where is the sun? Read a stick's shadow", bold: true, size: PuzzleGuide.TitleSize));
                     c.Add(new GnomonPlot(SkyNotebook.GnomonLengthM, shadow));
                     c.Add(Line($"A {SkyNotebook.GnomonLengthM:0.000} m stick stands straight up. Its shadow is {shadow:0.000} m long and points to {bearing:0}° on the compass (0° = north, 90° = east).", true));
+                    c.Add(CalculatorPad.Values("stick", SkyNotebook.GnomonLengthM.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture), "shadow", shadow.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture),
+                                               "shadow points to", bearing.ToString("0", System.Globalization.CultureInfo.InvariantCulture)));
                     c.Add(PuzzleGuide.Steps(
                         "Height h: divide stick / shadow, then press arctan (shift + tan). " + DEG,
                         "Direction A_s: the sun is on the opposite side of the stick from the shadow, so take the shadow's direction − 180°.",
@@ -316,6 +319,7 @@ namespace KardashevAscent.Presentation.UI
                     }
                     c.Add(PuzzleGuide.Text("Your latitude from the noon sun", bold: true, size: PuzzleGuide.TitleSize));
                     c.Add(Line($"At noon the sun stood h = {noon.Value.AltitudeDeg:0.0}° high, in the {(noon.Value.South ? "south" : "north")}. Today δ = {r.DeclinationDeg:+0.00;−0.00}°.", true));
+                    c.Add(CalculatorPad.Values("h", noon.Value.AltitudeDeg.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), "δ", r.DeclinationDeg.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)));
                     c.Add(PuzzleGuide.Steps(
                         "Sun in the south: φ = 90° − h + δ.",
                         "Sun in the north: φ = h − 90° + δ.",
@@ -339,6 +343,7 @@ namespace KardashevAscent.Presentation.UI
                     c.Add(PuzzleGuide.Text("Your latitude from the pole star point", bold: true, size: PuzzleGuide.TitleSize));
                     c.Add(new QuadrantPlot(reading));
                     c.Add(Line($"Sighting the {(north ? "north" : "south")} celestial pole (the point the night sky turns around) along the quadrant's edge, the hanging string crosses the scale at {reading:0.0}° (counted from straight up).", true));
+                    c.Add(CalculatorPad.Values("reading", reading.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)));
                     c.Add(PuzzleGuide.Steps(
                         "The pole's height above the horizon = 90° − the reading.",
                         "That height is your latitude.",
@@ -359,6 +364,10 @@ namespace KardashevAscent.Presentation.UI
                 var check = new Button(() => Check(which)) { text = "Check" };
                 check.AddToClassList("action");
                 row.Add(check);
+                var calc = CalculatorPad.OpenButton();
+                calc.RemoveFromClassList("small-button");
+                calc.AddToClassList("action");
+                row.Add(calc);
                 var hintLabel = Line(hint);
                 hintLabel.style.display = DisplayStyle.None;
                 if (which == Puzzle.Sun)
@@ -391,7 +400,8 @@ namespace KardashevAscent.Presentation.UI
             var l = Line(label, true);
             l.style.flexGrow = 1;
             row.Add(l);
-            var f = new TextField { maxLength = 10 };
+            var f = new TextField { maxLength = 12 };
+            CalculatorPad.TrackAnswer(f);
             f.AddToClassList("puzzle-field");
             f.style.width = 110;
             f.style.fontSize = PuzzleGuide.BodySize;

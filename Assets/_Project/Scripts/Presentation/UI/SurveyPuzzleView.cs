@@ -69,7 +69,8 @@ namespace KardashevAscent.Presentation.UI
                 Label l = PuzzleGuide.Text($"{Materials.Name(puzzle.Materials[m])}: average grade", bold: true);
                 l.style.flexGrow = 1;
                 row.Add(l);
-                var f = new TextField { maxLength = 8 };
+                var f = new TextField { maxLength = 12 };
+                CalculatorPad.TrackAnswer(f);
                 f.AddToClassList("puzzle-field");
                 f.style.width = 110;
                 f.style.fontSize = PuzzleGuide.BodySize;
@@ -84,6 +85,7 @@ namespace KardashevAscent.Presentation.UI
             submit.AddToClassList("small-button");
             submit.style.fontSize = PuzzleGuide.BodySize;
             buttons.Add(submit);
+            buttons.Add(CalculatorPad.OpenButton());
             Add(buttons);
 
             hints = PuzzleGuide.Text("");
@@ -121,10 +123,11 @@ namespace KardashevAscent.Presentation.UI
             {
                 var row = new VisualElement();
                 row.style.flexDirection = FlexDirection.Row;
-                foreach (string c in cells)
+                for (int i = 0; i < cells.Length; i++)
                 {
-                    var l = new Label(c);
+                    var l = new Label(cells[i]);
                     l.AddToClassList("job-text");
+                    l.style.fontSize = PuzzleGuide.BodySize - 1f;
                     l.style.width = 110;
                     l.style.flexGrow = 0;
                     if (header)
@@ -132,6 +135,8 @@ namespace KardashevAscent.Presentation.UI
                         l.style.unityFontStyleAndWeight = FontStyle.Bold;
                         l.style.color = new Color(0.62f, 0.68f, 0.8f);
                     }
+                    else if (i > 0)
+                        CalculatorPad.MakeClickable(l);   // a grade ("none" = 0) goes into the calculator
                     row.Add(l);
                 }
                 return row;

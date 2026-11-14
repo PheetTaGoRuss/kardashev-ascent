@@ -35,6 +35,8 @@ namespace KardashevAscent.Presentation.UI
             Add(PuzzleGuide.Text(
                 $"At noon a robot stood a rod H = {puzzle.RodHeightM:0.00} m tall. Its shadow was L = {puzzle.ShadowM:0.00} m long, " +
                 $"pointing {shadowWay}. Today's declination δ = {puzzle.DeclinationDeg:+0.00;−0.00}° (how far north of the equator the sun is today)."));
+            Add(CalculatorPad.Values("H", $"{puzzle.RodHeightM:0.00}", "L", $"{puzzle.ShadowM:0.00}",
+                                     "δ", (puzzle.DeclinationDeg).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)));
             Add(PuzzleGuide.Steps(
                 "Divide the rod by the shadow: H / L.",
                 "Press arctan (shift + tan) on that, calculator in degrees. That is the sun's height h.",
@@ -54,6 +56,7 @@ namespace KardashevAscent.Presentation.UI
             check.AddToClassList("small-button");
             check.style.fontSize = PuzzleGuide.BodySize;
             buttons.Add(check);
+            buttons.Add(CalculatorPad.OpenButton());
             Add(buttons);
 
             hints = PuzzleGuide.Text("");
@@ -76,7 +79,8 @@ namespace KardashevAscent.Presentation.UI
             Label l = PuzzleGuide.Text(label, bold: true);
             l.style.flexGrow = 1;
             row.Add(l);
-            var f = new TextField { maxLength = 8 };
+            var f = new TextField { maxLength = 12 };
+            CalculatorPad.TrackAnswer(f);
             f.AddToClassList("puzzle-field");
             f.style.width = 110;
             f.style.fontSize = PuzzleGuide.BodySize;

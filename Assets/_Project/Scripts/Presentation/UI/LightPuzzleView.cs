@@ -261,6 +261,10 @@ namespace KardashevAscent.Presentation.UI
                 Add(new LangleyPlot(puzzle));
             if (puzzle.Parameter == SolarParameter.Spectrum)
                 Add(new SpectrumPlot(puzzle));
+            if (puzzle.Parameter == SolarParameter.OpticalDepth || puzzle.Parameter == SolarParameter.DiffuseShare)
+                Add(CalculatorPad.Values("G₀", $"{puzzle.G0:0}"));
+            if (puzzle.Parameter == SolarParameter.Spectrum)
+                Add(CalculatorPad.Values("Wien's number", $"{ParameterPuzzle.WienMicronK:0}"));
             Add(Table(head, rows));
             Add(PuzzleGuide.Steps(steps));
             Add(PuzzleGuide.Example(example));
@@ -272,7 +276,8 @@ namespace KardashevAscent.Presentation.UI
             Label l = PuzzleGuide.Text(ask, bold: true);
             l.style.flexGrow = 1;
             row.Add(l);
-            answer = new TextField { maxLength = 10 };
+            answer = new TextField { maxLength = 12 };
+            CalculatorPad.TrackAnswer(answer);
             answer.AddToClassList("puzzle-field");
             answer.style.width = 110;
             answer.style.fontSize = PuzzleGuide.BodySize;
@@ -281,6 +286,7 @@ namespace KardashevAscent.Presentation.UI
             submit.AddToClassList("small-button");
             submit.style.fontSize = PuzzleGuide.BodySize;
             row.Add(submit);
+            row.Add(CalculatorPad.OpenButton());
             Add(row);
 
             hints = PuzzleGuide.Text("");
@@ -310,13 +316,15 @@ namespace KardashevAscent.Presentation.UI
         {
             var table = new VisualElement();
             table.style.marginTop = 4;
+            // A first column that only counts readings (1, 2, 3 or the hour) isn't a number to work with.
+            bool countColumn = head.Count > 0 && (head[0] == "reading" || head[0] == "day" || head[0] == "time");
             VisualElement Row(string[] cells, bool header)
             {
                 var row = new VisualElement();
                 row.style.flexDirection = FlexDirection.Row;
-                foreach (string c in cells)
+                for (int i = 0; i < cells.Length; i++)
                 {
-                    var l = new Label(c);
+                    var l = new Label(cells[i]);
                     l.style.fontSize = PuzzleGuide.BodySize - 1f;
                     l.style.whiteSpace = WhiteSpace.Normal;
                     l.style.width = 140;
@@ -326,6 +334,8 @@ namespace KardashevAscent.Presentation.UI
                         l.style.unityFontStyleAndWeight = FontStyle.Bold;
                         l.style.color = new Color(0.62f, 0.68f, 0.8f);
                     }
+                    else if (i > 0 || !countColumn)
+                        CalculatorPad.MakeClickable(l);   // click a reading: it goes into the calculator
                     row.Add(l);
                 }
                 return row;

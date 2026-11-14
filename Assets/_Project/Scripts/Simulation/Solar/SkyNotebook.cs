@@ -162,7 +162,8 @@ namespace KardashevAscent.Simulation.Solar
             if (!hOk || !aOk)
                 return !hOk && !aOk ? "Neither fits: h = arctan(stick / shadow); the sun is opposite the shadow (bearing ± 180°)."
                      : !hOk ? $"The direction is right; h = {altitudeDeg:0.#}° isn't: h = arctan(stick / shadow)."
-                     : $"h is right; A_s = {azimuthDeg:0}° isn't: the sun is on the opposite side of the shadow (bearing ± 180°).";
+                     : $"h is right; A_s = {azimuthDeg:0}° isn't. The sun is opposite its shadow: take the shadow's direction " +
+                       $"({(sky.SunAzimuthDeg + 180.0) % 360.0:0}°) − 180° (add 360° if negative). h isn't part of it.";
             right = true;
             TracksSun = true;
             bool noon = Math.Abs(sky.HourAngleDeg) <= NoonWindowDeg;
