@@ -18,11 +18,11 @@ Identifiers refer to [`feature-registry.md`](feature-registry.md) (features, ope
 | Content definitions outside code (D1–D3) | Industry, logistics, water, more buildings |
 | Inventories per place | Storage, logistics, transport robots, interplanetary trade |
 | An environment model per tile | Other energy sources, thermal management, equipment limits, events |
-| An observation and knowledge model (I2, I3) | Reports, research, the AI assistant, minimal interface |
+| An observation and knowledge model (I2, I3) | Reports, research, the planned assistant, minimal interface |
 | A technology model | Research as progression |
 | A layer above one planet (M9) | Several colonies and planets |
 | Conservation, determinism and performance tests | Trust in every later system |
-| Continuous integration | Several AI developers working at once |
+| Continuous integration | Parallel contributors working at once |
 
 ## 2. Dependency map
 
