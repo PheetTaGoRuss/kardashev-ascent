@@ -40,6 +40,9 @@ namespace KardashevAscent.Simulation.Robots
 
         public bool Has(RobotModule m) => (Modules & m) != 0;
 
+        /// <summary>Onboard AI level from its processors: 1 basic, 2 with a processor, 3 with an advanced one (stage E).</summary>
+        public int AILevel => 1 + (Has(RobotModule.Processor) ? 1 : 0) + (Has(RobotModule.AdvancedProcessor) ? 1 : 0);
+
         /// <summary>Battery capacity when new for this robot's chemistry and upgrades, Wh.</summary>
         public double DesignBatteryWh =>
             RobotSpecs.BatteryCapacityWh * (SodiumBattery ? RobotTech.SodiumCapacityRatio : 1.0)
@@ -142,6 +145,12 @@ namespace KardashevAscent.Simulation.Robots
 
         /// <summary>Survey and measurement results it found while cut off, waiting to sync (counts; the data itself lands at once in this stage).</summary>
         public int UnsyncedFindings { get; internal set; }
+
+        /// <summary>The colony's needs at its last sync: an AI level 2+ robot keeps working by them while cut off.</summary>
+        public ColonyNeeds CachedNeeds { get; internal set; }
+
+        /// <summary>While cut off: the connected robot it exchanged with at the last check (nearby exchange), or null.</summary>
+        public int? ExchangeVia { get; internal set; }
 
         /// <summary>Free to take colony work: not shut down, charging, in maintenance or low on charge.</summary>
         public bool Available => Activity == RobotActivity.None && !IsShutDown && !NeedsCharge && !ManualTarget.HasValue;

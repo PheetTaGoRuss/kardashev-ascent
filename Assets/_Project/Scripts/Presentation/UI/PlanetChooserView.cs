@@ -79,9 +79,9 @@ namespace KardashevAscent.Presentation.UI
                 shownAtStart = true;
                 SetVisible(true);
             }
-            if (Input.GetKeyDown(toggleKey))
+            if (ScreenInput.KeyDown(toggleKey))
                 SetVisible(!Visible);
-            else if (Visible && Input.GetKeyDown(KeyCode.Escape))
+            else if (Visible && ScreenInput.KeyDown(KeyCode.Escape))
                 SetVisible(false);
         }
 

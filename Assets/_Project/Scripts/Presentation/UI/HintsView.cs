@@ -92,7 +92,7 @@ namespace KardashevAscent.Presentation.UI
         static bool AnyPanel(IPlanetSimulation sim)
         {
             foreach (BuildingRecord r in sim.CaptureState().Buildings)
-                if (r.Type == BuildingType.SolarPanel)
+                if (r.Type == BuildingType.SolarPanel || r.Type == BuildingType.FloatingSolar)
                     return true;
             return false;
         }

@@ -1,3 +1,4 @@
+using KardashevAscent.Simulation.Energy;
 using System;
 using KardashevAscent.Simulation.Game;
 using KardashevAscent.Simulation.Planet;
@@ -17,29 +18,29 @@ namespace KardashevAscent.Simulation.Tests.Robots
             SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Math.PI / 180.0,
             282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0);
 
-        static StubPlanetSimulation WithWorkshop()
+        static PlanetSimulation WithWorkshop()
         {
-            var sim = new StubPlanetSimulation(Sphere, Surface, Earthlike);
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
             Assert.IsTrue(sim.PlaceWorkshop(sim.BaseTileId, 5));
             Assert.AreEqual(1, sim.WorkshopCount, "built from the lander's parts at once");
             return sim;
         }
 
-        static void Stock(StubPlanetSimulation sim, double kg)
+        static void Stock(PlanetSimulation sim, double kg)
         {
             foreach (Material m in Materials.All) sim.Materials.Add(m, kg);
         }
 
         /// <summary>Tick until <paramref name="done"/> (robots stop to charge, so work takes longer than its hours).</summary>
-        static void RunUntil(StubPlanetSimulation sim, Func<bool> done, double maxHours = 96.0)
+        static void RunUntil(PlanetSimulation sim, Func<bool> done, double maxHours = 96.0)
         {
             for (double h = 0.0; h < maxHours && !done(); h += 0.25)
                 sim.Tick(0.25);
             Assert.IsTrue(done(), "did not finish in time");
         }
 
-        static void Unlock(StubPlanetSimulation sim, int milestones) =>
-            typeof(StubPlanetSimulation).GetProperty("MilestonesReached").SetValue(sim, milestones);
+        static void Unlock(PlanetSimulation sim, int milestones) =>
+            typeof(PlanetSimulation).GetProperty("MilestonesReached").SetValue(sim, milestones);
 
         [Test]
         public void Workshop_IsABuilding_SalvagedLikeOthers()
@@ -54,7 +55,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         [Test]
         public void OrderRobot_NeedsAWorkshopAndMaterials()
         {
-            var sim = new StubPlanetSimulation(Sphere, Surface, Earthlike);
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
             StringAssert.Contains("Workshop", sim.OrderRobot(RobotKind.General));
             sim.PlaceWorkshop(sim.BaseTileId, 5);
             StringAssert.StartsWith("Missing", sim.OrderRobot(RobotKind.General));
@@ -159,6 +160,35 @@ namespace KardashevAscent.Simulation.Tests.Robots
         }
 
         [Test]
+        public void Refining_ConservesMass_TheRestOfTheRockIsSlag()
+        {
+            var sim = WithWorkshop();
+            Unlock(sim, 1);
+            sim.Materials.Add(Material.Rock, 100.0);
+            double before = sim.Materials[Material.Rock];
+            Assert.IsNull(sim.OrderRefine(Material.Aluminium));
+            RunUntil(sim, () => sim.Jobs.Count == 0);
+            double after = sim.Materials[Material.Rock] + sim.Materials[Material.Aluminium] + sim.Materials[Material.Slag];
+            Assert.AreEqual(before, after, 1e-9, "rock in = rock left + metal + slag");
+            Assert.AreEqual(50.0, sim.Materials[Material.Slag], 1e-9, "60 kg of rock for 10 kg of aluminium leaves 50 kg of slag");
+            Assert.IsTrue(sim.IndustrialReports[sim.IndustrialReports.Count - 1].Message.Contains("slag"));
+        }
+
+        [Test]
+        public void Slag_IsKeptInSaves_AndOldSavesStillLoad()
+        {
+            var sim = WithWorkshop();
+            sim.Materials.Add(Material.Slag, 12.0);
+            var state = sim.CaptureState();
+            var other = WithWorkshop();
+            Assert.IsTrue(other.RestoreState(state));
+            Assert.AreEqual(12.0, other.Materials[Material.Slag], 1e-9);
+            state.MaterialsKg.RemoveAll(m => m.Material == Material.Slag);
+            Assert.IsTrue(other.RestoreState(state), "a save from before slag existed has no slag record");
+            Assert.AreEqual(0.0, other.Materials[Material.Slag], 1e-9);
+        }
+
+        [Test]
         public void CancelJob_GivesEverythingBack()
         {
             var sim = WithWorkshop();
@@ -249,7 +279,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             SimulationState state = a.CaptureState();
             Assert.AreEqual(SimulationState.CurrentVersion, state.Version);
 
-            var b = new StubPlanetSimulation(Sphere, Surface, Earthlike);
+            var b = new PlanetSimulation(Sphere, Surface, Earthlike);
             Assert.IsTrue(b.RestoreState(state));
             Assert.AreEqual(1, b.WorkshopCount);
             Assert.AreEqual(1, b.Jobs.Count);

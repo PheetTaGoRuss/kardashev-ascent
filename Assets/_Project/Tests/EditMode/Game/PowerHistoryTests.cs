@@ -90,7 +90,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         [Test]
         public void Ticking_RecordsHourlySamples_AndBrownouts()
         {
-            var sim = new StubPlanetSimulation(Sphere, Surface, Earthlike);
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
             sim.Tick(30.0);
             Assert.AreEqual(30, sim.History.Count, "one sample per planet hour");
             Assert.AreEqual(30.0, sim.History.TotalHours, 1e-6);
@@ -102,11 +102,11 @@ namespace KardashevAscent.Simulation.Tests.Game
         [Test]
         public void SaveAndLoad_KeepsTheHistory()
         {
-            var a = new StubPlanetSimulation(Sphere, Surface, Earthlike);
+            var a = new PlanetSimulation(Sphere, Surface, Earthlike);
             int t = a.BaseTileId;
             a.PlacePanel(t, 0, Math.Abs(a.GetTile(t).Latitude), Math.PI);
             a.Tick(50.0);
-            var b = new StubPlanetSimulation(Sphere, Surface, Earthlike);
+            var b = new PlanetSimulation(Sphere, Surface, Earthlike);
             Assert.IsTrue(b.RestoreState(a.CaptureState()));
             Assert.AreEqual(a.History.Count, b.History.Count);
             Assert.AreEqual(a.History[a.History.Count - 1].GenerationW, b.History[b.History.Count - 1].GenerationW, 1e-9);

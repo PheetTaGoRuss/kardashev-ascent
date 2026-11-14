@@ -10,13 +10,13 @@ Bugs that need tracking by several people also get a GitHub issue; link it here.
 
 | # | Issue | Effect | Plan |
 | --- | --- | --- | --- |
-| KI-1 | `StubPlanetSimulation` is 1,356 lines and owns every system | Each feature makes it larger; branches conflict in it | Architecture M1 |
-| KI-2 | The class is called "stub" and is the real simulation | Misleads new readers | Architecture M2 |
+| KI-1 | `PlanetSimulation` still owns every system's bookkeeping (split into 14 files, one class) | New features still touch it | Architecture M1, second half |
+| KI-2 | ~~Class called "stub"~~ | Fixed 2026-11-13: renamed `PlanetSimulation` | — |
 | KI-3 | `IPlanetSimulation` hands out live `Workforce`, `DepositMap`, `MaterialStock`, `PowerHistory` and `SkyNotebook` objects | Presentation can change state without a command | Architecture M5 |
-| KI-4 | Namespace cycles: `Planet` ↔ `Solar`, `Planet` ↔ `Resources`, `Robots` ↔ `Game` | Tiers cannot be checked; assemblies cannot be split | Architecture M3 |
+| KI-4 | ~~Namespace cycles~~ | Fixed 2026-11-13; `tools/check_layers.py` keeps it so | — |
 | KI-5 | Unlocks are defined in three places | A new unlock can be added in one and missed in another | Data D5 |
 | KI-6 | Robot numbers are split between `RobotSpecs` and `RobotCatalog` | Two places to look | Data D6 |
-| KI-7 | Each building type has its own set and counter in the orchestrator | Every new building repeats the bookkeeping | Data D2 |
+| KI-7 | Each building type still has its own set and counter in the orchestrator (names, footprints and costs now come from `BuildingCatalog`) | A new building still repeats some bookkeeping | Data D2 |
 
 ## 2. Saves and data
 
@@ -32,7 +32,7 @@ Bugs that need tracking by several people also get a GitHub issue; link it here.
 | # | Issue | Effect | Plan |
 | --- | --- | --- | --- |
 | KI-12 | Deposits never run out | Mass is not conserved; no reason to explore further | Roadmap phase 2 (RS-07) |
-| KI-13 | Refining and manufacturing drop leftover mass | Mass is not conserved; no byproducts | Roadmap phase 2 (RS-09) |
+| KI-13 | Manufacturing recipes (robots, upgrades) still use materials without a mass balance. Refining is fixed: leftover rock becomes slag | Mass is not conserved in manufacturing | Roadmap phase 2 (RS-09) |
 | KI-14 | Robot, recipe, deposit and movement numbers are placeholders (`TBD` on 60 lines in Simulation) | Balance is arbitrary | Open question OQ-12 |
 | KI-15 | Battery ageing uses an unsourced depth exponent and 0 % damage | A model presented with numbers that have no source | Source them in `physics-verification.md` |
 | KI-16 | Air temperature of real planets is the equilibrium temperature, with no greenhouse term | Cold bias on planets with air | PL-09 |
@@ -53,8 +53,10 @@ Bugs that need tracking by several people also get a GitHub issue; link it here.
 
 | # | Issue | Effect | Plan |
 | --- | --- | --- | --- |
-| KI-24 | No continuous integration | A pull request can break tests unnoticed | Roadmap phase 0 |
-| KI-25 | No conservation, determinism or performance tests | Regressions of these kinds are invisible | Testing standards §8 |
+| KI-24 | ~~No continuous integration~~ | Fixed 2026-11-13: `.github/workflows/tests.yml` (not yet seen to run on GitHub) | — |
+| KI-25 | No performance test; mass balance is only partly tested | Regressions of these kinds are invisible | Testing standards §8 |
+| KI-35 | New terrain changes how existing planets look (not their saves): a saved building on a tile that is wetland now still loads, but new land buildings cannot go there | Surprises after an update | Terrain is not saved; revisit if saves must keep their old maps |
+| KI-34 | Stepping 300 robots takes about 5 ms per 0.25 h step (measured 2026-11-13 outside Unity) | Fine at the slower clock speeds; at "1 d/s" (96 steps a second) about half a second of work per real second, and "1 y/min" would not keep up | Aggregate simulation of background work (workforce stage H) |
 | KI-26 | No Presentation tests | UI changes are checked by hand | Testing standards §6 and §8 |
 | KI-27 | Not every save version has its own migration test | An old save could fail to load unnoticed | Add when touching save code |
 

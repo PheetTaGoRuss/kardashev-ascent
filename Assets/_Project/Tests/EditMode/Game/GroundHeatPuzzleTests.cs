@@ -49,7 +49,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         [Test]
         public void Measuring_GivesAPuzzle_ThenTheAnswerFixesIt()
         {
-            var sim = new StubPlanetSimulation(Sphere, Surface, Earthlike);
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
             int t = sim.BaseTileId;
             Assert.IsTrue(sim.OrderMeasure(SolarParameter.AirTemperature, t));
             for (int i = 0; i < 40 && sim.ParameterPuzzles.Count == 0; i++)

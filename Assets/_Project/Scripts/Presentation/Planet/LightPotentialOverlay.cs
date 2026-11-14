@@ -1,3 +1,4 @@
+using KardashevAscent.Presentation.UI;
 using System;
 using System.Threading.Tasks;
 using KardashevAscent.Presentation.Game;
@@ -108,7 +109,7 @@ namespace KardashevAscent.Presentation.Planet
                 pending = null;
             }
 
-            if (Input.GetKeyDown(toggleKey))
+            if (ScreenInput.KeyDown(toggleKey))
                 SetVisible(!visible);
         }
 

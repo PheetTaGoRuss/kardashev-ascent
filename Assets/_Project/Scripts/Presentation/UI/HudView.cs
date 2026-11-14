@@ -22,7 +22,7 @@ namespace KardashevAscent.Presentation.UI
         [Range(0f, 1f)] [SerializeField] float textInterval = 0.1f;
 
         UIDocument document;
-        Label date, time, season, power, demand, battery, kLabel, kPlanetLabel, brownout, toast, buildStock, buildQueue;
+        Label date, time, season, power, demand, battery, kLabel, kPlanetLabel, kDetailLabel, kHeading, brownout, toast, buildStock, buildQueue;
         VisualElement batteryFill, kFill;
         readonly Button[] speedButtons = new Button[5];
         static readonly ClockSpeed[] Speeds =
@@ -47,6 +47,8 @@ namespace KardashevAscent.Presentation.UI
             battery = root.Q<Label>("battery");
             kLabel = root.Q<Label>("k");
             kPlanetLabel = root.Q<Label>("k-planet");
+            kDetailLabel = root.Q<Label>("k-detail");
+            kHeading = root.Q<Label>("k-heading");
             brownout = root.Q<Label>("brownout");
             toast = root.Q<Label>("toast");
             buildStock = root.Q<Label>("build-stock");
@@ -146,10 +148,12 @@ namespace KardashevAscent.Presentation.UI
             batteryFill.EnableInClassList("warning", soc < 0.4 && soc >= 0.15);
             batteryFill.EnableInClassList("critical", soc < 0.15);
 
-            // The bar is planet K on 0..1 (log scale: each tenth is ten times the power), not P / P_I, which stays
-            // near zero for most of the game.
-            double planetK = Math.Max(0.0, Math.Min(1.0, sim.PlanetK));
-            kFill.style.width = Length.Percent((float)(planetK * 100.0));
+            // The bar fills toward the next milestone (ten times the power of the last), on a log scale.
+            int reached = sim.MilestonesReached;
+            double dayPowerW = sim.DayAveragePowerW > 0.0 ? sim.DayAveragePowerW : sim.KardashevPowerW;
+            double lastW = Kardashev.PowerForMilestone(reached, sim.TypeITargetW);
+            double progress = reached >= 10 ? 1.0 : Math.Max(0.0, Math.Min(1.0, Math.Log10(Math.Max(dayPowerW, 1.0) / lastW)));
+            kFill.style.width = Length.Percent((float)(progress * 100.0));
 
             for (int i = 0; i < speedButtons.Length; i++)
                 speedButtons[i]?.EnableInClassList("selected", runner.Clock != null && runner.Clock.Speed == Speeds[i]);
@@ -191,9 +195,14 @@ namespace KardashevAscent.Presentation.UI
                     : $"{making} · {sim.ConstructionQueueCount} site{(sim.ConstructionQueueCount == 1 ? "" : "s")}, " +
                       $"{Format.Energy(sim.ConstructionRemainingWh)} to go";
             }
-            kLabel.text = $"K {sim.KardashevK:0.00} · {Format.Power(sim.KardashevPowerW)}";
+            kLabel.text = Format.Power(sim.KardashevPowerW);
+            if (kHeading != null)
+                kHeading.text = $"KARDASHEV · MILESTONE {sim.MilestonesReached} OF 10";
             if (kPlanetLabel != null)
-                kPlanetLabel.text = $"Planet K {sim.PlanetK:0.00} ({Format.Percent(Kardashev.PlanetCompletion(sim.KardashevPowerW, sim.TypeITargetW))})";
+                kPlanetLabel.text = sim.MilestonesReached >= 10
+                    ? "Type I reached"
+                    : $"Next: {Format.Power(Kardashev.PowerForMilestone(sim.MilestonesReached + 1, sim.TypeITargetW))} through a whole day";
+            kLabel.tooltip = $"K {sim.KardashevK:0.00} · planet K {sim.PlanetK:0.00} ({Format.Percent(Kardashev.PlanetCompletion(sim.KardashevPowerW, sim.TypeITargetW))})";
 
             // The grid updates its brownout state on the next tick; while paused, don't warn once panels cover demand.
             bool brownoutNow = sim.IsBrownout && sim.GenerationW < sim.DemandW;

@@ -23,24 +23,26 @@
             <ui:Label name="ground" class="caption wrap" text="" />
             <ui:VisualElement name="ground-actions" class="ground-actions" />
 
-            <ui:Label class="heading section" text="SUN PATH" />
-            <ui:Label name="sunpath-caption" class="caption" text="How high the star climbs, and where" />
-            <ui:VisualElement name="sunpath" class="chart sunpath-chart" />
-            <ui:VisualElement class="legend">
-                <ui:VisualElement class="legend-item"><ui:VisualElement class="swatch series-1" /><ui:Label name="legend-1" class="caption" text="Dec solstice" /></ui:VisualElement>
-                <ui:VisualElement class="legend-item"><ui:VisualElement class="swatch series-2" /><ui:Label name="legend-2" class="caption" text="Jun solstice" /></ui:VisualElement>
-                <ui:VisualElement class="legend-item"><ui:VisualElement class="swatch series-3" /><ui:Label class="caption" text="Equinox" /></ui:VisualElement>
-            </ui:VisualElement>
-            <ui:VisualElement class="legend">
-                <ui:VisualElement class="legend-item"><ui:VisualElement class="marker-now" /><ui:Label class="caption" text="Star now" /></ui:VisualElement>
-                <ui:VisualElement class="legend-item"><ui:VisualElement class="marker-panel" /><ui:Label class="caption" text="Where the panel faces" /></ui:VisualElement>
-            </ui:VisualElement>
+            <ui:Foldout name="sunpath-fold" class="tile-fold" text="SUN PATH" value="true">
+                <ui:Label name="sunpath-caption" class="caption" text="How high the star climbs, and where" />
+                <ui:VisualElement name="sunpath" class="chart sunpath-chart" />
+                <ui:VisualElement class="legend">
+                    <ui:VisualElement class="legend-item"><ui:VisualElement class="swatch series-1" /><ui:Label name="legend-1" class="caption" text="Dec solstice" /></ui:VisualElement>
+                    <ui:VisualElement class="legend-item"><ui:VisualElement class="swatch series-2" /><ui:Label name="legend-2" class="caption" text="Jun solstice" /></ui:VisualElement>
+                    <ui:VisualElement class="legend-item"><ui:VisualElement class="swatch series-3" /><ui:Label class="caption" text="Equinox" /></ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="legend">
+                    <ui:VisualElement class="legend-item"><ui:VisualElement class="marker-now" /><ui:Label class="caption" text="Star now" /></ui:VisualElement>
+                    <ui:VisualElement class="legend-item"><ui:VisualElement class="marker-panel" /><ui:Label class="caption" text="Where the panel faces" /></ui:VisualElement>
+                </ui:VisualElement>
+            </ui:Foldout>
 
-            <ui:Label class="heading section" text="ENERGY BY MONTH" />
-            <ui:Label name="monthly-caption" class="caption" text="This panel" />
-            <ui:VisualElement name="monthly" class="chart monthly-chart" />
-            <ui:VisualElement name="month-labels" class="month-labels" />
-            <ui:Label name="monthly-hover" class="caption hover-line" text=" " />
+            <ui:Foldout name="monthly-fold" class="tile-fold" text="ENERGY BY MONTH" value="false">
+                <ui:Label name="monthly-caption" class="caption" text="This panel" />
+                <ui:VisualElement name="monthly" class="chart monthly-chart" />
+                <ui:VisualElement name="month-labels" class="month-labels" />
+                <ui:Label name="monthly-hover" class="caption hover-line" text=" " />
+            </ui:Foldout>
 
             <ui:Foldout name="formulas" class="formulas" text="Formulas used" value="false">
                 <ui:Label class="formula" text="cos θ = n · s   light on a panel falls off with the angle θ between the panel's facing n and the star s" />

@@ -57,6 +57,12 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | PL-04 | Choose the planet and the landing tile | CONFIRMED | PR #43, #55 | Tested (simulation side) | `SimulationRunner`, `PlanetChooserView` |
 | PL-05 | Building slots per tile; multi-slot footprints | CONFIRMED | PR #28, #33, #61 | Tested | `Planet/TileSite.cs`, `Game/BuildingFootprints.cs` |
 | PL-06 | Earth cloud climatology on Earth-like planets | CONFIRMED | PR #23 | Tested | `Climate/CloudClimate.cs` |
+| PL-10 | New terrain: forest, wetland, beach, volcanic rock (second terrain pass on warm wet planets; volcanic rock anywhere). Wetland is too soft for land buildings; forest and beach keep the landing rank of lowland; forest, wetland and volcanic rock slow robots; albedo and names per terrain | CONFIRMED (director's choice of all four, 2026-11-13) | chat 2026-11-13 | Tested; seen in Play mode | `Planet/PlanetSurface.cs` |
+| PL-11 | Relief from orbit: land tiles raised with elevation (1.5 % of the radius at the top, ~10x true scale) with cliff walls; sea at sea level | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/Planet/PlanetMeshBuilder.cs`, `PlanetView.cs` |
+| PL-12 | Rivers (springs on high land running to the sea; more water, slower crossing) | REJECTED for now (director 2026-11-14: looked bugged and weird; removed). Could return as FUTURE | chat 2026-11-14 | Removed | — |
+| PL-13 | Level of detail: peaks and forest canopy from orbit; trees, reeds and rocks close up on the open site | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/Planet/TerrainFeatures.cs`, `SiteDecor.cs` |
+| PL-14 | Buildings clear nature on their slots (visual only, no regrowth); from orbit a tile's canopy thins with the share built on | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `SiteDecor.cs`, `TerrainFeatures.cs` |
+| EN-14 | Floating solar on shallow sea and wetland: 1.5 times the cost of a land panel (game rule), 4 % more output from cooler cells (game rule, TBD), built, turned and taken down by raft crews with no robot driving onto the sea (game rule) | CONFIRMED (director's choice, 2026-11-13) | chat 2026-11-13 | Tested; seen in Play mode | `Game/PlanetSimulation.Buildings.cs` |
 | PL-07 | Atmosphere, climate, temperature and pressure simulation | FUTURE | V | Not started | — |
 | PL-08 | Subsurface exploration | FUTURE | V | Not started | — |
 | PL-09 | Greenhouse offset for air temperature of real planets | PROPOSED | physics report P1 item 14 | Not started | — |
@@ -73,6 +79,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | EN-06 | Battery yards as buildings | CONFIRMED | PR #36 | Tested | orchestrator |
 | EN-07 | Solar tiers unlocked by milestones | CONFIRMED | PR #46 | Tested | `Game/PanelTiers.cs` |
 | EN-08 | Re-angling a built panel is done by a robot | CONFIRMED | chat 2026-11-09, per `solar-measurements.md` on its branch | In progress | `feature/building-footprints` |
+| EN-08b | Edit angle: drag rings around a panel to turn its tilt and facing; saved angle layouts with the player's name and note, the slot and the tile's latitude and longitude | CONFIRMED (director's request, 2026-11-13) | chat 2026-11-13 | Tested; seen working in Play mode | `Presentation/UI/AngleEditor.cs`, `Game/AnglePreset.cs` |
 | EN-09 | Waste heat warming the planet | FUTURE | V; model from PR #23 | Tested as a library; not in play | `Climate/WasteHeat.cs` |
 | EN-10 | Power distribution and transmission losses | FUTURE | V | Not started | — |
 | EN-11 | Nuclear, geothermal, tidal, wave, ocean thermal, floating solar, advanced sources | FUTURE | V | Not started; several have checked numbers in the physics report | — |
@@ -107,8 +114,10 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | RB-06 | Task records, scheduler scoring, reservations | CONFIRMED | spec v2; PR #57 | Tested | `Robots/TaskBook.cs` |
 | RB-07 | Facility staffing with diminishing returns | CONFIRMED for the Workshop; other buildings open (OQ-7) | PR #58 | Tested | `Robots/FacilityStaffing.cs` |
 | RB-08 | Battery ageing by depth, cold capacity, task wear, charging station, maintenance rules | CONFIRMED | PR #59 | Tested; two unsourced placeholders | `Robots/RobotBattery.cs` |
-| RB-09 | Colony network: hub, relays, range, brownout, cut-off robots | CONFIRMED | Q1 decided 2026-11-08 | In progress | `feature/building-footprints` |
-| RB-10 | AI levels, memory, synchronisation, backups, colony computing | CONFIRMED as scope; details open | spec v2 stage E | Designed | `robotic-workforce-v2-audit.md` |
+| RB-09 | Colony network: hub, relays, range, brownout, cut-off robots | CONFIRMED | Q1 decided 2026-11-08 | Tested | `Robots/ColonyNetwork.cs`, `Game/PlanetSimulation.ColonyNetwork.cs` |
+| RB-10 | AI levels (processor upgrades), nearby exchange, findings wait for sync, onboard AI power, colony computing | CONFIRMED (details 2026-11-14) | spec v2 stage E | Tested | `Robots/Workforce.cs`, `Game/PlanetSimulation.Findings.cs` |
+| RB-10a | Individual memory beyond findings, colony database, backups and loss of unsynced data | CONFIRMED as scope | spec v2 stage E | Not started (needs OQ-9) | — |
+| RB-10b | Failure ladder (alternatives, ask a robot for help, notify the player) and player-set computing priorities | CONFIRMED as scope | spec v2 §12 | Not started | — |
 | RB-11 | Component tiers and assembly (manufacturing v2) | CONFIRMED as scope | spec v2 stage F | Designed | same |
 | RB-12 | Robot inspection view, task monitor, group presets | CONFIRMED as scope | spec v2 stage G | Designed | same |
 | RB-13 | Aggregate simulation and performance budget | CONFIRMED as scope | spec v2 stage H | Designed | same |
@@ -124,7 +133,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | RS-02 | Deposits by terrain; survey reveals them | CONFIRMED | PR #52 | Tested | `Resources/DepositMap.cs` |
 | RS-03 | Copper deposits near seas and in high ground | CONFIRMED | PR #60 | Tested | `DepositMap.cs` |
 | RS-04 | Mining into one colony stock | CONFIRMED | PR #52 | Tested | orchestrator |
-| RS-05 | Robot Workshop: robots, upgrades, substitute materials | CONFIRMED | PR #52 | Tested; placeholder recipes | `Robots/Manufacturing.cs` |
+| RS-05 | Robot Workshop: robots, upgrades, substitute materials. Refining conserves mass: leftover rock is slag (PROPOSED addition, not yet approved) | CONFIRMED | PR #52 | Tested; placeholder recipes | `Robots/Manufacturing.cs` |
 | RS-06 | Industrial production foundation: phases, storage classes, production blockers | Unknown: no decision recorded in the repository | — | In progress (uncommitted, seen locally 2026-11-12) | `Resources/IndustrialProduction.cs` in the main checkout |
 | RS-07 | Deposit depletion; purity | FUTURE | V | Not started | — |
 | RS-08 | Storage and logistics | FUTURE | V | Not started | — |
@@ -156,6 +165,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | UI-04 | One window per game system with a tab bar | No decision recorded in the repository | — | In progress | `feature/building-footprints` |
 | UI-05 | Minimal permanent interface | CONFIRMED as a principle | V | Not started | — |
 | UI-06 | Windows build from a menu | CONFIRMED | PR #44 | Implemented | `Editor/BuildWindows.cs` |
+| UI-07 | Build bar in categories (Power, Stations) with an (i) description per building | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/UI/BuildInfo.cs`, `PanelsView.cs` |
 
 ## 3. Decisions approved by the director
 
@@ -163,6 +173,9 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | --- | --- | --- |
 | 2026-11-08 | Workforce decisions D1–D16, D-AO, D-CAP as recommended, with two changes made during building (sky surveys stay player actions; cold and calendar ageing deferred) | `docs/design/robotic-workforce.md` sections 7 and 9 |
 | 2026-11-08 | Colony network Q1: relay range plus hub power; the lander is the hub; a brownout takes the network down | `docs/design/robotic-workforce-v2-audit.md` section 6 |
+| 2026-11-14 | Stage E details: AI level from Processor (2) and Advanced processor (3) Workshop upgrades, unlocked by milestones until research exists; a cut-off robot's findings wait until it syncs (directly or through a robot nearby), backups and loss wait for OQ-9; colony computing is a grid load per AI level above 1, cut first in a shortage, robots then work at level 1 | `docs/design/robotic-workforce-v2-audit.md` section 6 |
+| 2026-11-14 | Terrain and build bar: buildings clear trees and rocks on their slots, visual only; exaggerated relief from orbit; build bar in Power and Stations with (i) descriptions | PL-11 to PL-14, UI-07 |
+| 2026-11-14 | Rivers removed after a look in Play mode ("bugged and weird"); RiverMap, its rules and its drawing deleted | PL-12 |
 | 2026-11-09 | Solar measurements: robots turn built panels; research robots measure every solar parameter; measurement is a reasoning puzzle | `docs/design/solar-measurements.md` (on its branch) |
 | 2026-11-12 | Game vision and the ten design pillars | [`../game/game-vision.md`](../game/game-vision.md) |
 | 2026-11-12 | The player learns through observations and reports; minimal permanent interface | vision; [`../architecture/information-architecture.md`](../architecture/information-architecture.md) |

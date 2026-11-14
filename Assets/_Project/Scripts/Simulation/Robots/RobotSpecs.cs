@@ -43,6 +43,13 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>Draw while mining, W. TBD (D4).</summary>
         public const double MinePowerW = 300.0;
 
+        /// <summary>
+        /// Onboard AI draw from the robot's own battery, W, by AI level (1, 2, 3); doubled while cut off (it plans
+        /// alone). Spec v2 §12 "AI energy consumption". Placeholder values, TBD.
+        /// </summary>
+        public static double OnboardAIW(int aiLevel, bool cutOff) =>
+            (aiLevel >= 3 ? 30.0 : aiLevel == 2 ? 15.0 : 5.0) * (cutOff ? 2.0 : 1.0);
+
         public static double WorkingPowerW(TaskKind kind)
         {
             switch (kind)

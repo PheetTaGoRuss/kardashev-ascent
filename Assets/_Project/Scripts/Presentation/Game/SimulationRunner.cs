@@ -1,3 +1,4 @@
+using KardashevAscent.Presentation.UI;
 using System;
 using System.Collections.Generic;
 using KardashevAscent.Presentation.Planet;
@@ -9,7 +10,7 @@ using UnityEngine;
 namespace KardashevAscent.Presentation.Game
 {
     /// <summary>
-    /// Owns the planet's simulation and its clock: builds a <see cref="StubPlanetSimulation"/> for the chosen
+    /// Owns the planet's simulation and its clock: builds a <see cref="PlanetSimulation"/> for the chosen
     /// <see cref="PlanetDNA"/> (real NASA planets or hand-made ones, #11), then ticks it with game time every frame.
     /// Keys: Space pause/resume, 1–5 speed (pause, real time, 1 hour/s, 1 day/s, 1 year/min).
     /// </summary>
@@ -171,7 +172,7 @@ namespace KardashevAscent.Presentation.Game
                 PickRecord(startPlanet);
             if (landingTile.HasValue && (landingTile.Value >= planet.Sphere.TileCount || Terrains.IsWater(planet.Surface.Terrain[landingTile.Value])))
                 landingTile = null;
-            Simulation = new StubPlanetSimulation(planet.Sphere, planet.Surface, record, landingTile ?? -1);
+            Simulation = new PlanetSimulation(planet.Sphere, planet.Surface, record, landingTile ?? -1);
             SolarParams = record.ToSolarParams();
             ClockSpeed speed = Clock?.Speed ?? startSpeed;
             double yearHours = SolarParams.YearLengthHours;
@@ -191,13 +192,13 @@ namespace KardashevAscent.Presentation.Game
 
         void ReadKeys()
         {
-            if (Input.GetKeyDown(KeyCode.Space))
+            if (ScreenInput.KeyDown(KeyCode.Space))
                 SetSpeed(Clock.Speed == ClockSpeed.Paused ? speedBeforePause : ClockSpeed.Paused);
-            if (Input.GetKeyDown(KeyCode.Alpha1)) SetSpeed(ClockSpeed.Paused);
-            if (Input.GetKeyDown(KeyCode.Alpha2)) SetSpeed(ClockSpeed.RealTime);
-            if (Input.GetKeyDown(KeyCode.Alpha3)) SetSpeed(ClockSpeed.HourPerSecond);
-            if (Input.GetKeyDown(KeyCode.Alpha4)) SetSpeed(ClockSpeed.DayPerSecond);
-            if (Input.GetKeyDown(KeyCode.Alpha5)) SetSpeed(ClockSpeed.YearPerMinute);
+            if (ScreenInput.KeyDown(KeyCode.Alpha1)) SetSpeed(ClockSpeed.Paused);
+            if (ScreenInput.KeyDown(KeyCode.Alpha2)) SetSpeed(ClockSpeed.RealTime);
+            if (ScreenInput.KeyDown(KeyCode.Alpha3)) SetSpeed(ClockSpeed.HourPerSecond);
+            if (ScreenInput.KeyDown(KeyCode.Alpha4)) SetSpeed(ClockSpeed.DayPerSecond);
+            if (ScreenInput.KeyDown(KeyCode.Alpha5)) SetSpeed(ClockSpeed.YearPerMinute);
         }
 
         public void SetSpeed(ClockSpeed speed)

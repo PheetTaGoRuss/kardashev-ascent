@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using KardashevAscent.Simulation.Planet;
 using UnityEngine;
 
@@ -26,6 +27,13 @@ namespace KardashevAscent.Presentation.Planet
         [Tooltip("Air temperature, °C: above 40 the lowlands are desert.")]
         [SerializeField] float airTemperatureC = 15f;
 
+        [Header("Relief")]
+        [Tooltip("Height of the highest land above sea level, as a share of the radius. About 10x true scale so " +
+                 "mountains read from orbit (Earth's highest peak is 0.14 % of its radius).")]
+        [Range(0f, 0.05f)] [SerializeField] float reliefScale = 0.015f;
+        [Tooltip("Peaks and tree crowns drawn over the tiles.")]
+        [SerializeField] bool showFeatures = true;
+
         [Header("Look")]
         [Range(0f, 0.3f)] [SerializeField] float borderWidth = 0.07f;
         [Range(0f, 1f)] [SerializeField] float borderDarken = 0.3f;
@@ -52,8 +60,44 @@ namespace KardashevAscent.Presentation.Planet
         Material overlayMaterial;
         Material terrainMaterial;
 
+        /// <summary>The planet's own (lit, vertex-colour) material, for terrain detail drawn elsewhere.</summary>
+        public Material TerrainMaterial => terrainMaterial != null ? terrainMaterial : GetComponent<MeshRenderer>().sharedMaterial;
+
         public HexSphere Sphere { get; private set; }
         public PlanetSurface Surface { get; private set; }
+
+        float[] tileRadius;
+        GameObject features;
+        Mesh featuresMesh;
+        int detailTile = -1;
+
+        /// <summary>
+        /// Distance from the planet centre to a tile's top (relief): land rises with its elevation, the sea and frozen
+        /// sea stay at sea level (<see cref="Radius"/>). Local units, like <see cref="Radius"/>.
+        /// </summary>
+        public float TileRadius(int tile) =>
+            tileRadius != null && tile >= 0 && tile < tileRadius.Length ? tileRadius[tile] : radius;
+
+        IReadOnlyDictionary<int, float> builtShare;
+
+        /// <summary>Share of each tile's slots built on: its forest canopy thins out to match (from orbit).</summary>
+        public void SetBuiltShare(IReadOnlyDictionary<int, float> share)
+        {
+            builtShare = share;
+            BuildFeatures();
+        }
+
+        /// <summary>
+        /// Show close-up detail on this tile (the open building site): its orbit-scale peak and crowns leave
+        /// so the site's own detail takes over. −1: none.
+        /// </summary>
+        public void SetDetailTile(int tile)
+        {
+            if (tile == detailTile)
+                return;
+            detailTile = tile;
+            BuildFeatures();
+        }
         public float Radius => radius;
 
         /// <summary>Raised after the tiles are regenerated; tile ids from before are no longer valid.</summary>
@@ -79,6 +123,13 @@ namespace KardashevAscent.Presentation.Planet
             dirty = false;
             Sphere = HexSphere.Create(frequency);
             Surface = PlanetSurface.Generate(Sphere, Settings);
+            tileRadius = new float[Sphere.TileCount];
+            for (int t = 0; t < tileRadius.Length; t++)
+            {
+                bool sea = Terrains.IsWater(Surface.Terrain[t]) || Surface.Terrain[t] == TerrainType.FrozenSea;
+                tileRadius[t] = radius * (1f + (sea ? 0f : reliefScale * Mathf.Max(0f, Surface.Elevation[t])));
+            }
+            detailTile = -1;
 
             terrainColors = new Color32[Sphere.TileCount];
             for (int t = 0; t < terrainColors.Length; t++)
@@ -120,10 +171,42 @@ namespace KardashevAscent.Presentation.Planet
                 terrainMaterial = meshRenderer.sharedMaterial;
 
             ReleaseMesh();
-            mesh = PlanetMeshBuilder.Build(Sphere, radius, overlayColors ?? terrainColors, borderWidth, borderDarken);
+            mesh = PlanetMeshBuilder.Build(Sphere, radius, overlayColors ?? terrainColors, borderWidth, borderDarken, tileRadius);
             mesh.hideFlags = HideFlags.DontSave;
             GetComponent<MeshFilter>().sharedMesh = mesh;
             meshRenderer.sharedMaterial = overlayMaterial != null ? overlayMaterial : terrainMaterial;
+            BuildFeatures();
+        }
+
+        /// <summary>Peaks and crowns over the tiles (hidden while a data map is shown).</summary>
+        void BuildFeatures()
+        {
+            if (Sphere == null || tileRadius == null)
+                return;
+            if (features == null)
+            {
+                // After a domain reload the field is empty but the child may still be there: reuse it.
+                Transform old = transform.Find("Terrain Features");
+                if (old != null)
+                    features = old.gameObject;
+            }
+            if (features == null)
+            {
+                features = new GameObject("Terrain Features") { hideFlags = HideFlags.DontSave };
+                features.transform.SetParent(transform, false);
+                features.AddComponent<MeshFilter>();
+                features.AddComponent<MeshRenderer>();
+            }
+            if (featuresMesh != null)
+            {
+                if (Application.isPlaying) Destroy(featuresMesh);
+                else DestroyImmediate(featuresMesh);
+            }
+            featuresMesh = TerrainFeatures.Build(Sphere, Surface, tileRadius, radius, detailTile, builtShare);
+            featuresMesh.hideFlags = HideFlags.DontSave;
+            features.GetComponent<MeshFilter>().sharedMesh = featuresMesh;
+            features.GetComponent<MeshRenderer>().sharedMaterial = terrainMaterial;
+            features.SetActive(showFeatures && overlayColors == null);
         }
 
         /// <summary>
@@ -154,7 +237,7 @@ namespace KardashevAscent.Presentation.Planet
 
         /// <summary>The surface settings the tiles are generated from.</summary>
         public SurfaceSettings Settings =>
-            new SurfaceSettings(seed, oceanFraction, iceLatitude, continentScale, iceAroundSubStellar, liquidWater, airTemperatureC);
+            new SurfaceSettings(seed, oceanFraction, iceLatitude, continentScale, iceAroundSubStellar, liquidWater, airTemperatureC, true);
 
         /// <summary>Makes sure the tiles exist now (they are otherwise built on the first Update).</summary>
         public void EnsureBuilt()
@@ -192,6 +275,18 @@ namespace KardashevAscent.Presentation.Planet
                     break;
                 case TerrainType.Desert:
                     c = Color.Lerp(desert, highland, Mathf.InverseLerp(0f, 0.35f, elevation) * 0.35f);
+                    break;
+                case TerrainType.Forest:
+                    c = Color.Lerp(new Color32(44, 98, 52, 255), new Color32(60, 116, 60, 255), Mathf.InverseLerp(0f, 0.5f, elevation));
+                    break;
+                case TerrainType.Wetland:
+                    c = new Color32(64, 118, 98, 255);
+                    break;
+                case TerrainType.Beach:
+                    c = new Color32(222, 205, 150, 255);
+                    break;
+                case TerrainType.VolcanicRock:
+                    c = Color.Lerp(new Color32(70, 54, 54, 255), new Color32(96, 76, 70, 255), Mathf.InverseLerp(0.3f, 1f, elevation));
                     break;
                 case TerrainType.DryBasin:
                     // Deeper basins darker.

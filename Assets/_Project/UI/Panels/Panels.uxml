@@ -29,7 +29,7 @@
                 <ui:Label name="multi-text" class="body hidden" text="" />
                 <ui:Label name="planner-cost" class="body" text="" />
                 <ui:VisualElement class="button-row">
-                    <ui:Button name="best-button" class="action-button" text="Best angle (B)" />
+                    <ui:Button name="best-button" class="action-button" text="Edit angle" />
                     <ui:Button name="place-button" class="action-button primary" text="Place panel (P)" />
                 </ui:VisualElement>
                 <ui:VisualElement name="multi-buttons" class="button-row hidden">
@@ -51,7 +51,7 @@
                     <ui:Slider name="adjust-facing" class="slider" low-value="0" high-value="359" />
                     <ui:Label name="adjust-gain" class="body numbers" text="" />
                     <ui:VisualElement class="button-row">
-                        <ui:Button name="adjust-best" class="action-button" text="Best angle" />
+                        <ui:Button name="adjust-best" class="action-button" text="Edit angle" />
                         <ui:Button name="adjust-apply" class="action-button primary" text="Send a robot to turn it" />
                         <ui:Button name="adjust-cancel" class="action-button hidden" text="Cancel" />
                     </ui:VisualElement>
@@ -69,13 +69,26 @@
             <ui:Label name="help" class="panel box body help" text="" />
         </ui:VisualElement>
 
+        <ui:VisualElement name="build-info" class="panel box build-info hidden">
+            <ui:VisualElement class="build-info-head">
+                <ui:Label name="build-info-title" class="value" text="" />
+                <ui:Button name="build-info-close" class="info-close" text="×" />
+            </ui:VisualElement>
+            <ui:Label name="build-info-text" class="body" text="" />
+        </ui:VisualElement>
+
         <ui:VisualElement name="build-bar" class="panel box build-bar hidden">
+            <ui:VisualElement class="build-tabs">
+                <ui:Button name="cat-power" class="tab" text="Power" />
+                <ui:Button name="cat-stations" class="tab" text="Stations" />
+            </ui:VisualElement>
             <ui:VisualElement class="button-row build-row">
-                <ui:Button name="mode-panel" class="action-button mode" text="Solar panel" />
-                <ui:Button name="mode-battery" class="action-button mode" text="Battery yard" />
-                <ui:Button name="mode-workshop" class="action-button mode" text="Workshop" />
-                <ui:Button name="mode-station" class="action-button mode" text="Charger" />
-                <ui:Button name="mode-relay" class="action-button mode" text="Relay" />
+                <ui:VisualElement name="item-panel" class="build-item"><ui:Button name="mode-panel" class="action-button mode" text="Solar panel" /><ui:Button name="info-panel" class="info-button" text="i" /></ui:VisualElement>
+                <ui:VisualElement name="item-floating" class="build-item"><ui:Button name="mode-floating" class="action-button mode" text="Floating solar" /><ui:Button name="info-floating" class="info-button" text="i" /></ui:VisualElement>
+                <ui:VisualElement name="item-battery" class="build-item"><ui:Button name="mode-battery" class="action-button mode" text="Battery yard" /><ui:Button name="info-battery" class="info-button" text="i" /></ui:VisualElement>
+                <ui:VisualElement name="item-workshop" class="build-item"><ui:Button name="mode-workshop" class="action-button mode" text="Workshop" /><ui:Button name="info-workshop" class="info-button" text="i" /></ui:VisualElement>
+                <ui:VisualElement name="item-station" class="build-item"><ui:Button name="mode-station" class="action-button mode" text="Charger" /><ui:Button name="info-station" class="info-button" text="i" /></ui:VisualElement>
+                <ui:VisualElement name="item-relay" class="build-item"><ui:Button name="mode-relay" class="action-button mode" text="Relay" /><ui:Button name="info-relay" class="info-button" text="i" /></ui:VisualElement>
             </ui:VisualElement>
             <ui:Label name="build-hint" class="caption" text="Drag a building onto the site · Tab: switch" />
         </ui:VisualElement>

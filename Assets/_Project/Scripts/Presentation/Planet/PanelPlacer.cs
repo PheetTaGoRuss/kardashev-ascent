@@ -32,6 +32,8 @@ namespace KardashevAscent.Presentation.Planet
         ChargingStation,
         /// <summary>Network relay (workforce v2 stage E).</summary>
         Relay,
+        /// <summary>Solar panels on pontoons over shallow sea or wetland.</summary>
+        FloatingSolar,
     }
 
     [RequireComponent(typeof(PlanetView))]
@@ -89,6 +91,7 @@ namespace KardashevAscent.Presentation.Planet
             switch (type)
             {
                 case BuildingType.SolarPanel: return new Color32(70, 110, 200, a);
+                case BuildingType.FloatingSolar: return new Color32(60, 160, 190, a);
                 case BuildingType.Battery: return new Color32(70, 160, 100, a);
                 case BuildingType.Workshop: return new Color32(210, 140, 60, a);
                 case BuildingType.ChargingStation: return new Color32(200, 190, 70, a);
@@ -110,7 +113,11 @@ namespace KardashevAscent.Presentation.Planet
         /// <summary>True while a building is being dragged from the build bar.</summary>
         public bool Dragging => dragging;
 
+        /// <summary>True for the two panel modes (they share the tilt and facing controls).</summary>
+        public static bool IsPanel(BuildMode m) => m == BuildMode.SolarPanel || m == BuildMode.FloatingSolar;
+
         static BuildingType TypeOf(BuildMode m) =>
+            m == BuildMode.FloatingSolar ? BuildingType.FloatingSolar :
             m == BuildMode.Battery ? BuildingType.Battery : m == BuildMode.Workshop ? BuildingType.Workshop
             : m == BuildMode.ChargingStation ? BuildingType.ChargingStation
             : m == BuildMode.Relay ? BuildingType.Relay : BuildingType.SolarPanel;
@@ -160,6 +167,21 @@ namespace KardashevAscent.Presentation.Planet
             if (p.Rating == AngleRating.Optimal) BestAnglePanels++;
             ShowOnSlot(p.Visual, siteView.SiteFor(atTile), simulation.FootprintAt(atTile, s), t, a);
             placed[(atTile, s)] = p;
+        }
+
+        /// <summary>Where the selected slot (or the building covering it) is in the world, for things drawn over it.</summary>
+        public bool TryGetSelectedWorldPosition(out Vector3 world)
+        {
+            world = default;
+            if (simulation == null || siteView.Site == null || tile < 0 || (slot < 0 && siteView.Selection.Count == 0))
+                return false;
+            TileSite site = siteView.SiteFor(tile);
+            // One slot: the building on it. Several selected slots: the middle of the selection.
+            IReadOnlyList<int> slots = slot < 0 ? new List<int>(siteView.Selection)
+                : simulation.GetBuilding(tile, slot) != BuildingType.None ? simulation.FootprintAt(tile, slot) : new List<int> { slot };
+            FootprintPlace(site, slots, out Vector3 direction, out _);
+            world = transform.TransformPoint(direction * siteView.GroundRadius(site, direction));
+            return true;
         }
 
         /// <summary>What the selected panel would make at these angles (radians).</summary>
@@ -338,7 +360,8 @@ namespace KardashevAscent.Presentation.Planet
         /// </summary>
         PanelPreview PreviewBuilt(int t, int s, double tilt, double azimuth)
         {
-            PanelPreview p = simulation.PreviewPanel(t, tilt, azimuth);
+            PanelPreview p = simulation.GetBuilding(t, s) == BuildingType.FloatingSolar
+                ? simulation.PreviewFloatingPanel(t, tilt, azimuth) : simulation.PreviewPanel(t, tilt, azimuth);
             double newArea = simulation.NewPanelAreaM2(t), area = simulation.PanelAreaAt(t, s);
             if (area <= 0.0 || newArea <= 0.0 || Math.Abs(area - newArea) < 1e-6 * newArea)
                 return p;
@@ -426,7 +449,7 @@ namespace KardashevAscent.Presentation.Planet
                     ShowBattery(yard, site, simulation.FootprintAt(r.Tile, r.Slot));
                     batteryVisuals[(r.Tile, r.Slot)] = yard;
                 }
-                else if (r.Type == BuildingType.SolarPanel)
+                else if (r.Type == BuildingType.SolarPanel || r.Type == BuildingType.FloatingSolar)
                 {
                     PanelPreview p = PreviewBuilt(r.Tile, r.Slot, r.Tilt, r.Azimuth);
                     AngleRating rating = r.Tile == tile ? RatingOf(p) : AngleRating.Off;
@@ -491,10 +514,66 @@ namespace KardashevAscent.Presentation.Planet
         /// <summary>True when more than one slot is selected.</summary>
         public bool MultiSelect => siteView != null && siteView.Selection.Count > 1;
 
+        // ---- Angle previews: a see-through copy of a panel at the angles being set, until a robot turns the real one ----
+
+        static readonly Color PreviewTint = new Color(0.4f, 0.9f, 1f, 0.55f);
+        readonly Dictionary<int, (SolarPanelVisual Visual, double Tilt, double Azimuth)> angleGhosts =
+            new Dictionary<int, (SolarPanelVisual, double, double)>();
+        (HashSet<int> Slots, double Tilt, double Azimuth)? editPreview;
+
+        /// <summary>Show see-through panels at these angles (radians) over the built panels (by anchor slot) while the player is editing them.</summary>
+        public void SetEditPreview(IEnumerable<int> slotAnchors, double tilt, double azimuth) => editPreview = (new HashSet<int>(slotAnchors), tilt, azimuth);
+
+        public void ClearEditPreview() => editPreview = null;
+
+        /// <summary>The preview angles for each built panel of the open site: the edit in progress, or an order a robot has yet to carry out.</summary>
+        void UpdateAngleGhosts()
+        {
+            var wanted = new Dictionary<int, (double Tilt, double Azimuth)>();
+            if (tile >= 0 && siteView != null && siteView.Site != null && siteView.Site.Tile == tile)
+            {
+                foreach (var key in placed.Keys)
+                    if (key.Tile == tile && simulation.TryGetAdjustOrder(tile, key.Slot, out double ot, out double oa))
+                        wanted[key.Slot] = (ot, oa);
+                if (editPreview.HasValue)
+                    foreach (int s in editPreview.Value.Slots)
+                        if (placed.ContainsKey((tile, s)))
+                            wanted[s] = (editPreview.Value.Tilt, editPreview.Value.Azimuth);
+            }
+
+            List<int> gone = null;
+            foreach (int s in angleGhosts.Keys)
+                if (!wanted.ContainsKey(s))
+                    (gone ?? (gone = new List<int>())).Add(s);
+            if (gone != null)
+                foreach (int s in gone)
+                {
+                    angleGhosts[s].Visual.Destroy();
+                    angleGhosts.Remove(s);
+                }
+
+            foreach (var pair in wanted)
+            {
+                if (angleGhosts.TryGetValue(pair.Key, out var shown) && shown.Tilt == pair.Value.Tilt && shown.Azimuth == pair.Value.Azimuth)
+                    continue;
+                SolarPanelVisual visual = shown.Visual;
+                if (visual == null)
+                {
+                    visual = new SolarPanelVisual($"Angle Preview {tile}.{pair.Key}", transform, ghostMaterial, ghostMaterial);
+                    visual.SetTint(PreviewTint);
+                }
+                ShowOnSlot(visual, siteView.SiteFor(tile), simulation.FootprintAt(tile, pair.Key), pair.Value.Tilt, pair.Value.Azimuth);
+                angleGhosts[pair.Key] = (visual, pair.Value.Tilt, pair.Value.Azimuth);
+            }
+        }
+
+
         void Update()
         {
             if (simulation == null)
                 return;
+
+            UpdateAngleGhosts();
 
             if (bestTask != null && bestTask.IsCompleted)
             {
@@ -511,14 +590,15 @@ namespace KardashevAscent.Presentation.Planet
                 bestTask = null;
             }
 
-            if (tile >= 0 && Input.GetKeyDown(KeyCode.Tab))
+            if (tile >= 0 && ScreenInput.KeyDown(KeyCode.Tab))
                 mode = mode == BuildMode.SolarPanel ? BuildMode.Battery : mode == BuildMode.Battery ? BuildMode.Workshop
                      : mode == BuildMode.Workshop ? BuildMode.ChargingStation
-                     : mode == BuildMode.ChargingStation ? BuildMode.Relay : BuildMode.SolarPanel;
+                     : mode == BuildMode.ChargingStation ? BuildMode.Relay
+                     : mode == BuildMode.Relay ? BuildMode.FloatingSolar : BuildMode.SolarPanel;
 
             if (dragging)
             {
-                if (tile < 0 || Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1))
+                if (tile < 0 || ScreenInput.KeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1))
                 {
                     dragging = false;
                 }
@@ -533,20 +613,22 @@ namespace KardashevAscent.Presentation.Planet
 
             if (MultiSelect)
             {
-                if (Input.GetKeyDown(placeKey)) PlaceSelection();
-                if (Input.GetKeyDown(bestKey)) UseBestAngle();
-                if (Input.GetKeyDown(removeKey) || Input.GetKeyDown(KeyCode.Backspace)) RemoveSelection();
+                if (ScreenInput.KeyDown(placeKey)) PlaceSelection();
+                if (ScreenInput.KeyDown(bestKey)) UseBestAngle();
+                if (ScreenInput.KeyDown(removeKey) || ScreenInput.KeyDown(KeyCode.Backspace)) RemoveSelection();
             }
             else if (slot >= 0)
             {
-                if (Input.GetKeyDown(placeKey)) Place();
-                if (Input.GetKeyDown(bestKey)) UseBestAngle();
-                if (Input.GetKeyDown(removeKey) || Input.GetKeyDown(KeyCode.Backspace)) Remove();
+                if (ScreenInput.KeyDown(placeKey)) Place();
+                if (ScreenInput.KeyDown(bestKey)) UseBestAngle();
+                if (ScreenInput.KeyDown(removeKey) || ScreenInput.KeyDown(KeyCode.Backspace)) Remove();
             }
 
             if (previewDirty && tile >= 0 && Time.unscaledTime - lastPreviewTime >= previewInterval)
             {
-                preview = simulation.PreviewPanel(tile, tiltDeg * Mathf.Deg2Rad, azimuthDeg * Mathf.Deg2Rad);
+                preview = mode == BuildMode.FloatingSolar
+                    ? simulation.PreviewFloatingPanel(tile, tiltDeg * Mathf.Deg2Rad, azimuthDeg * Mathf.Deg2Rad)
+                    : simulation.PreviewPanel(tile, tiltDeg * Mathf.Deg2Rad, azimuthDeg * Mathf.Deg2Rad);
                 previewDirty = false;
                 lastPreviewTime = Time.unscaledTime;
             }
@@ -556,7 +638,28 @@ namespace KardashevAscent.Presentation.Planet
             {
                 padsDirty = false;
                 siteView.RefreshPads();
+                UpdateClearedForest();
             }
+        }
+
+        /// <summary>From orbit, each tile's forest thins out with the share of its slots that are built on.</summary>
+        void UpdateClearedForest()
+        {
+            if (simulation == null || planet == null)
+                return;
+            var slots = new Dictionary<int, int>();
+            foreach (var key in placed.Keys)
+                slots[key.Tile] = (slots.TryGetValue(key.Tile, out int a) ? a : 0) + simulation.FootprintAt(key.Tile, key.Slot).Count;
+            foreach (var key in batteryVisuals.Keys)
+                slots[key.Tile] = (slots.TryGetValue(key.Tile, out int a) ? a : 0) + simulation.FootprintAt(key.Tile, key.Slot).Count;
+            var share = new Dictionary<int, float>();
+            foreach (var kv in slots)
+            {
+                int total = simulation.SlotCount(kv.Key);
+                if (total > 0)
+                    share[kv.Key] = Mathf.Clamp01(kv.Value / (float)total);
+            }
+            planet.SetBuiltShare(share);
         }
 
         bool SlotHasPanel => placed.ContainsKey((tile, Anchor(tile, slot)));
@@ -581,6 +684,9 @@ namespace KardashevAscent.Presentation.Planet
         /// <summary>How many slots a building of this kind covers (solar: at today's tier).</summary>
         public int FootprintOf(BuildMode what) => simulation != null ? simulation.FootprintSize(TypeOf(what)) : 1;
 
+        /// <summary>Build parts a building of this kind costs, Wh.</summary>
+        public double CostOf(BuildMode what) => simulation != null ? simulation.BuildCostWh(TypeOf(what)) : 0.0;
+
         /// <summary>What a new solar building here is, e.g. "solar farm (1 km²)".</summary>
         public string NewPanelName => simulation == null ? "solar panel"
             : $"{PanelTiers.All[simulation.PanelTier].Name.ToLowerInvariant()} ({PanelTiers.FormatArea(simulation.NewPanelAreaM2(tile))})";
@@ -592,7 +698,9 @@ namespace KardashevAscent.Presentation.Planet
             {
                 if (simulation == null || tile < 0 || slot < 0) return "Solar panel";
                 double area = simulation.PanelAreaAt(tile, slot);
-                return $"{PanelTiers.All[TierAt(tile, slot)].Name} ({PanelTiers.FormatArea(area)})";
+                string kind = simulation.GetBuilding(tile, slot) == BuildingType.FloatingSolar ? "Floating " + PanelTiers.All[TierAt(tile, slot)].Name.ToLowerInvariant()
+                                                                                               : PanelTiers.All[TierAt(tile, slot)].Name;
+                return $"{kind} ({PanelTiers.FormatArea(area)})";
             }
         }
 
@@ -644,7 +752,7 @@ namespace KardashevAscent.Presentation.Planet
                 return;
             Color tint = preview.CanPlace || previewDirty ? ghostCanPlace : ghostBlocked;
             double tilt = tiltDeg * Mathf.Deg2Rad, azimuth = azimuthDeg * Mathf.Deg2Rad;
-            bool battery = mode != BuildMode.SolarPanel;
+            bool battery = !IsPanel(mode);
 
             // One ghost per building P (or letting go of a drag) would make, over its whole footprint: the dragged
             // building under the mouse, each building the selection has room for, or the one selected slot.
@@ -810,10 +918,11 @@ namespace KardashevAscent.Presentation.Planet
                 return true;
             }
             double tilt = tiltDeg * Mathf.Deg2Rad, azimuth = azimuthDeg * Mathf.Deg2Rad;
-            if (!simulation.PlacePanel(tile, s, tilt, azimuth))
+            bool floating = mode == BuildMode.FloatingSolar;
+            if (!(floating ? simulation.PlaceFloatingPanel(tile, s, tilt, azimuth) : simulation.PlacePanel(tile, s, tilt, azimuth)))
                 return false;
 
-            PanelPreview p = simulation.PreviewPanel(tile, tilt, azimuth);
+            PanelPreview p = floating ? simulation.PreviewFloatingPanel(tile, tilt, azimuth) : simulation.PreviewPanel(tile, tilt, azimuth);
             AngleRating rating = RatingOf(p);
             if (rating == AngleRating.Optimal)
                 BestAnglePanels++;

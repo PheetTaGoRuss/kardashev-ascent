@@ -17,7 +17,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         static readonly HexSphere Sphere = HexSphere.Create(12);
         static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
 
-        static StubPlanetSimulation Create() => new StubPlanetSimulation(Sphere, Surface, Earthlike);
+        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike);
 
         [Test]
         public void Langley_GivesBackTheOpticalDepth()
@@ -47,7 +47,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.AreEqual(LatitudePuzzle.Grade.Wrong, p.Check(0.4));
         }
 
-        static void MeasureUntilPuzzle(StubPlanetSimulation sim, SolarParameter p)
+        static void MeasureUntilPuzzle(PlanetSimulation sim, SolarParameter p)
         {
             Assert.IsTrue(sim.OrderMeasure(p, sim.BaseTileId));
             for (int i = 0; i < 40 && sim.ParameterPuzzles.Count == 0; i++)

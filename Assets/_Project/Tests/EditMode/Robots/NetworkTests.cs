@@ -18,10 +18,10 @@ namespace KardashevAscent.Simulation.Tests.Robots
         static readonly HexSphere Sphere = HexSphere.Create(12);
         static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
 
-        static StubPlanetSimulation Create() => new StubPlanetSimulation(Sphere, Surface, Earthlike);
+        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike);
 
         /// <summary>A land tile exactly this many hops from the base (−1 if none).</summary>
-        static int LandTileAtHops(StubPlanetSimulation sim, int hops)
+        static int LandTileAtHops(PlanetSimulation sim, int hops)
         {
             var dist = new Dictionary<int, int> { [sim.BaseTileId] = 0 };
             var queue = new Queue<int>();

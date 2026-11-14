@@ -66,6 +66,9 @@ namespace KardashevAscent.Presentation.Planet
 
         /// <summary>A site was opened (its tile id) or closed (−1).</summary>
         public event Action<int> SiteChanged;
+
+        /// <summary>The pads were redrawn (a site opened, or something was built or taken down).</summary>
+        public event Action PadsRebuilt;
         public event Action<int> SelectedSlotChanged;
         /// <summary>The set of selected slots changed (one, many or none).</summary>
         public event Action SelectionChanged;
@@ -141,15 +144,17 @@ namespace KardashevAscent.Presentation.Planet
             // dips a little between them; follow it so buildings stand on the surface.
             if (site == null)
                 return planet.Radius;
+            // The tile's top: raised with the relief.
+            float top = planet.TileRadius(site.Tile);
             Vector3 c = ToUnity(site.Centre);
             Vector3[] corners = Array.ConvertAll(planet.Sphere.Corners[site.Tile], ToUnity);
             Vector3 d = direction.normalized;
-            float best = planet.Radius;
+            float best = top;
             for (int i = 0; i < corners.Length; i++)
             {
-                // Plane through centre point and two corner points (all at the radius).
-                Vector3 a = corners[i] * planet.Radius, b = corners[(i + 1) % corners.Length] * planet.Radius;
-                Vector3 o = c * planet.Radius;
+                // Plane through centre point and two corner points (all at the tile's top).
+                Vector3 a = corners[i] * top, b = corners[(i + 1) % corners.Length] * top;
+                Vector3 o = c * top;
                 Vector3 normal = Vector3.Cross(a - o, b - o).normalized;
                 float denom = Vector3.Dot(normal, d);
                 if (Mathf.Abs(denom) < 1e-6f)
@@ -199,6 +204,7 @@ namespace KardashevAscent.Presentation.Planet
             dragging = pressed = false;
             SetSelection(Array.Empty<int>());
             FocusWholeSite();
+            planet.SetDetailTile(tile);
             SiteChanged?.Invoke(tile);
         }
 
@@ -248,6 +254,7 @@ namespace KardashevAscent.Presentation.Planet
             orbitCamera?.LeaveSite();
             if (wasOpen)
                 SiteChanged?.Invoke(-1);
+            planet.SetDetailTile(-1);
         }
 
         void Update()
@@ -284,8 +291,8 @@ namespace KardashevAscent.Presentation.Planet
             if (Input.GetMouseButtonUp(0) && pressed)
             {
                 pressed = false;
-                bool add = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-                bool subtract = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+                bool add = ScreenInput.Key(KeyCode.LeftShift) || ScreenInput.Key(KeyCode.RightShift);
+                bool subtract = ScreenInput.Key(KeyCode.LeftControl) || ScreenInput.Key(KeyCode.RightControl);
                 if (dragging)
                 {
                     dragging = false;
@@ -300,8 +307,8 @@ namespace KardashevAscent.Presentation.Planet
                 }
             }
 
-            bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
-            if (ctrl && Input.GetKeyDown(KeyCode.A))
+            bool ctrl = ScreenInput.Key(KeyCode.LeftControl) || ScreenInput.Key(KeyCode.RightControl);
+            if (ctrl && ScreenInput.KeyDown(KeyCode.A))
             {
                 var all = new int[Site.SlotCount];
                 for (int i = 0; i < all.Length; i++)
@@ -344,7 +351,7 @@ namespace KardashevAscent.Presentation.Planet
             Ray ray = cam.ScreenPointToRay(screenPosition);
             Vector3 origin = transform.InverseTransformPoint(ray.origin);
             Vector3 direction = (transform.InverseTransformPoint(ray.origin + ray.direction) - origin).normalized;
-            float r = planet.Radius;
+            float r = planet.TileRadius(Site.Tile);   // the site's top, raised with the relief
             float b = Vector3.Dot(origin, direction);
             float c = origin.sqrMagnitude - r * r;
             float discriminant = b * b - c;
@@ -419,6 +426,7 @@ namespace KardashevAscent.Presentation.Planet
             padsMesh.SetTriangles(triangles, 0);
             padsMesh.RecalculateBounds();
             padsObject.SetActive(true);
+            PadsRebuilt?.Invoke();
         }
 
         void ShowRing(GameObject go, Mesh mesh, int slot, float width, float liftFactor) =>
