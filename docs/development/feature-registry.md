@@ -58,6 +58,10 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | PL-05 | Building slots per tile; multi-slot footprints | CONFIRMED | PR #28, #33, #61 | Tested | `Planet/TileSite.cs`, `Game/BuildingFootprints.cs` |
 | PL-06 | Earth cloud climatology on Earth-like planets | CONFIRMED | PR #23 | Tested | `Climate/CloudClimate.cs` |
 | PL-10 | New terrain: forest, wetland, beach, volcanic rock (second terrain pass on warm wet planets; volcanic rock anywhere). Wetland is too soft for land buildings; forest and beach keep the landing rank of lowland; forest, wetland and volcanic rock slow robots; albedo and names per terrain | CONFIRMED (director's choice of all four, 2026-11-13) | chat 2026-11-13 | Tested; seen in Play mode | `Planet/PlanetSurface.cs` |
+| PL-11 | Relief from orbit: land tiles raised with elevation (1.5 % of the radius at the top, ~10x true scale) with cliff walls; sea at sea level | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/Planet/PlanetMeshBuilder.cs`, `PlanetView.cs` |
+| PL-12 | Rivers: springs on high land run downhill to the sea; river tiles hold water (grade 0.8) and take 1.5x as long to cross (TBD); drawn tile to tile, wider where they join | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Tested; seen in Play mode | `Planet/RiverMap.cs` |
+| PL-13 | Level of detail: peaks, forest canopy and rivers from orbit; trees, reeds, rocks and the river channel close up on the open site | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/Planet/TerrainFeatures.cs`, `SiteDecor.cs` |
+| PL-14 | Buildings clear nature on their slots (visual only, no regrowth); from orbit a tile's canopy thins with the share built on | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `SiteDecor.cs`, `TerrainFeatures.cs` |
 | EN-14 | Floating solar on shallow sea and wetland: 1.5 times the cost of a land panel (game rule), 4 % more output from cooler cells (game rule, TBD), built, turned and taken down by raft crews with no robot driving onto the sea (game rule) | CONFIRMED (director's choice, 2026-11-13) | chat 2026-11-13 | Tested; seen in Play mode | `Game/PlanetSimulation.Buildings.cs` |
 | PL-07 | Atmosphere, climate, temperature and pressure simulation | FUTURE | V | Not started | — |
 | PL-08 | Subsurface exploration | FUTURE | V | Not started | — |
@@ -161,6 +165,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | UI-04 | One window per game system with a tab bar | No decision recorded in the repository | — | In progress | `feature/building-footprints` |
 | UI-05 | Minimal permanent interface | CONFIRMED as a principle | V | Not started | — |
 | UI-06 | Windows build from a menu | CONFIRMED | PR #44 | Implemented | `Editor/BuildWindows.cs` |
+| UI-07 | Build bar in categories (Power, Stations) with an (i) description per building | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/UI/BuildInfo.cs`, `PanelsView.cs` |
 
 ## 3. Decisions approved by the director
 
@@ -169,6 +174,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | 2026-11-08 | Workforce decisions D1–D16, D-AO, D-CAP as recommended, with two changes made during building (sky surveys stay player actions; cold and calendar ageing deferred) | `docs/design/robotic-workforce.md` sections 7 and 9 |
 | 2026-11-08 | Colony network Q1: relay range plus hub power; the lander is the hub; a brownout takes the network down | `docs/design/robotic-workforce-v2-audit.md` section 6 |
 | 2026-11-14 | Stage E details: AI level from Processor (2) and Advanced processor (3) Workshop upgrades, unlocked by milestones until research exists; a cut-off robot's findings wait until it syncs (directly or through a robot nearby), backups and loss wait for OQ-9; colony computing is a grid load per AI level above 1, cut first in a shortage, robots then work at level 1 | `docs/design/robotic-workforce-v2-audit.md` section 6 |
+| 2026-11-14 | Terrain and build bar: rivers drawn with small rules (more water, slower crossing; no hydro yet); buildings clear trees, rocks and river bits on their slots, visual only; exaggerated relief from orbit; build bar in Power and Stations with (i) descriptions | PL-11 to PL-14, UI-07 |
 | 2026-11-09 | Solar measurements: robots turn built panels; research robots measure every solar parameter; measurement is a reasoning puzzle | `docs/design/solar-measurements.md` (on its branch) |
 | 2026-11-12 | Game vision and the ten design pillars | [`../game/game-vision.md`](../game/game-vision.md) |
 | 2026-11-12 | The player learns through observations and reports; minimal permanent interface | vision; [`../architecture/information-architecture.md`](../architecture/information-architecture.md) |
