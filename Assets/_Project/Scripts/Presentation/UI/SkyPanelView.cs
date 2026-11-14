@@ -294,7 +294,7 @@ namespace KardashevAscent.Presentation.UI
                     c.Add(new GnomonPlot(SkyNotebook.GnomonLengthM, shadow));
                     c.Add(Line($"A {SkyNotebook.GnomonLengthM:0.000} m stick stands straight up. Its shadow is {shadow:0.000} m long and points to {bearing:0}° on the compass (0° = north, 90° = east).", true));
                     c.Add(CalculatorPad.Values("stick", SkyNotebook.GnomonLengthM.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture), "shadow", shadow.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture),
-                                               "shadow points to", bearing.ToString("0", System.Globalization.CultureInfo.InvariantCulture)));
+                                               "shadow direction", bearing.ToString("0", System.Globalization.CultureInfo.InvariantCulture)));
                     c.Add(PuzzleGuide.Steps(
                         "Height h: divide stick / shadow, then press arctan (shift + tan). " + DEG,
                         "Direction A_s: the sun is on the opposite side of the stick from the shadow, so take the shadow's direction − 180°.",
