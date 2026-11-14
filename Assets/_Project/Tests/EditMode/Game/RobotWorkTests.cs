@@ -97,6 +97,28 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.AreEqual(3 * sim.BatteryUnitWh, sim.BatteryCapacityWh - PowerGridLanderCapacity());
         }
 
+        static int NextLandTile(PlanetSimulation sim)
+        {
+            foreach (int nb in sim.Sphere.Neighbors[sim.BaseTileId])
+                if (!sim.GetTile(nb).IsWater && sim.CanPlace(BuildingType.SolarPanel, nb, 0)) return nb;
+            throw new InvalidOperationException("no land next to the base");
+        }
+
+        [Test]
+        public void ASiteWithoutMaterials_IsNoWork_UntilTheyArrive()
+        {
+            var sim = Create();
+            int t = sim.BaseTileId;
+            sim.Materials.Clear();
+            Assert.IsTrue(sim.PlacePanel(t, 0, 0.3, Math.PI));
+            Robot r = sim.Workforce.Robots[0];
+            Assert.IsFalse(r.Task.HasValue && r.Task.Value.Kind == TaskKind.Build, "nothing to bring: no trip");
+            foreach (var (m, kg) in sim.BuildBill(BuildingType.SolarPanel).Items()) sim.Materials.Add(m, kg);
+            sim.RefreshWork();
+            for (int i = 0; i < 40 && sim.IsUnderConstruction(t, 0); i++) sim.Tick(0.25);
+            Assert.IsFalse(sim.IsUnderConstruction(t, 0));
+        }
+
         static double PowerGridLanderCapacity() => KardashevAscent.Simulation.Energy.PowerGrid.Lander().Battery.CapacityWh;
 
         [Test]
@@ -159,11 +181,11 @@ namespace KardashevAscent.Simulation.Tests.Game
             var sim = Create();
             int t = sim.BaseTileId;
             sim.PlaceBattery(t, 0);
-            // Use up the stock so the next site has to wait for materials with the robot on it.
-            sim.Materials.Clear();
-            sim.PlacePanel(t, 1, 0.3, Math.PI);
+            // A site on the next tile: the robot is on its way there (a site with no materials is no work at all).
+            int next = NextLandTile(sim);
+            Assert.IsTrue(sim.PlacePanel(next, 0, 0.3, Math.PI));
             Robot r = sim.Workforce.Robots[0];
-            Assert.AreEqual(TaskKind.Build, r.Task.Value.Kind, "the robot waits at the site for parts");
+            Assert.AreEqual(TaskKind.Build, r.Task.Value.Kind, "the robot is driving to the site");
             sim.Workforce.SetGroupPriority(r.GroupId, TaskKind.Salvage, TaskPriority.Critical);
             sim.OrderSalvage(t, 0);
             Assert.AreEqual(BuildingType.None, sim.GetBuilding(t, 0), "the critical order interrupted the build");

@@ -176,9 +176,12 @@ namespace KardashevAscent.Simulation.Tests.Robots
             Robot r = sim.Workforce.Robots[0];
             sim.Workforce.SetGroupProgram(r.GroupId, OperatingProgram.Demand);
             sim.OrderMining(t, KardashevAscent.Simulation.Resources.Material.Rock);
-            sim.Materials.Clear();
             sim.Workforce.Pause(r.GroupId);
-            sim.PlaceBattery(t, 0);
+            // A site on the next tile, so it is still waiting when the robot takes it.
+            int next = -1;
+            foreach (int nb in sim.Sphere.Neighbors[t])
+                if (next < 0 && !sim.GetTile(nb).IsWater && sim.CanPlace(KardashevAscent.Simulation.Game.BuildingType.Battery, nb, 0)) next = nb;
+            Assert.IsTrue(sim.PlaceBattery(next, 0));
             sim.Workforce.Resume(r.GroupId);
             sim.RefreshWork();
             Assert.IsTrue(sim.Workforce.Needs.SitesWaiting);
