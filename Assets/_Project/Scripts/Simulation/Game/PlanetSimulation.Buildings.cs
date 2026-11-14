@@ -98,6 +98,7 @@ namespace KardashevAscent.Simulation.Game
             : workshops.Contains((tileId, slot)) ? BuildingType.Workshop
             : stations.Contains((tileId, slot)) ? BuildingType.ChargingStation
             : relays.Contains((tileId, slot)) ? BuildingType.Relay
+            : researchStations.Contains((tileId, slot)) ? BuildingType.ResearchStation
             : BuildingType.None;
 
         public bool PlaceBattery(int tileId, int slot)
@@ -139,6 +140,13 @@ namespace KardashevAscent.Simulation.Game
                 relays.Remove((tileId, slot));
                 Vacate(tileId, slot);
                 RefreshNetwork();
+                return true;
+            }
+            if (researchStations.Contains((tileId, slot)))
+            {
+                Dismantle(tileId, slot, BuildingType.ResearchStation);
+                researchStations.Remove((tileId, slot));
+                Vacate(tileId, slot);
                 return true;
             }
             if (stations.Contains((tileId, slot)))

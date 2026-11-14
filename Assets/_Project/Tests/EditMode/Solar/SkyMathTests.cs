@@ -160,6 +160,7 @@ namespace KardashevAscent.Simulation.Tests.Solar
         public void DescribeSky_PowerMatchesALivePanel()
         {
             var sim = Earthlike();
+            sim.SafetyMarginsEnabled = false;   // the physics, without the design margin for unknown values
             int t = sim.BaseTileId;
             double tilt = Math.Abs(sim.GetTile(t).Latitude), az = Math.PI;
             Assert.IsTrue(sim.PlacePanel(t, 0, tilt, az));

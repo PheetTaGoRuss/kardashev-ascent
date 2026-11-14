@@ -76,6 +76,9 @@ namespace KardashevAscent.Simulation.Game
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.ChargingStation });
             foreach (var c in relays)
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.Relay });
+            foreach (var c in researchStations)
+                state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.ResearchStation });
+            CaptureResearch(state);
             foreach (ManufacturingJob j in jobs)
                 state.Jobs.Add(new JobRecord
                 {
@@ -142,6 +145,8 @@ namespace KardashevAscent.Simulation.Game
             foreach (var key in new List<(int Tile, int Slot)>(stations))
                 RemoveBuilding(key.Tile, key.Slot);
             foreach (var key in new List<(int Tile, int Slot)>(relays))
+                RemoveBuilding(key.Tile, key.Slot);
+            foreach (var key in new List<(int Tile, int Slot)>(researchStations))
                 RemoveBuilding(key.Tile, key.Slot);
             TimeHours = state.TimeHours;
             MilestonesReached = Math.Max(0, Math.Min(10, state.MilestonesReached));
@@ -218,6 +223,7 @@ namespace KardashevAscent.Simulation.Game
                 foreach (LatitudePuzzle p in state.LatitudePuzzles)
                     if (p != null && p.Tile >= 0 && p.Tile < TileCount)
                         latitudePuzzles.Add(p);
+            RestoreResearch(state);
             measureOrders.Clear();
             if (state.MeasureOrders != null)
                 foreach (MeasureOrderRecord mo in state.MeasureOrders)
@@ -303,6 +309,13 @@ namespace KardashevAscent.Simulation.Game
                     return;
                 if (site) Build.RestoreSite(r.Tile, r.Slot, BuildBill(BuildingType.ChargingStation), PaidShareOf(r, 0.0), WorkOf(r));
                 stations.Add((r.Tile, r.Slot));
+            }
+            else if (r.Type == BuildingType.ResearchStation)
+            {
+                if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
+                    return;
+                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildBill(BuildingType.ResearchStation), PaidShareOf(r, 0.0), WorkOf(r));
+                researchStations.Add((r.Tile, r.Slot));
             }
             else if (r.Type == BuildingType.Relay)
             {

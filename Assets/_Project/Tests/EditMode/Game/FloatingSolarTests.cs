@@ -19,7 +19,14 @@ namespace KardashevAscent.Simulation.Tests.Game
 
         static int Find(TerrainType type) => Array.IndexOf(Surface.Terrain, type);
 
-        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike) { ConstructionTimeEnabled = false };
+        static PlanetSimulation Create()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { ConstructionTimeEnabled = false };
+            // Floating solar needs to know water stays liquid here.
+            sim.LearnExperimentForTests(ExperimentKind.BoilingPoint);
+            sim.LearnExperimentForTests(ExperimentKind.SurfaceTemperature);
+            return sim;
+        }
 
         [Test]
         public void Floats_OnShallowSea_AndWetland_ButNotOnDeepSeaOrLand()

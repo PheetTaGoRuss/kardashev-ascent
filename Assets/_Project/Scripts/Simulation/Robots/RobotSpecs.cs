@@ -56,7 +56,8 @@ namespace KardashevAscent.Simulation.Robots
             {
                 case TaskKind.Salvage: return SalvagePowerW;
                 case TaskKind.Survey:
-                case TaskKind.Measure: return SurveyPowerW;
+                case TaskKind.Measure:
+                case TaskKind.Experiment: return SurveyPowerW;
                 case TaskKind.Mine: return MinePowerW;
                 case TaskKind.Manufacture: return BuildPowerW;
                 default: return BuildPowerW;

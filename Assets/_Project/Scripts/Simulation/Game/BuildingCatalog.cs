@@ -43,6 +43,7 @@ namespace KardashevAscent.Simulation.Game
             { BuildingType.ChargingStation, new BuildingDefinition(BuildingType.ChargingStation, "charging station", BuildingFootprints.ChargingStation, BuildCosts.ChargingStation) },
             { BuildingType.Relay, new BuildingDefinition(BuildingType.Relay, "relay", BuildingFootprints.Relay, BuildCosts.Relay) },
             { BuildingType.FloatingSolar, new BuildingDefinition(BuildingType.FloatingSolar, "floating solar", 1) },
+            { BuildingType.ResearchStation, new BuildingDefinition(BuildingType.ResearchStation, "Research Station", BuildingFootprints.ResearchStation, BuildCosts.ResearchStation) },
         };
 
         /// <summary>Every building the player can build.</summary>

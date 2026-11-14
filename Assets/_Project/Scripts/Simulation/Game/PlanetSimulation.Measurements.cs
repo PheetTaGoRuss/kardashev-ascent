@@ -140,7 +140,11 @@ namespace KardashevAscent.Simulation.Game
             if (tileId < 0 || tileId >= TileCount || GetTile(tileId).IsWater
                 || IsParameterKnown(parameter, tileId) || IsMeasureOrdered(parameter))
                 return false;
-            measureOrders.Add((parameter, tileId));
+            // Every measurement is done at a Research Station (director 2026-11-14).
+            int at = MeasureTile(parameter, tileId);
+            if (at < 0)
+                return false;
+            measureOrders.Add((parameter, at));
             Settle(null);
             return true;
         }

@@ -147,7 +147,7 @@ namespace KardashevAscent.Simulation.Game
                     Build.Work(t.Tile, t.Slot, dt * speed);
                     continue;
                 }
-                if (t.Kind != TaskKind.Survey && t.Kind != TaskKind.Mine && t.Kind != TaskKind.Measure)
+                if (t.Kind != TaskKind.Survey && t.Kind != TaskKind.Mine && t.Kind != TaskKind.Measure && t.Kind != TaskKind.Experiment)
                     continue;
                 fieldWork[t] = (fieldWork.TryGetValue(t, out double h) ? h : 0.0) + dt * speed;
             }
@@ -213,6 +213,7 @@ namespace KardashevAscent.Simulation.Game
                 Parameters.MarkMeasured(mo.Parameter);
                 ParameterMeasured?.Invoke(mo.Parameter);
             }
+            AdvanceExperiments();
             foreach (var order in miningOrders.ToArray())
             {
                 WorkTask t = MineTask(order.Tile, order.Material);

@@ -9,7 +9,7 @@ namespace KardashevAscent.Simulation.Game
     public sealed class SimulationState
     {
         /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished. 7 added robots; 8 their batteries and condition; 9 resources; 10 the Workshop; 11 programs (facility, ranking, queue); 12 movement; 13 critical damage (stage A); 14 reservations and tasks to go back to (stage B); 15 battery ageing by depth, maintenance rules (stage D); 16 building footprints. 23 industry reports.</summary>
-        public const int CurrentVersion = 28;
+        public const int CurrentVersion = 29;
 
         /// <summary>The version this state was saved with (<see cref="CurrentVersion"/> for a new one).</summary>
         public int Version = CurrentVersion;
@@ -79,6 +79,16 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Saved panel angle layouts (version 24; empty in older saves).</summary>
         public List<AnglePreset> AnglePresets = new List<AnglePreset>();
         public int NextAnglePresetId = 1;
+        /// <summary>Experiments done and waiting at a Research Station (version 29; older saves: none).</summary>
+        public List<int> KnownExperiments = new List<int>();
+        public List<ExperimentOrderRecord> ExperimentOrders = new List<ExperimentOrderRecord>();
+    }
+
+    [Serializable]
+    public sealed class ExperimentOrderRecord
+    {
+        public Planet.ExperimentKind Kind;
+        public int Tile;
     }
 
     [Serializable]

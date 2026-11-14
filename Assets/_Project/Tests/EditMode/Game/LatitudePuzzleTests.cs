@@ -16,7 +16,12 @@ namespace KardashevAscent.Simulation.Tests.Game
         static readonly HexSphere Sphere = HexSphere.Create(12);
         static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
 
-        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike) { PuzzleChance = 1.0 };   // these tests are about the puzzles
+        static PlanetSimulation Create()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { PuzzleChance = 1.0 };   // these tests are about the puzzles
+            sim.AddFinishedResearchStationForTests(sim.BaseTileId);   // measuring is done at a Research Station
+            return sim;
+        }
 
         [Test]
         public void Readings_GiveBackTheLatitude()
