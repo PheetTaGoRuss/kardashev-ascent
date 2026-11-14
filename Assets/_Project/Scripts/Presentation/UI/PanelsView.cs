@@ -38,6 +38,15 @@ namespace KardashevAscent.Presentation.UI
               legendMin, legendMax, legendTile, multiText, batteryText, plannerCost;
         Slider tilt, facing;
         Button bestButton, placeButton, removeAllButton, reangleButton, modePanel, modeBattery, modeWorkshop, modeStation, modeRelay, modeFloating;
+        // Build bar categories and the (i) descriptions.
+        readonly System.Collections.Generic.Dictionary<BuildMode, (VisualElement Item, Button Info)> buildItems =
+            new System.Collections.Generic.Dictionary<BuildMode, (VisualElement, Button)>();
+        Button catPower, catStations;
+        BuildInfo.Category buildCategory = BuildInfo.Category.Power;
+        VisualElement buildInfo;
+        Label buildInfoTitle, buildInfoText;
+        BuildMode? infoShown;
+        BuildMode lastModeSeen;
         float nextText;
 
         void OnEnable()
@@ -81,6 +90,27 @@ namespace KardashevAscent.Presentation.UI
             if (modeRelay != null)
                 modeRelay.clicked += () => { if (placer != null) placer.Mode = BuildMode.Relay; };
             DragFrom(modeRelay, BuildMode.Relay);
+            catPower = root.Q<Button>("cat-power");
+            catStations = root.Q<Button>("cat-stations");
+            if (catPower != null) catPower.clicked += () => buildCategory = BuildInfo.Category.Power;
+            if (catStations != null) catStations.clicked += () => buildCategory = BuildInfo.Category.Stations;
+            buildInfo = root.Q("build-info");
+            buildInfoTitle = root.Q<Label>("build-info-title");
+            buildInfoText = root.Q<Label>("build-info-text");
+            Button infoClose = root.Q<Button>("build-info-close");
+            if (infoClose != null) infoClose.clicked += () => infoShown = null;
+            foreach (var (mode, key) in new[] { (BuildMode.SolarPanel, "panel"), (BuildMode.FloatingSolar, "floating"), (BuildMode.Battery, "battery"),
+                                                (BuildMode.Workshop, "workshop"), (BuildMode.ChargingStation, "station"), (BuildMode.Relay, "relay") })
+            {
+                VisualElement item = root.Q("item-" + key);
+                Button info = root.Q<Button>("info-" + key);
+                if (item == null || info == null)
+                    continue;
+                BuildMode m = mode;
+                info.clicked += () => infoShown = infoShown == m ? (BuildMode?)null : m;
+                info.tooltip = "What it does";
+                buildItems[m] = (item, info);
+            }
             modeFloating = root.Q<Button>("mode-floating");
             if (modeFloating != null)
                 modeFloating.clicked += () => { if (placer != null) placer.Mode = BuildMode.FloatingSolar; };
@@ -191,6 +221,25 @@ namespace KardashevAscent.Presentation.UI
             Show(buildBar, siteOpen);
             if (siteOpen)
             {
+                // The selected building's category follows Tab too.
+                if (placer.Dragging || buildCategory != BuildInfo.CategoryOf(placer.Mode))
+                {
+                    bool userPickedTab = buildCategory != BuildInfo.CategoryOf(placer.Mode) && !placer.Dragging && lastModeSeen == placer.Mode;
+                    if (!userPickedTab) buildCategory = BuildInfo.CategoryOf(placer.Mode);
+                }
+                lastModeSeen = placer.Mode;
+                catPower?.EnableInClassList("selected", buildCategory == BuildInfo.Category.Power);
+                catStations?.EnableInClassList("selected", buildCategory == BuildInfo.Category.Stations);
+                foreach (var kv in buildItems)
+                {
+                    kv.Value.Item.style.display = BuildInfo.CategoryOf(kv.Key) == buildCategory ? DisplayStyle.Flex : DisplayStyle.None;
+                    kv.Value.Info.EnableInClassList("selected", infoShown == kv.Key);
+                }
+                if (infoShown.HasValue && buildInfoText != null)
+                {
+                    buildInfoTitle.text = BuildInfo.Title(infoShown.Value);
+                    buildInfoText.text = BuildInfo.Describe(infoShown.Value, placer);
+                }
                 NameButton(modePanel, "Solar panel", BuildMode.SolarPanel);
                 NameButton(modeBattery, "Battery yard", BuildMode.Battery);
                 NameButton(modeWorkshop, "Workshop", BuildMode.Workshop);
@@ -202,6 +251,7 @@ namespace KardashevAscent.Presentation.UI
                         ? "Let go over the site to build · Esc or right-click: cancel"
                         : "Drag a building onto the site · Tab: switch";
             }
+            Show(buildInfo, siteOpen && infoShown.HasValue);
             Show(mapHint, lightMap != null && !mapOn);
 
             // Panel-only controls hide while building batteries.

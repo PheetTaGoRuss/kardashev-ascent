@@ -51,5 +51,19 @@
 .build-bar { position: absolute; left: 50%; bottom: 12px; translate: -50% 0; align-items: center; }
 .build-row { margin-top: 0; margin-bottom: 4px; }
 .build-row .action-button { min-width: 110px; }
+.build-tabs { flex-direction: row; justify-content: center; margin-bottom: 4px; }
+.build-item { flex-direction: row; align-items: center; margin-right: 4px; }
+.build-item .action-button { margin-right: 0; }
+.info-button {
+    width: 20px; height: 20px; margin: 0 0 0 2px; padding: 0;
+    font-size: 12px; -unity-font-style: bold-and-italic;
+    color: var(--accent); background-color: rgba(143, 179, 255, 0.12);
+    border-width: 1px; border-color: rgba(143, 179, 255, 0.5); border-radius: 10px;
+}
+.info-button:hover { background-color: rgba(143, 179, 255, 0.3); }
+.info-button.selected { color: rgb(10, 14, 24); background-color: var(--accent); }
+.build-info { position: absolute; left: 50%; bottom: 130px; translate: -50% 0; width: 420px; }
+.build-info-head { flex-direction: row; justify-content: space-between; align-items: center; }
+.info-close { width: 22px; height: 22px; margin: 0; padding: 0; background-color: rgba(0, 0, 0, 0); border-width: 0; color: var(--text-muted); font-size: 16px; }
 .legend.above-build-bar { bottom: 100px; }
 .action-button.mode.selected { color: rgb(10, 14, 24); background-color: var(--accent); border-color: var(--accent); -unity-font-style: bold; }
