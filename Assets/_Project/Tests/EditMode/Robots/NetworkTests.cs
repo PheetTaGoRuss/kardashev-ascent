@@ -18,7 +18,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         static readonly HexSphere Sphere = HexSphere.Create(12);
         static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
 
-        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike);
+        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike) { ConstructionTimeEnabled = false };
 
         /// <summary>A land tile exactly this many hops from the base (−1 if none).</summary>
         static int LandTileAtHops(PlanetSimulation sim, int hops)

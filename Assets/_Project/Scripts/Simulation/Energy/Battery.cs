@@ -38,6 +38,12 @@ namespace KardashevAscent.Simulation.Energy
         public double MaxPowerW => CapacityWh * CRatePerHour;
         public double StateOfCharge => CapacityWh > 0.0 ? StoredWh / CapacityWh : 0.0;
 
+        /// <summary>
+        /// The share of capacity it may be charged to (0 to 1): a safety margin kept while the colony is unsure how hot
+        /// or cold its cells get (game rule). Energy already above it stays, but no more goes in.
+        /// </summary>
+        public double UsableShare { get; set; } = 1.0;
+
         /// <summary>Add capacity (a new battery built), keeping the energy already stored.</summary>
         public void AddCapacity(double wh)
         {
@@ -58,7 +64,9 @@ namespace KardashevAscent.Simulation.Energy
         {
             if (powerW <= 0.0 || hours <= 0.0)
                 return 0.0;
-            double room = CapacityWh - StoredWh;
+            double room = CapacityWh * Math.Max(0.0, Math.Min(1.0, UsableShare)) - StoredWh;
+            if (room <= 0.0)
+                return 0.0;
             double taken = Math.Min(Math.Min(powerW, MaxPowerW), room / (OneWayEfficiency * hours));
             taken = Math.Max(0.0, taken);
             StoredWh = Math.Min(CapacityWh, StoredWh + taken * OneWayEfficiency * hours);

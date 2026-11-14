@@ -59,3 +59,10 @@ python -m unittest discover tools/exoplanets
 - archive ไม่ได้ประกาศ rate limit แต่ให้ดึงครั้งเดียวแล้วใช้ cache ไม่ต้องดึงตอนเกมรัน
 
 ถ้าชื่อดาวไม่ตรงกับ `pl_name` ใน archive สคริปต์จะแจ้งชื่อที่หาไม่เจอ พร้อม query สำหรับหาชื่อที่ถูก
+
+## A hand-made planet with NASA values (Mars)
+
+A planet without an archive entry can still name a NASA source. `nasaSource` is the source; `nasaFields` lists the output
+fields that come from it (e.g. `solar.eccentricity`, `planet.radiusM`). Those are tagged `nasa` in the provenance,
+the rest stay `assumed`. Mars uses the NSSDC Mars Fact Sheet this way. Its solar longitude of perihelion
+(Ls = 250.87°, Allison & McEwen 2000) is tagged `literature`: the fact sheet's 336.04° is measured from Earth's equinox.

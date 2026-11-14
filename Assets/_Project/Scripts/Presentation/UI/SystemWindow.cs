@@ -19,6 +19,9 @@ namespace KardashevAscent.Presentation.UI
         /// <summary>Null when the system is available; otherwise why it is locked.</summary>
         public virtual string LockedReason(IPlanetSimulation sim) => null;
 
+        /// <summary>Width in pixels; 0 keeps the stylesheet's width. Windows with puzzles are wider so the text can be bigger.</summary>
+        protected virtual float Width => 0f;
+
         protected VisualElement Body { get; private set; }
         protected Label Subtitle { get; private set; }
         VisualElement panel;
@@ -32,6 +35,8 @@ namespace KardashevAscent.Presentation.UI
             panel.AddToClassList("workforce");
             panel.AddToClassList("panel");
             panel.AddToClassList("hidden");
+            if (Width > 0f)
+                panel.style.width = Width;   // the stylesheet's max-height (80 %) keeps it on screen under the tab bar
 
             var titleRow = new VisualElement();
             titleRow.AddToClassList("title-row");

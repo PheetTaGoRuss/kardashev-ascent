@@ -17,6 +17,7 @@ namespace KardashevAscent.Simulation.Game
             var state = new SimulationState
             {
                 PlanetId = PlanetId,
+                TerrainSeed = TerrainSeed,
                 Notebook = Notebook.Capture(),
                 MilestonesReached = MilestonesReached,
                 DayAveragePowerW = DayAveragePowerW,
@@ -31,7 +32,6 @@ namespace KardashevAscent.Simulation.Game
                 ColonyAverageGenerationW = Colony.AverageGenerationW,
                 ColonyDayEnergyWh = Colony.DayEnergyWh,
                 ColonyDayClockHours = Colony.DayClockHours,
-                BuildStockWh = Build.StockWh,
                 History = History.ToList(),
                 HistoryGeneratedWh = History.TotalGeneratedWh,
                 HistoryDemandWh = History.TotalDemandWh,
@@ -76,6 +76,9 @@ namespace KardashevAscent.Simulation.Game
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.ChargingStation });
             foreach (var c in relays)
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.Relay });
+            foreach (var c in researchStations)
+                state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.ResearchStation });
+            CaptureResearch(state);
             foreach (ManufacturingJob j in jobs)
                 state.Jobs.Add(new JobRecord
                 {
@@ -103,14 +106,15 @@ namespace KardashevAscent.Simulation.Game
                 if (footprintMap.TryGetFootprint(r.Tile, r.Slot, out List<int> f))
                     for (int i = 1; i < f.Count; i++) r.Covered.Add(f[i]);
             int order = 0;
-            var sites = new Dictionary<(int, int), (double Paid, int Order)>();
+            var sites = new Dictionary<(int, int), (double Paid, double Work, int Order)>();
             foreach (var site in Build.Sites())
-                sites[(site.Tile, site.Slot)] = (site.PaidWh, order++);
+                sites[(site.Tile, site.Slot)] = (site.Share, site.WorkDone, order++);
             foreach (BuildingRecord r in state.Buildings)
                 if (sites.TryGetValue((r.Tile, r.Slot), out var site))
                 {
                     r.UnderConstruction = true;
-                    r.PaidWh = site.Paid;
+                    r.PaidShare = site.Paid;
+                    r.WorkDoneHours = site.Work;
                     r.QueueOrder = site.Order;
                 }
             return state;
@@ -142,6 +146,8 @@ namespace KardashevAscent.Simulation.Game
                 RemoveBuilding(key.Tile, key.Slot);
             foreach (var key in new List<(int Tile, int Slot)>(relays))
                 RemoveBuilding(key.Tile, key.Slot);
+            foreach (var key in new List<(int Tile, int Slot)>(researchStations))
+                RemoveBuilding(key.Tile, key.Slot);
             TimeHours = state.TimeHours;
             MilestonesReached = Math.Max(0, Math.Min(10, state.MilestonesReached));
             DayAveragePowerW = Math.Max(0.0, state.DayAveragePowerW);
@@ -150,8 +156,9 @@ namespace KardashevAscent.Simulation.Game
             targetReached = MilestonesReached >= 10;
             Notebook.Restore(state.Notebook);
             UpdateStar();
-            // A version-1 save had no parts: every building in it is finished, and the colony keeps the lander's parts.
-            Build.Reset(state.Version >= 2 ? state.BuildStockWh : BuildCosts.LanderStockWh);
+            // Version 26 builds from materials: an older site keeps the share of its old cost in parts already paid.
+            restoringVersion = state.Version;
+            Build.Reset();
             var sitesInOrder = new List<BuildingRecord>();
             foreach (var r in state.Buildings)
             {
@@ -216,6 +223,7 @@ namespace KardashevAscent.Simulation.Game
                 foreach (LatitudePuzzle p in state.LatitudePuzzles)
                     if (p != null && p.Tile >= 0 && p.Tile < TileCount)
                         latitudePuzzles.Add(p);
+            RestoreResearch(state);
             measureOrders.Clear();
             if (state.MeasureOrders != null)
                 foreach (MeasureOrderRecord mo in state.MeasureOrders)
@@ -224,6 +232,10 @@ namespace KardashevAscent.Simulation.Game
             if (state.MaterialsKg != null)
                 foreach (MaterialRecord m in state.MaterialsKg)
                     Materials.Set(m.Material, m.Kg);
+            // Before version 26 the colony built from parts; it gets the lander's cargo of materials instead (game rule).
+            if (state.Version < 26)
+                foreach (var (m, kg) in BuildCosts.LanderCargo.Items())
+                    Materials.Add(m, kg);
             if (state.SurveyOrders != null)
                 foreach (int tile in state.SurveyOrders)
                     if (tile >= 0 && tile < TileCount && !Deposits.IsSurveyed(tile) && !surveyOrders.Contains(tile))
@@ -264,6 +276,20 @@ namespace KardashevAscent.Simulation.Game
             return true;
         }
 
+        int restoringVersion = SimulationState.CurrentVersion;
+
+        /// <summary>Work saved for a site (version 27), or null for an older save (work as far as its materials).</summary>
+        double? WorkOf(BuildingRecord r) => restoringVersion >= 27 ? r.WorkDoneHours : (double?)null;
+
+        /// <summary>Share of a saved site already paid: saved as a share since version 26, as parts (Wh) before.</summary>
+        double PaidShareOf(BuildingRecord r, double areaM2)
+        {
+            if (restoringVersion >= 26)
+                return r.PaidShare;
+            double cost = LegacyCostWh(r.Type, areaM2);
+            return cost > 0.0 ? Math.Max(0.0, Math.Min(1.0, r.PaidWh / cost)) : 0.0;
+        }
+
         void Restore(BuildingRecord r, bool site)
         {
             if (r.Type == BuildingType.SolarPanel || r.Type == BuildingType.FloatingSolar)
@@ -274,35 +300,42 @@ namespace KardashevAscent.Simulation.Game
                 if (floating) floatingPanels.Add((r.Tile, r.Slot));
                 // Saves before version 5 have no area: their panels are base panel fields.
                 double area = r.AreaM2 > 0.0 ? r.AreaM2 : PanelAreaM2;
-                if (site) Build.RestoreSite(r.Tile, r.Slot, PanelCost(area) * (floating ? FloatingCostFactor : 1.0), r.PaidWh);
+                if (site) Build.RestoreSite(r.Tile, r.Slot, PanelCost(area).Times(floating ? FloatingCostFactor : 1.0), PaidShareOf(r, area), WorkOf(r));
                 AddPanel(r.Tile, r.Slot, r.Tilt, r.Azimuth, area);
             }
             else if (r.Type == BuildingType.ChargingStation)
             {
                 if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
                     return;
-                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildCostWh(BuildingType.ChargingStation), r.PaidWh);
+                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildBill(BuildingType.ChargingStation), PaidShareOf(r, 0.0), WorkOf(r));
                 stations.Add((r.Tile, r.Slot));
+            }
+            else if (r.Type == BuildingType.ResearchStation)
+            {
+                if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
+                    return;
+                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildBill(BuildingType.ResearchStation), PaidShareOf(r, 0.0), WorkOf(r));
+                researchStations.Add((r.Tile, r.Slot));
             }
             else if (r.Type == BuildingType.Relay)
             {
                 if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
                     return;
-                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildCostWh(BuildingType.Relay), r.PaidWh);
+                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildBill(BuildingType.Relay), PaidShareOf(r, 0.0), WorkOf(r));
                 relays.Add((r.Tile, r.Slot));
             }
             else if (r.Type == BuildingType.Workshop)
             {
                 if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
                     return;
-                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildCostWh(BuildingType.Workshop), r.PaidWh);
+                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildBill(BuildingType.Workshop), PaidShareOf(r, 0.0), WorkOf(r));
                 workshops.Add((r.Tile, r.Slot));
             }
             else if (r.Type == BuildingType.Battery)
             {
                 if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
                     return;
-                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildCostWh(BuildingType.Battery), r.PaidWh);
+                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildBill(BuildingType.Battery), PaidShareOf(r, 0.0), WorkOf(r));
                 else Grid.Battery.AddCapacity(BatteryUnitWh);
                 AddBattery(r.Tile, r.Slot);
             }

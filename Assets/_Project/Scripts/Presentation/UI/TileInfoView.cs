@@ -36,6 +36,7 @@ namespace KardashevAscent.Presentation.UI
         Label title, place, sunlight, bestLabel, bestCaption, sunPathCaption, monthlyCaption, monthlyHover, legend1, legend2;
         SunPathChart sunPath;
         int shownTile = -1;
+        bool shownKnowsLatitude;
         double shownTilt = double.NaN, shownAzimuth = double.NaN;
         double[] months;
         float nextRefresh;
@@ -49,6 +50,7 @@ namespace KardashevAscent.Presentation.UI
             ScreenInput.Register(root.panel);
 
             panelRoot = root.Q("tile-info");
+            PanelDrag.AddGrip(panelRoot);   // drag it anywhere (director 2026-11-14)
             title = root.Q<Label>("title");
             place = root.Q<Label>("place");
             sunlight = root.Q<Label>("sunlight");
@@ -108,8 +110,11 @@ namespace KardashevAscent.Presentation.UI
                 return;
             }
 
-            if (tile != shownTile)
+            // The tile's place and sun path appear once its latitude is measured (director 2026-11-14).
+            bool knows = sim.Notebook != null && sim.Notebook.KnowsLatitude(tile);
+            if (tile != shownTile || knows != shownKnowsLatitude)
             {
+                shownKnowsLatitude = knows;
                 shownTile = tile;
                 shownTilt = shownAzimuth = double.NaN;
                 ShowTile(sim, tile);
@@ -138,8 +143,9 @@ namespace KardashevAscent.Presentation.UI
                 return;
             landingShape = shape;
             landingActions.Clear();
-            if (landing && water)
-                landingText.text = "The lander needs land: pick a tile that isn't sea.";
+            string problem = Terrains.LandingProblem(sim.GetTile(tile).Terrain);
+            if (landing && problem != null)
+                landingText.text = problem + " Pick another tile.";
             else if (landing)
             {
                 landingText.text = "Land the colony here? Time starts when the lander is down, and the colony can't move afterwards.";
@@ -261,7 +267,11 @@ namespace KardashevAscent.Presentation.UI
             TileInfo info = sim.GetTile(tile);
             double latDeg = info.Latitude * Mathf.Rad2Deg, lonDeg = info.Longitude * Mathf.Rad2Deg;
             title.text = $"Tile #{tile} · {Pretty(info.Terrain)}";
-            place.text = $"{Math.Abs(latDeg):0.0}° {(latDeg >= 0 ? "N" : "S")}, {Math.Abs(lonDeg):0.0}° {(lonDeg >= 0 ? "E" : "W")}" +
+            // Where the tile is stays unknown until the colony measures a latitude (sky view, V): the map then gives it.
+            bool knowsLatitude = sim.Notebook != null && sim.Notebook.KnowsLatitude(tile);
+            place.text = (knowsLatitude
+                             ? $"{Math.Abs(latDeg):0.0}° {(latDeg >= 0 ? "N" : "S")}, {Math.Abs(lonDeg):0.0}° {(lonDeg >= 0 ? "E" : "W")}"
+                             : "Latitude unknown (measure it: V)") +
                          (!info.IsBuildableLand ? (Terrains.AllowsFloating(info.Terrain) ? " · floating solar only" : " · no building on water") : $" · {sim.SlotCount(tile)} building slots");
 
             PlanetSolarParams planet = runner.SolarParams;
@@ -269,6 +279,12 @@ namespace KardashevAscent.Presentation.UI
             {
                 sunPathCaption.text = "Tidally locked: the star stands still in this tile's sky.";
                 sunPath.SetPaths(null, null, null, info.Latitude);
+                return;
+            }
+            if (!knowsLatitude)
+            {
+                sunPathCaption.text = "The sun's path here needs your latitude: measure it in the sky view (V).";
+                sunPath.SetPaths(null, null, null, 0.0);
                 return;
             }
             // "June" solstice = the northern summer one: δ = +ε. Name them by what they are here.

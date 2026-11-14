@@ -106,7 +106,7 @@ namespace KardashevAscent.Presentation.UI
             subtitle.text = $"{toggleKey}: close";
             summary.text = $"{w.Robots.Count} robot{(w.Robots.Count == 1 ? "" : "s")} · {working} working · " +
                            $"{sim.ConstructionQueueCount} site{(sim.ConstructionQueueCount == 1 ? "" : "s")} waiting · " +
-                           $"build parts {Format.Energy(sim.BuildStockWh)}" +
+                           (sim.ConstructionShortfall.IsEmpty ? "materials in stock" : $"sites short of {sim.ConstructionShortfall.Describe()}") +
                            (w.Tasks.Count(TaskState.Blocked) > 0 ? $" · {w.Tasks.Count(TaskState.Blocked)} blocked" : "") +
                            (w.Tasks.Count(TaskState.AssistanceNeeded) > 0 ? $" · {w.Tasks.Count(TaskState.AssistanceNeeded)} need help" : "");
             notes.text =
@@ -347,6 +347,10 @@ namespace KardashevAscent.Presentation.UI
                 case TaskKind.Mine: return $"Mine {Materials.Name((Material)t.Slot).ToLowerInvariant()} · tile {t.Tile}";
                 case TaskKind.Manufacture:
                     return t.Order < sim.Jobs.Count ? $"Workshop: {sim.Jobs[t.Order].Describe()}" : "Workshop job";
+                case TaskKind.Measure:
+                    return $"Measure {KardashevAscent.Simulation.Solar.SolarUnknowns.Name((KardashevAscent.Simulation.Solar.SolarParameter)t.Slot).ToLowerInvariant()} · Research Station, tile {t.Tile}";
+                case TaskKind.Experiment:
+                    return $"Experiment: {KardashevAscent.Simulation.Planet.Experiments.Name((KardashevAscent.Simulation.Planet.ExperimentKind)t.Slot).ToLowerInvariant()} · Research Station, tile {t.Tile}";
                 default: return t.ToString();
             }
         }
@@ -492,7 +496,7 @@ namespace KardashevAscent.Presentation.UI
             upgrades.AddToClassList("button-row");
             string have = "";
             foreach (RobotModule m in new[] { RobotModule.BigBattery, RobotModule.FastDrive, RobotModule.Shielding, RobotModule.ThermalInsulation,
-                                              RobotModule.Processor, RobotModule.AdvancedProcessor })
+                                              RobotModule.Processor, RobotModule.AdvancedProcessor, RobotModule.Boat })
             {
                 if (r.Has(m))
                 {
@@ -592,8 +596,8 @@ namespace KardashevAscent.Presentation.UI
                 return $"Charging {at} until 80 %";
             if (r.Activity == RobotActivity.Maintenance)
                 return r.Battery.WornOut
-                    ? $"Maintenance {at}: new battery ({Format.Energy(BuildCosts.Battery(r.Battery.NominalWh))} of build parts)"
-                    : $"Maintenance {at}: repairs use build parts";
+                    ? $"Maintenance {at}: new battery ({BuildCosts.BatteryCells(r.Battery.NominalWh).Describe()})"
+                    : $"Maintenance {at}: repairs use iron";
             if (r.NeedsCharge)
                 return "Battery below 20 %: waiting for a free charger";
             string repairNote = !r.NeedsMaintenance ? ""
@@ -613,7 +617,8 @@ namespace KardashevAscent.Presentation.UI
             if (t.Kind == TaskKind.Build)
             {
                 double progress = sim.ConstructionProgress(t.Tile, t.Slot);
-                string waiting = sim.BuildStockWh <= 0.0 && sim.BuildPowerW <= 0.0 ? " · waiting for spare power" : "";
+                KardashevAscent.Simulation.Resources.MaterialBill lack = sim.ConstructionRemainingAt(t.Tile, t.Slot).Minus(sim.Materials);
+                string waiting = lack.IsEmpty ? "" : $" · waiting for {lack.Describe()}";
                 return $"Building a {what} · tile {t.Tile}, slot {t.Slot} · {progress * 100.0:0} %{waiting}{repairNote}";
             }
             if (t.Kind == TaskKind.Survey)

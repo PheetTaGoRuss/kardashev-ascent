@@ -56,7 +56,8 @@ namespace KardashevAscent.Simulation.Robots
             {
                 case TaskKind.Salvage: return SalvagePowerW;
                 case TaskKind.Survey:
-                case TaskKind.Measure: return SurveyPowerW;
+                case TaskKind.Measure:
+                case TaskKind.Experiment: return SurveyPowerW;
                 case TaskKind.Mine: return MinePowerW;
                 case TaskKind.Manufacture: return BuildPowerW;
                 default: return BuildPowerW;
@@ -97,8 +98,6 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>Condition restored per hour of maintenance. TBD (D4).</summary>
         public const double RepairPerHour = 0.10;
 
-        /// <summary>Build parts for a full repair (condition 0 → 1), Wh. TBD (D4); manufacture (phase 3) must cost more.</summary>
-        public const double RepairPartsWh = 10_000.0;
 
         /// <summary>Iron for a full repair (spec v2 §8: basic maintenance uses basic materials), kg. TBD.</summary>
         public const double RepairIronKg = 20.0;

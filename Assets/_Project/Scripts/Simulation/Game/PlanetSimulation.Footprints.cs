@@ -37,6 +37,8 @@ namespace KardashevAscent.Simulation.Game
             TerrainType ground = GetTile(tileId).Terrain;
             if (type == BuildingType.FloatingSolar ? !Terrains.AllowsFloating(ground) : !Terrains.IsBuildableLand(ground))
                 return false;
+            if (KnowledgeBlocker(type) != null)
+                return false;   // the colony doesn't know enough yet (director 2026-11-14)
             foreach (int s in FootprintFor(type, tileId, slot))
                 if (GetBuilding(tileId, s) != BuildingType.None) return false;
             return true;
@@ -72,7 +74,7 @@ namespace KardashevAscent.Simulation.Game
         {
             if (!CanPlace(BuildingType.ChargingStation, tileId, slot))
                 return false;
-            Build.Start(tileId, slot, BuildCostWh(BuildingType.ChargingStation), 0.0, false);
+            Build.Start(tileId, slot, BuildBill(BuildingType.ChargingStation));
             stations.Add((tileId, slot));
             Occupy(tileId, FootprintFor(BuildingType.ChargingStation, tileId, slot));
             Settle((tileId, slot));

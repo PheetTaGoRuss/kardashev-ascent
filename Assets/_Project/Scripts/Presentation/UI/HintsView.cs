@@ -68,7 +68,7 @@ namespace KardashevAscent.Presentation.UI
                     step++;
             }
 
-            bool show = !skipped && sim != null && step < Steps && (chooser == null || !chooser.Visible) && GameFlow.IsPlaying;
+            bool show = !skipped && sim != null && step < Steps && (chooser == null || !chooser.Visible) && GameFlow.IsPlaying && !GameFlow.InSetup;
             panelRoot.EnableInClassList("hidden", !show);
             if (!show)
                 return;
@@ -114,7 +114,7 @@ namespace KardashevAscent.Presentation.UI
                     return $"Press {(colony != null ? colony.ToggleKey.ToString() : "C")} for the colony overview: a week of power, your K and the next milestone.";
                 case 4:
                     double next = Kardashev.PowerForMilestone(1, sim.TypeITargetW);
-                    return $"Reach milestone 1: {Format.Power(next)} used through a whole day. Spare power makes build parts, so every panel pays for more.";
+                    return $"Reach milestone 1: {Format.Power(next)} used through a whole day. Buildings take materials: survey and mine iron, copper and lithium for more.";
                 default:
                     return "";
             }

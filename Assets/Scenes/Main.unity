@@ -281,6 +281,12 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 93a58c0eea033ca418bc06a491d3d9f2, type: 2}
   - {fileID: 11400000, guid: e35202030835a8b4bbc0206e81b5706c, type: 2}
   - {fileID: 11400000, guid: 41ae22834ea85044db7c2d9b7f8d92e3, type: 2}
+  - {fileID: 11400000, guid: 5a7ba5a51da69aa459520ae6a92fa546, type: 2}
+  - {fileID: 11400000, guid: eac9e3ca5e1ca554d92ce5405c034851, type: 2}
+  - {fileID: 11400000, guid: f6bc539d97db04c4e909a3b22fd89f1d, type: 2}
+  - {fileID: 11400000, guid: fb7db05d161aab54abf15684c45cf8ed, type: 2}
+  - {fileID: 11400000, guid: da112e9474b29554c93dd114c170d3d5, type: 2}
+  - {fileID: 11400000, guid: 84af09427ba90c04d924ac67ea6511c2, type: 2}
   startPlanet: 0
   startSpeed: 2
 --- !u!4 &123573324
@@ -746,6 +752,8 @@ MonoBehaviour:
   iceAroundSubStellar: 0
   liquidWater: 1
   airTemperatureC: 15
+  reliefScale: 0.015
+  showFeatures: 1
   borderWidth: 0.07
   borderDarken: 0.3
   deepOcean: {r: 0.05, g: 0.16, b: 0.36, a: 0.75}
@@ -891,6 +899,7 @@ MonoBehaviour:
   ghostCanPlace: {r: 0.45, g: 0.85, b: 1, a: 0.5}
   ghostBlocked: {r: 1, g: 0.38, b: 0.3, a: 0.5}
   siteTint: {r: 1, g: 0.72, b: 0.25, a: 0.55}
+  shortTint: {r: 1, g: 0.22, b: 0.18, a: 0.6}
   panelScale: 0.78
   previewInterval: 0.05
 --- !u!114 &765499592

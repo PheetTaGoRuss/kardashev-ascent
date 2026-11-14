@@ -1,7 +1,7 @@
 {
   "generatedBy": "tools/exoplanets/fetch_exoplanets.py",
   "archive": "NASA Exoplanet Archive (https://exoplanetarchive.ipac.caltech.edu), table pscomppars",
-  "retrieved": "2026-11-08",
+  "retrieved": "2026-11-14",
   "units": "SI unless the field name says otherwise; angles in degrees",
   "planets": [
     {
@@ -204,7 +204,7 @@
       "displayName": "Proxima Centauri b",
       "archiveName": "Proxima Cen b",
       "source": "NASA Exoplanet Archive, table pscomppars",
-      "retrieved": "2026-11-08",
+      "retrieved": "2026-11-14",
       "solar": {
         "luminosityW": 5.780320630408608e+23,
         "semiMajorAxisM": 7252504771.536,
@@ -417,7 +417,7 @@
       "displayName": "TRAPPIST-1 e",
       "archiveName": "TRAPPIST-1 e",
       "source": "NASA Exoplanet Archive, table pscomppars",
-      "retrieved": "2026-11-08",
+      "retrieved": "2026-11-14",
       "solar": {
         "luminosityW": 2.116907731641514e+23,
         "semiMajorAxisM": 4375737717.975,
@@ -636,7 +636,7 @@
       "displayName": "Kepler-16 b",
       "archiveName": "Kepler-16 b",
       "source": "NASA Exoplanet Archive, table pscomppars",
-      "retrieved": "2026-11-08",
+      "retrieved": "2026-11-14",
       "solar": {
         "luminosityW": 4.785881367413777e+25,
         "semiMajorAxisM": 105436579269.36,
@@ -849,7 +849,7 @@
       "displayName": "Kepler-452 b",
       "archiveName": "Kepler-452 b",
       "source": "NASA Exoplanet Archive, table pscomppars",
-      "retrieved": "2026-11-08",
+      "retrieved": "2026-11-14",
       "solar": {
         "luminosityW": 4.6499890383241664e+26,
         "semiMajorAxisM": 156479372752.2,
@@ -920,6 +920,1290 @@
           "field": "star.spectralType",
           "origin": "nasa",
           "note": "st_spectype"
+        },
+        {
+          "field": "star.ageGyr",
+          "origin": "nasa",
+          "note": "st_age"
+        },
+        {
+          "field": "star.count",
+          "origin": "nasa",
+          "note": "sy_snum"
+        },
+        {
+          "field": "solar.semiMajorAxisM",
+          "origin": "nasa",
+          "note": "pl_orbsmax (au)"
+        },
+        {
+          "field": "solar.eccentricity",
+          "origin": "nasa",
+          "note": "pl_orbeccen"
+        },
+        {
+          "field": "solar.yearLengthHours",
+          "origin": "nasa",
+          "note": "pl_orbper (days)"
+        },
+        {
+          "field": "flags.tidallyLocked",
+          "origin": "assumed",
+          "note": "rotation is not measured for exoplanets"
+        },
+        {
+          "field": "flags.clouds",
+          "origin": "assumed",
+          "note": "earth = NASA POWER cloud climatology by latitude and month; none = clear sky (cloud cover unknown)"
+        },
+        {
+          "field": "flags.circumbinary",
+          "origin": "nasa",
+          "note": "cb_flag: planet orbits both stars"
+        },
+        {
+          "field": "solar.dayLengthHours",
+          "origin": "assumed",
+          "note": "solar day, game value"
+        },
+        {
+          "field": "solar.obliquityDeg",
+          "origin": "assumed",
+          "note": "axial tilt, game value"
+        },
+        {
+          "field": "solar.perihelionLongitudeDeg",
+          "origin": "assumed",
+          "note": "equinox -> periapsis, game value"
+        },
+        {
+          "field": "solar.opticalDepth",
+          "origin": "assumed",
+          "note": "broadband tau, game value"
+        },
+        {
+          "field": "solar.surfacePressureEarth",
+          "origin": "assumed",
+          "note": "surface pressure in Earth atmospheres, game value"
+        },
+        {
+          "field": "solar.diffuseK",
+          "origin": "assumed",
+          "note": "diffuse-light k, game value"
+        },
+        {
+          "field": "planet.insolationWm2",
+          "origin": "nasa",
+          "note": "pl_insol (Earth flux) x 1361 W/m^2"
+        },
+        {
+          "field": "planet.radiusM",
+          "origin": "nasa",
+          "note": "pl_rade"
+        },
+        {
+          "field": "planet.massKg",
+          "origin": "nasa",
+          "note": "pl_bmasse (may be M sin i)"
+        },
+        {
+          "field": "flags.surface",
+          "origin": "derived",
+          "note": "radius bins: rocky <= 1.6, gaseous >= 2.0 R_earth (Rogers 2015; Fulton 2017)"
+        },
+        {
+          "field": "planet.surfaceGravityMs2",
+          "origin": "derived",
+          "note": "g = GM/R^2"
+        },
+        {
+          "field": "planet.escapeVelocityMs",
+          "origin": "derived",
+          "note": "v = sqrt(2GM/R)"
+        },
+        {
+          "field": "planet.bondAlbedo",
+          "origin": "assumed",
+          "note": "game value"
+        },
+        {
+          "field": "planet.equilibriumTempK",
+          "origin": "nasa",
+          "note": "pl_eqt (albedo assumption varies by paper)"
+        },
+        {
+          "field": "solar.airTemperatureC",
+          "origin": "derived",
+          "note": "equilibrium temperature + greenhouse offset 0 K (assumed)"
+        },
+        {
+          "field": "look.terrainSeed",
+          "origin": "assumed",
+          "note": "terrain noise seed from the planet id"
+        },
+        {
+          "field": "look.water",
+          "origin": "assumed",
+          "note": "surface water is not measurable for exoplanets yet"
+        },
+        {
+          "field": "look.oceanFraction",
+          "origin": "assumed",
+          "note": "share of the surface in low basins (seas, or dry basins), game value"
+        },
+        {
+          "field": "chemistry.metallicityDex",
+          "origin": "nasa",
+          "note": "st_met ([Fe/H])"
+        },
+        {
+          "field": "chemistry.ironMassFraction",
+          "origin": "assumed",
+          "note": "composition not measured: Earth-like 32 wt % iron assumed"
+        }
+      ]
+    },
+    {
+      "id": "mars",
+      "displayName": "Mars",
+      "archiveName": "",
+      "source": "NASA NSSDC Mars Fact Sheet (updated 2025-05-19)",
+      "retrieved": "",
+      "solar": {
+        "luminosityW": 3.828e+26,
+        "semiMajorAxisM": 227956038589.6944,
+        "eccentricity": 0.0935,
+        "yearLengthHours": 16487.52,
+        "dayLengthHours": 24.6597,
+        "obliquityDeg": 25.19,
+        "perihelionLongitudeDeg": 250.87,
+        "opticalDepth": 0.5,
+        "surfacePressureEarth": 0.00628,
+        "diffuseK": 0.3,
+        "airTemperatureC": -59.0
+      },
+      "star": {
+        "teffK": 5772.0,
+        "count": 1
+      },
+      "planet": {
+        "insolationWm2": 586.2189626902373,
+        "radiusM": 3393149.2,
+        "massKg": 6.390254e+23,
+        "surfaceGravityMs2": 3.7044004790761145,
+        "escapeVelocityMs": 5013.897390664618,
+        "bondAlbedo": 0.25,
+        "equilibriumTempK": 209.82747259769226
+      },
+      "flags": {
+        "tidallyLocked": false,
+        "clouds": "none",
+        "circumbinary": false,
+        "surface": "rocky"
+      },
+      "look": {
+        "terrainSeed": 1964534311,
+        "water": "none",
+        "oceanFraction": 0.33
+      },
+      "chemistry": {
+        "metallicityDex": 0.0,
+        "ironMassFraction": 0.32
+      },
+      "provenance": [
+        {
+          "field": "solar.luminosityW",
+          "origin": "assumed",
+          "note": "planets.json luminositySun"
+        },
+        {
+          "field": "star.teffK",
+          "origin": "assumed",
+          "note": "planets.json"
+        },
+        {
+          "field": "star.count",
+          "origin": "assumed",
+          "note": "sy_snum"
+        },
+        {
+          "field": "solar.semiMajorAxisM",
+          "origin": "nasa",
+          "note": "NASA NSSDC Mars Fact Sheet (updated 2025-05-19)"
+        },
+        {
+          "field": "solar.eccentricity",
+          "origin": "nasa",
+          "note": "NASA NSSDC Mars Fact Sheet (updated 2025-05-19)"
+        },
+        {
+          "field": "solar.yearLengthHours",
+          "origin": "nasa",
+          "note": "NASA NSSDC Mars Fact Sheet (updated 2025-05-19)"
+        },
+        {
+          "field": "flags.tidallyLocked",
+          "origin": "assumed",
+          "note": "rotation is not measured for exoplanets"
+        },
+        {
+          "field": "flags.clouds",
+          "origin": "assumed",
+          "note": "earth = NASA POWER cloud climatology by latitude and month; none = clear sky (cloud cover unknown)"
+        },
+        {
+          "field": "flags.circumbinary",
+          "origin": "assumed",
+          "note": "cb_flag: planet orbits both stars"
+        },
+        {
+          "field": "solar.dayLengthHours",
+          "origin": "nasa",
+          "note": "NASA NSSDC Mars Fact Sheet (updated 2025-05-19)"
+        },
+        {
+          "field": "solar.obliquityDeg",
+          "origin": "nasa",
+          "note": "NASA NSSDC Mars Fact Sheet (updated 2025-05-19)"
+        },
+        {
+          "field": "solar.perihelionLongitudeDeg",
+          "origin": "literature",
+          "note": "Mars solar longitude of perihelion Ls = 250.87 deg (Allison & McEwen 2000, NASA GISS Mars24); the fact sheet's 336.04 deg is measured from Earth's equinox"
+        },
+        {
+          "field": "solar.opticalDepth",
+          "origin": "assumed",
+          "note": "broadband tau, game value"
+        },
+        {
+          "field": "solar.surfacePressureEarth",
+          "origin": "nasa",
+          "note": "NASA NSSDC Mars Fact Sheet (updated 2025-05-19)"
+        },
+        {
+          "field": "solar.diffuseK",
+          "origin": "assumed",
+          "note": "diffuse-light k, game value"
+        },
+        {
+          "field": "planet.insolationWm2",
+          "origin": "derived",
+          "note": "L / (4 pi a^2)"
+        },
+        {
+          "field": "planet.radiusM",
+          "origin": "nasa",
+          "note": "NASA NSSDC Mars Fact Sheet (updated 2025-05-19)"
+        },
+        {
+          "field": "planet.massKg",
+          "origin": "nasa",
+          "note": "NASA NSSDC Mars Fact Sheet (updated 2025-05-19)"
+        },
+        {
+          "field": "flags.surface",
+          "origin": "derived",
+          "note": "radius bins: rocky <= 1.6, gaseous >= 2.0 R_earth (Rogers 2015; Fulton 2017)"
+        },
+        {
+          "field": "planet.surfaceGravityMs2",
+          "origin": "derived",
+          "note": "g = GM/R^2"
+        },
+        {
+          "field": "planet.escapeVelocityMs",
+          "origin": "derived",
+          "note": "v = sqrt(2GM/R)"
+        },
+        {
+          "field": "planet.bondAlbedo",
+          "origin": "nasa",
+          "note": "NASA NSSDC Mars Fact Sheet (updated 2025-05-19)"
+        },
+        {
+          "field": "planet.equilibriumTempK",
+          "origin": "derived",
+          "note": "[L(1-A)/(16 pi sigma a^2)]^(1/4)"
+        },
+        {
+          "field": "solar.airTemperatureC",
+          "origin": "nasa",
+          "note": "NASA NSSDC Mars Fact Sheet (updated 2025-05-19)"
+        },
+        {
+          "field": "look.terrainSeed",
+          "origin": "assumed",
+          "note": "terrain noise seed from the planet id"
+        },
+        {
+          "field": "look.water",
+          "origin": "assumed",
+          "note": "surface water is not measurable for exoplanets yet"
+        },
+        {
+          "field": "look.oceanFraction",
+          "origin": "assumed",
+          "note": "share of the surface in low basins (seas, or dry basins), game value"
+        },
+        {
+          "field": "chemistry.metallicityDex",
+          "origin": "assumed",
+          "note": "not in the archive: solar metallicity assumed"
+        },
+        {
+          "field": "chemistry.ironMassFraction",
+          "origin": "assumed",
+          "note": "composition not measured: Earth-like 32 wt % iron assumed"
+        }
+      ]
+    },
+    {
+      "id": "trappist-1-f",
+      "displayName": "TRAPPIST-1 f",
+      "archiveName": "TRAPPIST-1 f",
+      "source": "NASA Exoplanet Archive, table pscomppars",
+      "retrieved": "2026-11-14",
+      "solar": {
+        "luminosityW": 2.116907731641514e+23,
+        "semiMajorAxisM": 5758022043.243,
+        "eccentricity": 0.01007,
+        "yearLengthHours": 220.98095999999998,
+        "dayLengthHours": 0.0,
+        "obliquityDeg": 0.0,
+        "perihelionLongitudeDeg": 0.0,
+        "opticalDepth": 0.32,
+        "surfacePressureEarth": 1.0,
+        "diffuseK": 0.3,
+        "airTemperatureC": -55.44999999999999
+      },
+      "star": {
+        "teffK": 2566.0,
+        "radiusM": 82927440.0,
+        "massKg": 1.78564606e+29,
+        "spectralType": "M8.0 V",
+        "ageGyr": 7.6,
+        "count": 1
+      },
+      "planet": {
+        "insolationWm2": 507.653,
+        "radiusM": 6665114.5,
+        "massKg": 6.205115799999999e+24,
+        "surfaceGravityMs2": 9.322671583050607,
+        "escapeVelocityMs": 11147.795615899007,
+        "bondAlbedo": 0.3,
+        "equilibriumTempK": 217.7
+      },
+      "flags": {
+        "tidallyLocked": true,
+        "clouds": "none",
+        "circumbinary": false,
+        "surface": "rocky"
+      },
+      "look": {
+        "terrainSeed": 106353741,
+        "water": "liquid",
+        "oceanFraction": 0.85
+      },
+      "chemistry": {
+        "metallicityDex": 0.052,
+        "ironMassFraction": 0.21
+      },
+      "provenance": [
+        {
+          "field": "solar.luminosityW",
+          "origin": "nasa",
+          "note": "st_lum = log10(L/Lsun)"
+        },
+        {
+          "field": "star.teffK",
+          "origin": "nasa",
+          "note": "st_teff"
+        },
+        {
+          "field": "star.radiusM",
+          "origin": "nasa",
+          "note": "st_rad"
+        },
+        {
+          "field": "star.massKg",
+          "origin": "nasa",
+          "note": "st_mass"
+        },
+        {
+          "field": "star.spectralType",
+          "origin": "nasa",
+          "note": "st_spectype"
+        },
+        {
+          "field": "star.ageGyr",
+          "origin": "nasa",
+          "note": "st_age"
+        },
+        {
+          "field": "star.count",
+          "origin": "nasa",
+          "note": "sy_snum"
+        },
+        {
+          "field": "solar.semiMajorAxisM",
+          "origin": "nasa",
+          "note": "pl_orbsmax (au)"
+        },
+        {
+          "field": "solar.eccentricity",
+          "origin": "nasa",
+          "note": "pl_orbeccen"
+        },
+        {
+          "field": "solar.yearLengthHours",
+          "origin": "nasa",
+          "note": "pl_orbper (days)"
+        },
+        {
+          "field": "flags.tidallyLocked",
+          "origin": "assumed",
+          "note": "rotation is not measured for exoplanets"
+        },
+        {
+          "field": "flags.clouds",
+          "origin": "assumed",
+          "note": "earth = NASA POWER cloud climatology by latitude and month; none = clear sky (cloud cover unknown)"
+        },
+        {
+          "field": "flags.circumbinary",
+          "origin": "nasa",
+          "note": "cb_flag: planet orbits both stars"
+        },
+        {
+          "field": "solar.dayLengthHours",
+          "origin": "assumed",
+          "note": "tidally locked: star fixed in the sky, 0 = no solar day"
+        },
+        {
+          "field": "solar.obliquityDeg",
+          "origin": "assumed",
+          "note": "tidally locked: obliquity damped to ~0"
+        },
+        {
+          "field": "solar.perihelionLongitudeDeg",
+          "origin": "assumed",
+          "note": "equinox -> periapsis, game value"
+        },
+        {
+          "field": "solar.opticalDepth",
+          "origin": "assumed",
+          "note": "broadband tau, game value"
+        },
+        {
+          "field": "solar.surfacePressureEarth",
+          "origin": "assumed",
+          "note": "surface pressure in Earth atmospheres, game value"
+        },
+        {
+          "field": "solar.diffuseK",
+          "origin": "assumed",
+          "note": "diffuse-light k, game value"
+        },
+        {
+          "field": "planet.insolationWm2",
+          "origin": "nasa",
+          "note": "pl_insol (Earth flux) x 1361 W/m^2"
+        },
+        {
+          "field": "planet.radiusM",
+          "origin": "nasa",
+          "note": "pl_rade"
+        },
+        {
+          "field": "planet.massKg",
+          "origin": "nasa",
+          "note": "pl_bmasse (may be M sin i)"
+        },
+        {
+          "field": "flags.surface",
+          "origin": "derived",
+          "note": "radius bins: rocky <= 1.6, gaseous >= 2.0 R_earth (Rogers 2015; Fulton 2017)"
+        },
+        {
+          "field": "planet.surfaceGravityMs2",
+          "origin": "derived",
+          "note": "g = GM/R^2"
+        },
+        {
+          "field": "planet.escapeVelocityMs",
+          "origin": "derived",
+          "note": "v = sqrt(2GM/R)"
+        },
+        {
+          "field": "planet.bondAlbedo",
+          "origin": "assumed",
+          "note": "game value"
+        },
+        {
+          "field": "planet.equilibriumTempK",
+          "origin": "nasa",
+          "note": "pl_eqt (albedo assumption varies by paper)"
+        },
+        {
+          "field": "solar.airTemperatureC",
+          "origin": "derived",
+          "note": "equilibrium temperature + greenhouse offset 0 K (assumed)"
+        },
+        {
+          "field": "look.terrainSeed",
+          "origin": "assumed",
+          "note": "terrain noise seed from the planet id"
+        },
+        {
+          "field": "look.water",
+          "origin": "assumed",
+          "note": "surface water is not measurable for exoplanets yet"
+        },
+        {
+          "field": "look.oceanFraction",
+          "origin": "assumed",
+          "note": "share of the surface in low basins (seas, or dry basins), game value"
+        },
+        {
+          "field": "chemistry.metallicityDex",
+          "origin": "nasa",
+          "note": "st_met ([Fe/H])"
+        },
+        {
+          "field": "chemistry.ironMassFraction",
+          "origin": "derived",
+          "note": "Agol et al. 2021, PSJ 2:1: all seven TRAPPIST-1 planets fit ~21 wt % iron (Earth 32 %)"
+        }
+      ]
+    },
+    {
+      "id": "toi-700-d",
+      "displayName": "TOI-700 d",
+      "archiveName": "TOI-700 d",
+      "source": "NASA Exoplanet Archive, table pscomppars",
+      "retrieved": "2026-11-14",
+      "solar": {
+        "luminosityW": 8.919323771542712e+24,
+        "semiMajorAxisM": 24563970368.940002,
+        "eccentricity": 0.042,
+        "yearLengthHours": 898.162968,
+        "dayLengthHours": 0.0,
+        "obliquityDeg": 0.0,
+        "perihelionLongitudeDeg": 0.0,
+        "opticalDepth": 0.32,
+        "surfacePressureEarth": 1.0,
+        "diffuseK": 0.3,
+        "airTemperatureC": -4.349999999999966
+      },
+      "star": {
+        "teffK": 3459.0,
+        "radiusM": 285515280.0,
+        "massKg": 8.2919199e+29,
+        "spectralType": "M2.5 V",
+        "ageGyr": 1.5,
+        "count": 1
+      },
+      "planet": {
+        "insolationWm2": 1156.85,
+        "radiusM": 7302924.5,
+        "massKg": 9.436076000000001e+24,
+        "surfaceGravityMs2": 11.808739228118833,
+        "escapeVelocityMs": 13133.037045797146,
+        "bondAlbedo": 0.3,
+        "equilibriumTempK": 268.8
+      },
+      "flags": {
+        "tidallyLocked": true,
+        "clouds": "none",
+        "circumbinary": false,
+        "surface": "rocky"
+      },
+      "look": {
+        "terrainSeed": 1243983287,
+        "water": "liquid",
+        "oceanFraction": 0.62
+      },
+      "chemistry": {
+        "metallicityDex": -0.07,
+        "ironMassFraction": 0.32
+      },
+      "provenance": [
+        {
+          "field": "solar.luminosityW",
+          "origin": "nasa",
+          "note": "st_lum = log10(L/Lsun)"
+        },
+        {
+          "field": "star.teffK",
+          "origin": "nasa",
+          "note": "st_teff"
+        },
+        {
+          "field": "star.radiusM",
+          "origin": "nasa",
+          "note": "st_rad"
+        },
+        {
+          "field": "star.massKg",
+          "origin": "nasa",
+          "note": "st_mass"
+        },
+        {
+          "field": "star.spectralType",
+          "origin": "nasa",
+          "note": "st_spectype"
+        },
+        {
+          "field": "star.ageGyr",
+          "origin": "nasa",
+          "note": "st_age"
+        },
+        {
+          "field": "star.count",
+          "origin": "nasa",
+          "note": "sy_snum"
+        },
+        {
+          "field": "solar.semiMajorAxisM",
+          "origin": "nasa",
+          "note": "pl_orbsmax (au)"
+        },
+        {
+          "field": "solar.eccentricity",
+          "origin": "nasa",
+          "note": "pl_orbeccen"
+        },
+        {
+          "field": "solar.yearLengthHours",
+          "origin": "nasa",
+          "note": "pl_orbper (days)"
+        },
+        {
+          "field": "flags.tidallyLocked",
+          "origin": "assumed",
+          "note": "rotation is not measured for exoplanets"
+        },
+        {
+          "field": "flags.clouds",
+          "origin": "assumed",
+          "note": "earth = NASA POWER cloud climatology by latitude and month; none = clear sky (cloud cover unknown)"
+        },
+        {
+          "field": "flags.circumbinary",
+          "origin": "nasa",
+          "note": "cb_flag: planet orbits both stars"
+        },
+        {
+          "field": "solar.dayLengthHours",
+          "origin": "assumed",
+          "note": "tidally locked: star fixed in the sky, 0 = no solar day"
+        },
+        {
+          "field": "solar.obliquityDeg",
+          "origin": "assumed",
+          "note": "tidally locked: obliquity damped to ~0"
+        },
+        {
+          "field": "solar.perihelionLongitudeDeg",
+          "origin": "assumed",
+          "note": "equinox -> periapsis, game value"
+        },
+        {
+          "field": "solar.opticalDepth",
+          "origin": "assumed",
+          "note": "broadband tau, game value"
+        },
+        {
+          "field": "solar.surfacePressureEarth",
+          "origin": "assumed",
+          "note": "surface pressure in Earth atmospheres, game value"
+        },
+        {
+          "field": "solar.diffuseK",
+          "origin": "assumed",
+          "note": "diffuse-light k, game value"
+        },
+        {
+          "field": "planet.insolationWm2",
+          "origin": "nasa",
+          "note": "pl_insol (Earth flux) x 1361 W/m^2"
+        },
+        {
+          "field": "planet.radiusM",
+          "origin": "nasa",
+          "note": "pl_rade"
+        },
+        {
+          "field": "planet.massKg",
+          "origin": "nasa",
+          "note": "pl_bmasse (may be M sin i)"
+        },
+        {
+          "field": "flags.surface",
+          "origin": "derived",
+          "note": "radius bins: rocky <= 1.6, gaseous >= 2.0 R_earth (Rogers 2015; Fulton 2017)"
+        },
+        {
+          "field": "planet.surfaceGravityMs2",
+          "origin": "derived",
+          "note": "g = GM/R^2"
+        },
+        {
+          "field": "planet.escapeVelocityMs",
+          "origin": "derived",
+          "note": "v = sqrt(2GM/R)"
+        },
+        {
+          "field": "planet.bondAlbedo",
+          "origin": "assumed",
+          "note": "game value"
+        },
+        {
+          "field": "planet.equilibriumTempK",
+          "origin": "nasa",
+          "note": "pl_eqt (albedo assumption varies by paper)"
+        },
+        {
+          "field": "solar.airTemperatureC",
+          "origin": "derived",
+          "note": "equilibrium temperature + greenhouse offset 0 K (assumed)"
+        },
+        {
+          "field": "look.terrainSeed",
+          "origin": "assumed",
+          "note": "terrain noise seed from the planet id"
+        },
+        {
+          "field": "look.water",
+          "origin": "assumed",
+          "note": "surface water is not measurable for exoplanets yet"
+        },
+        {
+          "field": "look.oceanFraction",
+          "origin": "assumed",
+          "note": "share of the surface in low basins (seas, or dry basins), game value"
+        },
+        {
+          "field": "chemistry.metallicityDex",
+          "origin": "nasa",
+          "note": "st_met ([Fe/H])"
+        },
+        {
+          "field": "chemistry.ironMassFraction",
+          "origin": "assumed",
+          "note": "composition not measured: Earth-like 32 wt % iron assumed"
+        }
+      ]
+    },
+    {
+      "id": "lhs-1140-b",
+      "displayName": "LHS 1140 b",
+      "archiveName": "LHS 1140 b",
+      "source": "NASA Exoplanet Archive, table pscomppars",
+      "retrieved": "2026-11-14",
+      "solar": {
+        "luminosityW": 1.4546279534250807e+24,
+        "semiMajorAxisM": 14151958568.220001,
+        "eccentricity": 0.043,
+        "yearLengthHours": 593.69352,
+        "dayLengthHours": 0.0,
+        "obliquityDeg": 0.0,
+        "perihelionLongitudeDeg": 0.0,
+        "opticalDepth": 0.32,
+        "surfacePressureEarth": 1.0,
+        "diffuseK": 0.3,
+        "airTemperatureC": -47.14999999999998
+      },
+      "star": {
+        "teffK": 3096.0,
+        "radiusM": 150201630.0,
+        "massKg": 3.66673868e+29,
+        "spectralType": "M4.5 V",
+        "ageGyr": 5.0,
+        "count": 1
+      },
+      "planet": {
+        "insolationWm2": 585.23,
+        "radiusM": 11034113.0,
+        "massKg": 3.344432e+25,
+        "surfaceGravityMs2": 18.333831659114153,
+        "escapeVelocityMs": 20114.55046724351,
+        "bondAlbedo": 0.3,
+        "equilibriumTempK": 226.0
+      },
+      "flags": {
+        "tidallyLocked": true,
+        "clouds": "none",
+        "circumbinary": false,
+        "surface": "uncertain"
+      },
+      "look": {
+        "terrainSeed": 1364680920,
+        "water": "liquid",
+        "oceanFraction": 0.62
+      },
+      "chemistry": {
+        "metallicityDex": -0.15,
+        "ironMassFraction": 0.32
+      },
+      "provenance": [
+        {
+          "field": "solar.luminosityW",
+          "origin": "nasa",
+          "note": "st_lum = log10(L/Lsun)"
+        },
+        {
+          "field": "star.teffK",
+          "origin": "nasa",
+          "note": "st_teff"
+        },
+        {
+          "field": "star.radiusM",
+          "origin": "nasa",
+          "note": "st_rad"
+        },
+        {
+          "field": "star.massKg",
+          "origin": "nasa",
+          "note": "st_mass"
+        },
+        {
+          "field": "star.spectralType",
+          "origin": "nasa",
+          "note": "st_spectype"
+        },
+        {
+          "field": "star.ageGyr",
+          "origin": "nasa",
+          "note": "st_age"
+        },
+        {
+          "field": "star.count",
+          "origin": "nasa",
+          "note": "sy_snum"
+        },
+        {
+          "field": "solar.semiMajorAxisM",
+          "origin": "nasa",
+          "note": "pl_orbsmax (au)"
+        },
+        {
+          "field": "solar.eccentricity",
+          "origin": "nasa",
+          "note": "pl_orbeccen"
+        },
+        {
+          "field": "solar.yearLengthHours",
+          "origin": "nasa",
+          "note": "pl_orbper (days)"
+        },
+        {
+          "field": "flags.tidallyLocked",
+          "origin": "assumed",
+          "note": "rotation is not measured for exoplanets"
+        },
+        {
+          "field": "flags.clouds",
+          "origin": "assumed",
+          "note": "earth = NASA POWER cloud climatology by latitude and month; none = clear sky (cloud cover unknown)"
+        },
+        {
+          "field": "flags.circumbinary",
+          "origin": "nasa",
+          "note": "cb_flag: planet orbits both stars"
+        },
+        {
+          "field": "solar.dayLengthHours",
+          "origin": "assumed",
+          "note": "tidally locked: star fixed in the sky, 0 = no solar day"
+        },
+        {
+          "field": "solar.obliquityDeg",
+          "origin": "assumed",
+          "note": "tidally locked: obliquity damped to ~0"
+        },
+        {
+          "field": "solar.perihelionLongitudeDeg",
+          "origin": "assumed",
+          "note": "equinox -> periapsis, game value"
+        },
+        {
+          "field": "solar.opticalDepth",
+          "origin": "assumed",
+          "note": "broadband tau, game value"
+        },
+        {
+          "field": "solar.surfacePressureEarth",
+          "origin": "assumed",
+          "note": "surface pressure in Earth atmospheres, game value"
+        },
+        {
+          "field": "solar.diffuseK",
+          "origin": "assumed",
+          "note": "diffuse-light k, game value"
+        },
+        {
+          "field": "planet.insolationWm2",
+          "origin": "nasa",
+          "note": "pl_insol (Earth flux) x 1361 W/m^2"
+        },
+        {
+          "field": "planet.radiusM",
+          "origin": "nasa",
+          "note": "pl_rade"
+        },
+        {
+          "field": "planet.massKg",
+          "origin": "nasa",
+          "note": "pl_bmasse (may be M sin i)"
+        },
+        {
+          "field": "flags.surface",
+          "origin": "derived",
+          "note": "radius bins: rocky <= 1.6, gaseous >= 2.0 R_earth (Rogers 2015; Fulton 2017)"
+        },
+        {
+          "field": "planet.surfaceGravityMs2",
+          "origin": "derived",
+          "note": "g = GM/R^2"
+        },
+        {
+          "field": "planet.escapeVelocityMs",
+          "origin": "derived",
+          "note": "v = sqrt(2GM/R)"
+        },
+        {
+          "field": "planet.bondAlbedo",
+          "origin": "assumed",
+          "note": "game value"
+        },
+        {
+          "field": "planet.equilibriumTempK",
+          "origin": "nasa",
+          "note": "pl_eqt (albedo assumption varies by paper)"
+        },
+        {
+          "field": "solar.airTemperatureC",
+          "origin": "derived",
+          "note": "equilibrium temperature + greenhouse offset 0 K (assumed)"
+        },
+        {
+          "field": "look.terrainSeed",
+          "origin": "assumed",
+          "note": "terrain noise seed from the planet id"
+        },
+        {
+          "field": "look.water",
+          "origin": "assumed",
+          "note": "surface water is not measurable for exoplanets yet"
+        },
+        {
+          "field": "look.oceanFraction",
+          "origin": "assumed",
+          "note": "share of the surface in low basins (seas, or dry basins), game value"
+        },
+        {
+          "field": "chemistry.metallicityDex",
+          "origin": "nasa",
+          "note": "st_met ([Fe/H])"
+        },
+        {
+          "field": "chemistry.ironMassFraction",
+          "origin": "assumed",
+          "note": "composition not measured: Earth-like 32 wt % iron assumed"
+        }
+      ]
+    },
+    {
+      "id": "kepler-186-f",
+      "displayName": "Kepler-186 f",
+      "archiveName": "Kepler-186 f",
+      "source": "NASA Exoplanet Archive, table pscomppars",
+      "retrieved": "2026-11-14",
+      "solar": {
+        "luminosityW": 2.1036424651269867e+25,
+        "semiMajorAxisM": 64626280142.4,
+        "eccentricity": 0.04,
+        "yearLengthHours": 3118.6584,
+        "dayLengthHours": 24.0,
+        "obliquityDeg": 0.0,
+        "perihelionLongitudeDeg": 0.0,
+        "opticalDepth": 0.32,
+        "surfacePressureEarth": 1.0,
+        "diffuseK": 0.3,
+        "airTemperatureC": -96.14999999999998
+      },
+      "star": {
+        "teffK": 3755.0,
+        "radiusM": 363851100.0,
+        "massKg": 1.0817276800000001e+30,
+        "spectralType": "M1",
+        "ageGyr": 4.0,
+        "count": 1
+      },
+      "planet": {
+        "insolationWm2": 408.3,
+        "radiusM": 7462377.0,
+        "massKg": 1.0212462000000001e+25,
+        "surfaceGravityMs2": 12.24001092653673,
+        "escapeVelocityMs": 13515.885173967436,
+        "bondAlbedo": 0.3,
+        "equilibriumTempK": 177.0
+      },
+      "flags": {
+        "tidallyLocked": false,
+        "clouds": "none",
+        "circumbinary": false,
+        "surface": "rocky"
+      },
+      "look": {
+        "terrainSeed": 444988630,
+        "water": "liquid",
+        "oceanFraction": 0.62
+      },
+      "chemistry": {
+        "metallicityDex": -0.26,
+        "ironMassFraction": 0.32
+      },
+      "provenance": [
+        {
+          "field": "solar.luminosityW",
+          "origin": "nasa",
+          "note": "st_lum = log10(L/Lsun)"
+        },
+        {
+          "field": "star.teffK",
+          "origin": "nasa",
+          "note": "st_teff"
+        },
+        {
+          "field": "star.radiusM",
+          "origin": "nasa",
+          "note": "st_rad"
+        },
+        {
+          "field": "star.massKg",
+          "origin": "nasa",
+          "note": "st_mass"
+        },
+        {
+          "field": "star.spectralType",
+          "origin": "nasa",
+          "note": "st_spectype"
+        },
+        {
+          "field": "star.ageGyr",
+          "origin": "nasa",
+          "note": "st_age"
+        },
+        {
+          "field": "star.count",
+          "origin": "nasa",
+          "note": "sy_snum"
+        },
+        {
+          "field": "solar.semiMajorAxisM",
+          "origin": "nasa",
+          "note": "pl_orbsmax (au)"
+        },
+        {
+          "field": "solar.eccentricity",
+          "origin": "nasa",
+          "note": "pl_orbeccen"
+        },
+        {
+          "field": "solar.yearLengthHours",
+          "origin": "nasa",
+          "note": "pl_orbper (days)"
+        },
+        {
+          "field": "flags.tidallyLocked",
+          "origin": "assumed",
+          "note": "rotation is not measured for exoplanets"
+        },
+        {
+          "field": "flags.clouds",
+          "origin": "assumed",
+          "note": "earth = NASA POWER cloud climatology by latitude and month; none = clear sky (cloud cover unknown)"
+        },
+        {
+          "field": "flags.circumbinary",
+          "origin": "nasa",
+          "note": "cb_flag: planet orbits both stars"
+        },
+        {
+          "field": "solar.dayLengthHours",
+          "origin": "assumed",
+          "note": "solar day, game value"
+        },
+        {
+          "field": "solar.obliquityDeg",
+          "origin": "assumed",
+          "note": "axial tilt, game value"
+        },
+        {
+          "field": "solar.perihelionLongitudeDeg",
+          "origin": "assumed",
+          "note": "equinox -> periapsis, game value"
+        },
+        {
+          "field": "solar.opticalDepth",
+          "origin": "assumed",
+          "note": "broadband tau, game value"
+        },
+        {
+          "field": "solar.surfacePressureEarth",
+          "origin": "assumed",
+          "note": "surface pressure in Earth atmospheres, game value"
+        },
+        {
+          "field": "solar.diffuseK",
+          "origin": "assumed",
+          "note": "diffuse-light k, game value"
+        },
+        {
+          "field": "planet.insolationWm2",
+          "origin": "nasa",
+          "note": "pl_insol (Earth flux) x 1361 W/m^2"
+        },
+        {
+          "field": "planet.radiusM",
+          "origin": "nasa",
+          "note": "pl_rade"
+        },
+        {
+          "field": "planet.massKg",
+          "origin": "nasa",
+          "note": "pl_bmasse (may be M sin i)"
+        },
+        {
+          "field": "flags.surface",
+          "origin": "derived",
+          "note": "radius bins: rocky <= 1.6, gaseous >= 2.0 R_earth (Rogers 2015; Fulton 2017)"
+        },
+        {
+          "field": "planet.surfaceGravityMs2",
+          "origin": "derived",
+          "note": "g = GM/R^2"
+        },
+        {
+          "field": "planet.escapeVelocityMs",
+          "origin": "derived",
+          "note": "v = sqrt(2GM/R)"
+        },
+        {
+          "field": "planet.bondAlbedo",
+          "origin": "assumed",
+          "note": "game value"
+        },
+        {
+          "field": "planet.equilibriumTempK",
+          "origin": "nasa",
+          "note": "pl_eqt (albedo assumption varies by paper)"
+        },
+        {
+          "field": "solar.airTemperatureC",
+          "origin": "derived",
+          "note": "equilibrium temperature + greenhouse offset 0 K (assumed)"
+        },
+        {
+          "field": "look.terrainSeed",
+          "origin": "assumed",
+          "note": "terrain noise seed from the planet id"
+        },
+        {
+          "field": "look.water",
+          "origin": "assumed",
+          "note": "surface water is not measurable for exoplanets yet"
+        },
+        {
+          "field": "look.oceanFraction",
+          "origin": "assumed",
+          "note": "share of the surface in low basins (seas, or dry basins), game value"
+        },
+        {
+          "field": "chemistry.metallicityDex",
+          "origin": "nasa",
+          "note": "st_met ([Fe/H])"
+        },
+        {
+          "field": "chemistry.ironMassFraction",
+          "origin": "assumed",
+          "note": "composition not measured: Earth-like 32 wt % iron assumed"
+        }
+      ]
+    },
+    {
+      "id": "kepler-442-b",
+      "displayName": "Kepler-442 b",
+      "archiveName": "Kepler-442 b",
+      "source": "NASA Exoplanet Archive, table pscomppars",
+      "retrieved": "2026-11-14",
+      "solar": {
+        "luminosityW": 4.476843668824066e+25,
+        "semiMajorAxisM": 61185529116.299995,
+        "eccentricity": 0.04,
+        "yearLengthHours": 2695.3272,
+        "dayLengthHours": 24.0,
+        "obliquityDeg": 0.0,
+        "perihelionLongitudeDeg": 0.0,
+        "opticalDepth": 0.32,
+        "surfacePressureEarth": 1.0,
+        "diffuseK": 0.3,
+        "airTemperatureC": -32.14999999999998
+      },
+      "star": {
+        "teffK": 4402.0,
+        "radiusM": 416028600.0,
+        "massKg": 1.21097823e+30,
+        "ageGyr": 2.9,
+        "count": 1
+      },
+      "planet": {
+        "insolationWm2": 898.26,
+        "radiusM": 8546654.0,
+        "massKg": 1.4094392e+25,
+        "surfaceGravityMs2": 12.878338166236526,
+        "escapeVelocityMs": 14836.893232871771,
+        "bondAlbedo": 0.3,
+        "equilibriumTempK": 241.0
+      },
+      "flags": {
+        "tidallyLocked": false,
+        "clouds": "none",
+        "circumbinary": false,
+        "surface": "rocky"
+      },
+      "look": {
+        "terrainSeed": 564268251,
+        "water": "liquid",
+        "oceanFraction": 0.62
+      },
+      "chemistry": {
+        "metallicityDex": -0.37,
+        "ironMassFraction": 0.32
+      },
+      "provenance": [
+        {
+          "field": "solar.luminosityW",
+          "origin": "nasa",
+          "note": "st_lum = log10(L/Lsun)"
+        },
+        {
+          "field": "star.teffK",
+          "origin": "nasa",
+          "note": "st_teff"
+        },
+        {
+          "field": "star.radiusM",
+          "origin": "nasa",
+          "note": "st_rad"
+        },
+        {
+          "field": "star.massKg",
+          "origin": "nasa",
+          "note": "st_mass"
         },
         {
           "field": "star.ageGyr",

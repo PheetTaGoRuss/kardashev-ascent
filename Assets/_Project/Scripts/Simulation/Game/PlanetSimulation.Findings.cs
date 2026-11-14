@@ -90,12 +90,58 @@ namespace KardashevAscent.Simulation.Game
                     latitudePuzzles.Add(f.Latitude);
                     PuzzleReady?.Invoke(SolarParameter.Latitude);
                     break;
+                case FindingKind.SurveyWorkedOut:
+                    Deposits.MarkSurveyed(f.Tile);
+                    roughSurveys.Remove(f.Tile);
+                    TileSurveyed?.Invoke(f.Tile);
+                    break;
+                case FindingKind.ValueWorkedOut:
+                    if (f.Parameter == SolarParameter.Latitude)
+                        Notebook.RecordLatitude(f.Tile, Sphere.Latitude(f.Tile) * 180.0 / Math.PI, "noon shadow, worked out by the robot");
+                    else
+                        Parameters.MarkMeasured(f.Parameter);
+                    ParameterMeasured?.Invoke(f.Parameter);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Share of survey and measurement results that come back as a puzzle for the player (director 2026-11-14:
+        /// puzzles are occasional; the rest the robot works out itself). Game rule, TBD. Research will always have its
+        /// own unique puzzle (future).
+        /// </summary>
+        public const double DefaultPuzzleChance = 0.25;
+
+        /// <summary>This colony's puzzle chance (tests set 1 to get a puzzle every time, 0 for none).</summary>
+        public double PuzzleChance { get; set; } = DefaultPuzzleChance;
+
+        /// <summary>
+        /// Does this result come back as a puzzle? A stable roll from the tile, what was measured and the game hour, so a
+        /// replay or a reloaded game rolls the same.
+        /// </summary>
+        bool RollPuzzle(int tile, int what)
+        {
+            if (PuzzleChance >= 1.0) return true;
+            if (PuzzleChance <= 0.0) return false;
+            unchecked
+            {
+                uint h = (uint)tile * 2654435761u ^ (uint)what * 40503u ^ (uint)Math.Floor(TimeHours) * 2246822519u;
+                h ^= h >> 15; h *= 2246822519u; h ^= h >> 13; h *= 3266489917u; h ^= h >> 16;
+                return (h % 10000u) / 10000.0 < PuzzleChance;
             }
         }
     }
 
     /// <summary>What a held finding is.</summary>
-    public enum FindingKind { SurveyRockOnly, SurveyCores, LightReadings, ShadowReadings }
+    /// <summary>Saved as an integer: add new kinds at the end only.</summary>
+    public enum FindingKind
+    {
+        SurveyRockOnly, SurveyCores, LightReadings, ShadowReadings,
+        /// <summary>The robot worked the grades out itself (no puzzle this time).</summary>
+        SurveyWorkedOut,
+        /// <summary>The robot worked the measured value out itself (no puzzle this time).</summary>
+        ValueWorkedOut,
+    }
 
     /// <summary>A survey or measurement result a cut-off robot is carrying (stage E; save version 25).</summary>
     [Serializable]

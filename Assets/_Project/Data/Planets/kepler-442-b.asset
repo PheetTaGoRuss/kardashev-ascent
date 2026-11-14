@@ -1,0 +1,155 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18aab5c6bb6a5ac4293377f0a5f3a5cf, type: 3}
+  m_Name: kepler-442-b
+  m_EditorClassIdentifier: KardashevAscent.Presentation::KardashevAscent.Presentation.Game.PlanetDNA
+  record:
+    id: kepler-442-b
+    displayName: Kepler-442 b
+    archiveName: Kepler-442 b
+    source: NASA Exoplanet Archive, table pscomppars
+    retrieved: 2026-11-14
+    solar:
+      luminosityW: 4.476843668824066e+25
+      semiMajorAxisM: 61185529116.299995
+      eccentricity: 0.04
+      yearLengthHours: 2695.3272
+      dayLengthHours: 24
+      obliquityDeg: 0
+      perihelionLongitudeDeg: 0
+      opticalDepth: 0.32
+      diffuseK: 0.3
+      airTemperatureC: -32.14999999999998
+      surfacePressureEarth: 1
+    star:
+      teffK: 4402
+      radiusM: 416028600
+      massKg: 1.21097823e+30
+      spectralType: 
+      count: 1
+    planet:
+      insolationWm2: 898.26
+      radiusM: 8546654
+      massKg: 1.4094392e+25
+      surfaceGravityMs2: 12.878338166236526
+      escapeVelocityMs: 14836.893232871773
+      bondAlbedo: 0.3
+      equilibriumTempK: 241
+    flags:
+      tidallyLocked: 0
+      circumbinary: 0
+      surface: rocky
+      clouds: none
+    look:
+      terrainSeed: 564268251
+      water: liquid
+      oceanFraction: 0.62
+    chemistry:
+      metallicityDex: -0.37
+      ironMassFraction: 0.32
+    provenance:
+    - field: solar.luminosityW
+      origin: nasa
+      note: st_lum = log10(L/Lsun)
+    - field: star.teffK
+      origin: nasa
+      note: st_teff
+    - field: star.radiusM
+      origin: nasa
+      note: st_rad
+    - field: star.massKg
+      origin: nasa
+      note: st_mass
+    - field: star.ageGyr
+      origin: nasa
+      note: st_age
+    - field: star.count
+      origin: nasa
+      note: sy_snum
+    - field: solar.semiMajorAxisM
+      origin: nasa
+      note: pl_orbsmax (au)
+    - field: solar.eccentricity
+      origin: nasa
+      note: pl_orbeccen
+    - field: solar.yearLengthHours
+      origin: nasa
+      note: pl_orbper (days)
+    - field: flags.tidallyLocked
+      origin: assumed
+      note: rotation is not measured for exoplanets
+    - field: flags.clouds
+      origin: assumed
+      note: earth = NASA POWER cloud climatology by latitude and month; none = clear sky (cloud cover unknown)
+    - field: flags.circumbinary
+      origin: nasa
+      note: 'cb_flag: planet orbits both stars'
+    - field: solar.dayLengthHours
+      origin: assumed
+      note: solar day, game value
+    - field: solar.obliquityDeg
+      origin: assumed
+      note: axial tilt, game value
+    - field: solar.perihelionLongitudeDeg
+      origin: assumed
+      note: equinox -> periapsis, game value
+    - field: solar.opticalDepth
+      origin: assumed
+      note: broadband tau, game value
+    - field: solar.surfacePressureEarth
+      origin: assumed
+      note: surface pressure in Earth atmospheres, game value
+    - field: solar.diffuseK
+      origin: assumed
+      note: diffuse-light k, game value
+    - field: planet.insolationWm2
+      origin: nasa
+      note: pl_insol (Earth flux) x 1361 W/m^2
+    - field: planet.radiusM
+      origin: nasa
+      note: pl_rade
+    - field: planet.massKg
+      origin: nasa
+      note: pl_bmasse (may be M sin i)
+    - field: flags.surface
+      origin: derived
+      note: 'radius bins: rocky <= 1.6, gaseous >= 2.0 R_earth (Rogers 2015; Fulton 2017)'
+    - field: planet.surfaceGravityMs2
+      origin: derived
+      note: g = GM/R^2
+    - field: planet.escapeVelocityMs
+      origin: derived
+      note: v = sqrt(2GM/R)
+    - field: planet.bondAlbedo
+      origin: assumed
+      note: game value
+    - field: planet.equilibriumTempK
+      origin: nasa
+      note: pl_eqt (albedo assumption varies by paper)
+    - field: solar.airTemperatureC
+      origin: derived
+      note: equilibrium temperature + greenhouse offset 0 K (assumed)
+    - field: look.terrainSeed
+      origin: assumed
+      note: terrain noise seed from the planet id
+    - field: look.water
+      origin: assumed
+      note: surface water is not measurable for exoplanets yet
+    - field: look.oceanFraction
+      origin: assumed
+      note: share of the surface in low basins (seas, or dry basins), game value
+    - field: chemistry.metallicityDex
+      origin: nasa
+      note: st_met ([Fe/H])
+    - field: chemistry.ironMassFraction
+      origin: assumed
+      note: 'composition not measured: Earth-like 32 wt % iron assumed'

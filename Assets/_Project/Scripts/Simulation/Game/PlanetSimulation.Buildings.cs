@@ -20,27 +20,27 @@ namespace KardashevAscent.Simulation.Game
                 return false;
             double area = NewPanelAreaM2(tileId);
             // It waits as a site until a robot works on it; an idle robot takes it now (design D2).
-            Build.Start(tileId, slot, PanelCost(area), 0.0, false);
+            Build.Start(tileId, slot, PanelCost(area));
             AddPanel(tileId, slot, tilt, azimuth, area);
             Occupy(tileId, FootprintFor(BuildingType.SolarPanel, tileId, slot));
             Settle((tileId, slot));
             return true;
         }
 
-        /// <summary>A building is going away: a site gives back its parts, a finished one is salvaged.</summary>
+        /// <summary>A building is going away: a site gives back its materials, a finished one is salvaged.</summary>
         void Dismantle(int tileId, int slot, BuildingType type, bool wasFloating = false)
         {
             salvageOrders.Remove((tileId, slot));
             adjustOrders.RemoveAll(o => o.Tile == tileId && o.Slot == slot);
             if (Build.IsQueued(tileId, slot))
             {
-                Build.Cancel(tileId, slot);
+                Build.Cancel(tileId, slot, Materials);
                 Workforce.Tasks.MarkCancelled(new WorkTask(TaskKind.Build, tileId, slot));
                 return;
             }
             // A panel gives back a share of what its own size cost, not the current tier's.
             Build.Salvage((type == BuildingType.SolarPanel || type == BuildingType.FloatingSolar) && panels.TryGetValue((tileId, slot), out var p)
-                ? PanelCost(p.Area) * (wasFloating ? FloatingCostFactor : 1.0) : BuildCostWh(type));
+                ? PanelCost(p.Area).Times(wasFloating ? FloatingCostFactor : 1.0) : BuildBill(type), Materials);
             if (type == BuildingType.Battery)
                 Grid.Battery.RemoveCapacity(BatteryUnitWh);
         }
@@ -53,7 +53,7 @@ namespace KardashevAscent.Simulation.Game
             if (!CanPlace(BuildingType.FloatingSolar, tileId, slot) || !PreviewFloatingPanel(tileId, tilt, azimuth).CanPlace)
                 return false;
             double area = NewPanelAreaM2(tileId);
-            Build.Start(tileId, slot, PanelCost(area) * FloatingCostFactor, 0.0, false);
+            Build.Start(tileId, slot, PanelCost(area).Times(FloatingCostFactor));
             AddPanel(tileId, slot, tilt, azimuth, area);
             floatingPanels.Add((tileId, slot));
             Occupy(tileId, FootprintFor(BuildingType.FloatingSolar, tileId, slot));
@@ -98,13 +98,14 @@ namespace KardashevAscent.Simulation.Game
             : workshops.Contains((tileId, slot)) ? BuildingType.Workshop
             : stations.Contains((tileId, slot)) ? BuildingType.ChargingStation
             : relays.Contains((tileId, slot)) ? BuildingType.Relay
+            : researchStations.Contains((tileId, slot)) ? BuildingType.ResearchStation
             : BuildingType.None;
 
         public bool PlaceBattery(int tileId, int slot)
         {
             if (!CanPlace(BuildingType.Battery, tileId, slot))
                 return false;
-            bool finished = Build.Start(tileId, slot, BuildCostWh(BuildingType.Battery), 0.0, false);
+            bool finished = Build.Start(tileId, slot, BuildBill(BuildingType.Battery));
             AddBattery(tileId, slot);
             Occupy(tileId, FootprintFor(BuildingType.Battery, tileId, slot));
             if (finished)
@@ -139,6 +140,13 @@ namespace KardashevAscent.Simulation.Game
                 relays.Remove((tileId, slot));
                 Vacate(tileId, slot);
                 RefreshNetwork();
+                return true;
+            }
+            if (researchStations.Contains((tileId, slot)))
+            {
+                Dismantle(tileId, slot, BuildingType.ResearchStation);
+                researchStations.Remove((tileId, slot));
+                Vacate(tileId, slot);
                 return true;
             }
             if (stations.Contains((tileId, slot)))

@@ -54,16 +54,21 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | PL-01 | Hex-tiled planet, tile picking | CONFIRMED | PR #3, #19 | Tested | `Planet/HexSphere.cs` |
 | PL-02 | Terrain per planet from seed and flags | CONFIRMED | PR #45 | Tested | `Planet/PlanetSurface.cs` |
 | PL-03 | Real planets from the NASA Exoplanet Archive with provenance labels | CONFIRMED | PR #16, #43 | Tested | `Planet/PlanetRecord.cs`, `tools/exoplanets` |
+| PL-03a | Six more planets: TRAPPIST-1 f, TOI-700 d, LHS 1140 b, Kepler-186 f, Kepler-442 b from the NASA Exoplanet Archive, and Mars from the NASA NSSDC fact sheet | CONFIRMED (director 2026-11-14: add more NASA data) | chat 2026-11-14 | Tested; seen in Play mode | `tools/exoplanets/planets.json`, `Data/Planets/*.asset` |
+| PL-15 | Every new colony lands on a new random map of its planet (continents and deposits); the seed is saved (version 28); older saves keep the planet's own map | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Tested; seen in Play mode | `Presentation/Game/SimulationRunner.cs` (`NewRandomMap`, `UseMap`), `GameFlow.cs` |
 | PL-04 | Choose the planet and the landing tile | CONFIRMED | PR #43, #55 | Tested (simulation side) | `SimulationRunner`, `PlanetChooserView` |
 | PL-04a | Landing is a required first step: after choosing the planet, time stays stopped and no building site opens until the player picks a land tile and presses Land here; the colony can't move afterwards (replaces "move before the first building") | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Implemented | `Presentation/Game/GameFlow.cs`, `UI/TileInfoView.cs` |
+| PL-04b | Landing needs flat, open ground: lowland, desert, dry basin, beach, forest or tundra; not sea, wetland, mountain, highland, volcanic rock or ice (saved colonies elsewhere still load) | CONFIRMED (director 2026-11-14); which ground counts PROPOSED | chat 2026-11-14 | Tested; seen in Play mode | `Planet/PlanetSurface.cs` (`Terrains.LandingProblem`) |
 | PL-05 | Building slots per tile; multi-slot footprints | CONFIRMED | PR #28, #33, #61 | Tested | `Planet/TileSite.cs`, `Game/BuildingFootprints.cs` |
 | PL-06 | Earth cloud climatology on Earth-like planets | CONFIRMED | PR #23 | Tested | `Climate/CloudClimate.cs` |
+| PL-06a | Earth air temperature (NASA POWER T2M, 2001–2025) by latitude and month on Earth-like planets: panel cell temperature, robot battery cold, the Air heat value | CONFIRMED (director 2026-11-14: add more NASA data) | chat 2026-11-14 | Tested | `Climate/CloudClimate.cs` (`EarthAirTemperature`), `tools/nasa_power/fetch_air_temperature.py`, `docs/nasa-data.md` |
+| PL-06b | Earth ground reflectance (NASA POWER ALLSKY_SRF_ALB) as a seasonal change on each terrain, and aerosol haze (AOD_55 at 550 nm → whole spectrum by Molineaux et al. 1998 and Ångström α 1.3) as a change around the planet's τ, by latitude and month on Earth-like planets | CONFIRMED (director 2026-11-14: add both) | chat 2026-11-14 | Tested | `Climate/CloudClimate.cs` (`EarthGroundAndHaze`), `tools/nasa_power/fetch_ground_and_haze.py` |
 | PL-10 | New terrain: forest, wetland, beach, volcanic rock (second terrain pass on warm wet planets; volcanic rock anywhere). Wetland is too soft for land buildings; forest and beach keep the landing rank of lowland; forest, wetland and volcanic rock slow robots; albedo and names per terrain | CONFIRMED (director's choice of all four, 2026-11-13) | chat 2026-11-13 | Tested; seen in Play mode | `Planet/PlanetSurface.cs` |
 | PL-11 | Relief from orbit: land tiles raised with elevation (1.5 % of the radius at the top, ~10x true scale) with cliff walls; sea at sea level | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/Planet/PlanetMeshBuilder.cs`, `PlanetView.cs` |
 | PL-12 | Rivers (springs on high land running to the sea; more water, slower crossing) | REJECTED for now (director 2026-11-14: looked bugged and weird; removed). Could return as FUTURE | chat 2026-11-14 | Removed | — |
 | PL-13 | Level of detail: peaks and forest canopy from orbit; trees, reeds and rocks close up on the open site | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/Planet/TerrainFeatures.cs`, `SiteDecor.cs` |
 | PL-14 | Buildings clear nature on their slots (visual only, no regrowth); from orbit a tile's canopy thins with the share built on | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `SiteDecor.cs`, `TerrainFeatures.cs` |
-| EN-14 | Floating solar on shallow sea and wetland: 1.5 times the cost of a land panel (game rule), 4 % more output from cooler cells (game rule, TBD), built, turned and taken down by raft crews with no robot driving onto the sea (game rule) | CONFIRMED (director's choice, 2026-11-13) | chat 2026-11-13 | Tested; seen in Play mode | `Game/PlanetSimulation.Buildings.cs` |
+| EN-14 | Floating solar on shallow sea and wetland: 1.5 times the cost of a land panel (game rule), 4 % more output from cooler cells (game rule, TBD), built and taken down by a robot with a boat hull (director 2026-11-14; before, raft crews); turned without a robot | CONFIRMED (director's choice, 2026-11-13; boats 2026-11-14) | chat 2026-11-13, 2026-11-14 | Tested | `Game/PlanetSimulation.Buildings.cs`, `RobotsAtWork.cs` |
 | PL-07 | Atmosphere, climate, temperature and pressure simulation | FUTURE | V | Not started | — |
 | PL-08 | Subsurface exploration | FUTURE | V | Not started | — |
 | PL-09 | Greenhouse offset for air temperature of real planets | PROPOSED | physics report P1 item 14 | Not started | — |
@@ -75,6 +80,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | EN-01 | Solar panel model: orbit to yearly energy | CONFIRMED | PR #2, #21, #23 | Verified (pvlib, NASA POWER) | `Solar/*`, `docs/physics/physics-verification.md` |
 | EN-02 | Spectral match by star temperature; binary stars; tidally locked planets | CONFIRMED | PR #23 | Tested | `Solar/SpectralMatch.cs`, `BinaryStar.cs` |
 | EN-03 | Panel placement with angles, best-angle search and bonus | CONFIRMED | PR #27, #32 | Tested | `Game/PanelAngleSearch.cs`, `PanelPlacer` |
+| EN-03a | A new panel starts flat (β = 0) or copies the angles of a panel already on its tile; the best angle is never set for you (and nothing gives the latitude away before it is measured) | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/Planet/PanelPlacer.cs` |
 | EN-04 | Light-potential map | CONFIRMED | PR #26 | Tested | `Solar/LightPotential.cs` |
 | EN-05 | Power grid: one bus, battery, RTGs, brownouts | CONFIRMED | PR #29 | Tested | `Energy/PowerGrid.cs` |
 | EN-06 | Battery yards as buildings | CONFIRMED | PR #36 | Tested | orchestrator |
@@ -92,9 +98,13 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | ID | Feature | Design | Basis | Implementation | Where |
 | --- | --- | --- | --- | --- | --- |
 | CO-01 | Game clock, speeds, day and night, seasons | CONFIRMED | PR #25 | Tested | `Game/SimClock.cs` |
+| CO-01a | Fastest speed is 1 day per second: no year per minute (button and key 5 removed) | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Implemented | `UI/HudView.cs`, `SimulationRunner.cs` |
 | CO-02 | Colony demand grows with reliable power | CONFIRMED | PR #36 | Tested | `Energy/ColonyDemand.cs` |
-| CO-03 | Build parts in Wh from spare power; sites; salvage | CONFIRMED | PR #38 | Tested | `Game/Construction.cs` |
+| CO-03 | Build parts in Wh from spare power; sites; salvage | REJECTED (director 2026-11-14: buildings use real materials, not power; replaced by CO-03a) | PR #38 | Removed (old saves convert) | — |
+| CO-03a | Buildings take a bill of real materials: the real mass of the installation (c-Si module composition; LFP cathode) times 1 % on site (game rule); stations have placeholder bills (TBD). A robot takes them from stock while it works on the site; spare power makes nothing; Workshop jobs draw their energy from the grid; repairs take iron and battery-cell materials. The lander brings a cargo for the first buildings (game rule, TBD). Save version 26 | CONFIRMED (director 2026-11-14); amounts PROPOSED | chat 2026-11-14 | Tested; seen in Play mode | `Resources/BuildCosts.cs`, `Game/Construction.cs` |
 | CO-04 | Sites progress only while a robot works on them | CONFIRMED | WF D2 | Tested | orchestrator, `Workforce` |
+| CO-04b | Construction takes robot work: 2 h plus 4 h per square root of a tonne of materials (TBD), at the crew's rate, never ahead of the materials delivered; a site is finished when both are in. Sites rise from the ground as they are built, pulse while a robot works, and pop when finished; robots hop while building. Save version 27 | CONFIRMED (director 2026-11-14); hours PROPOSED | chat 2026-11-14 | Tested; seen in Play mode | `Game/Construction.cs`, `Presentation/Planet/PanelPlacer.cs` |
+| CO-04c | A site the stock can't supply yet shows red; once the materials are in stock it turns yellow (waiting to be built) | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/Planet/PanelPlacer.cs` |
 | CO-05 | Absolute K beside planet K | CONFIRMED | PR #42 | Tested | `Civilization/Kardashev.cs` |
 | CO-06 | Milestones every 0.1 of planet K on a day's average | CONFIRMED | PR #44 | Tested | `Kardashev.cs`, orchestrator |
 | CO-07 | Milestones as the unlock mechanism ("energy quotas") | CONFIRMED | WF D7, D8 | Tested | `PanelTiers`, `RobotTech` |
@@ -124,6 +134,11 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | RB-13 | Aggregate simulation and performance budget | CONFIRMED as scope | spec v2 stage H | Designed | same |
 | RB-14 | Transport robots and logistics | FUTURE | workforce spec §11; OQ-8 | Not started | — |
 | RB-15 | Robot rescue | FUTURE | workforce spec §12 | Not started | — |
+| RB-17 | The lander brings three General robots (was one) | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Tested; seen in Play mode | `Robots/Workforce.cs` |
+| RB-18 | Boat hull module: the robot crosses open water (shallow sea 1.5, deep ocean 2 flat tiles per hop, TBD) and builds floating solar; available from the start | CONFIRMED (director 2026-11-14); numbers PROPOSED | chat 2026-11-14 | Tested; ordered and fitted in Play mode | `Robots/RouteFinder.cs`, `Manufacturing.cs` |
+| RB-19 | Long trips: an idle robot whose only reachable work needs more than the usual 80 % charge (round trip plus 20 % kept) charges up to what the trip needs, up to 100 %, before setting off; it stays at the charger meanwhile, and that charging is served right after the colony like charging below 20 % (changes D6 for this case) | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Tested; seen in Play mode | `Robots/Workforce.cs` (`PlanTripCharges`), `RobotUpkeep.cs` |
+| CO-04a | A construction site is no work while the stock has none of a material it still needs: no robot drives out and back empty-handed; it becomes work again when the material arrives | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Tested; seen in Play mode | `Game/PlanetSimulation.RobotsAtWork.cs` |
+| RB-20 | A robot that plugs in charges at priority (right after the colony, before the grid battery) up to 80 % or what its trip needs; it leaves early only in a brownout. A charging robot you send somewhere goes if it has the charge to get there and back keeping 20 %. Changes D6 (top-up after the grid battery only above 80 %) | CONFIRMED (director 2026-11-14: robots kept charging and did nothing) | chat 2026-11-14 | Tested; seen in Play mode | `Robots/RobotUpkeep.cs`, `Workforce.SendTo` |
 | RB-16 | Robot destruction | Open (OQ-9) | v2 audit Q4 | Not started | — |
 
 ### 2.5 Resources and industry
@@ -136,6 +151,8 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | RS-04 | Mining into one colony stock | CONFIRMED | PR #52 | Tested | orchestrator |
 | RS-05 | Robot Workshop: robots, upgrades, substitute materials. Refining conserves mass: leftover rock is slag (PROPOSED addition, not yet approved) | CONFIRMED | PR #52 | Tested; placeholder recipes | `Robots/Manufacturing.cs` |
 | RS-06 | Industrial production foundation: phases, storage classes, production blockers | Unknown: no decision recorded in the repository | — | In progress (uncommitted, seen locally 2026-11-12) | `Resources/IndustrialProduction.cs` in the main checkout |
+| RS-12 | Calculation puzzles are occasional: a survey or measurement comes back as a puzzle 25 % of the time (TBD; a stable roll from tile, kind and hour); otherwise the robot works the result out exactly | CONFIRMED (director 2026-11-14); 25 % PROPOSED | chat 2026-11-14 | Tested | `Game/PlanetSimulation.Findings.cs` (`RollPuzzle`) |
+| RS-13 | Research always ends in its own unique puzzle | FUTURE (director 2026-11-14) | chat 2026-11-14 | Not started | — |
 | RS-07 | Deposit depletion; purity | FUTURE | V | Not started | — |
 | RS-08 | Storage and logistics | FUTURE | V | Not started | — |
 | RS-09 | Chemical processing, production chains, byproducts, waste, recycling | FUTURE | V | Not started | — |
@@ -152,6 +169,10 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | IN-04 | Observation record with source, time, uncertainty | PROPOSED | information architecture §4 | Not started | — |
 | IN-05 | Reports, colony knowledge database, historical records | FUTURE | V | Power history only | `Game/PowerHistory.cs` |
 | IN-06 | Unknown substances, samples, experiments, laboratories, experimental failure | FUTURE | V | Not started | — |
+| IN-10 | Research Station: every measurement and experiment is done there by a robot, and takes time; a latitude is measured where a station stands (the sky view still works anywhere) | CONFIRMED (director 2026-11-14) | `docs/design/research-station.md` | Implemented; tested outside Unity | `Game/PlanetSimulation.Research.cs` |
+| IN-11 | Experiments: air pressure, water boiling point (Antoine), surface temperature (coldest/warmest month), gravity (pendulum); hours TBD | CONFIRMED (director 2026-11-14); hours PROPOSED | `docs/design/research-station.md` | Implemented; tested outside Unity | `Planet/Experiments.cs` |
+| IN-12 | Knowledge gates buildings (floating solar needs to know water stays liquid) and sets safety margins until known (solar: 1 − spread of unknowns, floor 50 %; batteries charge to 80 % until the surface temperature is known) | Direction CONFIRMED (director 2026-11-14); margin numbers PROPOSED | `docs/design/research-station.md` | Implemented; tested outside Unity | `Game/PlanetSimulation.Research.cs` |
+| IN-13 | Before landing: a rough brief from orbit (mean temperature, robot survival verdict, gravity, air pressure, water) with error bars (TBD) | CONFIRMED (director 2026-11-14); error bars PROPOSED | `docs/design/research-station.md` | Implemented | `UI/PlanetChooserView.cs`, `Planet/Experiments.cs` |
 | IN-07 | Scientist consultation | FUTURE | V | Not started | — |
 | IN-08 | Local AI scientific assistant; optional online references | FUTURE | V | Not started | — |
 | IN-09 | Events: anomalies, disasters, rare discoveries | FUTURE | V | Flare wear on robots only | `RobotUpkeep.cs` |
@@ -167,6 +188,10 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | UI-05 | Minimal permanent interface | CONFIRMED as a principle | V | Not started | — |
 | UI-06 | Windows build from a menu | CONFIRMED | PR #44 | Implemented | `Editor/BuildWindows.cs` |
 | UI-08 | Game menu: main menu at launch (New game, Continue saved game, Quit) and a pause menu on Esc (Resume, Save, Load, Main menu, Quit); time is stopped on both | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Implemented | `Presentation/Game/GameFlow.cs` |
+| UI-09 | Setup tutorial right after landing: time stays stopped while it asks for a solar panel, battery yard, charging station and Robot Workshop on the landing tile; Skip places the rest automatically; time starts when all four are placed | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/Game/GameFlow.cs`, `PanelPlacer.AutoPlace` |
+| UI-10 | Research window: symbol badges per value, a bar for how unsure each is, one-word status and one button per row; a four-step picture tutorial the first time (and with ?); puzzle cards with a badge and one-line intros | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/UI/SystemWindows.cs` (`ResearchWindow`, `ParameterLook`), `LightPuzzleView.cs` |
+| UI-11 | Sky view measuring as puzzles from real instruments: δ from tilt and orbit position (sin δ = sin ε · sin λ); the sun from a 1 m stick's shadow (h = arctan(stick / shadow), A_s = shadow bearing ± 180°); latitude from the noon sun (φ = 90° − h + δ) or the celestial pole with a quadrant (φ = 90° − reading); answers within 1° (sun direction 2°); a five-step first-time tutorial (? reopens) | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Tested; seen in Play mode | `Simulation/Solar/SkyNotebook.cs`, `Presentation/UI/SkyPanelView.cs` |
+| UI-11a | A tile's latitude and longitude stay hidden (tile panel, sun path, map hover, saved layouts) until the colony measures a latitude; then the map gives every tile's | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Implemented; checked in Play mode | `UI/TileInfoView.cs`, `Planet/TilePicker.cs`, `UI/AngleEditor.cs` |
 | UI-07 | Build bar in categories (Power, Stations) with an (i) description per building | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/UI/BuildInfo.cs`, `PanelsView.cs` |
 
 ## 3. Decisions approved by the director
@@ -178,7 +203,20 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | 2026-11-14 | Stage E details: AI level from Processor (2) and Advanced processor (3) Workshop upgrades, unlocked by milestones until research exists; a cut-off robot's findings wait until it syncs (directly or through a robot nearby), backups and loss wait for OQ-9; colony computing is a grid load per AI level above 1, cut first in a shortage, robots then work at level 1 | `docs/design/robotic-workforce-v2-audit.md` section 6 |
 | 2026-11-14 | Terrain and build bar: buildings clear trees and rocks on their slots, visual only; exaggerated relief from orbit; build bar in Power and Stations with (i) descriptions | PL-11 to PL-14, UI-07 |
 | 2026-11-14 | Game flow: main menu plus pause menu; the player must pick the first landing tile before time starts, with the game paused while picking | PL-04a, UI-08 |
+| 2026-11-14 | After landing a tutorial asks for the essential buildings or places them on Skip; 3 starter robots; boat upgrade for work on water; fastest speed 1 day/s; buildings use real materials, not power (answers OQ-3) | UI-09, RB-17, RB-18, CO-01a, CO-03a |
+| 2026-11-14 | Long-trip charging and no work for sites without materials approved; calculation puzzles occasional (research will always have its own puzzle); construction takes time, with a building animation | RB-19, CO-04a, RS-12, RS-13, CO-04b |
+| 2026-11-14 | No landing on sea, wetland or unbuildable ground; new panels flat or copying the tile; friendlier measuring with symbols, bars and a tutorial | PL-04b, EN-03a, UI-10 |
+| 2026-11-14 | More NASA data: Earth air temperature from NASA POWER; every NASA source listed in docs/nasa-data.md | PL-06a |
+| 2026-11-14 | More NASA data: ground reflectance and aerosol haze from NASA POWER | PL-06b |
+| 2026-11-14 | More NASA data: five more archive planets and Mars from the NASA fact sheet; a random map for every new game | PL-03a, PL-15 |
+| 2026-11-14 | Sky view measuring is a set of real-instrument puzzles (stick shadow, quadrant), with a tutorial, not click-to-know | UI-11 |
 | 2026-11-14 | Rivers removed after a look in Play mode ("bugged and weird"); RiverMap, its rules and its drawing deleted | PL-12 |
+| 2026-11-14 | Puzzle cards for beginners: bigger text and windows (Research 640 px, sky view 480 px), numbered "how to solve it" steps and a worked example with other numbers on every puzzle | UI-11 |
+| 2026-11-14 | In-game science calculator (degrees; sin/cos/tan and inverses, ln, log, sqrt, ^): click a puzzle's numbers to put them in (also copied to the clipboard), "Put in answer" fills the answer box | UI-11 |
+| 2026-11-14 | New UI look for every screen, inspired by factory games such as Mindustry (not copied): square near-opaque grey panels with an amber strip, grey block buttons lit amber on hover, amber selected states; calculator opens any time (K / HUD "Calc"), clicking a number copies it | UI (all) |
+| 2026-11-14 | Inspect and info panels (tile info, sky, site/planner/placed boxes, building info card) drag by a grip like the calculator (double-click: put back); bigger text in them | UI (all) |
+| 2026-11-14 | Research Station: measuring and experiments happen there; knowledge gates buildings and sets safety margins; a rough brief from orbit before landing | IN-10 to IN-13 |
+| 2026-11-14 | Sound: effects and a looping space ambience synthesised in code (no files to license); button clicks, building, puzzles right/wrong, discoveries, brownout alarm, milestones; volume sliders and mute in the pause menu | UI (all) |
 | 2026-11-09 | Solar measurements: robots turn built panels; research robots measure every solar parameter; measurement is a reasoning puzzle | `docs/design/solar-measurements.md` (on its branch) |
 | 2026-11-12 | Game vision and the ten design pillars | [`../game/game-vision.md`](../game/game-vision.md) |
 | 2026-11-12 | The player learns through observations and reports; minimal permanent interface | vision; [`../architecture/information-architecture.md`](../architecture/information-architecture.md) |
@@ -198,7 +236,7 @@ Each needs the director. Until answered, the listed default applies and work tha
 | --- | --- | --- | --- |
 | OQ-1 | How much permanent interface stays? Which of the HUD and panels become reports and inspections? | Pillar 8 against the existing HUD and panels | Keep existing panels; new information follows the information architecture |
 | OQ-2 | One colony per planet? When do several planets run at once, and does time pass on planets the player is not watching? | Decides whether a layer above the planet simulation is needed (architecture step M9) | One planet, one colony |
-| OQ-3 | Do build parts in Wh stay the construction currency once materials and industry exist? | Two currencies for building; affects every recipe | Both: parts for energy cost, materials on top, as today |
+| OQ-3 | Do build parts in Wh stay the construction currency once materials and industry exist? | Two currencies for building; affects every recipe | Both: parts for energy cost, materials on top, as today · **Answered 2026-11-14 (director): materials only; see CO-03a** |
 | OQ-4 | What may the player see that the colony has not observed? Is god mode a debug tool or a feature? | Pillar 8 | God mode is a debug and teaching tool |
 | OQ-5 | Do milestones remain the unlock mechanism once research exists? | One unlock table or two systems | Milestones only |
 | OQ-6 | Which language are the documents in? Existing ones mix Thai and English | Consistency; AI and team readability | New architecture documents in English; existing Thai documents stay (TD-14) |
