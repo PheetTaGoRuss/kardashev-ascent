@@ -24,10 +24,13 @@ namespace KardashevAscent.Presentation.UI
         UIDocument document;
         Label date, time, season, power, demand, battery, kLabel, kPlanetLabel, kDetailLabel, kHeading, brownout, toast, buildStock, buildQueue;
         VisualElement batteryFill, kFill;
-        readonly Button[] speedButtons = new Button[5];
+        // The fastest speed is a day per second (director, 2026-11-14): no year per minute.
+        readonly Button[] speedButtons = new Button[4];
         static readonly ClockSpeed[] Speeds =
-            { ClockSpeed.Paused, ClockSpeed.RealTime, ClockSpeed.HourPerSecond, ClockSpeed.DayPerSecond, ClockSpeed.YearPerMinute };
+            { ClockSpeed.Paused, ClockSpeed.RealTime, ClockSpeed.HourPerSecond, ClockSpeed.DayPerSecond };
         float nextText;
+
+        static string Mass(double kg) => kg >= 1000.0 ? $"{kg / 1000.0:0.#}t" : $"{kg:0}kg";
 
         void OnEnable()
         {
@@ -56,13 +59,22 @@ namespace KardashevAscent.Presentation.UI
             batteryFill = root.Q("battery-fill");
             kFill = root.Q("k-fill");
 
-            string[] names = { "speed-paused", "speed-real", "speed-hour", "speed-day", "speed-year" };
+            string[] names = { "speed-paused", "speed-real", "speed-hour", "speed-day" };
             for (int i = 0; i < names.Length; i++)
             {
                 ClockSpeed speed = Speeds[i];
                 speedButtons[i] = root.Q<Button>(names[i]);
                 if (speedButtons[i] != null)
                     speedButtons[i].clicked += () => runner?.SetSpeed(speed);
+            }
+            // The calculator opens any time (director 2026-11-14): K or this button by the speeds.
+            Button dayButton = speedButtons[speedButtons.Length - 1];
+            if (dayButton != null && dayButton.parent != null && dayButton.parent.Q<Button>("calculator") == null)
+            {
+                var calc = new Button(() => CalculatorPad.Toggle(root)) { name = "calculator", text = "Calc (K)" };
+                calc.AddToClassList("speed-button");
+                calc.style.marginLeft = 10;
+                dayButton.parent.Add(calc);
             }
             nextText = 0f;
             if (saveGame != null)
@@ -126,6 +138,8 @@ namespace KardashevAscent.Presentation.UI
 
         void Update()
         {
+            if (ScreenInput.KeyDown(KeyCode.K) && document != null && document.rootVisualElement != null)
+                CalculatorPad.Toggle(document.rootVisualElement);
             CheckMilestones(runner != null ? runner.Simulation : null);
             if (toast != null)
             {
@@ -183,17 +197,20 @@ namespace KardashevAscent.Presentation.UI
                 : $"needed {Format.Power(sim.DemandW)}";
             string flow = sim.BatteryPowerW > 1.0 ? $"+{Format.Power(sim.BatteryPowerW)}"
                 : sim.BatteryPowerW < -1.0 ? $"−{Format.Power(-sim.BatteryPowerW)}"
-                : sim.CurtailedW > 1.0 || sim.BuildPowerW > 1.0 ? "full" : "idle";
+                : sim.CurtailedW > 1.0 ? "full" : "idle";
             battery.text = $"{soc * 100.0:0} % of {Format.Energy(sim.BatteryCapacityWh)} · {flow}";
 
             if (buildStock != null)
             {
-                string making = sim.BuildPowerW > 1.0 ? $"+{Format.Power(sim.BuildPowerW)}" : "no spare power";
-                buildStock.text = Format.Energy(sim.BuildStockWh);
-                buildQueue.text = sim.ConstructionQueueCount == 0
-                    ? making
-                    : $"{making} · {sim.ConstructionQueueCount} site{(sim.ConstructionQueueCount == 1 ? "" : "s")}, " +
-                      $"{Format.Energy(sim.ConstructionRemainingWh)} to go";
+                // The metals buildings take (chemical symbols keep it short), then rock and the sites.
+                buildStock.text = $"Fe {Mass(sim.Materials[KardashevAscent.Simulation.Resources.Material.Iron])} · " +
+                                  $"Cu {Mass(sim.Materials[KardashevAscent.Simulation.Resources.Material.Copper])}";
+                int sites = sim.ConstructionQueueCount;
+                buildQueue.text = $"Li {Mass(sim.Materials[KardashevAscent.Simulation.Resources.Material.Lithium])} · " +
+                                  $"rock {Mass(sim.Materials[KardashevAscent.Simulation.Resources.Material.Rock])} · " +
+                                  (sites == 0 ? "no sites"
+                                   : sim.ConstructionShortfall.IsEmpty ? $"{sites} site{(sites == 1 ? "" : "s")}, in stock"
+                                   : $"{sites} site{(sites == 1 ? "" : "s")} short");
             }
             kLabel.text = Format.Power(sim.KardashevPowerW);
             if (kHeading != null)

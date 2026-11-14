@@ -19,10 +19,13 @@ namespace KardashevAscent.Simulation.Game
         {
             var tasks = new List<WorkTask>(Build.QueueCount + salvageOrders.Count);
             int i = 0;
+            // Floating panels are built by robots with a boat module (director, 2026-11-14; before, raft crews built them).
+            // A site is work only while the stock has some of every material it still needs: otherwise a robot would
+            // drive out and back with nothing to bring (it waits for mining or refining instead).
             foreach (var site in Build.Sites())
             {
-                if (floatingPanels.Contains((site.Tile, site.Slot)))
-                    continue;   // raft crews build these; no robot needs to reach the sea
+                if (!CanAdvance(site.Bill, site.Share))
+                    continue;
                 tasks.Add(new WorkTask(TaskKind.Build, site.Tile, site.Slot, i++));
             }
             for (int k = 0; k < salvageOrders.Count; k++)
@@ -33,12 +36,23 @@ namespace KardashevAscent.Simulation.Game
                 tasks.Add(new WorkTask(TaskKind.Survey, surveyOrders[k], -1, k));
             for (int k = 0; k < measureOrders.Count; k++)
                 tasks.Add(new WorkTask(TaskKind.Measure, measureOrders[k].Tile, (int)measureOrders[k].Parameter, k));
+            for (int k = 0; k < experimentOrders.Count; k++)
+                tasks.Add(new WorkTask(TaskKind.Experiment, experimentOrders[k].Tile, (int)experimentOrders[k].Kind, k));
             for (int k = 0; k < miningOrders.Count; k++)
                 tasks.Add(new WorkTask(TaskKind.Mine, miningOrders[k].Tile, (int)miningOrders[k].Material, k));
             List<(int Tile, int Slot)> shops = FinishedWorkshops();
             for (int k = 0; k < Math.Min(jobs.Count, shops.Count); k++)
                 tasks.Add(new WorkTask(TaskKind.Manufacture, shops[k].Tile, shops[k].Slot, k));
             return tasks;
+        }
+
+        /// <summary>True when the stock holds some of every material a site still needs.</summary>
+        bool CanAdvance(MaterialBill bill, double share)
+        {
+            if (share >= 1.0) return true;
+            foreach (var (m, kg) in bill.Items())
+                if (kg > 1e-9 && Materials[m] <= 1e-9) return false;
+            return true;
         }
 
         /// <summary>
@@ -54,8 +68,8 @@ namespace KardashevAscent.Simulation.Game
                 Workforce.NowHours = TimeHours;
                 Workforce.Assign(OpenTasks(), Needs());
                 bool any = false;
-                // Floating panels are towed out and anchored by raft crews: no robot drives onto the sea (game rule, 2026-11-13).
-                foreach (var done in Build.Pay(key => floatingPanels.Contains((key.Tile, key.Slot)) || Workforce.IsWorkedOnSite(new WorkTask(TaskKind.Build, key.Tile, key.Slot))))
+                // A site takes materials from stock while a robot works on it.
+                foreach (var done in Build.Pay(Materials, key => Workforce.IsWorkedOnSite(new WorkTask(TaskKind.Build, key.Tile, key.Slot))))
                 {
                     any = true;
                     Finish(done.Tile, done.Slot, !(silent.HasValue && silent.Value == done));
@@ -99,8 +113,8 @@ namespace KardashevAscent.Simulation.Game
             slot = A(tileId, slot);
             if (GetBuilding(tileId, slot) == BuildingType.None)
                 return false;
-            if (Build.IsQueued(tileId, slot) || floatingPanels.Contains((tileId, slot)))
-                return RemoveBuilding(tileId, slot);   // a site is simply cancelled (its parts come back); raft crews take floating panels down at once
+            if (Build.IsQueued(tileId, slot))
+                return RemoveBuilding(tileId, slot);   // a site is simply cancelled (its materials come back)
             if (salvageOrders.Contains((tileId, slot)))
                 return false;
             salvageOrders.Add((tileId, slot));

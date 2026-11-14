@@ -2,8 +2,8 @@
     position: absolute;
     top: 80px;
     right: 12px;
-    width: 340px;
-    max-height: 78%;
+    width: 430px;
+    max-height: 82%;
     padding: 10px 12px;
 }
 
@@ -11,29 +11,29 @@
 
 .stat-row { flex-direction: row; margin-top: 8px; }
 .stat { flex-grow: 1; flex-basis: 0; }
-.stat-value { font-size: 15px; -unity-font-style: bold; padding: 0; margin: 1px 0; }
+.stat-value { font-size: 19px; -unity-font-style: bold; padding: 0; margin: 1px 0; }
 
 .section { margin-top: 12px; }
 .wrap { white-space: normal; }
 .landing-text { margin-top: 4px; color: var(--accent); }
 .ground-actions { flex-direction: row; flex-wrap: wrap; margin-top: 4px; }
 .ground-button {
-    height: 20px;
+    height: 26px;
     margin: 0 4px 4px 0;
-    padding: 0 6px;
-    font-size: 11px;
+    padding: 0 8px;
+    font-size: 13px;
     color: var(--text);
-    background-color: rgba(143, 179, 255, 0.15);
+    background-color: rgba(255, 199, 92, 0.15);
     border-width: 0;
-    border-radius: 3px;
+    border-radius: 0;
 }
-.ground-button:hover { background-color: rgba(143, 179, 255, 0.30); }
-.ground-button.on { color: rgb(10, 14, 24); background-color: var(--accent); }
+.ground-button:hover { background-color: rgba(255, 199, 92, 0.30); }
+.ground-button.on { color: var(--accent); background-color: rgba(255, 199, 92, 0.16); border-color: var(--accent); }
 
 .chart {
     margin-top: 6px;
     background-color: rgba(255, 255, 255, 0.03);
-    border-radius: 4px;
+    border-radius: 0;
 }
 .sunpath-chart { height: 150px; }
 .monthly-chart { height: 90px; flex-direction: row; align-items: flex-end; padding: 0 2px; }
@@ -42,33 +42,42 @@
     flex-grow: 1;
     margin: 0 1px;
     background-color: rgb(143, 179, 255);
-    border-top-left-radius: 3px;
-    border-top-right-radius: 3px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
 }
 .month-bar:hover { background-color: rgb(196, 214, 255); }
 
 .month-labels { flex-direction: row; padding: 0 2px; }
-.month-label { flex-grow: 1; flex-basis: 0; -unity-text-align: middle-center; font-size: 9px; color: var(--text-muted); padding: 0; margin: 0; }
+.month-label { flex-grow: 1; flex-basis: 0; -unity-text-align: middle-center; font-size: 11px; color: var(--text-muted); padding: 0; margin: 0; }
 .hover-line { min-height: 14px; }
 
 .axis-label { position: absolute; font-size: 9px; color: var(--text-muted); padding: 0; margin: 0; }
 
 .legend { flex-direction: row; flex-wrap: wrap; margin-top: 4px; }
 .legend-item { flex-direction: row; align-items: center; margin-right: 10px; }
-.swatch { width: 14px; height: 3px; border-radius: 2px; margin-right: 4px; }
+.swatch { width: 14px; height: 3px; border-radius: 0; margin-right: 4px; }
 .series-1 { background-color: rgb(57, 135, 229); }
 .series-2 { background-color: rgb(217, 89, 38); }
 .series-3 { background-color: rgb(25, 158, 112); }
-.marker-now { width: 8px; height: 8px; border-radius: 4px; background-color: rgb(255, 214, 120); margin-right: 4px; }
-.marker-panel { width: 8px; height: 8px; border-width: 2px; border-color: rgb(230, 236, 255); border-radius: 1px; rotate: 45deg; margin-right: 6px; }
+.marker-now { width: 8px; height: 8px; border-radius: 0; background-color: rgb(255, 214, 120); margin-right: 4px; }
+.marker-panel { width: 8px; height: 8px; border-width: 2px; border-color: rgb(230, 236, 255); border-radius: 0; rotate: 45deg; margin-right: 6px; }
 
 .formulas { margin-top: 12px; }
-.formula { white-space: normal; font-size: 11px; color: var(--text-muted); margin: 3px 0; padding: 0; }
+.formula { white-space: normal; font-size: 13px; color: var(--text-muted); margin: 3px 0; padding: 0; }
 
 /* Captions under the big numbers wrap instead of running off the panel. */
 .stat .caption { white-space: normal; }
 
 /* Sections fold shut so the panel can be as short as the player wants. */
 .tile-fold { margin-top: 10px; }
-.tile-fold .unity-foldout__text { font-size: 10px; letter-spacing: 1px; color: var(--text-muted); -unity-font-style: bold; }
+.tile-fold .unity-foldout__text { font-size: 12px; letter-spacing: 1px; color: var(--text-muted); -unity-font-style: bold; }
 .tile-fold .unity-foldout__content { margin-left: 0; }
+
+/* Bigger, easier-to-read inspect text (director 2026-11-14). */
+.tile-info .value { font-size: 19px; }
+.tile-info .body { font-size: 15px; }
+.tile-info .caption { font-size: 13px; }
+.tile-info .heading { font-size: 12px; }
+.tile-info .axis-label { font-size: 11px; }
+.sunpath-chart { height: 190px; }
+.monthly-chart { height: 110px; }

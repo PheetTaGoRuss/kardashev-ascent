@@ -99,6 +99,109 @@ namespace KardashevAscent.Simulation.Solar
                         (first ? " Best angles unlocked, and the survey now gives every tile's latitude." : ""));
         }
 
+        // ---- Puzzles: the player works each value out from real-world readings (director 2026-11-14) ----
+
+        /// <summary>Answers within this many degrees are right (instruments and rounding; game rule).</summary>
+        public const double AnswerToleranceDeg = 1.0;
+
+        /// <summary>Length of the shadow stick (gnomon), m.</summary>
+        public const double GnomonLengthM = 1.0;
+
+        /// <summary>
+        /// What a vertical stick of <see cref="GnomonLengthM"/> shows now: its shadow's length (m, rounded to the
+        /// millimetre) and the compass bearing it points to (°, clockwise from north). The shadow points away from the
+        /// sun, so tan h = stick / shadow and A_s = bearing ± 180°. No shadow at night (length NaN).
+        /// </summary>
+        public static (double ShadowM, double BearingDeg) GnomonReading(in SkyReport sky)
+        {
+            if (!sky.Valid || !sky.SunUp || sky.SunAltitudeDeg <= 0.5)
+                return (double.NaN, double.NaN);
+            double shadow = GnomonLengthM / Math.Tan(sky.SunAltitudeDeg * Math.PI / 180.0);
+            double bearing = (sky.SunAzimuthDeg + 180.0) % 360.0;
+            return (Math.Round(shadow, 3), Math.Round(bearing));
+        }
+
+        /// <summary>
+        /// A quadrant aimed at the celestial pole at night: the plumb line's angle from the sight line's perpendicular,
+        /// read on the scale from the zenith (°, 0.1° steps); the pole's altitude is 90° − reading. Which pole is up
+        /// (north or south) is part of the reading. NaN in daylight.
+        /// </summary>
+        public static (double ReadingDeg, bool North) QuadrantReading(in SkyReport sky) =>
+            !sky.Valid || sky.SunUp ? (double.NaN, true) : (Math.Round(90.0 - Math.Abs(sky.LatitudeDeg), 1), sky.LatitudeDeg >= 0.0);
+
+        /// <summary>The noon sighting kept for the latitude step: (altitude, sun in the south), or null.</summary>
+        public (double AltitudeDeg, bool South)? NoonSighting { get; private set; }
+
+        static double AngleError(double a, double b)
+        {
+            double d = Math.Abs((a - b) % 360.0);
+            return Math.Min(d, 360.0 - d);
+        }
+
+        /// <summary>The player's δ from sin δ = sin ε · sin λ. Right within <see cref="AnswerToleranceDeg"/>.</summary>
+        public string AnswerDeclination(in SkyReport sky, double declinationDeg, out bool right)
+        {
+            right = Math.Abs(declinationDeg - sky.DeclinationDeg) <= AnswerToleranceDeg;
+            if (!right)
+                return $"δ = {declinationDeg:0.##}° doesn't fit: sin δ = sin ε · sin λ, then δ = arcsin of that.";
+            return WorkOutDeclination(sky);
+        }
+
+        /// <summary>
+        /// The player's sun position from the stick's shadow (h = arctan(stick / shadow), A_s = shadow bearing ± 180°).
+        /// Right when both are within <see cref="AnswerToleranceDeg"/> (azimuth 2°). Near noon it keeps the sighting for
+        /// the latitude step.
+        /// </summary>
+        public string AnswerSun(int tile, in SkyReport sky, double altitudeDeg, double azimuthDeg, out bool right)
+        {
+            right = false;
+            if (!sky.Valid || !sky.SunUp)
+                return "The sun is down: no shadow to measure. Sight the celestial pole tonight, or wait for day.";
+            bool hOk = Math.Abs(altitudeDeg - sky.SunAltitudeDeg) <= AnswerToleranceDeg;
+            bool aOk = AngleError(azimuthDeg, sky.SunAzimuthDeg) <= 2.0 * AnswerToleranceDeg;
+            if (!hOk || !aOk)
+                return !hOk && !aOk ? "Neither fits: h = arctan(stick / shadow); the sun is opposite the shadow (bearing ± 180°)."
+                     : !hOk ? $"The direction is right; h = {altitudeDeg:0.#}° isn't: h = arctan(stick / shadow)."
+                     : $"h is right; A_s = {azimuthDeg:0}° isn't. The sun is opposite its shadow: take the shadow's direction " +
+                       $"({(sky.SunAzimuthDeg + 180.0) % 360.0:0}°) − 180° (add 360° if negative). h isn't part of it.";
+            right = true;
+            TracksSun = true;
+            bool noon = Math.Abs(sky.HourAngleDeg) <= NoonWindowDeg;
+            bool south = sky.SunAzimuthDeg > 90.0 && sky.SunAzimuthDeg < 270.0;
+            NoonSighting = noon ? (sky.SunAltitudeDeg, south) : ((double, bool)?)null;
+            return Note($"Shadow sighting: sun at h = {sky.SunAltitudeDeg:0.0}°, A_s = {sky.SunAzimuthDeg:0}°." +
+                        (noon ? (KnowsDeclination ? " It's noon: work out your latitude in step 3." : " It's noon: work out δ first, then your latitude.")
+                              : " Sight it again within a quarter hour of noon to find your latitude."));
+        }
+
+        /// <summary>The player's latitude from the noon sighting: φ = 90° − h + δ (sun in the south) or h − 90° + δ.</summary>
+        public string AnswerNoonLatitude(int tile, in SkyReport sky, double latitudeDeg, out bool right)
+        {
+            right = false;
+            if (NoonSighting == null)
+                return "Measure the sun within a quarter hour of noon first.";
+            if (!KnowsDeclination)
+                return "Work out δ first (step 1).";
+            var (h, south) = NoonSighting.Value;
+            double phi = SkyMath.LatitudeFromNoonDeg(h, sky.DeclinationDeg, south);
+            right = Math.Abs(latitudeDeg - phi) <= AnswerToleranceDeg;
+            if (!right)
+                return $"φ = {latitudeDeg:0.#}° doesn't fit: sun in the {(south ? "south: φ = 90° − h + δ" : "north: φ = h − 90° + δ")} (south of the equator is negative).";
+            return RecordLatitude(tile, phi, "noon sun: φ = 90° − h + δ");
+        }
+
+        /// <summary>The player's latitude from the quadrant on the celestial pole: φ = ±(90° − reading).</summary>
+        public string AnswerPole(int tile, in SkyReport sky, double latitudeDeg, out bool right)
+        {
+            right = false;
+            if (!sky.Valid || sky.SunUp)
+                return "Too bright to see the stars: sight the pole after sunset.";
+            right = Math.Abs(latitudeDeg - sky.LatitudeDeg) <= AnswerToleranceDeg;
+            if (!right)
+                return $"φ = {latitudeDeg:0.#}° doesn't fit: the pole's altitude is 90° − the quadrant reading, and φ is that (negative if it is the south pole).";
+            return RecordLatitude(tile, sky.LatitudeDeg, "celestial pole with a quadrant");
+        }
+
         /// <summary>A latitude worked out from a robot's measurement (the shadow puzzle).</summary>
         public string RecordLatitude(int tile, double latitudeDeg, string method)
         {

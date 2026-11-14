@@ -21,7 +21,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         static readonly HexSphere Sphere = HexSphere.Create(12);
         static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
 
-        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike);
+        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike) { PuzzleChance = 1.0 };   // these tests are about the puzzles
 
         /// <summary>A workforce on tile 0 with a network whose hub is far away, so every robot is cut off.</summary>
         static Workforce CutOffWorkforce(int robots)
@@ -222,7 +222,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             var held = new HeldFinding { RobotId = r.Id, Kind = FindingKind.SurveyRockOnly, Tile = t };
             a.heldFindings.Add(held);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(25, state.Version);
+            Assert.AreEqual(SimulationState.CurrentVersion, state.Version);
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));
             Assert.AreEqual(1, b.HeldFindings.Count);

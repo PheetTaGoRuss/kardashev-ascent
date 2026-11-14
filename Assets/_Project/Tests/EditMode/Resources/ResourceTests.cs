@@ -167,7 +167,14 @@ namespace KardashevAscent.Simulation.Tests.Resources
 
         // ---- Survey and mining in the colony ----
 
-        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Wet, Earthlike);
+        /// <summary>One robot and no lander cargo, so amounts mined are easy to follow.</summary>
+        static PlanetSimulation Create()
+        {
+            var sim = new PlanetSimulation(Sphere, Wet, Earthlike) { ConstructionTimeEnabled = false, PuzzleChance = 1.0 };   // these tests are about the puzzles
+            sim.Workforce.Reset(sim.BaseTileId, 1);
+            sim.Materials.Clear();
+            return sim;
+        }
 
         static int LandTileWith(PlanetSimulation sim, Material m)
         {
@@ -244,6 +251,7 @@ namespace KardashevAscent.Simulation.Tests.Resources
             sim.OrderMining(t, Material.Rock);
             sim.Tick(0.5);
             sim.Workforce.Pause(sim.Workforce.Robots[0].GroupId);
+            foreach (var (m, kg) in sim.BuildBill(BuildingType.Battery).Items()) sim.Materials.Add(m, kg);
             sim.PlaceBattery(t, 0);
             sim.Workforce.Resume(sim.Workforce.Robots[0].GroupId);
             sim.Tick(0.5);   // the batch ends; the robot re-evaluates and builds (Build ranks before Mine)

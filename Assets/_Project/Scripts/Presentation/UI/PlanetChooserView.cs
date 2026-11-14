@@ -74,12 +74,12 @@ namespace KardashevAscent.Presentation.UI
 
         void Update()
         {
-            if (showAtStart && !shownAtStart && runner != null && runner.Simulation != null && runner.Planets.Count > 0)
+            if (showAtStart && !shownAtStart && !GameFlow.Active && runner != null && runner.Simulation != null && runner.Planets.Count > 0)
             {
                 shownAtStart = true;
                 SetVisible(true);
             }
-            if (ScreenInput.KeyDown(toggleKey))
+            if (ScreenInput.KeyDown(toggleKey) && GameFlow.Phase != GamePhase.MainMenu)
                 SetVisible(!Visible);
             else if (Visible && ScreenInput.KeyDown(KeyCode.Escape))
                 SetVisible(false);
@@ -98,7 +98,7 @@ namespace KardashevAscent.Presentation.UI
                     speedWhenOpened = runner.Clock.Speed;
                     runner.SetSpeed(ClockSpeed.Paused);
                 }
-                else if (closing && runner.Clock.Speed == ClockSpeed.Paused && speedWhenOpened != ClockSpeed.Paused)
+                else if (closing && GameFlow.IsPlaying && runner.Clock.Speed == ClockSpeed.Paused && speedWhenOpened != ClockSpeed.Paused)
                     runner.SetSpeed(speedWhenOpened);
             }
             if (opening)
@@ -118,9 +118,13 @@ namespace KardashevAscent.Presentation.UI
         {
             if (runner == null || selected < 0)
                 return;
-            if (selected != runner.CurrentIndex && !runner.ChoosePlanet(selected))
+            bool newPlanet = selected != runner.CurrentIndex;
+            if (newPlanet && !runner.ChoosePlanet(selected))
                 return;
             SetVisible(false);
+            // A new planet (or the first one) means choosing where to land next.
+            if (newPlanet || GameFlow.Phase == GamePhase.ChoosingPlanet)
+                GameFlow.PlanetChosen();
         }
 
         void Rebuild()
@@ -221,6 +225,27 @@ namespace KardashevAscent.Presentation.UI
                 : look.IceLatitudeDeg >= 90.0 ? "none" : $"from {look.IceLatitudeDeg:0}° latitude (tundra, frozen seas, then glacier)";
             Row(ValueOrigin.Assumed, "Cold zone", cold,
                 "game rule from the air temperature: Earth-like at 0–35 °C, wider when colder; locked planets are eyeballs");
+
+            // What the colony knows before it lands (director 2026-11-14): rough values from orbit and the records, with
+            // wide error bars. A Research Station measures them exactly after landing.
+            Section("FROM ORBIT · BEFORE LANDING (ROUGH)");
+            double meanC = r.solar.airTemperatureC;
+            Row(ValueOrigin.Derived, "Mean temperature", $"about {meanC:0} °C ± {OrbitalBrief.TemperatureSpreadC:0} °C",
+                "from orbit; the Research Station's surface temperature experiment measures it at the base");
+            OrbitalBrief.RobotVerdict robots = OrbitalBrief.Robots(meanC);
+            Row(ValueOrigin.Derived, "Robots", OrbitalBrief.Say(robots),
+                $"robots charge their LFP cells at {OrbitalBrief.ChargeMinC:0}–{OrbitalBrief.ChargeMaxC:0} °C and survive {OrbitalBrief.SurviveMinC:0} to {OrbitalBrief.SurviveMaxC:0} °C (datasheet ranges; game rule)");
+            double g = r.planet.surfaceGravityMs2 > 0.0 ? r.planet.surfaceGravityMs2
+                : r.planet.massKg > 0.0 && r.planet.radiusM > 0.0 ? PlanetSimulation.GravitationalConstant * r.planet.massKg / (r.planet.radiusM * r.planet.radiusM) : 0.0;
+            if (g > 0.0)
+                Row(ValueOrigin.Derived, "Gravity", $"about {g / PlanetSimulation.StandardGravityMs2:0.##} g ± {OrbitalBrief.GravitySpreadShare * 100.0:0} %",
+                    "from mass and radius; the pendulum experiment measures it");
+            double atm = r.solar.surfacePressureEarth;
+            Row(ValueOrigin.Derived, "Air pressure", atm > 0.0 ? $"about {atm:0.###} × Earth's ± {OrbitalBrief.PressureSpreadShare * 100.0:0} %" : "no air",
+                "from orbit; the barometer experiment measures it");
+            double boil = Experiments.WaterBoilingPointC(Experiments.PressurePa(atm));
+            Row(ValueOrigin.Derived, "Water", double.IsNaN(boil) ? "can't be liquid: the air is too thin" : $"would boil near {boil:0} °C",
+                "rough, from the air pressure; the boiling point experiment says for sure");
 
             string why = r.WhyNotPlayable;
             verdict.EnableInClassList("bad", why != null);

@@ -89,6 +89,7 @@
                 <ui:VisualElement name="item-workshop" class="build-item"><ui:Button name="mode-workshop" class="action-button mode" text="Workshop" /><ui:Button name="info-workshop" class="info-button" text="i" /></ui:VisualElement>
                 <ui:VisualElement name="item-station" class="build-item"><ui:Button name="mode-station" class="action-button mode" text="Charger" /><ui:Button name="info-station" class="info-button" text="i" /></ui:VisualElement>
                 <ui:VisualElement name="item-relay" class="build-item"><ui:Button name="mode-relay" class="action-button mode" text="Relay" /><ui:Button name="info-relay" class="info-button" text="i" /></ui:VisualElement>
+                <ui:VisualElement name="item-research" class="build-item"><ui:Button name="mode-research" class="action-button mode" text="Research Station" /><ui:Button name="info-research" class="info-button" text="i" /></ui:VisualElement>
             </ui:VisualElement>
             <ui:Label name="build-hint" class="caption" text="Drag a building onto the site · Tab: switch" />
         </ui:VisualElement>

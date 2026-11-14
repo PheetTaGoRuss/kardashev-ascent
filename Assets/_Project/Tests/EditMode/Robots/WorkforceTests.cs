@@ -9,7 +9,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         static Workforce Start()
         {
             var w = new Workforce();
-            w.Reset(5);
+            w.Reset(5, 1);
             return w;
         }
 

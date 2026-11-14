@@ -201,8 +201,19 @@ namespace KardashevAscent.Simulation.Robots
         public bool SendTo(int robotId, int tile)
         {
             Robot r = GetRobot(robotId);
-            if (r == null || Movement == null || r.Tile == tile || r.IsShutDown || r.Activity != RobotActivity.None
-                || Movement.Routes.Route(r.Tile, tile) == null)
+            if (r == null || Movement == null || r.Tile == tile || r.IsShutDown || Movement.RoutesFor(r).Route(r.Tile, tile) == null)
+                return false;
+            // A robot on charge goes when you send it, if it has the charge to get there and back to a charger
+            // keeping 20 % (director 2026-11-14: robots must answer orders); in maintenance it stays.
+            if (r.Activity == RobotActivity.Charging)
+            {
+                if (!InRange(r, new WorkTask(TaskKind.Survey, tile, -1)))
+                    return false;
+                r.Activity = RobotActivity.None;
+                r.Facility = null;
+                r.TripCharge = 0.0;
+            }
+            else if (r.Activity != RobotActivity.None)
                 return false;
             r.Task = null;
             r.OnTemporaryTask = false;
@@ -223,7 +234,7 @@ namespace KardashevAscent.Simulation.Robots
             }
             if (r.Destination == tile)
                 return;
-            List<int> route = Movement.Routes.Route(r.Tile, tile);
+            List<int> route = Movement.RoutesFor(r).Route(r.Tile, tile);
             r.Route.Clear();
             r.HopProgress = 0.0;
             if (route != null)
@@ -236,8 +247,8 @@ namespace KardashevAscent.Simulation.Robots
             if (Movement == null)
                 return true;
             double speed = r.Attribute(RobotAttribute.Speed);
-            double go = Movement.Routes.HoursBetween(r.Tile, t.Tile) / speed;
-            double back = Movement.HoursToCharger[t.Tile] / speed;
+            double go = Movement.RoutesFor(r).HoursBetween(r.Tile, t.Tile) / speed;
+            double back = Movement.HoursToChargerFor(r)[t.Tile] / speed;
             if (double.IsInfinity(go) || double.IsInfinity(back))
                 return false;
             double usableCapacity = r.Battery.ColdFactor * r.Battery.CapacityWh;
@@ -867,6 +878,7 @@ namespace KardashevAscent.Simulation.Robots
                     HandOut(open, taken, reservedTasks);
             }
 
+            PlanTripCharges(open);
             UpdateBook(open);
 
             // Drive to the task; robots with nothing to do stop where they are.
@@ -926,7 +938,7 @@ namespace KardashevAscent.Simulation.Robots
 
         Score ScoreOf(Robot r, WorkTask t, int staffed)
         {
-            double hours = Movement != null ? Movement.Routes.HoursBetween(r.Tile, t.Tile) / r.Attribute(RobotAttribute.Speed) : 0.0;
+            double hours = Movement != null ? Movement.RoutesFor(r).HoursBetween(r.Tile, t.Tile) / r.Attribute(RobotAttribute.Speed) : 0.0;
             return new Score((int)ProgramPriority(r, t.Kind), GetGroup(r.GroupId).RankOf(t.Kind), staffed,
                              RobotCatalog.Productivity(r, t.Kind, Milestones), hours, r.Battery.StateOfCharge, t.Order, r.Id);
         }
@@ -1052,19 +1064,52 @@ namespace KardashevAscent.Simulation.Robots
             return TaskState.Available;
         }
 
-        /// <summary>Range with a battery charged to the resume level (a robot charging now could go later).</summary>
-        bool InRangeWhenCharged(Robot r, WorkTask t)
+        /// <summary>Range with a full battery (a robot charging now could go later; long trips charge to full).</summary>
+        bool InRangeWhenCharged(Robot r, WorkTask t) => TripChargeFor(r, t) <= 1.0 + 1e-9;
+
+        /// <summary>
+        /// Share of capacity a robot needs at the start to get to a task and back to a charger keeping 20 %
+        /// (∞ when it can't get there at all).
+        /// </summary>
+        double TripChargeFor(Robot r, WorkTask t)
         {
             if (Movement == null)
-                return true;
+                return 0.0;
             double speed = r.Attribute(RobotAttribute.Speed);
-            double go = Movement.Routes.HoursBetween(r.Tile, t.Tile) / speed;
-            double back = Movement.HoursToCharger[t.Tile] / speed;
-            if (double.IsInfinity(go) || double.IsInfinity(back))
-                return false;
+            double go = Movement.RoutesFor(r).HoursBetween(r.Tile, t.Tile) / speed;
+            double back = Movement.HoursToChargerFor(r)[t.Tile] / speed;
             double usableCapacity = r.Battery.ColdFactor * r.Battery.CapacityWh;
-            double spare = (RobotSpecs.ResumeWorkFraction - RobotSpecs.ReturnToChargeFraction) * usableCapacity;
-            return Movement.EnergyWh(go + back) <= Math.Max(spare, r.Battery.UsableWh - RobotSpecs.ReturnToChargeFraction * usableCapacity) + 1e-9;
+            if (double.IsInfinity(go) || double.IsInfinity(back) || usableCapacity <= 0.0)
+                return double.PositiveInfinity;
+            return RobotSpecs.ReturnToChargeFraction + Movement.EnergyWh(go + back) / usableCapacity;
+        }
+
+        /// <summary>
+        /// An idle robot whose only reachable work is beyond its usual 80 % charge (a far sea, say) charges fully for it
+        /// first (game rule, 2026-11-14). Robots with a task, or with nothing that far, drop the plan.
+        /// </summary>
+        void PlanTripCharges(Dictionary<WorkTask, WorkTask> open)
+        {
+            var staffed = new HashSet<WorkTask>();
+            foreach (Robot r in robots)
+                if (r.Task.HasValue) staffed.Add(r.Task.Value);
+            foreach (Robot r in robots)
+            {
+                if (r.Activity == RobotActivity.Charging && r.TripCharge > 0.0)
+                    continue;   // already charging for it
+                double need = 0.0;
+                if (Movement != null && !r.Task.HasValue && !r.IsShutDown && !Paused(r) && !r.ManualTarget.HasValue
+                    && r.Activity == RobotActivity.None)
+                    foreach (WorkTask t in open.Keys)
+                    {
+                        if (staffed.Contains(t) || !Capable(r, t.Kind) || ProgramPriority(r, t.Kind) == TaskPriority.Disabled || InRange(r, t))
+                            continue;
+                        double c = TripChargeFor(r, t);
+                        if (c > RobotSpecs.ResumeWorkFraction && c <= 1.0 + 1e-9 && (need == 0.0 || c < need))
+                            need = Math.Min(1.0, c + 0.02);   // a little margin
+                    }
+                r.TripCharge = need;
+            }
         }
 
         /// <summary>How reluctant a robot is to drop what it does: idle 0, else 1 + how urgent its task is.</summary>
@@ -1293,14 +1338,19 @@ namespace KardashevAscent.Simulation.Robots
         }
 
         /// <summary>Back to the start of a colony: one General robot at <paramref name="tile"/> (spec: starting_units 1).</summary>
-        public void Reset(int tile)
+        /// <param name="starters">General robots to start with (tests that follow one robot use 1).</param>
+        public void Reset(int tile, int starters = StarterRobots)
         {
             robots.Clear();
             groups.Clear();
             nextRobotId = nextGroupId = 1;
             groupCapacity = DefaultGroupCapacity;
-            AddRobot(RobotKind.General, tile);
+            for (int i = 0; i < Math.Max(1, starters); i++)
+                AddRobot(RobotKind.General, tile);
         }
+
+        /// <summary>General robots the lander brings (director, 2026-11-14; was 1).</summary>
+        public const int StarterRobots = 3;
 
         static int MaxId(List<Robot> list)
         {

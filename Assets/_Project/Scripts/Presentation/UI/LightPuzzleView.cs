@@ -8,6 +8,72 @@ using UnityEngine.UIElements;
 namespace KardashevAscent.Presentation.UI
 {
     /// <summary>
+    /// How every puzzle card reads (director 2026-11-14: bigger, simpler, with a worked example, for a student who has
+    /// never seen the method before): larger text, numbered "how to solve it" steps, and an example with other numbers.
+    /// </summary>
+    public static class PuzzleGuide
+    {
+        public const float BodySize = 14f;
+        public const float TitleSize = 17f;
+        public const float SmallSize = 12f;
+
+        static readonly Color ExampleTint = UiPalette.Good;
+
+        public static Label Text(string text, bool bold = false, float size = BodySize)
+        {
+            var l = new Label(text);
+            l.style.fontSize = size;
+            l.style.whiteSpace = WhiteSpace.Normal;
+            l.style.marginTop = 2;
+            l.style.paddingLeft = l.style.paddingRight = 0;
+            if (bold) l.style.unityFontStyleAndWeight = FontStyle.Bold;
+            return l;
+        }
+
+        /// <summary>"How to solve it" with numbered steps.</summary>
+        public static VisualElement Steps(params string[] steps)
+        {
+            var box = new VisualElement();
+            box.style.marginTop = 8;
+            box.Add(Text("How to solve it", bold: true));
+            for (int i = 0; i < steps.Length; i++)
+            {
+                var row = new VisualElement();
+                row.style.flexDirection = FlexDirection.Row;
+                row.style.marginTop = 2;
+                var n = Text($"{i + 1}.", bold: true);
+                n.style.width = 22;
+                n.style.flexShrink = 0;
+                row.Add(n);
+                var s = Text(steps[i]);
+                s.style.flexShrink = 1;
+                s.style.flexGrow = 1;
+                row.Add(s);
+                box.Add(row);
+            }
+            return box;
+        }
+
+        /// <summary>A worked example with different numbers, in a green box.</summary>
+        public static VisualElement Example(params string[] lines)
+        {
+            var box = new VisualElement();
+            box.style.marginTop = 8;
+            box.style.paddingLeft = box.style.paddingRight = 8;
+            box.style.paddingTop = box.style.paddingBottom = 5;
+            box.style.backgroundColor = new Color(UiPalette.Good.r, UiPalette.Good.g, UiPalette.Good.b, 0.10f);
+            box.style.borderLeftWidth = 3;
+            box.style.borderLeftColor = ExampleTint;
+            var h = Text("Example (other numbers)", bold: true);
+            h.style.color = ExampleTint;
+            box.Add(h);
+            foreach (string line in lines)
+                box.Add(Text(line));
+            return box;
+        }
+    }
+
+    /// <summary>
     /// One light puzzle (stage D): the robot's readings as a table (and, for haze, the Langley plot), a box for the
     /// answer, and the formulas behind a hint button.
     /// </summary>
@@ -29,131 +95,204 @@ namespace KardashevAscent.Presentation.UI
             style.paddingTop = 4;
             style.paddingBottom = 6;
             style.borderLeftWidth = 2;
-            style.borderLeftColor = new Color(0.56f, 0.70f, 1f);
+            style.borderLeftColor = UiPalette.Accent;
 
-            string title, intro, ask, formulas;
+            string title, intro, ask;
+            string[] steps, example;
             var head = new System.Collections.Generic.List<string>();
             var rows = new System.Collections.Generic.List<string[]>();
             switch (puzzle.Parameter)
             {
                 case SolarParameter.OpticalDepth:
-                    title = "Air haze τ: the Langley plot";
-                    intro = $"A robot pointed a sun photometer at the star through the day. Above the air the light is G₀ = {puzzle.G0:0} W/m². " +
-                            "Air mass m is how many thicknesses of air the light crosses (1 straight up).";
-                    head.AddRange(new[] { "sun height h", "air mass m", "direct DNI" });
+                    title = "Air haze τ: how much light the air blocks";
+                    intro = $"A robot measured the sun's direct light at different sun heights. Above the air the light is G₀ = {puzzle.G0:0} W/m². " +
+                            "Air mass m = how many layers of air the light passed through (1 = sun straight up).";
+                    head.AddRange(new[] { "sun height", "air mass m", "light reaching ground" });
                     for (int i = 0; i < puzzle.Dni.Length; i++)
                         rows.Add(new[] { $"{puzzle.AltitudeDeg[i]:0}°", $"{puzzle.AirMass[i]:0.000}", $"{puzzle.Dni[i]:0} W/m²" });
-                    ask = "Optical depth τ:";
-                    formulas = "Beer–Lambert: DNI = G₀ · e^(−τ·m).\nSo ln DNI = ln G₀ − τ·m: plot ln DNI against m, and the line falls with slope −τ.\n" +
-                               "From one row: τ = ln(G₀ / DNI) / m. Using several rows (the slope) is more exact.";
+                    ask = "Air haze τ:";
+                    steps = new[]
+                    {
+                        "Pick one row of the table.",
+                        "Divide the light above the air by the light that reached the ground: G₀ / light.",
+                        "Take the natural log of that number (the ln key).",
+                        "Divide by that row's air mass m. That is τ. (Do two rows and average them to be more exact.)",
+                    };
+                    example = new[]
+                    {
+                        "G₀ = 1361 W/m², a row with m = 2.000 and light 742 W/m²:",
+                        "1361 / 742 = 1.834  →  ln 1.834 = 0.607  →  0.607 / 2.000 = 0.30",
+                        "So τ ≈ 0.30.",
+                    };
                     break;
                 case SolarParameter.DiffuseShare:
-                    title = "Diffuse light share k";
-                    intro = $"A robot set up two sensors: one shaded from the star (reads only the sky's diffuse light DHI) and a " +
-                            $"tracker that reads the direct beam DNI. Above the air: G₀ = {puzzle.G0:0} W/m².";
-                    head.AddRange(new[] { "sun height h", "direct DNI", "diffuse DHI" });
+                    title = "Sky glow k: how much light the sky scatters down";
+                    intro = $"A robot read two sensors: one in shade (only the sky's glow, DHI) and one aimed at the sun (direct light, DNI). " +
+                            $"Above the air: G₀ = {puzzle.G0:0} W/m².";
+                    head.AddRange(new[] { "sun height h", "direct DNI", "sky glow DHI" });
                     for (int i = 0; i < puzzle.Dhi.Length; i++)
                         rows.Add(new[] { $"{puzzle.AltitudeDeg[i]:0}°", $"{puzzle.Dni[i]:0} W/m²", $"{puzzle.Dhi[i]:0.0} W/m²" });
-                    ask = "Diffuse share k:";
-                    formulas = "The air takes 1 − DNI / G₀ of the beam out. A share k of that comes down as diffuse light, spread over " +
-                               "the ground, which the sun meets at sin h:\n  DHI = k · G₀ · sin h · (1 − DNI / G₀)\n" +
-                               "So k = DHI / (G₀ · sin h · (1 − DNI / G₀)). Work it out for each row and average.";
+                    ask = "Sky glow share k:";
+                    steps = new[]
+                    {
+                        "Pick one row.",
+                        "How much of the beam the air took away: 1 − DNI / G₀.",
+                        "How much light would land on flat ground: G₀ × sin h (calculator in degrees).",
+                        "Multiply the answers of steps 2 and 3.",
+                        "k = DHI / that number. (Average a few rows.)",
+                    };
+                    example = new[]
+                    {
+                        "G₀ = 1361, h = 40°, DNI = 800, DHI = 90:",
+                        "1 − 800 / 1361 = 0.412   ·   1361 × sin 40° = 875   ·   875 × 0.412 = 360",
+                        "k = 90 / 360 = 0.25",
+                    };
                     break;
                 case SolarParameter.Albedo:
-                    title = "Ground reflectance ρ_g";
-                    intro = "A robot set two light sensors over open ground: one facing up (light coming in) and one facing " +
-                            "down (light the ground throws back), read three times through the day.";
-                    head.AddRange(new[] { "reading", "incoming (up)", "reflected (down)" });
+                    title = "Ground shine ρ: how much light the ground reflects";
+                    intro = "A robot pointed one light sensor up (light coming in) and one down (light the ground bounces back), three times in a day.";
+                    head.AddRange(new[] { "reading", "light in (up)", "light back (down)" });
                     for (int i = 0; i < puzzle.Incoming.Length; i++)
                         rows.Add(new[] { $"{i + 1}", $"{puzzle.Incoming[i]:0} W/m²", $"{puzzle.Reflected[i]:0.0} W/m²" });
-                    ask = "Reflectance ρ (0–1):";
-                    formulas = "Reflectance is the share of the light that bounces back: ρ = reflected / incoming.\n" +
-                               "Add up all readings first (single readings carry small sensor errors): ρ = Σ reflected / Σ incoming.\n" +
-                               "Tilted panels catch some of this light from the ground in front of them.";
+                    ask = "Ground shine ρ (0 to 1):";
+                    steps = new[]
+                    {
+                        "Add up all the 'light in' readings.",
+                        "Add up all the 'light back' readings.",
+                        "ρ = light back / light in. (0 = black ground, 1 = a perfect mirror.)",
+                    };
+                    example = new[]
+                    {
+                        "Light in: 500 + 800 + 650 = 1950   ·   light back: 100 + 160 + 130 = 390",
+                        "ρ = 390 / 1950 = 0.20",
+                    };
                     break;
                 case SolarParameter.AirTemperature:
-                    title = "Air temperature: the weather station";
-                    intro = "A robot set up a weather station and read it every 3 hours through one day.";
-                    head.AddRange(new[] { "time", "air temperature", "" });
+                    title = "Air heat: the day's average temperature";
+                    intro = "A robot read a thermometer every 3 hours for one whole day.";
+                    head.AddRange(new[] { "time", "temperature", "" });
                     for (int i = 0; i < puzzle.TemperatureC.Length; i++)
                         rows.Add(new[] { $"{puzzle.HourOfDay[i]:00}:00", $"{puzzle.TemperatureC[i]:0.0} °C", "" });
-                    ask = "Daily mean temperature (°C):";
-                    formulas = "The readings are evenly spaced through the whole day, so the daily mean is their average:\n" +
-                               "  T_mean = (sum of the 8 readings) / 8.\n" +
-                               "Panels run hotter than the air; each °C over 25 °C costs a silicon cell about 0.4 % of its output.";
+                    ask = "Average temperature (°C):";
+                    steps = new[]
+                    {
+                        "Add up all 8 temperatures (minus signs count: −3 makes the sum smaller).",
+                        "Divide by 8. That is the day's average.",
+                    };
+                    example = new[]
+                    {
+                        "12 + 10 + 9 + 14 + 20 + 24 + 21 + 16 = 126",
+                        "126 / 8 = 15.8 °C",
+                    };
                     break;
                 case SolarParameter.Dust:
-                    title = "Dust on panels";
-                    intro = "A robot left two reference cells side by side for a week: one wiped clean every day, one left " +
-                            "alone. Their output was read three times.";
-                    head.AddRange(new[] { "reading", "clean cell", "dusty cell" });
+                    title = "Dust: how much light the dust blocks";
+                    intro = "A robot left two small test panels side by side for a week: one wiped clean every day, one left dusty.";
+                    head.AddRange(new[] { "reading", "clean panel", "dusty panel" });
                     for (int i = 0; i < puzzle.CleanW.Length; i++)
                         rows.Add(new[] { $"{i + 1}", $"{puzzle.CleanW[i]:0.0} W", $"{puzzle.DustyW[i]:0.0} W" });
-                    ask = "Share of light the dust blocks (0–1):";
-                    formulas = "The dusty cell loses a share of its light: f_dust = 1 − (dusty / clean).\n" +
-                               "Use the sums of all readings: f_dust = 1 − Σ dusty / Σ clean. 0 means the dust does nothing.";
+                    ask = "Share the dust blocks (0 to 1):";
+                    steps = new[]
+                    {
+                        "Add up the clean panel's readings.",
+                        "Add up the dusty panel's readings.",
+                        "Divide dusty / clean: the share that still gets through.",
+                        "Dust share = 1 − that number.",
+                    };
+                    example = new[]
+                    {
+                        "Clean: 50 + 60 + 40 = 150   ·   dusty: 47 + 56.4 + 37.6 = 141",
+                        "141 / 150 = 0.94   →   1 − 0.94 = 0.06 (the dust blocks 6 %)",
+                    };
                     break;
                 case SolarParameter.Spectrum:
-                    title = "The star's spectrum";
-                    intro = "A robot pointed a spectrometer at the star and read its brightness in 10 nm steps across the " +
-                            "spectrum (100 = the brightest bin). A star glows like a blackbody: hotter stars peak at " +
-                            "shorter (bluer) wavelengths.";
+                    title = "Star colour: the star's temperature";
+                    intro = "A robot measured how bright the star is at several colours (wavelengths, in nm). 100 = the brightest one. " +
+                            "Hot stars are brightest at blue (short) wavelengths, cool stars at red (long) ones.";
                     head.AddRange(new[] { "wavelength", "brightness", "" });
                     for (int i = 0; i < puzzle.WavelengthNm.Length; i++)
                         rows.Add(new[] { $"{puzzle.WavelengthNm[i]:0} nm", $"{puzzle.Brightness[i]:0.0}", "" });
                     ask = "Star temperature (K):";
-                    formulas = "Find the wavelength where the brightness peaks, λ_peak. Wien's displacement law:\n" +
-                               $"  T = b / λ_peak, with b = {ParameterPuzzle.WienMicronK:0} µm·K (so divide by λ in µm: 500 nm = 0.5 µm).\n" +
-                               "The Sun peaks near 500 nm → about 5800 K. A red dwarf peaks past 1000 nm → under 2900 K.\n" +
-                               "The star's temperature sets how well the cell material matches its light (f_spec).";
+                    steps = new[]
+                    {
+                        "Find the brightest reading (the top of the hump). Its wavelength is λ_peak.",
+                        "Change nm to µm: divide by 1000 (500 nm = 0.5 µm).",
+                        $"Wien's law: T = {ParameterPuzzle.WienMicronK:0} / λ_peak (in µm). The answer is in kelvin (K).",
+                    };
+                    example = new[]
+                    {
+                        "Brightest at 800 nm  →  0.8 µm",
+                        $"T = {ParameterPuzzle.WienMicronK:0} / 0.8 = 3622 K (a cool, orange star). The Sun peaks near 500 nm: about 5800 K.",
+                    };
                     break;
                 default:
-                    title = "Clouds: the light log";
-                    intro = "A robot logged the light on flat ground for five days, next to what a clear sky would have given.";
+                    title = "Clouds: how much sunlight gets through";
+                    intro = "A robot logged the sunlight on flat ground for five days, next to what a clear sky would have given.";
                     head.AddRange(new[] { "day", "clear sky", "measured" });
                     for (int d = 0; d < puzzle.ClearKwh.Length; d++)
                         rows.Add(new[] { $"{d + 1}", $"{puzzle.ClearKwh[d]:0.00} kWh/m²", $"{puzzle.MeasuredKwh[d]:0.00} kWh/m²" });
-                    ask = "Share that got through f:";
-                    formulas = "Single days swing with the weather, so add them up:\n  f = (sum of measured) / (sum of clear sky).\n" +
-                               "f = 1 means no clouds; 0.7 means clouds took 30 %.";
+                    ask = "Share that got through (0 to 1):";
+                    steps = new[]
+                    {
+                        "Add up the 'measured' column.",
+                        "Add up the 'clear sky' column.",
+                        "Divide measured / clear sky. (1 = no clouds; 0.7 = clouds took 30 %.)",
+                    };
+                    example = new[]
+                    {
+                        "Measured: 4.5 + 3.0 + 5.1 = 12.6   ·   clear sky: 6.0 + 6.2 + 5.8 = 18.0",
+                        "12.6 / 18.0 = 0.70",
+                    };
                     break;
             }
 
-            Add(MakeLabel(title, "robot-name"));
-            Add(MakeLabel(intro, "job-text"));
+            // A symbol badge and the title, then what the robot did in plain words (director 2026-11-14: readable by a
+            // student who has never seen this before: steps and a worked example).
+            var titleRow = new VisualElement();
+            titleRow.style.flexDirection = FlexDirection.Row;
+            titleRow.style.alignItems = Align.Center;
+            titleRow.Add(ParameterLook.Badge(puzzle.Parameter, 28f));
+            Label t = PuzzleGuide.Text(title, bold: true, size: PuzzleGuide.TitleSize);
+            t.style.flexGrow = 1;
+            titleRow.Add(t);
+            Add(titleRow);
+            Add(PuzzleGuide.Text(intro));
             if (puzzle.Parameter == SolarParameter.OpticalDepth)
                 Add(new LangleyPlot(puzzle));
             if (puzzle.Parameter == SolarParameter.Spectrum)
                 Add(new SpectrumPlot(puzzle));
+            if (puzzle.Parameter == SolarParameter.OpticalDepth || puzzle.Parameter == SolarParameter.DiffuseShare)
+                Add(CalculatorPad.Values("G₀", $"{puzzle.G0:0}"));
+            if (puzzle.Parameter == SolarParameter.Spectrum)
+                Add(CalculatorPad.Values("Wien's number", $"{ParameterPuzzle.WienMicronK:0}"));
             Add(Table(head, rows));
+            Add(PuzzleGuide.Steps(steps));
+            Add(PuzzleGuide.Example(example));
 
             var row = new VisualElement();
             row.style.flexDirection = FlexDirection.Row;
             row.style.alignItems = Align.Center;
-            row.style.marginTop = 3;
-            Label l = MakeLabel(ask, "job-text");
+            row.style.marginTop = 6;
+            Label l = PuzzleGuide.Text(ask, bold: true);
             l.style.flexGrow = 1;
             row.Add(l);
-            answer = new TextField { maxLength = 10 };
+            answer = new TextField { maxLength = 12 };
+            CalculatorPad.TrackAnswer(answer);
             answer.AddToClassList("puzzle-field");
-            answer.style.width = 70;
+            answer.style.width = 110;
+            answer.style.fontSize = PuzzleGuide.BodySize;
             row.Add(answer);
+            var submit = new Button(Submit) { text = "Check" };
+            submit.AddToClassList("small-button");
+            submit.style.fontSize = PuzzleGuide.BodySize;
+            row.Add(submit);
+            row.Add(CalculatorPad.OpenButton());
             Add(row);
 
-            var buttons = new VisualElement();
-            buttons.AddToClassList("button-row");
-            var submit = new Button(Submit) { text = "Submit" };
-            submit.AddToClassList("small-button");
-            buttons.Add(submit);
-            var hint = new Button(() => hints.style.display = DisplayStyle.Flex) { text = "Show the formulas" };
-            hint.AddToClassList("small-button");
-            buttons.Add(hint);
-            Add(buttons);
-
-            hints = MakeLabel(formulas, "job-text");
+            hints = PuzzleGuide.Text("");
             hints.style.display = DisplayStyle.None;
             Add(hints);
-            message = MakeLabel("", "job-text");
+            message = PuzzleGuide.Text("");
             message.AddToClassList("message");
             Add(message);
         }
@@ -167,6 +306,7 @@ namespace KardashevAscent.Presentation.UI
                 return;
             }
             string result = sim.AnswerParameterPuzzle(puzzle.Parameter, v, out LatitudePuzzle.Grade grade);
+            KardashevAscent.Presentation.Audio.GameAudio.Play(grade != LatitudePuzzle.Grade.Wrong ? KardashevAscent.Presentation.Audio.Sfx.Correct : KardashevAscent.Presentation.Audio.Sfx.Wrong);
             message.text = grade == LatitudePuzzle.Grade.Precise ? "Precise! " + result : result;
             if (grade != LatitudePuzzle.Grade.Wrong)
                 solved?.Invoke(message.text);
@@ -177,21 +317,26 @@ namespace KardashevAscent.Presentation.UI
         {
             var table = new VisualElement();
             table.style.marginTop = 4;
+            // A first column that only counts readings (1, 2, 3 or the hour) isn't a number to work with.
+            bool countColumn = head.Count > 0 && (head[0] == "reading" || head[0] == "day" || head[0] == "time");
             VisualElement Row(string[] cells, bool header)
             {
                 var row = new VisualElement();
                 row.style.flexDirection = FlexDirection.Row;
-                foreach (string c in cells)
+                for (int i = 0; i < cells.Length; i++)
                 {
-                    var l = new Label(c);
-                    l.AddToClassList("job-text");
-                    l.style.width = 110;
+                    var l = new Label(cells[i]);
+                    l.style.fontSize = PuzzleGuide.BodySize - 1f;
+                    l.style.whiteSpace = WhiteSpace.Normal;
+                    l.style.width = 140;
                     l.style.flexGrow = 0;
                     if (header)
                     {
                         l.style.unityFontStyleAndWeight = FontStyle.Bold;
-                        l.style.color = new Color(0.62f, 0.68f, 0.8f);
+                        l.style.color = UiPalette.Muted;
                     }
+                    else if (i > 0 || !countColumn)
+                        CalculatorPad.MakeClickable(l);   // click a reading: it goes into the calculator
                     row.Add(l);
                 }
                 return row;
@@ -218,11 +363,11 @@ namespace KardashevAscent.Presentation.UI
             public SpectrumPlot(ParameterPuzzle p)
             {
                 this.p = p;
-                style.height = 110;
+                style.height = 140;
                 style.marginTop = 4;
                 generateVisualContent += Draw;
-                Add(new Label("brightness ↑") { style = { position = Position.Absolute, left = 0, top = 0, fontSize = 10 } });
-                Add(new Label("wavelength →") { style = { position = Position.Absolute, right = 0, bottom = 0, fontSize = 10 } });
+                Add(new Label("brightness ↑") { style = { position = Position.Absolute, left = 0, top = 0, fontSize = 12 } });
+                Add(new Label("wavelength →") { style = { position = Position.Absolute, right = 0, bottom = 0, fontSize = 12 } });
             }
 
             void Draw(MeshGenerationContext ctx)
@@ -265,12 +410,12 @@ namespace KardashevAscent.Presentation.UI
             public LangleyPlot(ParameterPuzzle p)
             {
                 this.p = p;
-                style.height = 110;
+                style.height = 140;
                 style.marginTop = 4;
                 generateVisualContent += Draw;
-                Add(new Label("ln DNI ↑") { style = { position = Position.Absolute, left = 0, top = 0, fontSize = 10 } });
-                Add(new Label("air mass m →") { style = { position = Position.Absolute, right = 0, bottom = 0, fontSize = 10 } });
-                Add(new Label("yellow: readings · blue: G₀ at m = 0") { style = { position = Position.Absolute, right = 0, top = 0, fontSize = 10 } });
+                Add(new Label("ln DNI ↑") { style = { position = Position.Absolute, left = 0, top = 0, fontSize = 12 } });
+                Add(new Label("air mass m →") { style = { position = Position.Absolute, right = 0, bottom = 0, fontSize = 12 } });
+                Add(new Label("yellow: readings · blue: G₀ at m = 0") { style = { position = Position.Absolute, right = 0, top = 0, fontSize = 12 } });
             }
 
             void Draw(MeshGenerationContext ctx)

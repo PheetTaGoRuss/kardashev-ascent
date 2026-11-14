@@ -34,7 +34,7 @@ namespace KardashevAscent.Simulation.Game
             string key = string.Join(",", tiles);
             if (movement == null || key != chargerKey)
             {
-                movement = new Movement(Routes, Routes.HoursFromNearest(tiles));
+                movement = new Movement(Routes, Routes.HoursFromNearest(tiles), Routes.Amphibious().HoursFromNearest(tiles));
                 chargerKey = key;
             }
             return movement;

@@ -42,6 +42,18 @@ namespace KardashevAscent.Simulation.Planet
         /// <summary>Where floating solar can be built: shallow sea and wetland.</summary>
         public static bool AllowsFloating(TerrainType t) => t == TerrainType.ShallowOcean || t == TerrainType.Wetland;
 
+        /// <summary>
+        /// Why the lander can't come down on this ground, or null if it can (director 2026-11-14: no landing on sea,
+        /// wetland or ground the colony can't start on). It needs flat, open ground: <see cref="BaseSiteRank"/> above 0.
+        /// </summary>
+        public static string LandingProblem(TerrainType t)
+        {
+            if (IsWater(t)) return "The lander can't come down on water.";
+            if (t == TerrainType.Wetland) return "Wetland is too soft for the lander and the first buildings.";
+            if (BaseSiteRank(t) == 0) return $"The lander needs flat, open ground (lowland, desert, basin, beach, forest or tundra), not {Name(t).ToLowerInvariant()}.";
+            return null;
+        }
+
         /// <summary>Flat, open ground a colony would land on (best first: <see cref="BaseSiteRank"/>).</summary>
         public static int BaseSiteRank(TerrainType t)
         {

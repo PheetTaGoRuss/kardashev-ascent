@@ -18,6 +18,9 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Materials on hand, kg.</summary>
         public MaterialStock Materials { get; } = new MaterialStock();
 
+        /// <summary>Grid power the Workshop's jobs drew in the last step, W (their recipes' energy over their work hours).</summary>
+        public double WorkshopPowerW { get; private set; }
+
         readonly List<int> surveyOrders = new List<int>();
         readonly List<(int Tile, Material Material)> miningOrders = new List<(int, Material)>();
         /// <summary>Hours of work done on survey tasks and the current mining batch.</summary>
@@ -116,6 +119,7 @@ namespace KardashevAscent.Simulation.Game
                     crews[t] = crew = new List<double>();
                 crew.Add(RobotCatalog.Productivity(r, t.Kind, MilestonesReached));
             }
+            double workshopW = 0.0;
             foreach (var kv in crews)
             {
                 WorkTask t = kv.Key;
@@ -123,8 +127,12 @@ namespace KardashevAscent.Simulation.Game
                 if (t.Kind == TaskKind.Manufacture)
                 {
                     int index = FinishedWorkshops().IndexOf((t.Tile, t.Slot));
+                    // A job draws its recipe's energy from the grid, spread over its work hours, as a priority load
+                    // (it doesn't stop in a brownout yet: TBD).
                     if (index >= 0 && index < jobs.Count)
                     {
+                        if (jobs[index].Recipe.WorkHours > 0.0)
+                            workshopW += speed * jobs[index].Recipe.EnergyWh / jobs[index].Recipe.WorkHours;
                         double before = jobs[index].DoneHours;
                         jobs[index].DoneHours += dt * speed;
                         // Long jobs go in rounds, like mining batches, so the robot still takes more urgent work between them.
@@ -133,10 +141,17 @@ namespace KardashevAscent.Simulation.Game
                     }
                     continue;
                 }
-                if (t.Kind != TaskKind.Survey && t.Kind != TaskKind.Mine && t.Kind != TaskKind.Measure)
+                // Construction takes time (director 2026-11-14): the crew's hours go into the site.
+                if (t.Kind == TaskKind.Build)
+                {
+                    Build.Work(t.Tile, t.Slot, dt * speed);
+                    continue;
+                }
+                if (t.Kind != TaskKind.Survey && t.Kind != TaskKind.Mine && t.Kind != TaskKind.Measure && t.Kind != TaskKind.Experiment)
                     continue;
                 fieldWork[t] = (fieldWork.TryGetValue(t, out double h) ? h : 0.0) + dt * speed;
             }
+            WorkshopPowerW = workshopW;
             for (int i = jobs.Count - 1; i >= 0; i--)
             {
                 ManufacturingJob j = jobs[i];
@@ -155,9 +170,12 @@ namespace KardashevAscent.Simulation.Game
                     surveyOrders.Remove(tile);
                     SurveyPuzzle puzzle = SurveyPuzzle.Make(tile, Deposits.At(tile));
                     // Only rock here: nothing to estimate, the survey is simply done (once the colony has it).
+                    // Otherwise the cores are a puzzle only now and then; usually the robot works the grades out itself.
                     var finding = puzzle.Materials.Count == 0
                         ? new HeldFinding { Kind = FindingKind.SurveyRockOnly, Tile = tile }
-                        : new HeldFinding { Kind = FindingKind.SurveyCores, Tile = tile, Survey = puzzle };
+                        : RollPuzzle(tile, 1)
+                        ? new HeldFinding { Kind = FindingKind.SurveyCores, Tile = tile, Survey = puzzle }
+                        : new HeldFinding { Kind = FindingKind.SurveyWorkedOut, Tile = tile };
                     if (!HoldIfCutOff(t, finding))
                         Deliver(finding);
                 }
@@ -170,7 +188,10 @@ namespace KardashevAscent.Simulation.Game
                 fieldWork.Remove(t);
                 measureOrders.Remove(mo);
                 HeldFinding readings = null;
-                if (HasPuzzle(mo.Parameter))
+                if (!RollPuzzle(mo.Tile, 2 + (int)mo.Parameter))
+                    // No puzzle this time: the robot works the value out itself.
+                    readings = new HeldFinding { Kind = FindingKind.ValueWorkedOut, Tile = mo.Tile, Parameter = mo.Parameter };
+                else if (HasPuzzle(mo.Parameter))
                     readings = new HeldFinding { Kind = FindingKind.LightReadings, Tile = mo.Tile, Parameter = mo.Parameter,
                                                  Light = MakeLightPuzzle(mo.Parameter, mo.Tile) };
                 else if (mo.Parameter == SolarParameter.Latitude)
@@ -192,6 +213,7 @@ namespace KardashevAscent.Simulation.Game
                 Parameters.MarkMeasured(mo.Parameter);
                 ParameterMeasured?.Invoke(mo.Parameter);
             }
+            AdvanceExperiments();
             foreach (var order in miningOrders.ToArray())
             {
                 WorkTask t = MineTask(order.Tile, order.Material);

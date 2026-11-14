@@ -36,6 +36,7 @@ namespace KardashevAscent.Presentation.UI
         Label title, place, sunlight, bestLabel, bestCaption, sunPathCaption, monthlyCaption, monthlyHover, legend1, legend2;
         SunPathChart sunPath;
         int shownTile = -1;
+        bool shownKnowsLatitude;
         double shownTilt = double.NaN, shownAzimuth = double.NaN;
         double[] months;
         float nextRefresh;
@@ -49,6 +50,7 @@ namespace KardashevAscent.Presentation.UI
             ScreenInput.Register(root.panel);
 
             panelRoot = root.Q("tile-info");
+            PanelDrag.AddGrip(panelRoot);   // drag it anywhere (director 2026-11-14)
             title = root.Q<Label>("title");
             place = root.Q<Label>("place");
             sunlight = root.Q<Label>("sunlight");
@@ -108,8 +110,11 @@ namespace KardashevAscent.Presentation.UI
                 return;
             }
 
-            if (tile != shownTile)
+            // The tile's place and sun path appear once its latitude is measured (director 2026-11-14).
+            bool knows = sim.Notebook != null && sim.Notebook.KnowsLatitude(tile);
+            if (tile != shownTile || knows != shownKnowsLatitude)
             {
+                shownKnowsLatitude = knows;
                 shownTile = tile;
                 shownTilt = shownAzimuth = double.NaN;
                 ShowTile(sim, tile);
@@ -123,34 +128,44 @@ namespace KardashevAscent.Presentation.UI
             RefreshLanding(sim, tile);
         }
 
-        /// <summary>Where the colony landed, and (before anything is built) a button to land on this tile instead.</summary>
+        /// <summary>
+        /// While choosing where to land (time stopped), a button to land on this tile; once landed, where the colony is.
+        /// The colony can't move after landing (decided 2026-11-14).
+        /// </summary>
         void RefreshLanding(IPlanetSimulation sim, int tile)
         {
             if (landingText == null || landingActions == null)
                 return;
-            bool here = tile == sim.BaseTileId, water = sim.GetTile(tile).IsWater, canMove = runner.CanMoveLanding;
-            string shape = $"{tile}|{sim.BaseTileId}|{canMove}";
+            bool here = tile == sim.BaseTileId, water = sim.GetTile(tile).IsWater;
+            bool landing = GameFlow.Phase == GamePhase.Landing;
+            string shape = $"{tile}|{sim.BaseTileId}|{landing}";
             if (shape == landingShape)
                 return;
             landingShape = shape;
             landingActions.Clear();
-            if (here)
-                landingText.text = canMove
-                    ? "Your lander is here. Before you build, you can land somewhere else: pick a land tile and press Land here."
-                    : "Your colony's landing site. Press R to fly back here.";
-            else if (canMove && !water)
+            string problem = Terrains.LandingProblem(sim.GetTile(tile).Terrain);
+            if (landing && problem != null)
+                landingText.text = problem + " Pick another tile.";
+            else if (landing)
             {
-                landingText.text = $"Nothing is built yet: the lander can still come down here instead (tile #{sim.BaseTileId} now).";
+                landingText.text = "Land the colony here? Time starts when the lander is down, and the colony can't move afterwards.";
                 var b = new Button(() =>
                 {
-                    string why = runner.LandAt(tile);
-                    landingText.text = why ?? "Landed here.";
+                    string why = runner.LandAt(tile, true);
                     landingShape = null;
+                    if (why != null)
+                    {
+                        landingText.text = why;
+                        return;
+                    }
+                    GameFlow.Landed(tile);
                 }) { text = "Land here" };
                 b.AddToClassList("ground-button");
                 b.AddToClassList("on");
                 landingActions.Add(b);
             }
+            else if (here)
+                landingText.text = "Your colony's landing site. Press R to fly back here.";
             else
                 landingText.text = "";
             landingText.EnableInClassList("hidden", landingText.text.Length == 0);
@@ -252,7 +267,11 @@ namespace KardashevAscent.Presentation.UI
             TileInfo info = sim.GetTile(tile);
             double latDeg = info.Latitude * Mathf.Rad2Deg, lonDeg = info.Longitude * Mathf.Rad2Deg;
             title.text = $"Tile #{tile} · {Pretty(info.Terrain)}";
-            place.text = $"{Math.Abs(latDeg):0.0}° {(latDeg >= 0 ? "N" : "S")}, {Math.Abs(lonDeg):0.0}° {(lonDeg >= 0 ? "E" : "W")}" +
+            // Where the tile is stays unknown until the colony measures a latitude (sky view, V): the map then gives it.
+            bool knowsLatitude = sim.Notebook != null && sim.Notebook.KnowsLatitude(tile);
+            place.text = (knowsLatitude
+                             ? $"{Math.Abs(latDeg):0.0}° {(latDeg >= 0 ? "N" : "S")}, {Math.Abs(lonDeg):0.0}° {(lonDeg >= 0 ? "E" : "W")}"
+                             : "Latitude unknown (measure it: V)") +
                          (!info.IsBuildableLand ? (Terrains.AllowsFloating(info.Terrain) ? " · floating solar only" : " · no building on water") : $" · {sim.SlotCount(tile)} building slots");
 
             PlanetSolarParams planet = runner.SolarParams;
@@ -260,6 +279,12 @@ namespace KardashevAscent.Presentation.UI
             {
                 sunPathCaption.text = "Tidally locked: the star stands still in this tile's sky.";
                 sunPath.SetPaths(null, null, null, info.Latitude);
+                return;
+            }
+            if (!knowsLatitude)
+            {
+                sunPathCaption.text = "The sun's path here needs your latitude: measure it in the sky view (V).";
+                sunPath.SetPaths(null, null, null, 0.0);
                 return;
             }
             // "June" solstice = the northern summer one: δ = +ε. Name them by what they are here.

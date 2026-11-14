@@ -17,7 +17,7 @@ MonoBehaviour:
     displayName: TRAPPIST-1 e
     archiveName: TRAPPIST-1 e
     source: NASA Exoplanet Archive, table pscomppars
-    retrieved: 2026-11-08
+    retrieved: 2026-11-14
     solar:
       luminosityW: 2.116907731641514e+23
       semiMajorAxisM: 4375737717.975
