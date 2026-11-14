@@ -15,7 +15,7 @@ namespace KardashevAscent.Presentation.Planet
         static readonly Color32 Rock = new Color32(118, 110, 102, 40);
         static readonly Color32 Snow = new Color32(232, 238, 244, 90);
         static readonly Color32 Canopy = new Color32(34, 78, 38, 20);
-        static readonly Color32 River = new Color32(40, 110, 175, 200);
+        static readonly Color32 River = new Color32(70, 150, 215, 220);
 
         /// <param name="tileRadius">The tile tops' distance from the centre (relief).</param>
         /// <param name="seaRadius">Sea level.</param>
@@ -48,15 +48,16 @@ namespace KardashevAscent.Presentation.Planet
                 }
                 else if (type == TerrainType.Forest)
                 {
-                    // A few tree crowns, scattered by the tile id.
-                    for (int k = 0; k < 4; k++)
+                    // Small tree crowns, scattered by the tile id: a canopy texture from orbit, not giant trees when a
+                    // neighbouring site is open.
+                    for (int k = 0; k < 7; k++)
                     {
                         float a = (t * 2.399f + k * 1.7f) % (2f * Mathf.PI);
-                        float d = span * (0.15f + 0.45f * Hash(t, k));
+                        float d = span * (0.1f + 0.6f * Hash(t, k));
                         Vector3 east = Vector3.Cross(Vector3.up, up).sqrMagnitude > 1e-6f ? Vector3.Cross(Vector3.up, up).normalized : Vector3.right;
                         Vector3 north = Vector3.Cross(up, east);
                         Vector3 dir = (up * r + (east * Mathf.Cos(a) + north * Mathf.Sin(a)) * d).normalized;
-                        Cone(v, n, c, tri, dir * r, dir, span * 0.16f, span * 0.45f, Canopy);
+                        Cone(v, n, c, tri, dir * r, dir, span * 0.09f, span * 0.2f, Canopy);
                     }
                 }
                 if (rivers != null && rivers.IsRiver(t))
@@ -65,7 +66,7 @@ namespace KardashevAscent.Presentation.Planet
                     if (next >= 0 && next != excludeTile)
                     {
                         // From this tile's centre to the next one's, just above both tops (or sea level).
-                        float width = span * (0.08f + 0.05f * Mathf.Min(6, rivers.Flow(t)));
+                        float width = span * (0.12f + 0.05f * Mathf.Min(6, rivers.Flow(t)));
                         Vector3 a = up * (r + span * 0.02f);
                         Vector3 nextUp = ToUnity(sphere.Centers[next]);
                         float rNext = Terrains.IsWater(surface.Terrain[next]) ? seaRadius : tileRadius[next];

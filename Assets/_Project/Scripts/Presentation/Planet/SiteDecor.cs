@@ -20,7 +20,7 @@ namespace KardashevAscent.Presentation.Planet
         static readonly Color32 Reed = new Color32(96, 128, 60, 15);
         static readonly Color32 Stone = new Color32(128, 120, 110, 40);
         static readonly Color32 DarkStone = new Color32(58, 52, 50, 50);
-        static readonly Color32 Water = new Color32(46, 120, 185, 210);
+        static readonly Color32 Water = new Color32(70, 150, 215, 230);
 
         SiteView site;
         PlanetView planet;
@@ -163,7 +163,7 @@ namespace KardashevAscent.Presentation.Planet
                 }
             int down = rivers.Downstream(tile);
             Vector3 exit = down >= 0 ? Vector3.Lerp(centre, ToUnity(planet.Sphere.Centers[down]), 0.5f).normalized : centre;
-            float width = slot * (0.6f + 0.15f * Mathf.Min(6, rivers.Flow(tile)));
+            float width = slot * (0.9f + 0.2f * Mathf.Min(6, rivers.Flow(tile)));
             const int pieces = 16;
             var points = new List<Vector3>();
             for (int i = 0; i <= pieces; i++)
