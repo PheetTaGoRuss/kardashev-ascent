@@ -204,8 +204,110 @@ namespace KardashevAscent.Presentation.UI
     }
 
     /// <summary>
-    /// Research (T): the solar parameters (docs/design/solar-measurements.md). For the selected tile (or the base),
-    /// each parameter's status and how much its uncertainty can change a panel's yearly energy; order a robot to measure.
+    /// How each solar value looks on screen: a symbol in a coloured badge, a short name and what measures it
+    /// (director 2026-11-14: less text, symbols and pictures).
+    /// </summary>
+    public static class ParameterLook
+    {
+        public static string Symbol(SolarParameter p)
+        {
+            switch (p)
+            {
+                case SolarParameter.Latitude: return "φ";
+                case SolarParameter.OpticalDepth: return "τ";
+                case SolarParameter.DiffuseShare: return "k";
+                case SolarParameter.Clouds: return "f";
+                case SolarParameter.Albedo: return "ρ";
+                case SolarParameter.AirTemperature: return "T";
+                case SolarParameter.Dust: return "d";
+                default: return "λ";
+            }
+        }
+
+        public static string Short(SolarParameter p)
+        {
+            switch (p)
+            {
+                case SolarParameter.Latitude: return "Latitude";
+                case SolarParameter.OpticalDepth: return "Air haze";
+                case SolarParameter.DiffuseShare: return "Sky glow";
+                case SolarParameter.Clouds: return "Clouds";
+                case SolarParameter.Albedo: return "Ground shine";
+                case SolarParameter.AirTemperature: return "Air heat";
+                case SolarParameter.Dust: return "Dust";
+                default: return "Star colour";
+            }
+        }
+
+        /// <summary>The instrument, in a few words.</summary>
+        public static string Tool(SolarParameter p)
+        {
+            switch (p)
+            {
+                case SolarParameter.Latitude: return "noon shadow";
+                case SolarParameter.OpticalDepth: return "sun photometer";
+                case SolarParameter.DiffuseShare: return "shaded sensor";
+                case SolarParameter.Clouds: return "light log";
+                case SolarParameter.Albedo: return "up/down sensors";
+                case SolarParameter.AirTemperature: return "weather station";
+                case SolarParameter.Dust: return "test cells";
+                default: return "spectrometer";
+            }
+        }
+
+        public static Color Colour(SolarParameter p)
+        {
+            switch (p)
+            {
+                case SolarParameter.Latitude: return new Color(0.56f, 0.70f, 1f);
+                case SolarParameter.OpticalDepth: return new Color(0.75f, 0.62f, 1f);
+                case SolarParameter.DiffuseShare: return new Color(0.45f, 0.85f, 0.95f);
+                case SolarParameter.Clouds: return new Color(0.80f, 0.84f, 0.90f);
+                case SolarParameter.Albedo: return new Color(0.95f, 0.78f, 0.45f);
+                case SolarParameter.AirTemperature: return new Color(1f, 0.55f, 0.45f);
+                case SolarParameter.Dust: return new Color(0.80f, 0.68f, 0.52f);
+                default: return new Color(1f, 0.85f, 0.35f);
+            }
+        }
+
+        /// <summary>A round badge with the value's symbol.</summary>
+        public static VisualElement Badge(SolarParameter p, float size = 26f)
+        {
+            var b = new Label(Symbol(p));
+            b.style.width = size; b.style.height = size;
+            b.style.minWidth = size;
+            b.style.borderTopLeftRadius = b.style.borderTopRightRadius = b.style.borderBottomLeftRadius = b.style.borderBottomRightRadius = size / 2f;
+            b.style.backgroundColor = Colour(p);
+            b.style.color = new Color(0.05f, 0.06f, 0.10f);
+            b.style.unityTextAlign = TextAnchor.MiddleCenter;
+            b.style.unityFontStyleAndWeight = FontStyle.Bold;
+            b.style.fontSize = size * 0.55f;
+            b.style.marginRight = 8;
+            b.style.paddingLeft = b.style.paddingRight = b.style.paddingTop = b.style.paddingBottom = 0;
+            return b;
+        }
+
+        /// <summary>A thin bar: <paramref name="fill"/> of it in <paramref name="colour"/> over a dark track.</summary>
+        public static VisualElement Bar(out VisualElement fill, Color colour, float height = 6f)
+        {
+            var track = new VisualElement();
+            track.style.height = height;
+            track.style.backgroundColor = new Color(1f, 1f, 1f, 0.08f);
+            track.style.borderTopLeftRadius = track.style.borderTopRightRadius = track.style.borderBottomLeftRadius = track.style.borderBottomRightRadius = height / 2f;
+            fill = new VisualElement();
+            fill.style.height = height;
+            fill.style.width = Length.Percent(0);
+            fill.style.backgroundColor = colour;
+            fill.style.borderTopLeftRadius = fill.style.borderTopRightRadius = fill.style.borderBottomLeftRadius = fill.style.borderBottomRightRadius = height / 2f;
+            track.Add(fill);
+            return track;
+        }
+    }
+
+    /// <summary>
+    /// Research: what a solar panel on the selected tile depends on, how sure the colony is of each value, and a button to
+    /// send a robot to measure it. Puzzles (now and then) wait at the top. A short picture tutorial opens the first time
+    /// (and with "?").
     /// </summary>
     public sealed class ResearchWindow : SystemWindow
     {
@@ -214,54 +316,196 @@ namespace KardashevAscent.Presentation.UI
         public override KeyCode Key => KeyCode.T;
         public override int Order => 40;
 
-        Label where, total, puzzleHead, solvedText;
-        VisualElement puzzles;
+        const string TutorialSeenKey = "kardashev.tutorial.measuring";
+
+        Label where, total, puzzleHead, solvedText, totalKnown;
+        VisualElement totalFill;
+        VisualElement puzzles, tutorial;
+        Label tutorialStep, tutorialText, tutorialCount;
+        VisualElement tutorialPicture;
+        Button tutorialNext;
+        int tutorialAt;
         int shownPuzzles = -1;
-        VisualElement rows;
         readonly Dictionary<SolarParameter, Label> status = new Dictionary<SolarParameter, Label>();
+        readonly Dictionary<SolarParameter, Label> spreadText = new Dictionary<SolarParameter, Label>();
+        readonly Dictionary<SolarParameter, VisualElement> spreadFill = new Dictionary<SolarParameter, VisualElement>();
         readonly Dictionary<SolarParameter, Button> buttons = new Dictionary<SolarParameter, Button>();
         List<ParameterEffect> effects;
         int effectsTile = -2;
         float nextEffects;
         KardashevAscent.Presentation.Planet.TilePicker picker;
 
+        static readonly (string Title, string Text, SolarParameter Picture)[] Steps =
+        {
+            ("Unknowns cost power", "Each value changes what a panel makes. The longer its bar, the less sure we are.", SolarParameter.Clouds),
+            ("Send a robot", "Press ► next to a value. A robot takes the instrument out and measures for a few hours.", SolarParameter.OpticalDepth),
+            ("Sometimes a puzzle", "Usually the robot works the value out. Now and then it brings readings: solve them at the top.", SolarParameter.Spectrum),
+            ("Bars shrink", "Measured values drop to zero. Know your latitude φ to unlock the best panel angle (B).", SolarParameter.Latitude),
+        };
+
         protected override void BuildBody()
         {
+            BuildTutorial();
+
+            // The panel here, and how much of its year is still unknown.
+            var head = new VisualElement();
+            head.style.flexDirection = FlexDirection.Row;
+            head.style.alignItems = Align.Center;
+            total = Label("", "value");
+            total.style.flexGrow = 1;
+            head.Add(total);
+            var help = MakeButton("?", () => ShowTutorial(0));
+            help.tooltip = "How measuring works";
+            head.Add(help);
+            Body.Add(head);
+            Body.Add(ParameterLook.Bar(out totalFill, new Color(1f, 0.45f, 0.35f), 8f));
+            totalKnown = Label("", "caption");
+            Body.Add(totalKnown);
+            where = Label("", "caption");
+            Body.Add(where);
+
             puzzleHead = Heading("PUZZLES");
             puzzles = new VisualElement();
             Body.Add(puzzles);
             solvedText = Text();
             solvedText.AddToClassList("good");
-            where = Text();
-            total = Text();
-            Heading("WHAT A PANEL HERE DEPENDS ON");
-            rows = new VisualElement();
-            Body.Add(rows);
+
+            Heading("VALUES");
             foreach (SolarParameter p in (SolarParameter[])System.Enum.GetValues(typeof(SolarParameter)))
             {
                 SolarParameter param = p;
                 var row = new VisualElement();
-                row.AddToClassList("job");
-                var text = new VisualElement();
-                text.style.flexGrow = 1;
-                text.style.flexShrink = 1;
-                text.Add(Label(SolarUnknowns.Name(p), "robot-name"));
+                row.style.flexDirection = FlexDirection.Row;
+                row.style.alignItems = Align.Center;
+                row.style.marginTop = 5;
+                row.Add(ParameterLook.Badge(p));
+
+                var mid = new VisualElement();
+                mid.style.flexGrow = 1; mid.style.flexShrink = 1;
+                var top = new VisualElement();
+                top.style.flexDirection = FlexDirection.Row;
+                Label name = Label(ParameterLook.Short(p), "robot-name");
+                name.style.flexGrow = 1;
+                top.Add(name);
+                Label sp = Label("", "job-text");
+                sp.style.flexGrow = 0;
+                top.Add(sp);
+                mid.Add(top);
+                mid.Add(ParameterLook.Bar(out VisualElement fill, ParameterLook.Colour(p)));
                 Label st = Label("", "job-text");
-                text.Add(st);
-                row.Add(text);
-                Button b = MakeButton("Measure", () => Toggle(param));
+                mid.Add(st);
+                mid.tooltip = $"{SolarUnknowns.Name(p)} · measured with {SolarUnknowns.Instrument(p)}";
+                row.Add(mid);
+
+                Button b = MakeButton("►", () => Toggle(param));
+                b.style.width = 34;
+                b.style.marginLeft = 8;
                 row.Add(b);
-                rows.Add(row);
+                Body.Add(row);
                 status[p] = st;
+                spreadText[p] = sp;
+                spreadFill[p] = fill;
                 buttons[p] = b;
             }
-            Text("caption").text =
-                "Spread = how far the yearly energy of a 30°-tilted panel facing the equator could be off while the value is " +
-                "only an estimate (the model run at both ends of the range). A robot measures one value at a time; research " +
-                "robots are twice as quick as General ones. Every value ends with a puzzle: work the value " +
-                "out from the robot's readings (within 5 %: known; within 15 %: half the spread is left). Ground surveys " +
-                "end here too: the robot's cores wait for your grade estimates. Ranges and hours are placeholder values.";
         }
+
+        // ---- Tutorial ----
+
+        void BuildTutorial()
+        {
+            tutorial = new VisualElement();
+            tutorial.style.marginBottom = 8;
+            tutorial.style.paddingLeft = tutorial.style.paddingRight = 8;
+            tutorial.style.paddingTop = tutorial.style.paddingBottom = 6;
+            tutorial.style.backgroundColor = new Color(0.56f, 0.70f, 1f, 0.12f);
+            tutorial.style.borderTopLeftRadius = tutorial.style.borderTopRightRadius = tutorial.style.borderBottomLeftRadius = tutorial.style.borderBottomRightRadius = 4;
+            var row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.alignItems = Align.Center;
+            tutorialPicture = new VisualElement();
+            row.Add(tutorialPicture);
+            var words = new VisualElement();
+            words.style.flexGrow = 1; words.style.flexShrink = 1;
+            tutorialStep = Label("", "robot-name");
+            words.Add(tutorialStep);
+            tutorialText = Label("", "job-text");
+            words.Add(tutorialText);
+            row.Add(words);
+            tutorial.Add(row);
+            var buttonsRow = new VisualElement();
+            buttonsRow.style.flexDirection = FlexDirection.Row;
+            buttonsRow.style.alignItems = Align.Center;
+            buttonsRow.style.marginTop = 4;
+            tutorialCount = Label("", "caption");
+            tutorialCount.style.flexGrow = 1;
+            buttonsRow.Add(tutorialCount);
+            buttonsRow.Add(MakeButton("Skip", CloseTutorial));
+            tutorialNext = MakeButton("Next ►", () => ShowTutorial(tutorialAt + 1));
+            buttonsRow.Add(tutorialNext);
+            tutorial.Add(buttonsRow);
+            Body.Add(tutorial);
+            bool seen = false;
+            try { seen = PlayerPrefs.GetInt(TutorialSeenKey, 0) == 1; } catch { }
+            if (seen) tutorial.style.display = DisplayStyle.None;
+            else ShowTutorial(0);
+        }
+
+        void ShowTutorial(int step)
+        {
+            if (step >= Steps.Length)
+            {
+                CloseTutorial();
+                return;
+            }
+            tutorialAt = step;
+            tutorial.style.display = DisplayStyle.Flex;
+            var s = Steps[step];
+            tutorialStep.text = $"{step + 1}. {s.Title}";
+            tutorialText.text = s.Text;
+            tutorialCount.text = $"{step + 1} / {Steps.Length}";
+            tutorialNext.text = step == Steps.Length - 1 ? "Got it" : "Next ►";
+            tutorialPicture.Clear();
+            tutorialPicture.Add(Picture(step, s.Picture));
+        }
+
+        /// <summary>A small picture per step: a bar, the measure button, a puzzle card, a bar going to zero.</summary>
+        static VisualElement Picture(int step, SolarParameter p)
+        {
+            var box = new VisualElement();
+            box.style.width = 70;
+            box.style.marginRight = 8;
+            box.style.alignItems = Align.Center;
+            box.Add(ParameterLook.Badge(p, 30f));
+            if (step == 1)
+            {
+                var play = new Label("►");
+                play.style.fontSize = 16;
+                play.style.color = ParameterLook.Colour(p);
+                box.Add(play);
+                return box;
+            }
+            var bar = ParameterLook.Bar(out VisualElement fill, ParameterLook.Colour(p));
+            bar.style.width = 60;
+            bar.style.marginTop = 4;
+            fill.style.width = Length.Percent(step == 0 ? 80 : step == 2 ? 45 : 4);
+            box.Add(bar);
+            if (step == 2)
+            {
+                var q = new Label("? = ?");
+                q.style.fontSize = 11;
+                q.style.color = ParameterLook.Colour(p);
+                box.Add(q);
+            }
+            return box;
+        }
+
+        void CloseTutorial()
+        {
+            tutorial.style.display = DisplayStyle.None;
+            try { PlayerPrefs.SetInt(TutorialSeenKey, 1); PlayerPrefs.Save(); } catch { }
+        }
+
+        // ---- Values ----
 
         IPlanetSimulation lastSim;
         int Tile(IPlanetSimulation sim)
@@ -313,36 +557,47 @@ namespace KardashevAscent.Presentation.UI
             double lat = sim.Sphere.Latitude(tile);
             if (tile != effectsTile || Time.unscaledTime >= nextEffects)
             {
-                // A 30° panel facing the equator: a typical panel, so the spreads compare across parameters.
+                // A 30° panel facing the equator: a typical panel, so the spreads compare across values.
                 effects = sim.ParameterEffects(tile, 30.0 * Mathf.Deg2Rad, lat >= 0.0 ? Mathf.PI : 0.0);
                 effectsTile = tile;
                 nextEffects = Time.unscaledTime + 3f;
             }
-            where.text = $"Tile #{tile}{(tile == sim.BaseTileId ? " (base)" : "")} · select another tile on the map to see it there.";
-            double baseWh = 0.0, sq = 0.0;
+            where.text = $"Tile #{tile}{(tile == sim.BaseTileId ? " · base" : "")} · click another tile to compare";
+            double baseWh = 0.0, sq = 0.0, worst = 0.0;
+            int known = 0;
             foreach (ParameterEffect e in effects)
             {
                 baseWh = System.Math.Max(baseWh, (e.LowWh + e.HighWh) / 2.0);
                 sq += e.HalfRangeWh * e.HalfRangeWh;
+                worst = System.Math.Max(worst, e.HalfRangeWh);
+                if (e.Known) known++;
             }
             double spread = System.Math.Sqrt(sq);
-            total.text = baseWh > 0.0
-                ? $"One panel here: about {Format.Energy(baseWh)} a year, ± {Format.Energy(spread)} ({spread / baseWh * 100.0:0.0} %) from what is still unknown."
-                : "No sunlight model for this tile.";
+            double share = baseWh > 0.0 ? spread / baseWh : 0.0;
+            total.text = baseWh > 0.0 ? $"Panel here ≈ {Format.Energy(baseWh)}/yr ± {share * 100.0:0.0} %" : "No sunlight model here";
+            totalFill.style.width = Length.Percent((float)System.Math.Min(100.0, share * 400.0));   // 25 % fills the bar
+            totalKnown.text = $"{known} of {effects.Count} values known";
             foreach (ParameterEffect e in effects)
             {
                 SolarParameter p = e.Parameter;
                 bool ordered = sim.IsMeasureOrdered(p);
-                string share = baseWh > 0.0 ? $"± {e.HalfRangeWh / baseWh * 100.0:0.0} %" : "";
                 bool waitingPuzzle = p == SolarParameter.Latitude ? HasPuzzle(sim, tile) : HasLightPuzzle(sim, p);
+                double pct = baseWh > 0.0 ? e.HalfRangeWh / baseWh * 100.0 : 0.0;
+                spreadText[p].text = e.Known ? "known" : $"± {pct:0.0} %";
+                spreadFill[p].style.width = Length.Percent(e.Known || worst <= 0.0 ? 0f : (float)(100.0 * e.HalfRangeWh / worst));
                 status[p].text = e.Known
-                    ? (p == SolarParameter.Clouds && !sim.Parameters.IsMeasured(p) ? "No clouds on this planet's model." : "Measured.")
-                    : ordered ? $"Measuring with {SolarUnknowns.Instrument(p)}: {sim.MeasureProgress(p) * 100.0:0} %"
-                    : waitingPuzzle ? "Readings are in: work it out in PUZZLES above."
-                    : e.Rough ? $"Measured roughly · spread {share} left · measure again to pin it down"
-                    : $"Estimate · spread {share} · measured with {SolarUnknowns.Instrument(p)}";
+                    ? (p == SolarParameter.Clouds && !sim.Parameters.IsMeasured(p) ? "● no clouds here" : "● measured")
+                    : ordered ? $"● measuring {sim.MeasureProgress(p) * 100.0:0} % · {ParameterLook.Tool(p)}"
+                    : waitingPuzzle ? "● puzzle waiting ↑"
+                    : e.Rough ? $"● rough · {ParameterLook.Tool(p)}"
+                    : $"○ estimate · {ParameterLook.Tool(p)}";
+                status[p].style.color = e.Known ? new Color(0.45f, 0.85f, 0.55f)
+                    : ordered ? new Color(0.56f, 0.70f, 1f)
+                    : waitingPuzzle ? new Color(1f, 0.78f, 0.35f)
+                    : new Color(0.75f, 0.78f, 0.85f);
                 Button b = buttons[p];
-                b.text = ordered ? "Cancel" : waitingPuzzle ? "Solve above" : e.Rough ? "Again" : "Measure";
+                b.text = ordered ? "■" : waitingPuzzle ? "↑" : e.Rough ? "↻" : "►";
+                b.tooltip = ordered ? "Stop measuring" : waitingPuzzle ? "Solve the puzzle above" : e.Rough ? "Measure again" : "Send a robot to measure";
                 b.SetEnabled(!e.Known && !waitingPuzzle);
             }
         }
