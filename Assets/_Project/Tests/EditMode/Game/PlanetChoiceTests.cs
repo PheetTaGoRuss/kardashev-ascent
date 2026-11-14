@@ -60,13 +60,20 @@ namespace KardashevAscent.Simulation.Tests.Game
         [Test]
         public void EarthClouds_LowerTheYearByTheLatitudesCloudFactor()
         {
-            var clear = Create(Sunlike());
             PlanetRecord r = Sunlike();
             r.flags.clouds = "earth";
             var cloudy = Create(r);
-            int t = clear.BaseTileId;
-            double ratio = cloudy.PreviewPanel(t, Tilt(cloudy), Math.PI).EnergyPerYearWh
-                           / clear.PreviewPanel(t, Tilt(clear), Math.PI).EnergyPerYearWh;
+            int t = cloudy.BaseTileId;
+            // The same planet with and without its clouds (its NASA air temperature and haze stay): take the clouds
+            // back out month by month.
+            double[] months = cloudy.MonthlyEnergyWh(t, Tilt(cloudy), Math.PI);
+            double withClouds = 0.0, without = 0.0;
+            for (int m = 0; m < months.Length; m++)
+            {
+                withClouds += months[m];
+                without += months[m] / cloudy.CloudFactor(t, 2.0 * Math.PI * (m + 0.5) / months.Length);
+            }
+            double ratio = withClouds / without;
             double lat = cloudy.GetTile(t).Latitude;
             double min = double.MaxValue, max = 0.0;
             for (int m = 0; m < 12; m++)

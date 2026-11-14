@@ -98,20 +98,22 @@ namespace KardashevAscent.Simulation.Game
                 Double3 sun = SunAt(pair.Key.Tile);
                 if (sun.Up <= 0.0)
                     continue;
-                PanelParams p = MakePanel(pair.Key.Tile, pair.Value.Tilt, pair.Value.Azimuth,
-                                          CloudFactor(pair.Key.Tile, meanAnomaly), pair.Value.Area);
-                double power = PanelPowerNow(p, sun, AirTemperatureAt(pair.Key.Tile, meanAnomaly), out _, out _, out _, out _);
+                PanelParams p = InSeason(MakePanel(pair.Key.Tile, pair.Value.Tilt, pair.Value.Azimuth,
+                                                   CloudFactor(pair.Key.Tile, meanAnomaly), pair.Value.Area), pair.Key.Tile, meanAnomaly);
+                double power = PanelPowerNow(p, sun, AirTemperatureAt(pair.Key.Tile, meanAnomaly), OpticalDepthAt(pair.Key.Tile, meanAnomaly),
+                                             out _, out _, out _, out _);
                 total += floatingPanels.Contains(pair.Key) ? power * (1.0 + FloatingCoolingGain) : power;
             }
             return total;
         }
 
         /// <summary>One panel's power under the star right now (sun up), with the light and temperature along the way.</summary>
-        double PanelPowerNow(in PanelParams p, Double3 sun, double airTemperatureC, out double dni, out double dhi, out double poa, out double cellT)
+        double PanelPowerNow(in PanelParams p, Double3 sun, double airTemperatureC, double opticalDepth,
+                             out double dni, out double dhi, out double poa, out double cellT)
         {
             double airMass = Atmosphere.AirMassKastenYoung(SunPosition.ZenithDegrees(sun), p.PressureRatio);
-            dni = Atmosphere.DirectNormal(currentIrradiance, planet.OpticalDepth, airMass);
-            dhi = Atmosphere.DiffuseHorizontal(currentIrradiance, sun.Up, planet.OpticalDepth, airMass, planet.DiffuseK);
+            dni = Atmosphere.DirectNormal(currentIrradiance, opticalDepth, airMass);
+            dhi = Atmosphere.DiffuseHorizontal(currentIrradiance, sun.Up, opticalDepth, airMass, planet.DiffuseK);
             double ghi = Atmosphere.GlobalHorizontal(dni, dhi, sun.Up);
             double cosTheta = PanelModel.CosIncidence(PanelModel.Normal(p.Tilt, p.Azimuth), sun);
             poa = PanelModel.PlaneOfArray(dni, dhi, ghi, cosTheta, p.Tilt, p.Albedo, p.FShade);
@@ -135,11 +137,11 @@ namespace KardashevAscent.Simulation.Game
             hourAngle = (hourAngle + 540.0) % 360.0 - 180.0;
             Double3 sun = SunAt(tileId);
             double cloud = CloudFactor(tileId, meanAnomaly);
-            PanelParams p = MakePanel(tileId, tilt, azimuth, cloud, NewPanelAreaM2(tileId));
+            PanelParams p = InSeason(MakePanel(tileId, tilt, azimuth, cloud, NewPanelAreaM2(tileId)), tileId, meanAnomaly);
             double air = AirTemperatureAt(tileId, meanAnomaly);
             double dni = 0.0, dhi = 0.0, poa = 0.0, cellT = air, power = 0.0;
             if (sun.Up > 0.0)
-                power = PanelPowerNow(p, sun, air, out dni, out dhi, out poa, out cellT);
+                power = PanelPowerNow(p, sun, air, OpticalDepthAt(tileId, meanAnomaly), out dni, out dhi, out poa, out cellT);
             return new SkyReport(planet.TidallyLocked, Sphere.Latitude(tileId) * deg, planet.Obliquity * deg, lambda,
                                  declination, hourAngle, planet.TidallyLocked ? double.NaN : SimClock.LocalTime24(hourAngle / deg),
                                  Math.Asin(Math.Max(-1.0, Math.Min(1.0, sun.Up))) * deg, SunPosition.AzimuthDegrees(sun),
@@ -166,9 +168,44 @@ namespace KardashevAscent.Simulation.Game
                 ? Climate.EarthAirTemperature.AnnualMean(Sphere.Latitude(tileId))
                 : planet.AirTemperatureC;
 
-        /// <summary>The planet as seen from one tile: its own yearly air temperature on Earth-like planets.</summary>
+        /// <summary>Smallest optical depth a NASA haze change may leave (clean air still scatters: Rayleigh). Game rule.</summary>
+        const double MinOpticalDepth = 0.05;
+
+        bool EarthClimate(int tileId) => Clouds == CloudModel.EarthClimatology && tileId >= 0 && tileId < TileCount;
+
+        /// <summary>
+        /// Optical depth τ over a tile now: on Earth-like planets the planet's τ moved by NASA's aerosols for this
+        /// place and season (<see cref="Climate.EarthGroundAndHaze"/>), elsewhere the planet's τ.
+        /// </summary>
+        public double OpticalDepthAt(int tileId, double meanAnomaly) =>
+            EarthClimate(tileId)
+                ? Math.Max(MinOpticalDepth, planet.OpticalDepth + Climate.EarthGroundAndHaze.HazeChange(Sphere.Latitude(tileId),
+                      Climate.CloudClimate.YearFractionFromMeanAnomaly(meanAnomaly)))
+                : planet.OpticalDepth;
+
+        /// <summary>The tile's optical depth over a whole year.</summary>
+        public double AnnualOpticalDepth(int tileId) =>
+            EarthClimate(tileId)
+                ? Math.Max(MinOpticalDepth, planet.OpticalDepth + Climate.EarthGroundAndHaze.HazeChangeYear(Sphere.Latitude(tileId)))
+                : planet.OpticalDepth;
+
+        /// <summary>How much brighter or darker the ground is this season than over the year (NASA; 0 elsewhere).</summary>
+        public double GroundReflectanceChange(int tileId, double meanAnomaly) =>
+            EarthClimate(tileId)
+                ? Climate.EarthGroundAndHaze.AlbedoChange(Sphere.Latitude(tileId), Climate.CloudClimate.YearFractionFromMeanAnomaly(meanAnomaly))
+                : 0.0;
+
+        /// <summary>A panel with this season's ground reflectance (the terrain's own plus NASA's seasonal change).</summary>
+        PanelParams InSeason(in PanelParams p, int tileId, double meanAnomaly)
+        {
+            double change = GroundReflectanceChange(tileId, meanAnomaly);
+            return change == 0.0 ? p : WithPanel(p, p.Latitude, Math.Max(0.0, Math.Min(1.0, p.Albedo + change)), p.FSpec, p.FDust);
+        }
+
+        /// <summary>The planet as seen from one tile: its own yearly air temperature and haze on Earth-like planets.</summary>
         PlanetSolarParams PlanetAt(int tileId) =>
-            Clouds == CloudModel.EarthClimatology ? WithAir(planet, planet.OpticalDepth, planet.DiffuseK, AnnualAirTemperature(tileId)) : planet;
+            Clouds == CloudModel.EarthClimatology
+                ? WithAir(planet, AnnualOpticalDepth(tileId), planet.DiffuseK, AnnualAirTemperature(tileId)) : planet;
 
         /// <summary>Share of clear-sky light reaching panels on a tile at this point of the orbit (1 without clouds).</summary>
         public double CloudFactor(int tileId, double meanAnomaly) =>
