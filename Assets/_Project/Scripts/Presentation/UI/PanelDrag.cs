@@ -21,9 +21,9 @@ namespace KardashevAscent.Presentation.UI
             var grip = new VisualElement();
             grip.AddToClassList(GripClass);
             grip.tooltip = "Drag to move · double-click: put back";
-            grip.style.height = 10;
-            grip.style.marginTop = -4;
-            grip.style.marginBottom = 4;
+            grip.style.height = 16;          // easy to grab
+            grip.style.marginTop = -6;
+            grip.style.marginBottom = 2;
             grip.style.flexDirection = FlexDirection.Row;
             grip.style.justifyContent = Justify.Center;
             grip.style.alignItems = Align.Center;
