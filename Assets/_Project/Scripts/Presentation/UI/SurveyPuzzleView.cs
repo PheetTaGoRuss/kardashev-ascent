@@ -33,9 +33,9 @@ namespace KardashevAscent.Presentation.UI
             style.borderLeftWidth = 2;
             style.borderLeftColor = new Color(0.56f, 0.70f, 1f);
 
-            Add(MakeLabel($"Ground survey of tile #{puzzle.Tile}: the cores", "robot-name"));
-            Add(MakeLabel($"A robot drilled {puzzle.Rows.Count} cores across the tile and assayed each one. Grade 1 is an " +
-                          "ordinary deposit on Earth; 0 means the core found none of that material.", "job-text"));
+            Add(PuzzleGuide.Text($"What's in the ground of tile #{puzzle.Tile}?", bold: true, size: PuzzleGuide.TitleSize));
+            Add(PuzzleGuide.Text($"A robot drilled {puzzle.Rows.Count} rock samples (cores) across the tile and tested each one. " +
+                                 "The numbers are grades: 1 = an ordinary deposit on Earth, 2 = twice as rich, 'none' = nothing found."));
 
             var head = new List<string> { "core (depth)" };
             foreach (Material m in puzzle.Materials)
@@ -51,6 +51,14 @@ namespace KardashevAscent.Presentation.UI
                 rows.Add(cells);
             }
             Add(Table(head, rows));
+            Add(PuzzleGuide.Steps(
+                "Pick one material (one column).",
+                "Add up its grades from every core. A core with 'none' counts as 0.",
+                "Divide by the number of cores. That average is the tile's grade.",
+                $"Within {SurveyPuzzle.PreciseShare * 100:0} % counts as exact; within {SurveyPuzzle.RoughShare * 100:0} % as rough (shown ±)."));
+            Add(PuzzleGuide.Example(
+                "Iron in 5 cores: 1.2, none, 0.9, 1.5, 0.4",
+                "1.2 + 0 + 0.9 + 1.5 + 0.4 = 4.0   →   4.0 / 5 = 0.80"));
 
             for (int m = 0; m < puzzle.Materials.Count; m++)
             {
@@ -58,12 +66,13 @@ namespace KardashevAscent.Presentation.UI
                 row.style.flexDirection = FlexDirection.Row;
                 row.style.alignItems = Align.Center;
                 row.style.marginTop = 3;
-                Label l = MakeLabel($"{Materials.Name(puzzle.Materials[m])} grade over the tile:", "job-text");
+                Label l = PuzzleGuide.Text($"{Materials.Name(puzzle.Materials[m])}: average grade", bold: true);
                 l.style.flexGrow = 1;
                 row.Add(l);
                 var f = new TextField { maxLength = 8 };
                 f.AddToClassList("puzzle-field");
-                f.style.width = 70;
+                f.style.width = 110;
+                f.style.fontSize = PuzzleGuide.BodySize;
                 row.Add(f);
                 answers.Add(f);
                 Add(row);
@@ -71,22 +80,16 @@ namespace KardashevAscent.Presentation.UI
 
             var buttons = new VisualElement();
             buttons.AddToClassList("button-row");
-            var submit = new Button(Submit) { text = "Submit" };
+            var submit = new Button(Submit) { text = "Check" };
             submit.AddToClassList("small-button");
+            submit.style.fontSize = PuzzleGuide.BodySize;
             buttons.Add(submit);
-            var hint = new Button(() => hints.style.display = DisplayStyle.Flex) { text = "Show the rule" };
-            hint.AddToClassList("small-button");
-            buttons.Add(hint);
             Add(buttons);
 
-            hints = MakeLabel(
-                "The tile's grade is the average over all the cores, and a core that found none counts as 0:\n" +
-                "  grade = (sum of the cores' grades) / (number of cores).\n" +
-                $"Within {SurveyPuzzle.PreciseShare * 100:0} % of the assays: surveyed. Within {SurveyPuzzle.RoughShare * 100:0} %: " +
-                "surveyed, but the tile's grades show as ±.", "job-text");
+            hints = PuzzleGuide.Text("");
             hints.style.display = DisplayStyle.None;
             Add(hints);
-            message = MakeLabel("", "job-text");
+            message = PuzzleGuide.Text("");
             message.AddToClassList("message");
             Add(message);
         }

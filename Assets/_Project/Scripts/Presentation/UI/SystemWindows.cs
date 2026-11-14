@@ -311,6 +311,8 @@ namespace KardashevAscent.Presentation.UI
     /// </summary>
     public sealed class ResearchWindow : SystemWindow
     {
+        // Wide enough for the puzzle cards' bigger text, steps and worked examples (director 2026-11-14).
+        protected override float Width => 640f;
         public override string Id => "research";
         public override string Title => "Research";
         public override KeyCode Key => KeyCode.T;
