@@ -197,7 +197,7 @@ namespace KardashevAscent.Presentation.UI
                 int sites = sim.ConstructionQueueCount;
                 buildQueue.text = $"Li {Mass(sim.Materials[KardashevAscent.Simulation.Resources.Material.Lithium])} · " +
                                   $"rock {Mass(sim.Materials[KardashevAscent.Simulation.Resources.Material.Rock])} · " +
-                                  (sites == 0 ? "no sites waiting"
+                                  (sites == 0 ? "no sites"
                                    : sim.ConstructionShortfall.IsEmpty ? $"{sites} site{(sites == 1 ? "" : "s")}, in stock"
                                    : $"{sites} site{(sites == 1 ? "" : "s")} short");
             }
