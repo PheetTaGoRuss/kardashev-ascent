@@ -20,8 +20,9 @@ namespace KardashevAscent.Presentation.Planet
         /// <param name="tileRadius">The tile tops' distance from the centre (relief).</param>
         /// <param name="seaRadius">Sea level.</param>
         /// <param name="excludeTile">The tile shown close up (−1: none).</param>
+        /// <param name="builtShare">Share of each tile's slots built on (missing: 0). Forest crowns thin out to match.</param>
         public static Mesh Build(HexSphere sphere, PlanetSurface surface, RiverMap rivers, IReadOnlyList<float> tileRadius,
-                                 float seaRadius, int excludeTile)
+                                 float seaRadius, int excludeTile, IReadOnlyDictionary<int, float> builtShare = null)
         {
             var v = new List<Vector3>();
             var n = new List<Vector3>();
@@ -50,7 +51,10 @@ namespace KardashevAscent.Presentation.Planet
                 {
                     // Small tree crowns, scattered by the tile id: a canopy texture from orbit, not giant trees when a
                     // neighbouring site is open.
-                    for (int k = 0; k < 7; k++)
+                    // Buildings clear the forest: a tile half built on keeps about half its crowns.
+                    float cleared = builtShare != null && builtShare.TryGetValue(t, out float share) ? share : 0f;
+                    int crowns = cleared > 0f ? Mathf.Max(0, 7 - Mathf.CeilToInt(7f * cleared)) : 7;
+                    for (int k = 0; k < crowns; k++)
                     {
                         float a = (t * 2.399f + k * 1.7f) % (2f * Mathf.PI);
                         float d = span * (0.1f + 0.6f * Hash(t, k));

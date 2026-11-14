@@ -194,6 +194,7 @@ namespace KardashevAscent.Presentation.Planet
                   List<Vector3> v, List<Vector3> n, List<Color32> c, List<int> tri)
         {
             Vector3 dir = Scatter(slotCentre, slot, tile, k, i);
+            if (LandsOnBuilt(dir)) return;   // scattered into a neighbouring building's slot
             float ground = site.GroundRadius(dir);
             float h = slot * 0.55f * scale * (0.8f + 0.4f * TerrainFeatures.Hash(tile * 31 + k, i + 10));
             TerrainFeatures.Cone(v, n, c, tri, dir * ground, dir, slot * 0.035f * scale, h * 0.45f, Trunk, 4);
@@ -204,6 +205,7 @@ namespace KardashevAscent.Presentation.Planet
                    List<Vector3> v, List<Vector3> n, List<Color32> c, List<int> tri)
         {
             Vector3 dir = Scatter(slotCentre, slot, tile, k, i);
+            if (LandsOnBuilt(dir)) return;   // scattered into a neighbouring building's slot
             TerrainFeatures.Cone(v, n, c, tri, dir * site.GroundRadius(dir), dir, slot * 0.03f, slot * size, colour, 3);
         }
 
@@ -211,9 +213,16 @@ namespace KardashevAscent.Presentation.Planet
                   List<Vector3> v, List<Vector3> n, List<Color32> c, List<int> tri)
         {
             Vector3 dir = Scatter(slotCentre, slot, tile, k, i);
+            if (LandsOnBuilt(dir)) return;   // scattered into a neighbouring building's slot
             float r = slot * size * (0.6f + 0.6f * TerrainFeatures.Hash(tile * 53 + k, i + 20));
             // A low, wide pyramid: a boulder.
             TerrainFeatures.Cone(v, n, c, tri, dir * site.GroundRadius(dir), dir, r, r * 0.8f, colour, 5);
+        }
+
+        bool LandsOnBuilt(Vector3 dir)
+        {
+            int under = site.Site.FindSlot(new System.Numerics.Vector3(dir.x, dir.y, dir.z));
+            return under >= 0 && Built(under);
         }
 
         /// <summary>A point inside a slot, the same every time for this tile, slot and index.</summary>
