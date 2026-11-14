@@ -39,7 +39,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.AreEqual(123456789, sim.TerrainSeed);
             SimulationState state = sim.CaptureState();
             Assert.AreEqual(123456789, state.TerrainSeed);
-            Assert.AreEqual(28, SimulationState.CurrentVersion);
+            Assert.AreEqual(29, SimulationState.CurrentVersion);
             var older = JsonUtility_Free_OldState();
             Assert.AreEqual(0, older.TerrainSeed, "a save from before random maps names none: the planet's own map");
         }
@@ -141,6 +141,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         {
             // The star never moves on a circular locked orbit, so the preview (per Earth year) is power × Earth-year hours.
             var sim = Create(PlanetRecordTests.ProximaForOtherTests());
+            sim.SafetyMarginsEnabled = false;   // the physics, without the design margin for unknown values
             int t = sim.BaseTileId;
             double tilt = Tilt(sim);
             Assert.IsTrue(sim.PlacePanel(t, 0, tilt, Math.PI));

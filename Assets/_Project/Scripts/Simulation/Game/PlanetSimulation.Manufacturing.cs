@@ -231,7 +231,12 @@ namespace KardashevAscent.Simulation.Game
             Clouds = record.Clouds;
             Deposits = new DepositMap(sphere, surface, record.ToChemistry(), record.look?.terrainSeed ?? 7);
             if (record.planet.surfaceGravityMs2 > 0.0)
+            {
                 Routes = new RouteFinder(sphere, surface, record.planet.surfaceGravityMs2);
+                SurfaceGravityMs2 = record.planet.surfaceGravityMs2;
+            }
+            else if (record.planet.massKg > 0.0 && record.planet.radiusM > 0.0)
+                SurfaceGravityMs2 = GravitationalConstant * record.planet.massKg / (record.planet.radiusM * record.planet.radiusM);
         }
     }
 }

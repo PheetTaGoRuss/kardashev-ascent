@@ -89,8 +89,12 @@ namespace KardashevAscent.Simulation.Resources
         public static readonly MaterialBill Relay = new MaterialBill()
             .Add(Material.Iron, 60.0).Add(Material.Rock, 30.0).Add(Material.Copper, 10.0);
 
+        /// <summary>Research Station: a small lab with instruments and a test bench (game rule, TBD).</summary>
+        public static readonly MaterialBill ResearchStation = new MaterialBill()
+            .Add(Material.Iron, 200.0).Add(Material.Rock, 100.0).Add(Material.Copper, 25.0);
+
         /// <summary>
-        /// What the lander brings: about one solar panel, battery yard, charging station and Workshop, with some to spare
+        /// What the lander brings: about one solar panel, battery yard, charging station, Workshop and Research Station, with some to spare
         /// (game rule, TBD).
         /// </summary>
         public static readonly MaterialBill LanderCargo = new MaterialBill()
