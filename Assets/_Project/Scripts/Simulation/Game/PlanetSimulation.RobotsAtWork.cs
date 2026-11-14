@@ -20,8 +20,14 @@ namespace KardashevAscent.Simulation.Game
             var tasks = new List<WorkTask>(Build.QueueCount + salvageOrders.Count);
             int i = 0;
             // Floating panels are built by robots with a boat module (director, 2026-11-14; before, raft crews built them).
+            // A site is work only while the stock has some of every material it still needs: otherwise a robot would
+            // drive out and back with nothing to bring (it waits for mining or refining instead).
             foreach (var site in Build.Sites())
+            {
+                if (!CanAdvance(site.Bill, site.Share))
+                    continue;
                 tasks.Add(new WorkTask(TaskKind.Build, site.Tile, site.Slot, i++));
+            }
             for (int k = 0; k < salvageOrders.Count; k++)
                 tasks.Add(new WorkTask(TaskKind.Salvage, salvageOrders[k].Tile, salvageOrders[k].Slot, k));
             for (int k = 0; k < adjustOrders.Count; k++)
@@ -36,6 +42,15 @@ namespace KardashevAscent.Simulation.Game
             for (int k = 0; k < Math.Min(jobs.Count, shops.Count); k++)
                 tasks.Add(new WorkTask(TaskKind.Manufacture, shops[k].Tile, shops[k].Slot, k));
             return tasks;
+        }
+
+        /// <summary>True when the stock holds some of every material a site still needs.</summary>
+        bool CanAdvance(MaterialBill bill, double share)
+        {
+            if (share >= 1.0) return true;
+            foreach (var (m, kg) in bill.Items())
+                if (kg > 1e-9 && Materials[m] <= 1e-9) return false;
+            return true;
         }
 
         /// <summary>

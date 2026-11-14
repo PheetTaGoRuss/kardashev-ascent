@@ -131,7 +131,17 @@ namespace KardashevAscent.Simulation.Game
             }
         }
 
+        /// <summary>True inside <see cref="Step"/>: a building finished there starts counting from the next step.</summary>
+        bool stepping;
+
         void Step(double dt)
+        {
+            stepping = true;
+            try { StepCore(dt); }
+            finally { stepping = false; }
+        }
+
+        void StepCore(double dt)
         {
             TimeHours += dt;
             UpdateStar();
