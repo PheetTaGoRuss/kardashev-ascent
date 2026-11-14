@@ -68,7 +68,7 @@ namespace KardashevAscent.Presentation.UI
                     step++;
             }
 
-            bool show = !skipped && sim != null && step < Steps && (chooser == null || !chooser.Visible) && GameFlow.IsPlaying;
+            bool show = !skipped && sim != null && step < Steps && (chooser == null || !chooser.Visible) && GameFlow.IsPlaying && !GameFlow.InSetup;
             panelRoot.EnableInClassList("hidden", !show);
             if (!show)
                 return;
