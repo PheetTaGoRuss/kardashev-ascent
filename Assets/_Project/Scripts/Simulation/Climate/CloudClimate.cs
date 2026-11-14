@@ -51,4 +51,36 @@ namespace KardashevAscent.Simulation.Climate
             return f - Math.Floor(f);
         }
     }
+    /// <summary>
+    /// Earth's real air temperature 2 m above the ground (NASA POWER T2M climatology, 2001–2025), by latitude and month,
+    /// for Earth-like planets (the same ones that use <see cref="CloudClimate"/>). Each row mixes land and ocean.
+    /// </summary>
+    public static class EarthAirTemperature
+    {
+        /// <summary>Air temperature, °C, at this latitude (radians) and time of year (0 = 1 January). Interpolated like the clouds; clamped at ±80°.</summary>
+        public static double Celsius(double latitude, double yearFraction)
+        {
+            double[][] t = AirTemperatureTable.Celsius;
+            double y = (latitude * 180.0 / Math.PI - AirTemperatureTable.FirstLatitudeDeg) / AirTemperatureTable.StepDeg;
+            y = Math.Max(0.0, Math.Min(t.Length - 1, y));
+            int i0 = Math.Min((int)y, t.Length - 2);
+            double fy = y - i0;
+            double m = (yearFraction - Math.Floor(yearFraction)) * 12.0 - 0.5;
+            int m0 = (int)Math.Floor(m);
+            double fm = m - m0;
+            int a = (m0 + 12) % 12, b = (m0 + 13) % 12;
+            double low = t[i0][a] + fm * (t[i0][b] - t[i0][a]);
+            double high = t[i0 + 1][a] + fm * (t[i0 + 1][b] - t[i0 + 1][a]);
+            return low + fy * (high - low);
+        }
+
+        /// <summary>Mean over the year at one latitude (radians), °C.</summary>
+        public static double AnnualMean(double latitude)
+        {
+            double sum = 0.0;
+            for (int m = 0; m < 12; m++)
+                sum += Celsius(latitude, (m + 0.5) / 12.0);
+            return sum / 12.0;
+        }
+    }
 }

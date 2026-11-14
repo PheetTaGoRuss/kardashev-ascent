@@ -83,3 +83,5 @@ The audit is a snapshot and is never updated; the registry, the known-issues lis
 - Paths are written from the repository root or as relative links; code names are in backticks.
 - Diagrams are Mermaid blocks, which GitHub renders.
 - A date is written as `2026-11-12`.
+
+- [nasa-data.md](nasa-data.md): every NASA dataset the game uses, what it feeds and how to rebuild it.

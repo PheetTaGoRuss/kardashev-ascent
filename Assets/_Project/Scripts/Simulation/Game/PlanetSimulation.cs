@@ -165,7 +165,7 @@ namespace KardashevAscent.Simulation.Game
             // The network's hub and relays are served first from the priority power; robots' critical charging gets the rest.
             double networkServedW = Math.Min(Network.PowerW, grid.PriorityServedW);
             Upkeep.Apply(Workforce, dt, grid.DockServedW, grid.PriorityServedW - networkServedW, topUpW, IsFlaringStar, moving,
-                         Materials, planet.AirTemperatureC);
+                         Materials, AirTemperatureAt(BaseTileId, CurrentMeanAnomaly()));
             RobotChargingW = Upkeep.ChargingW;
             Network.SetPowered(!Grid.IsBrownout);
             Workforce.UpdateConnections(dt);
