@@ -270,13 +270,13 @@ namespace KardashevAscent.Presentation.UI
             }
         }
 
-        /// <summary>A round badge with the value's symbol.</summary>
+        /// <summary>A square badge with the value's symbol.</summary>
         public static VisualElement Badge(SolarParameter p, float size = 26f)
         {
             var b = new Label(Symbol(p));
             b.style.width = size; b.style.height = size;
             b.style.minWidth = size;
-            b.style.borderTopLeftRadius = b.style.borderTopRightRadius = b.style.borderBottomLeftRadius = b.style.borderBottomRightRadius = size / 2f;
+            b.style.borderTopLeftRadius = b.style.borderTopRightRadius = b.style.borderBottomLeftRadius = b.style.borderBottomRightRadius = 0;
             b.style.backgroundColor = Colour(p);
             b.style.color = new Color(0.05f, 0.06f, 0.10f);
             b.style.unityTextAlign = TextAnchor.MiddleCenter;
@@ -293,12 +293,12 @@ namespace KardashevAscent.Presentation.UI
             var track = new VisualElement();
             track.style.height = height;
             track.style.backgroundColor = new Color(1f, 1f, 1f, 0.08f);
-            track.style.borderTopLeftRadius = track.style.borderTopRightRadius = track.style.borderBottomLeftRadius = track.style.borderBottomRightRadius = height / 2f;
+            track.style.borderTopLeftRadius = track.style.borderTopRightRadius = track.style.borderBottomLeftRadius = track.style.borderBottomRightRadius = 0;
             fill = new VisualElement();
             fill.style.height = height;
             fill.style.width = Length.Percent(0);
             fill.style.backgroundColor = colour;
-            fill.style.borderTopLeftRadius = fill.style.borderTopRightRadius = fill.style.borderBottomLeftRadius = fill.style.borderBottomRightRadius = height / 2f;
+            fill.style.borderTopLeftRadius = fill.style.borderTopRightRadius = fill.style.borderBottomLeftRadius = fill.style.borderBottomRightRadius = 0;
             track.Add(fill);
             return track;
         }
@@ -419,8 +419,8 @@ namespace KardashevAscent.Presentation.UI
             tutorial.style.marginBottom = 8;
             tutorial.style.paddingLeft = tutorial.style.paddingRight = 8;
             tutorial.style.paddingTop = tutorial.style.paddingBottom = 6;
-            tutorial.style.backgroundColor = new Color(0.56f, 0.70f, 1f, 0.12f);
-            tutorial.style.borderTopLeftRadius = tutorial.style.borderTopRightRadius = tutorial.style.borderBottomLeftRadius = tutorial.style.borderBottomRightRadius = 4;
+            tutorial.style.backgroundColor = UiPalette.AccentA(0.10f);
+            tutorial.style.borderTopLeftRadius = tutorial.style.borderTopRightRadius = tutorial.style.borderBottomLeftRadius = tutorial.style.borderBottomRightRadius = 0;
             var row = new VisualElement();
             row.style.flexDirection = FlexDirection.Row;
             row.style.alignItems = Align.Center;
@@ -594,7 +594,7 @@ namespace KardashevAscent.Presentation.UI
                     : e.Rough ? $"● rough · {ParameterLook.Tool(p)}"
                     : $"○ estimate · {ParameterLook.Tool(p)}";
                 status[p].style.color = e.Known ? new Color(0.45f, 0.85f, 0.55f)
-                    : ordered ? new Color(0.56f, 0.70f, 1f)
+                    : ordered ? UiPalette.Accent
                     : waitingPuzzle ? new Color(1f, 0.78f, 0.35f)
                     : new Color(0.75f, 0.78f, 0.85f);
                 Button b = buttons[p];

@@ -8,7 +8,7 @@
     max-height: 84%;
     padding: 10px 12px;
 }
-.planets.panel { background-color: rgba(10, 14, 24, 0.97); }
+.planets.panel { background-color: rgba(22, 22, 26, 0.97); }
 
 .title-row { flex-direction: row; align-items: flex-start; }
 .title-text { flex-grow: 1; }
@@ -31,7 +31,7 @@
 .planet-item {
     margin: 0 0 4px 0;
     padding: 6px 8px;
-    border-radius: 4px;
+    border-radius: 0;
     border-width: 1px;
     border-color: rgba(0, 0, 0, 0);
     background-color: rgba(255, 255, 255, 0.04);
@@ -40,11 +40,11 @@
     color: var(--text);
 }
 .planet-item:hover { background-color: rgba(255, 255, 255, 0.09); }
-.planet-item.selected { border-color: var(--accent); background-color: rgba(143, 179, 255, 0.14); }
+.planet-item.selected { border-color: var(--accent); background-color: rgba(255, 199, 92, 0.14); }
 .planet-item.unplayable { color: var(--text-muted); }
 
 .rows { margin-top: 8px; }
-.row { flex-direction: row; align-items: center; padding: 2px 4px; border-radius: 3px; }
+.row { flex-direction: row; align-items: center; padding: 2px 4px; border-radius: 0; }
 .row:hover { background-color: rgba(255, 255, 255, 0.05); }
 .row-label { width: 120px; flex-shrink: 0; font-size: 11px; color: var(--text-muted); padding: 0; margin: 0; }
 .row-value { flex-grow: 1; flex-shrink: 1; font-size: 12px; padding: 0; margin: 0; white-space: normal; }
@@ -55,8 +55,8 @@
     -unity-font-style: bold;
     padding: 1px 4px;
     margin: 0 0 0 6px;
-    border-radius: 3px;
-    color: rgb(12, 16, 26);
+    border-radius: 0;
+    color: var(--on-accent);
     -unity-text-align: middle-center;
     min-width: 44px;
 }
@@ -81,10 +81,10 @@
     height: 28px;
     font-size: 13px;
     -unity-font-style: bold;
-    color: rgb(12, 16, 26);
+    color: var(--on-accent);
     background-color: var(--accent);
     border-width: 0;
-    border-radius: 4px;
+    border-radius: 0;
 }
-.land-button:hover { background-color: rgb(170, 198, 255); }
+.land-button:hover { background-color: rgb(255, 220, 140); }
 .land-button:disabled { background-color: rgba(255, 255, 255, 0.10); color: var(--text-muted); }

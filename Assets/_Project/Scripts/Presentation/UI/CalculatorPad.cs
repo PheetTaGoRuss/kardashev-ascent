@@ -6,13 +6,14 @@ using UnityEngine.UIElements;
 namespace KardashevAscent.Presentation.UI
 {
     /// <summary>
-    /// The floating science calculator for the puzzles (director 2026-11-14). Click a number on a puzzle card to put
-    /// it in (it is copied to the clipboard too); type or click keys; "Put in answer" fills the answer box you last
-    /// clicked. Angles are in degrees. The maths lives in <see cref="ScienceCalculator"/>.
+    /// The floating science calculator (director 2026-11-14). It opens any time (K, or the HUD's Calc button).
+    /// Clicking a number on a puzzle card copies it to the clipboard ("Copied") and, while the calculator is open,
+    /// puts it in too; type or click keys; "Put in answer" fills the answer box you last clicked. Angles are in
+    /// degrees. The maths lives in <see cref="ScienceCalculator"/>.
     /// </summary>
     public static class CalculatorPad
     {
-        static readonly Color Accent = new Color(0.56f, 0.70f, 1f);
+        static Color Accent => UiPalette.Accent;
         static readonly Regex NumberIn = new Regex(@"[-−+]?\d+(?:[.,]\d+)?");
 
         static VisualElement window;
@@ -41,10 +42,10 @@ namespace KardashevAscent.Presentation.UI
             if (number == null)
                 return;
             label.style.color = Accent;
-            label.tooltip = $"Click: put {number} in the calculator";
-            label.RegisterCallback<PointerEnterEvent>(_ => label.style.backgroundColor = new Color(0.56f, 0.70f, 1f, 0.15f));
+            label.tooltip = $"Click: copy {number} (and put it in the calculator if it's open)";
+            label.RegisterCallback<PointerEnterEvent>(_ => label.style.backgroundColor = UiPalette.AccentA(0.18f));
             label.RegisterCallback<PointerLeaveEvent>(_ => label.style.backgroundColor = StyleKeyword.Null);
-            label.RegisterCallback<ClickEvent>(e => { Insert(label, number); e.StopPropagation(); });
+            label.RegisterCallback<ClickEvent>(e => { Copied(label, number); e.StopPropagation(); });
         }
 
         /// <summary>"Click a number" chips: the values a puzzle gives, each one clickable.</summary>
@@ -63,10 +64,10 @@ namespace KardashevAscent.Presentation.UI
                 chip.style.marginLeft = 6;
                 chip.style.paddingLeft = chip.style.paddingRight = 6;
                 chip.style.borderTopLeftRadius = chip.style.borderTopRightRadius =
-                    chip.style.borderBottomLeftRadius = chip.style.borderBottomRightRadius = 4;
+                    chip.style.borderBottomLeftRadius = chip.style.borderBottomRightRadius = 0;
                 chip.style.borderTopWidth = chip.style.borderBottomWidth = chip.style.borderLeftWidth = chip.style.borderRightWidth = 1;
                 chip.style.borderTopColor = chip.style.borderBottomColor = chip.style.borderLeftColor = chip.style.borderRightColor =
-                    new Color(0.56f, 0.70f, 1f, 0.5f);
+                    UiPalette.AccentA(0.6f);
                 MakeClickable(chip, number);
                 row.Add(chip);
             }
@@ -91,19 +92,36 @@ namespace KardashevAscent.Presentation.UI
 
         // ---- the window ----
 
-        static void Toggle(VisualElement from)
+        public static bool IsOpen => window != null && window.panel != null && window.style.display != DisplayStyle.None;
+
+        /// <summary>Open or close the calculator on the panel <paramref name="from"/> belongs to (K, the HUD button).</summary>
+        public static void Toggle(VisualElement from)
         {
-            if (Ensure(from) && window.style.display == DisplayStyle.None)
-                window.style.display = DisplayStyle.Flex;
-            else if (window != null)
+            if (IsOpen)
                 window.style.display = DisplayStyle.None;
+            else if (Ensure(from))
+                window.style.display = DisplayStyle.Flex;
         }
 
-        static void Insert(VisualElement from, string number)
+        /// <summary>A number was clicked: copy it, say so for a moment, and put it in the calculator if it is open.</summary>
+        static void Copied(Label label, string number)
         {
             GUIUtility.systemCopyBuffer = number;
-            if (!Ensure(from)) return;
-            window.style.display = DisplayStyle.Flex;
+            string was = label.text;
+            if (was != "Copied!")
+            {
+                label.text = "Copied!";
+                label.style.color = UiPalette.Good;
+                label.schedule.Execute(() => { label.text = was; label.style.color = Accent; }).StartingIn(700);
+            }
+            if (IsOpen)
+                Insert(number);
+            else if (status != null)
+                status.text = $"Copied {number}. Paste with Ctrl+V.";
+        }
+
+        static void Insert(string number)
+        {
             string s = display.value ?? "";
             if (justEvaluated)
                 s = "";
@@ -181,16 +199,15 @@ namespace KardashevAscent.Presentation.UI
             w.style.width = 300;
             w.style.paddingLeft = w.style.paddingRight = 10;
             w.style.paddingTop = w.style.paddingBottom = 8;
-            w.style.backgroundColor = new Color(0.04f, 0.055f, 0.095f, 0.98f);
-            w.style.borderTopWidth = w.style.borderBottomWidth = w.style.borderLeftWidth = w.style.borderRightWidth = 1;
-            w.style.borderTopColor = w.style.borderBottomColor = w.style.borderLeftColor = w.style.borderRightColor = new Color(0.56f, 0.70f, 1f, 0.6f);
-            w.style.borderTopLeftRadius = w.style.borderTopRightRadius = w.style.borderBottomLeftRadius = w.style.borderBottomRightRadius = 6;
+            w.AddToClassList("panel");
+            w.style.backgroundColor = UiPalette.PanelSolid;
 
             // Title bar: drag it to move the calculator.
             var bar = new VisualElement();
             bar.style.flexDirection = FlexDirection.Row;
             bar.style.alignItems = Align.Center;
-            Label title = PuzzleGuide.Text("Calculator · degrees (DEG)", bold: true);
+            Label title = PuzzleGuide.Text("CALCULATOR · DEG   (K)", bold: true);
+            title.style.color = Accent;
             title.style.flexGrow = 1;
             bar.Add(title);
             var close = new Button(() => w.style.display = DisplayStyle.None) { text = "×" };
@@ -214,10 +231,10 @@ namespace KardashevAscent.Presentation.UI
             result = PuzzleGuide.Text("= ?", bold: true, size: PuzzleGuide.TitleSize + 3);
             result.style.unityTextAlign = TextAnchor.MiddleRight;
             result.tooltip = "Click: copy the result";
-            result.RegisterCallback<ClickEvent>(_ => GUIUtility.systemCopyBuffer = ResultText());
+            result.RegisterCallback<ClickEvent>(_ => { GUIUtility.systemCopyBuffer = ResultText(); status.text = $"Copied {ResultText()}. Paste with Ctrl+V."; });
             w.Add(result);
             status = PuzzleGuide.Text("Click a number on the puzzle, or type.", size: PuzzleGuide.SmallSize);
-            status.style.color = new Color(0.7f, 0.74f, 0.82f);
+            status.style.color = UiPalette.Muted;
             w.Add(status);
 
             string[][] keys =
@@ -244,7 +261,8 @@ namespace KardashevAscent.Presentation.UI
                     b.style.fontSize = PuzzleGuide.BodySize;
                     b.style.marginLeft = b.style.marginRight = 2;
                     b.style.marginTop = b.style.marginBottom = 2;
-                    if (key == "=") b.style.backgroundColor = new Color(0.56f, 0.70f, 1f, 0.55f);
+                    if (key == "=") { b.AddToClassList("primary-button"); }
+                    else if (key.EndsWith("(") || key == "C" || key == "Del") b.style.color = Accent;
                     row.Add(b);
                 }
                 w.Add(row);
@@ -253,7 +271,7 @@ namespace KardashevAscent.Presentation.UI
             var actions = new VisualElement();
             actions.style.flexDirection = FlexDirection.Row;
             actions.style.marginTop = 4;
-            var copy = new Button(() => GUIUtility.systemCopyBuffer = ResultText()) { text = "Copy result" };
+            var copy = new Button(() => { GUIUtility.systemCopyBuffer = ResultText(); status.text = $"Copied {ResultText()}. Paste with Ctrl+V."; }) { text = "Copy result" };
             var put = new Button(() =>
             {
                 string r = ResultText();

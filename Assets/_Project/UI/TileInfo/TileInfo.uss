@@ -23,17 +23,17 @@
     padding: 0 6px;
     font-size: 11px;
     color: var(--text);
-    background-color: rgba(143, 179, 255, 0.15);
+    background-color: rgba(255, 199, 92, 0.15);
     border-width: 0;
-    border-radius: 3px;
+    border-radius: 0;
 }
-.ground-button:hover { background-color: rgba(143, 179, 255, 0.30); }
-.ground-button.on { color: rgb(10, 14, 24); background-color: var(--accent); }
+.ground-button:hover { background-color: rgba(255, 199, 92, 0.30); }
+.ground-button.on { color: var(--accent); background-color: rgba(255, 199, 92, 0.16); border-color: var(--accent); }
 
 .chart {
     margin-top: 6px;
     background-color: rgba(255, 255, 255, 0.03);
-    border-radius: 4px;
+    border-radius: 0;
 }
 .sunpath-chart { height: 150px; }
 .monthly-chart { height: 90px; flex-direction: row; align-items: flex-end; padding: 0 2px; }
@@ -42,8 +42,8 @@
     flex-grow: 1;
     margin: 0 1px;
     background-color: rgb(143, 179, 255);
-    border-top-left-radius: 3px;
-    border-top-right-radius: 3px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
 }
 .month-bar:hover { background-color: rgb(196, 214, 255); }
 
@@ -55,12 +55,12 @@
 
 .legend { flex-direction: row; flex-wrap: wrap; margin-top: 4px; }
 .legend-item { flex-direction: row; align-items: center; margin-right: 10px; }
-.swatch { width: 14px; height: 3px; border-radius: 2px; margin-right: 4px; }
+.swatch { width: 14px; height: 3px; border-radius: 0; margin-right: 4px; }
 .series-1 { background-color: rgb(57, 135, 229); }
 .series-2 { background-color: rgb(217, 89, 38); }
 .series-3 { background-color: rgb(25, 158, 112); }
-.marker-now { width: 8px; height: 8px; border-radius: 4px; background-color: rgb(255, 214, 120); margin-right: 4px; }
-.marker-panel { width: 8px; height: 8px; border-width: 2px; border-color: rgb(230, 236, 255); border-radius: 1px; rotate: 45deg; margin-right: 6px; }
+.marker-now { width: 8px; height: 8px; border-radius: 0; background-color: rgb(255, 214, 120); margin-right: 4px; }
+.marker-panel { width: 8px; height: 8px; border-width: 2px; border-color: rgb(230, 236, 255); border-radius: 0; rotate: 45deg; margin-right: 6px; }
 
 .formulas { margin-top: 12px; }
 .formula { white-space: normal; font-size: 11px; color: var(--text-muted); margin: 3px 0; padding: 0; }

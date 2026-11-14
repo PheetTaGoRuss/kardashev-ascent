@@ -67,6 +67,15 @@ namespace KardashevAscent.Presentation.UI
                 if (speedButtons[i] != null)
                     speedButtons[i].clicked += () => runner?.SetSpeed(speed);
             }
+            // The calculator opens any time (director 2026-11-14): K or this button by the speeds.
+            Button dayButton = speedButtons[speedButtons.Length - 1];
+            if (dayButton != null && dayButton.parent != null && dayButton.parent.Q<Button>("calculator") == null)
+            {
+                var calc = new Button(() => CalculatorPad.Toggle(root)) { name = "calculator", text = "Calc (K)" };
+                calc.AddToClassList("speed-button");
+                calc.style.marginLeft = 10;
+                dayButton.parent.Add(calc);
+            }
             nextText = 0f;
             if (saveGame != null)
                 saveGame.Loaded += OnLoaded;
@@ -129,6 +138,8 @@ namespace KardashevAscent.Presentation.UI
 
         void Update()
         {
+            if (ScreenInput.KeyDown(KeyCode.K) && document != null && document.rootVisualElement != null)
+                CalculatorPad.Toggle(document.rootVisualElement);
             CheckMilestones(runner != null ? runner.Simulation : null);
             if (toast != null)
             {

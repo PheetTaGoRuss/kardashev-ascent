@@ -257,8 +257,8 @@ namespace KardashevAscent.Presentation.UI
             c.AddToClassList("sky-puzzle");
             c.style.marginTop = 4; c.style.marginBottom = 6;
             c.style.paddingLeft = c.style.paddingRight = 8; c.style.paddingTop = c.style.paddingBottom = 6;
-            c.style.backgroundColor = new Color(0.56f, 0.70f, 1f, 0.10f);
-            c.style.borderLeftWidth = 2; c.style.borderLeftColor = new Color(0.56f, 0.70f, 1f);
+            c.style.backgroundColor = UiPalette.AccentA(0.08f);
+            c.style.borderLeftWidth = 2; c.style.borderLeftColor = UiPalette.Accent;
             SkyNotebook book = sky.Notebook;
             string hint;
             answerA = answerB = null;
