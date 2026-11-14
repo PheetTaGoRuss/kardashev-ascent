@@ -73,6 +73,9 @@ namespace KardashevAscent.Presentation.UI
                 Vector2 p = Clamp(target, origin + d);
                 target.style.left = p.x;
                 target.style.top = p.y;
+                // A tall panel moved down gets shorter (and scrolls) rather than running off the bottom.
+                if (target.parent != null)
+                    target.style.maxHeight = Mathf.Max(120f, target.parent.contentRect.height - p.y - 8f);
                 e.StopPropagation();
             });
             void End(int pointerId)
@@ -105,6 +108,7 @@ namespace KardashevAscent.Presentation.UI
             target.style.top = StyleKeyword.Null;
             target.style.right = StyleKeyword.Null;
             target.style.bottom = StyleKeyword.Null;
+            target.style.maxHeight = StyleKeyword.Null;
         }
 
         // Keep at least a strip of the panel (and its grip) on screen.
