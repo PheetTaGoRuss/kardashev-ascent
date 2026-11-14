@@ -95,6 +95,12 @@ namespace KardashevAscent.Presentation.UI
             if (catPower != null) catPower.clicked += () => buildCategory = BuildInfo.Category.Power;
             if (catStations != null) catStations.clicked += () => buildCategory = BuildInfo.Category.Stations;
             buildInfo = root.Q("build-info");
+            // The inspect boxes and the building info card drag like the calculator (director 2026-11-14); the
+            // inspect boxes move their whole column together.
+            VisualElement leftColumn = root.Q("left");
+            foreach (VisualElement box in new[] { siteBox, plannerBox, placedBox })
+                PanelDrag.AddGrip(box, leftColumn);
+            PanelDrag.AddGrip(buildInfo);
             buildInfoTitle = root.Q<Label>("build-info-title");
             buildInfoText = root.Q<Label>("build-info-text");
             Button infoClose = root.Q<Button>("build-info-close");

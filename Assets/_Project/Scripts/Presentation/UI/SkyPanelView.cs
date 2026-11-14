@@ -37,6 +37,7 @@ namespace KardashevAscent.Presentation.UI
             root.pickingMode = PickingMode.Ignore;
             ScreenInput.Register(root.panel);
             panelRoot = root.Q("sky");
+            PanelDrag.AddGrip(panelRoot);   // drag it anywhere (director 2026-11-14)
             labelLayer = root.Q("labels");
             title = root.Q<Label>("title");
             season = root.Q<Label>("season");
