@@ -208,6 +208,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | 2026-11-14 | Sky view measuring is a set of real-instrument puzzles (stick shadow, quadrant), with a tutorial, not click-to-know | UI-11 |
 | 2026-11-14 | Rivers removed after a look in Play mode ("bugged and weird"); RiverMap, its rules and its drawing deleted | PL-12 |
 | 2026-11-14 | Puzzle cards for beginners: bigger text and windows (Research 640 px, sky view 480 px), numbered "how to solve it" steps and a worked example with other numbers on every puzzle | UI-11 |
+| 2026-11-14 | In-game science calculator (degrees; sin/cos/tan and inverses, ln, log, sqrt, ^): click a puzzle's numbers to put them in (also copied to the clipboard), "Put in answer" fills the answer box | UI-11 |
 | 2026-11-09 | Solar measurements: robots turn built panels; research robots measure every solar parameter; measurement is a reasoning puzzle | `docs/design/solar-measurements.md` (on its branch) |
 | 2026-11-12 | Game vision and the ten design pillars | [`../game/game-vision.md`](../game/game-vision.md) |
 | 2026-11-12 | The player learns through observations and reports; minimal permanent interface | vision; [`../architecture/information-architecture.md`](../architecture/information-architecture.md) |
