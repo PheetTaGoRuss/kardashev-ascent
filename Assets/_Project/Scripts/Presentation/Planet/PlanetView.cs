@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using KardashevAscent.Simulation.Planet;
 using UnityEngine;
 
@@ -79,6 +80,15 @@ namespace KardashevAscent.Presentation.Planet
         /// </summary>
         public float TileRadius(int tile) =>
             tileRadius != null && tile >= 0 && tile < tileRadius.Length ? tileRadius[tile] : radius;
+
+        IReadOnlyDictionary<int, float> builtShare;
+
+        /// <summary>Share of each tile's slots built on: its forest canopy thins out to match (from orbit).</summary>
+        public void SetBuiltShare(IReadOnlyDictionary<int, float> share)
+        {
+            builtShare = share;
+            BuildFeatures();
+        }
 
         /// <summary>
         /// Show close-up detail on this tile (the open building site): its orbit-scale peak, crowns and river leave
@@ -196,7 +206,7 @@ namespace KardashevAscent.Presentation.Planet
                 if (Application.isPlaying) Destroy(featuresMesh);
                 else DestroyImmediate(featuresMesh);
             }
-            featuresMesh = TerrainFeatures.Build(Sphere, Surface, Rivers, tileRadius, radius, detailTile);
+            featuresMesh = TerrainFeatures.Build(Sphere, Surface, Rivers, tileRadius, radius, detailTile, builtShare);
             featuresMesh.hideFlags = HideFlags.DontSave;
             features.GetComponent<MeshFilter>().sharedMesh = featuresMesh;
             features.GetComponent<MeshRenderer>().sharedMaterial = terrainMaterial;
