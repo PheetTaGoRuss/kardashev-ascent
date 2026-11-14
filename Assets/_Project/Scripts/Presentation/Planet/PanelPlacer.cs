@@ -855,6 +855,25 @@ namespace KardashevAscent.Presentation.Planet
         /// <summary>Build in the selected slot: a panel at the current angles, or a battery yard.</summary>
         public bool Place() => PlaceAt(slot);
 
+        /// <summary>
+        /// Build one <paramref name="what"/> on the first free slot of the open site that takes it, from the centre
+        /// out (panels at the planned angles). Used when the player skips the setup tutorial. Returns false if no slot fits.
+        /// </summary>
+        public bool AutoPlace(BuildMode what)
+        {
+            if (simulation == null || tile < 0 || siteView.Site == null)
+                return false;
+            BuildMode was = mode;
+            mode = what;
+            BuildingType type = TypeOf(what);
+            bool done = false;
+            for (int s = 0; s < simulation.SlotCount(tile) && !done; s++)
+                if (!Occupied(s) && simulation.CanPlace(type, tile, s))
+                    done = PlaceAt(s);
+            mode = was;
+            return done;
+        }
+
         /// <summary>Remove whatever stands in the selected slot.</summary>
         public bool Remove() => RemoveAt(slot);
 

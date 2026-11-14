@@ -1,6 +1,7 @@
 using KardashevAscent.Presentation.Planet;
 using KardashevAscent.Presentation.UI;
 using KardashevAscent.Simulation.Game;
+using BuildingType = KardashevAscent.Simulation.Game.BuildingType;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -17,6 +18,11 @@ namespace KardashevAscent.Presentation.Game
         Landing,
         /// <summary>The colony is down and running.</summary>
         Playing,
+        /// <summary>
+        /// Just landed: time stays stopped while the setup tutorial asks for the essential buildings (or places them
+        /// when skipped). The site is open and the build bar works.
+        /// </summary>
+        Setup,
     }
 
     /// <summary>
@@ -30,8 +36,11 @@ namespace KardashevAscent.Presentation.Game
         /// <summary>The current phase. Playing when there is no flow (editor tests, other scenes).</summary>
         public static GamePhase Phase { get; private set; } = GamePhase.Playing;
 
-        /// <summary>True when the player can build and time can run.</summary>
-        public static bool IsPlaying => Phase == GamePhase.Playing;
+        /// <summary>True when the player can build (in play, or in the setup tutorial right after landing).</summary>
+        public static bool IsPlaying => Phase == GamePhase.Playing || Phase == GamePhase.Setup;
+
+        /// <summary>True while the setup tutorial runs (time stopped).</summary>
+        public static bool InSetup => Phase == GamePhase.Setup;
 
         /// <summary>True when a flow is running (it opens the chooser itself, so the chooser doesn't open on its own).</summary>
         public static bool Active => instance != null;
@@ -43,7 +52,11 @@ namespace KardashevAscent.Presentation.Game
         PlanetChooserView chooser;
         TilePicker picker;
         SiteView siteView;
-        VisualElement root, mainMenu, pauseMenu, landingBanner;
+        PanelPlacer placer;
+        VisualElement root, mainMenu, pauseMenu, landingBanner, setupPanel;
+        Label setupSteps, setupNow;
+        int setupTile = -1;
+        float nextSetupRefresh;
         Button continueButton, loadButton;
         Label menuMessage, pauseMessage;
         bool pauseOpen;
@@ -76,6 +89,7 @@ namespace KardashevAscent.Presentation.Game
             chooser = FindAnyObjectByType<PlanetChooserView>();
             picker = FindAnyObjectByType<TilePicker>();
             siteView = FindAnyObjectByType<SiteView>();
+            placer = FindAnyObjectByType<PanelPlacer>();
             root = GetComponent<UIDocument>().rootVisualElement;
             root.pickingMode = PickingMode.Ignore;
             root.style.position = Position.Absolute;
@@ -111,9 +125,10 @@ namespace KardashevAscent.Presentation.Game
             Show(mainMenu, phase == GamePhase.MainMenu);
             Show(pauseMenu, false);
             Show(landingBanner, phase == GamePhase.Landing);
+            Show(setupPanel, phase == GamePhase.Setup);
             if (phase != GamePhase.Playing)
             {
-                if (picker != null && phase != GamePhase.Landing) picker.Select(-1);
+                if (picker != null && phase != GamePhase.Landing && phase != GamePhase.Setup) picker.Select(-1);
                 Pause();
             }
             if (phase == GamePhase.MainMenu)
@@ -136,18 +151,80 @@ namespace KardashevAscent.Presentation.Game
                 instance.SetPhase(GamePhase.Landing);
         }
 
-        /// <summary>The colony landed on this tile: time starts and the tile's building site opens.</summary>
+        /// <summary>
+        /// The colony landed on this tile: its building site opens and the setup tutorial asks for the essential
+        /// buildings, with time still stopped (director, 2026-11-14).
+        /// </summary>
         public static void Landed(int tile)
         {
             if (instance == null || Phase != GamePhase.Landing)
                 return;
-            instance.SetPhase(GamePhase.Playing);
-            instance.runner?.SetSpeed(ClockSpeed.HourPerSecond);
+            instance.setupTile = tile;
+            instance.SetPhase(GamePhase.Setup);
             if (instance.picker != null)
             {
                 instance.picker.Select(-1);
                 instance.picker.Select(tile);
             }
+            instance.RefreshSetup();
+        }
+
+        // ---- Setup tutorial ----
+
+        /// <summary>The essential buildings, in the order the tutorial asks for them.</summary>
+        static readonly (BuildMode Mode, BuildingType Type, string Name, string Category, string Why)[] Essentials =
+        {
+            (BuildMode.SolarPanel, BuildingType.SolarPanel, "Solar panel", "Power", "makes the colony's power by day"),
+            (BuildMode.Battery, BuildingType.Battery, "Battery yard", "Power", "carries the colony through the night"),
+            (BuildMode.ChargingStation, BuildingType.ChargingStation, "Charging station", "Stations", "robots charge here between jobs"),
+            (BuildMode.Workshop, BuildingType.Workshop, "Robot Workshop", "Stations", "makes robots, upgrades (a boat hull for work on water) and refines metals"),
+        };
+
+        bool Has(BuildingType type)
+        {
+            IPlanetSimulation sim = runner != null ? runner.Simulation : null;
+            if (sim == null || setupTile < 0) return false;
+            for (int s = 0; s < sim.SlotCount(setupTile); s++)
+                if (sim.GetBuilding(setupTile, s) == type) return true;
+            return false;
+        }
+
+        void RefreshSetup()
+        {
+            if (setupSteps == null) return;
+            string list = "";
+            int next = -1;
+            for (int i = 0; i < Essentials.Length; i++)
+            {
+                bool done = Has(Essentials[i].Type);
+                if (!done && next < 0) next = i;
+                list += (done ? "✓ " : next == i ? "▶ " : "· ") + Essentials[i].Name + " — " + Essentials[i].Why + "\n";
+            }
+            setupSteps.text = list.TrimEnd('\n');
+            if (next < 0)
+            {
+                FinishSetup();
+                return;
+            }
+            var e = Essentials[next];
+            setupNow.text = $"Step {next + 1} of {Essentials.Length}: open {e.Category} in the build bar at the bottom and drag a {e.Name} onto a free slot of the site. " +
+                            "Time starts when all four are placed; your three robots then build them from the lander's cargo.";
+        }
+
+        void SkipSetup()
+        {
+            if (placer != null)
+                foreach (var e in Essentials)
+                    if (!Has(e.Type))
+                        placer.AutoPlace(e.Mode);
+            FinishSetup();
+        }
+
+        void FinishSetup()
+        {
+            if (Phase != GamePhase.Setup) return;
+            SetPhase(GamePhase.Playing);
+            runner?.SetSpeed(ClockSpeed.HourPerSecond);
         }
 
         void OnLoaded()
@@ -166,8 +243,13 @@ namespace KardashevAscent.Presentation.Game
 
         void Update()
         {
-            // Outside play, time stays stopped whatever else asks for it.
-            if (!IsPlaying || pauseOpen)
+            if (Phase == GamePhase.Setup && Time.unscaledTime >= nextSetupRefresh)
+            {
+                nextSetupRefresh = Time.unscaledTime + 0.25f;
+                RefreshSetup();
+            }
+            // Outside play (and in the setup tutorial), time stays stopped whatever else asks for it.
+            if (!IsPlaying || InSetup || pauseOpen)
             {
                 if (runner != null && runner.Clock != null && runner.Clock.Speed != ClockSpeed.Paused)
                     runner.SetSpeed(ClockSpeed.Paused);
@@ -207,7 +289,8 @@ namespace KardashevAscent.Presentation.Game
         {
             pauseOpen = false;
             Show(pauseMenu, false);
-            runner?.SetSpeed(speedBeforePause != ClockSpeed.Paused ? speedBeforePause : ClockSpeed.HourPerSecond);
+            if (!InSetup)
+                runner?.SetSpeed(speedBeforePause != ClockSpeed.Paused ? speedBeforePause : ClockSpeed.HourPerSecond);
         }
 
         static void Quit()
@@ -278,6 +361,29 @@ namespace KardashevAscent.Presentation.Game
             lb.AddToClassList("body"); lb.style.whiteSpace = WhiteSpace.Normal; lb.style.maxWidth = 520;
             landingBanner.Add(lb);
             root.Add(landingBanner);
+
+            setupPanel = new VisualElement();
+            setupPanel.AddToClassList("panel");
+            setupPanel.style.position = Position.Absolute;
+            setupPanel.style.top = 96;
+            setupPanel.style.left = new Length(50, LengthUnit.Percent);
+            setupPanel.style.translate = new Translate(new Length(-50, LengthUnit.Percent), 0);
+            setupPanel.style.width = 560;
+            setupPanel.style.paddingLeft = setupPanel.style.paddingRight = 14;
+            setupPanel.style.paddingTop = setupPanel.style.paddingBottom = 10;
+            var st = new Label("Set up your colony");
+            st.style.fontSize = 16; st.style.unityFontStyleAndWeight = FontStyle.Bold;
+            setupPanel.Add(st);
+            setupNow = new Label("");
+            setupNow.AddToClassList("body"); setupNow.style.whiteSpace = WhiteSpace.Normal; setupNow.style.marginTop = 4;
+            setupPanel.Add(setupNow);
+            setupSteps = new Label("");
+            setupSteps.AddToClassList("body"); setupSteps.style.whiteSpace = WhiteSpace.Normal; setupSteps.style.marginTop = 6;
+            setupPanel.Add(setupSteps);
+            Button skip = MenuButton("Skip: place the rest for me", SkipSetup);
+            skip.style.height = 30; skip.style.fontSize = 13; skip.style.marginTop = 8;
+            setupPanel.Add(skip);
+            root.Add(setupPanel);
         }
 
         VisualElement Screen(float dim)
