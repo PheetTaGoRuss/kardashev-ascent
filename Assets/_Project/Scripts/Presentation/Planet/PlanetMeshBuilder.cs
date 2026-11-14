@@ -5,14 +5,21 @@ using UnityEngine.Rendering;
 
 namespace KardashevAscent.Presentation.Planet
 {
-    /// <summary>Turns a <see cref="HexSphere"/> into one mesh: each tile a flat polygon with a thin darker border.</summary>
+    /// <summary>
+    /// Turns a <see cref="HexSphere"/> into one mesh: each tile a flat polygon with a thin darker border. With per-tile
+    /// radii (relief), each tile sits at its own height and gets darker cliff walls down its edges, so mountains and
+    /// coasts read from orbit.
+    /// </summary>
     public static class PlanetMeshBuilder
     {
+        /// <summary>How much darker cliff walls are than the tile top.</summary>
+        const float WallDarken = 0.45f;
+
         /// <param name="tileColors">One colour per tile; alpha is used as surface smoothness by the PlanetTiles shader.</param>
         /// <param name="borderWidth">Border as a fraction of the tile's centre-to-corner distance (0 = no border).</param>
         /// <param name="borderDarken">How much darker the border is than the tile (0–1).</param>
         public static Mesh Build(HexSphere sphere, float radius, IReadOnlyList<Color32> tileColors,
-                                 float borderWidth = 0.08f, float borderDarken = 0.35f)
+                                 float borderWidth = 0.08f, float borderDarken = 0.35f, IReadOnlyList<float> tileRadius = null)
         {
             int tiles = sphere.TileCount;
             int maxCorners = 6;
@@ -25,7 +32,8 @@ namespace KardashevAscent.Presentation.Planet
             for (int t = 0; t < tiles; t++)
             {
                 Vector3 n = ToUnity(sphere.Centers[t]);
-                Vector3 center = n * radius;
+                float r = tileRadius != null ? tileRadius[t] : radius;
+                Vector3 center = n * r;
                 var cornerDirs = sphere.Corners[t];
                 int k = cornerDirs.Length;
                 Color32 fill = tileColors[t];
@@ -37,8 +45,29 @@ namespace KardashevAscent.Presentation.Planet
                 int innerStart = vertices.Count;
                 for (int i = 0; i < k; i++)
                 {
-                    Vector3 corner = ToUnity(cornerDirs[i]) * radius;
+                    Vector3 corner = ToUnity(cornerDirs[i]) * r;
                     Add(vertices, normals, colors, Vector3.Lerp(corner, center, border ? borderWidth : 0f), n, fill);
+                }
+
+                // Cliff walls: from the tile's edge down to sea level. A lower neighbour shows the wall; a higher one
+                // hides it. Darker than the top so slopes read as relief.
+                if (r > radius * 1.0001f)
+                {
+                    Color32 wall = Darken(fill, WallDarken);
+                    for (int i = 0; i < k; i++)
+                    {
+                        Vector3 a = ToUnity(cornerDirs[i]), b = ToUnity(cornerDirs[(i + 1) % k]);
+                        Vector3 outward = ((a + b) * 0.5f - n * Vector3.Dot((a + b) * 0.5f, n)).normalized;
+                        int w = vertices.Count;
+                        Add(vertices, normals, colors, a * r, outward, wall);
+                        Add(vertices, normals, colors, b * r, outward, wall);
+                        Add(vertices, normals, colors, b * radius, outward, wall);
+                        Add(vertices, normals, colors, a * radius, outward, wall);
+                        indices.Add(w); indices.Add(w + 2); indices.Add(w + 1);
+                        indices.Add(w); indices.Add(w + 3); indices.Add(w + 2);
+                        indices.Add(w); indices.Add(w + 1); indices.Add(w + 2);
+                        indices.Add(w); indices.Add(w + 2); indices.Add(w + 3);
+                    }
                 }
 
                 // Corner order goes counter-clockwise seen from outside, which faces outward in Unity.
@@ -54,7 +83,7 @@ namespace KardashevAscent.Presentation.Planet
 
                 int outerStart = vertices.Count;
                 for (int i = 0; i < k; i++)
-                    Add(vertices, normals, colors, ToUnity(cornerDirs[i]) * radius, n, edge);
+                    Add(vertices, normals, colors, ToUnity(cornerDirs[i]) * r, n, edge);
 
                 // The inner ring again, in the border colour, so the border is a crisp band.
                 int innerEdgeStart = vertices.Count;
