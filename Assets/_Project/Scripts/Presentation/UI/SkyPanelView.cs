@@ -223,6 +223,7 @@ namespace KardashevAscent.Presentation.UI
 
         // ---- Puzzles (director 2026-11-14): readings from real instruments; the player works the value out ----
 
+        const string DEG = "Use a calculator in degrees mode (DEG), not radians.";
         enum Puzzle { Declination, Sun, Noon, Pole }
 
         VisualElement card;
@@ -264,10 +265,20 @@ namespace KardashevAscent.Presentation.UI
             switch (which)
             {
                 case Puzzle.Declination:
-                    c.Add(Line("The tilted axis and where the planet is on its orbit give the sun's declination δ."));
+                    c.Add(PuzzleGuide.Text("Today's sun declination δ", bold: true, size: PuzzleGuide.TitleSize));
+                    c.Add(Line("δ is how far north (+) or south (−) of the equator the sun is today. It comes from how tilted the planet is and where it is on its orbit."));
                     c.Add(Line($"Tilt ε = {r.ObliquityDeg:0.##}°   ·   orbit position λ = {r.EclipticLongitudeDeg:0.#}°", true));
+                    c.Add(PuzzleGuide.Steps(
+                        "Press sin on the tilt ε.",
+                        "Press sin on the orbit position λ.",
+                        "Multiply the two answers.",
+                        "Press arcsin (shift + sin) on that. That is δ in degrees. " + DEG));
+                    c.Add(PuzzleGuide.Example(
+                        "ε = 23.44°, λ = 60°:",
+                        "sin 23.44° = 0.3978   ·   sin 60° = 0.8660",
+                        "0.3978 × 0.8660 = 0.3445   →   arcsin 0.3445 = 20.15°"));
                     answerA = Field(c, "δ (°)");
-                    hint = "sin δ = sin ε · sin λ, so δ = arcsin(sin ε · sin λ).\nExample: ε = 23.44°, λ = 90° (northern summer solstice) → δ = +23.44°.";
+                    hint = "";
                     break;
                 case Puzzle.Sun:
                 {
@@ -278,11 +289,20 @@ namespace KardashevAscent.Presentation.UI
                         hint = "";
                         break;
                     }
+                    c.Add(PuzzleGuide.Text("Where is the sun? Read a stick's shadow", bold: true, size: PuzzleGuide.TitleSize));
                     c.Add(new GnomonPlot(SkyNotebook.GnomonLengthM, shadow));
-                    c.Add(Line($"A {SkyNotebook.GnomonLengthM:0.000} m stick stands straight up. Its shadow is {shadow:0.000} m long and points to {bearing:0}° on the compass.", true));
+                    c.Add(Line($"A {SkyNotebook.GnomonLengthM:0.000} m stick stands straight up. Its shadow is {shadow:0.000} m long and points to {bearing:0}° on the compass (0° = north, 90° = east).", true));
+                    c.Add(PuzzleGuide.Steps(
+                        "Height h: divide stick / shadow, then press arctan (shift + tan). " + DEG,
+                        "Direction A_s: the sun is on the opposite side of the stick from the shadow, so take the shadow's direction − 180°.",
+                        "If that comes out negative, add 360°."));
+                    c.Add(PuzzleGuide.Example(
+                        "Stick 1.000 m, shadow 0.700 m pointing to 320°:",
+                        "1 / 0.7 = 1.4286   →   arctan 1.4286 = 55.0°  (h)",
+                        "320° − 180° = 140°  (A_s, the sun is south-east)"));
                     answerA = Field(c, "Sun's height h (°)");
                     answerB = Field(c, "Sun's direction A_s (°)");
-                    hint = "tan h = stick / shadow, so h = arctan(stick / shadow).\nThe sun is on the other side of the stick from its shadow: A_s = bearing − 180° (add 360° if it is negative).";
+                    hint = "";
                     break;
                 }
                 case Puzzle.Noon:
@@ -294,9 +314,17 @@ namespace KardashevAscent.Presentation.UI
                         hint = "";
                         break;
                     }
+                    c.Add(PuzzleGuide.Text("Your latitude from the noon sun", bold: true, size: PuzzleGuide.TitleSize));
                     c.Add(Line($"At noon the sun stood h = {noon.Value.AltitudeDeg:0.0}° high, in the {(noon.Value.South ? "south" : "north")}. Today δ = {r.DeclinationDeg:+0.00;−0.00}°.", true));
+                    c.Add(PuzzleGuide.Steps(
+                        "Sun in the south: φ = 90° − h + δ.",
+                        "Sun in the north: φ = h − 90° + δ.",
+                        "Careful with signs: adding a negative δ makes the answer smaller. φ positive = north, negative = south."));
+                    c.Add(PuzzleGuide.Example(
+                        "h = 60°, sun in the south, δ = −10°:",
+                        "φ = 90° − 60° + (−10°) = 20°  (20° north)"));
                     answerA = Field(c, "Latitude φ (°, south is −)");
-                    hint = "At noon the sun is on your meridian. Sun in the south: φ = 90° − h + δ. Sun in the north: φ = h − 90° + δ.";
+                    hint = "";
                     break;
                 }
                 default:
@@ -308,10 +336,18 @@ namespace KardashevAscent.Presentation.UI
                         hint = "";
                         break;
                     }
+                    c.Add(PuzzleGuide.Text("Your latitude from the pole star point", bold: true, size: PuzzleGuide.TitleSize));
                     c.Add(new QuadrantPlot(reading));
-                    c.Add(Line($"Sighting the {(north ? "north" : "south")} celestial pole along the quadrant's edge, the plumb line crosses the scale at {reading:0.0}° (counted from straight up).", true));
+                    c.Add(Line($"Sighting the {(north ? "north" : "south")} celestial pole (the point the night sky turns around) along the quadrant's edge, the hanging string crosses the scale at {reading:0.0}° (counted from straight up).", true));
+                    c.Add(PuzzleGuide.Steps(
+                        "The pole's height above the horizon = 90° − the reading.",
+                        "That height is your latitude.",
+                        "North pole: φ is positive. South pole: put a minus sign in front."));
+                    c.Add(PuzzleGuide.Example(
+                        "Reading 35° on the north pole:",
+                        "90° − 35° = 55°   →   φ = +55°  (on the south pole it would be −55°)"));
                     answerA = Field(c, "Latitude φ (°, south is −)");
-                    hint = "The pole's height above the horizon is 90° − the reading. That height is your latitude: north pole → φ positive, south pole → φ negative.";
+                    hint = "";
                     break;
                 }
             }
@@ -325,9 +361,6 @@ namespace KardashevAscent.Presentation.UI
                 row.Add(check);
                 var hintLabel = Line(hint);
                 hintLabel.style.display = DisplayStyle.None;
-                var help = new Button(() => hintLabel.style.display = hintLabel.style.display == DisplayStyle.None ? DisplayStyle.Flex : DisplayStyle.None) { text = "? Formula" };
-                help.AddToClassList("action");
-                row.Add(help);
                 if (which == Puzzle.Sun)
                 {
                     var again = new Button(() => { CloseCard(); Open(Puzzle.Sun); }) { text = "New reading" };
@@ -344,10 +377,8 @@ namespace KardashevAscent.Presentation.UI
 
         static Label Line(string text, bool strong = false)
         {
-            var l = new Label(text);
-            l.AddToClassList(strong ? "body" : "caption");
+            Label l = PuzzleGuide.Text(text, bold: strong);
             l.AddToClassList("wrap");
-            l.style.whiteSpace = WhiteSpace.Normal;
             return l;
         }
 
@@ -357,12 +388,13 @@ namespace KardashevAscent.Presentation.UI
             row.style.flexDirection = FlexDirection.Row;
             row.style.alignItems = Align.Center;
             row.style.marginTop = 3;
-            var l = Line(label);
+            var l = Line(label, true);
             l.style.flexGrow = 1;
             row.Add(l);
             var f = new TextField { maxLength = 10 };
             f.AddToClassList("puzzle-field");
-            f.style.width = 80;
+            f.style.width = 110;
+            f.style.fontSize = PuzzleGuide.BodySize;
             row.Add(f);
             parent.Add(row);
             return f;
