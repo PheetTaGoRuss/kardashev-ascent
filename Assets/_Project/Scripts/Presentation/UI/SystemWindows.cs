@@ -356,7 +356,7 @@ namespace KardashevAscent.Presentation.UI
         public override KeyCode Key => KeyCode.N;
         public override int Order => 50;
 
-        Label status, coverage, power, robots;
+        Label status, coverage, power, computing, robots;
 
         protected override void BuildBody()
         {
@@ -365,6 +365,8 @@ namespace KardashevAscent.Presentation.UI
             coverage = Text();
             Heading("POWER");
             power = Text();
+            Heading("COLONY COMPUTING");
+            computing = Text();
             Heading("ROBOTS");
             robots = Text();
             Text("caption").text =
@@ -372,7 +374,12 @@ namespace KardashevAscent.Presentation.UI
                 "new orders, rule changes and the colony's needs, and hands in what it found. A robot out of range keeps " +
                 "working on the program and priorities it last synced, and can't react to the colony's needs until it is " +
                 "back in range. The hub and relays need grid power: in a brownout the whole network is down. " +
-                "Build relays from the build bar to extend coverage. Range and power draws are placeholder values.";
+                "Build relays from the build bar to extend coverage.\n" +
+                "AI levels: a Processor upgrade (Workshop) gives level 2: cut off, the robot keeps working by the colony's " +
+                "needs as it last knew them. An Advanced processor gives level 3: it also reaches another robot 2 tiles away " +
+                "instead of 1. A cut-off robot near a connected one syncs through it and hands over what it found; " +
+                "otherwise its survey and measurement results wait until it is back in range. Levels 2 and 3 need colony " +
+                "computing, the first load cut when power is short. Ranges, draws and unlocks are placeholder values.";
         }
 
         protected override void RefreshBody(IPlanetSimulation sim)
@@ -390,12 +397,27 @@ namespace KardashevAscent.Presentation.UI
                             (relays == 0 ? ".\nNo relays yet: robots working more than " + KardashevAscent.Simulation.Robots.ColonyNetwork.RangeTiles + " tiles from the lander drop off the network." : ".");
             power.text = $"Hub {Format.Power(KardashevAscent.Simulation.Robots.ColonyNetwork.HubPowerW)} · relays {Format.Power(relays * KardashevAscent.Simulation.Robots.ColonyNetwork.RelayPowerW)} · " +
                          $"total {Format.Power(net.PowerW)}, served before the colony's other loads.";
+            double request = sim.ComputingRequestW;
+            computing.text = request <= 0.0
+                ? "Not needed: no robot has a processor yet (Workshop upgrade)."
+                : sim.ComputingOn
+                    ? $"Running · {Format.Power(request)} for the robots' processors."
+                    : $"CUT: power is short, so the {Format.Power(request)} for processors is off. Robots work at AI level 1.";
+            computing.EnableInClassList("message", request > 0.0 && !sim.ComputingOn);
             var sb = new System.Text.StringBuilder();
             foreach (var r in w.Robots)
             {
-                sb.Append(r.Name).Append(": ");
+                int level = w.EffectiveAILevel(r);
+                sb.Append(r.Name).Append($" (AI {level}{(level < r.AILevel ? $" of {r.AILevel}" : "")}): ");
                 if (r.Connected) sb.Append("connected");
-                else sb.Append($"out of range for {r.HoursOffline:0.0} h on tile #{r.Tile} · running cached rules ({r.CachedProgram})");
+                else
+                {
+                    sb.Append($"out of range for {r.HoursOffline:0.0} h on tile #{r.Tile}");
+                    var via = r.ExchangeVia.HasValue ? w.GetRobot(r.ExchangeVia.Value) : null;
+                    sb.Append(via != null ? $" · syncing through {via.Name} nearby" : $" · running cached rules ({r.CachedProgram})");
+                }
+                if (r.UnsyncedFindings > 0)
+                    sb.Append($" · carrying {r.UnsyncedFindings} result{(r.UnsyncedFindings == 1 ? "" : "s")} not yet handed in");
                 sb.Append('\n');
             }
             robots.text = sb.Length > 0 ? sb.ToString().TrimEnd() : "No robots.";

@@ -314,6 +314,7 @@ namespace KardashevAscent.Simulation.Robots
         {
             foreach (Robot r in robots)
             {
+                r.ExchangeVia = null;
                 bool now = Network == null || Network.IsConnected(r.Tile);
                 if (now)
                 {
@@ -337,6 +338,52 @@ namespace KardashevAscent.Simulation.Robots
                     r.HoursOffline += hours;
                 }
             }
+            // Nearby exchange (spec: robots talk directly during outages): a cut-off robot near a connected one syncs
+            // its rules through it and hands over what it found. It stays off the network itself.
+            foreach (Robot r in robots)
+            {
+                if (r.Connected || Network == null)
+                    continue;
+                int range = ExchangeRange(EffectiveAILevel(r));
+                foreach (Robot o in robots)
+                    if (o.Connected && o != r && Network.Within(r.Tile, o.Tile, range))
+                    {
+                        Sync(r);
+                        r.ExchangeVia = o.Id;
+                        break;
+                    }
+            }
+        }
+
+        // ---- AI levels and colony computing (stage E) ----
+
+        /// <summary>
+        /// False while colony computing is cut (a power shortage): robots then fall back to AI level 1. Basic autonomy
+        /// never needs it. Set by the orchestrator each tick.
+        /// </summary>
+        public bool ComputingAvailable { get; set; } = true;
+
+        /// <summary>The AI level a robot works at now: its processors', or 1 while colony computing is cut.</summary>
+        public int EffectiveAILevel(Robot r) => ComputingAvailable ? r.AILevel : 1;
+
+        /// <summary>How far a cut-off robot reaches another robot directly, tiles: 1, or 2 at AI level 3. TBD.</summary>
+        public static int ExchangeRange(int aiLevel) => aiLevel >= 3 ? 2 : 1;
+
+        /// <summary>Can this robot hand in findings now: on the network, or via a robot nearby.</summary>
+        public bool CanSync(Robot r) => r.Connected || r.ExchangeVia.HasValue;
+
+        /// <summary>Colony computing the robots need, W: each AI level above 1 adds a share. TBD.</summary>
+        public const double ComputingWPerLevel = 300.0;
+
+        public double ComputingRequestW
+        {
+            get
+            {
+                double w = 0.0;
+                foreach (Robot r in robots)
+                    w += (r.AILevel - 1) * ComputingWPerLevel;
+                return w;
+            }
         }
 
         /// <summary>A connected robot takes the live program and priorities, and hands over what it found.</summary>
@@ -345,7 +392,7 @@ namespace KardashevAscent.Simulation.Robots
             r.CachedProgram = EffectiveProgram(r);
             foreach (TaskKind k in (TaskKind[])System.Enum.GetValues(typeof(TaskKind)))
                 r.CachedPriorities[k] = EffectivePriority(r, k);
-            r.UnsyncedFindings = 0;
+            r.CachedNeeds = Needs;
         }
 
         /// <summary>How many robots are cut off now.</summary>
@@ -372,6 +419,9 @@ namespace KardashevAscent.Simulation.Robots
                 TaskPriority cached = r.CachedPriorities.TryGetValue(kind, out TaskPriority c) ? c : TaskPriority.Normal;
                 if (r.CachedProgram != OperatingProgram.Demand || cached == TaskPriority.Disabled)
                     return cached;
+                // AI level 2+: keeps working by the colony's needs as it last knew them. Level 1 has no notion of them.
+                if (EffectiveAILevel(r) >= 2 && kind == TaskKind.Build && (r.CachedNeeds.BrownoutRisk || r.CachedNeeds.SitesWaiting))
+                    return TaskPriority.High;
                 return kind == TaskKind.Mine ? TaskPriority.Low : TaskPriority.Normal;
             }
             TaskPriority p = EffectivePriority(r, kind);
@@ -1134,6 +1184,8 @@ namespace KardashevAscent.Simulation.Robots
                 rs.HoursOffline = r.HoursOffline;
                 rs.CachedProgram = r.CachedProgram;
                 rs.UnsyncedFindings = r.UnsyncedFindings;
+                rs.CachedBrownoutRisk = r.CachedNeeds.BrownoutRisk;
+                rs.CachedSitesWaiting = r.CachedNeeds.SitesWaiting;
                 foreach (var kv in r.CachedPriorities)
                     rs.CachedPriorities.Add(new PriorityRecord { Kind = kv.Key, Priority = kv.Value });
                 rs.Route.AddRange(r.Route);
@@ -1192,6 +1244,7 @@ namespace KardashevAscent.Simulation.Robots
                 r.HoursOffline = rs.HoursOffline;
                 r.CachedProgram = rs.CachedProgram;
                 r.UnsyncedFindings = rs.UnsyncedFindings;
+                r.CachedNeeds = new ColonyNeeds(rs.CachedBrownoutRisk, rs.CachedSitesWaiting);
                 if (rs.CachedPriorities != null)
                     foreach (PriorityRecord p in rs.CachedPriorities)
                         r.CachedPriorities[p.Kind] = p.Priority;

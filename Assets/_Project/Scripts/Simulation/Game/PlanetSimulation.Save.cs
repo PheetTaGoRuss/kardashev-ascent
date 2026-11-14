@@ -50,6 +50,7 @@ namespace KardashevAscent.Simulation.Game
             state.ParameterPuzzles.AddRange(parameterPuzzles);
             state.RoughParameters = Parameters.CaptureRough();
             state.SurveyPuzzles.AddRange(surveyPuzzles);
+            state.HeldFindings.AddRange(heldFindings);
             state.RoughSurveys.AddRange(roughSurveys);
             state.RoughSurveys.Sort();
             foreach (var mo in measureOrders)
@@ -191,6 +192,11 @@ namespace KardashevAscent.Simulation.Game
             Parameters.Restore(state.MeasuredParameters);   // version 18
             Parameters.RestoreRough(state.RoughParameters);   // version 20
             surveyPuzzles.Clear();
+            heldFindings.Clear();
+            if (state.HeldFindings != null)   // version 25
+                foreach (HeldFinding f in state.HeldFindings)
+                    if (f != null && f.Tile >= 0 && f.Tile < TileCount)
+                        heldFindings.Add(f);
             roughSurveys.Clear();
             if (state.SurveyPuzzles != null)   // version 21
                 foreach (SurveyPuzzle p in state.SurveyPuzzles)

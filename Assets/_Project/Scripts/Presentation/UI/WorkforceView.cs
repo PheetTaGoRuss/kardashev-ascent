@@ -491,13 +491,16 @@ namespace KardashevAscent.Presentation.UI
             var upgrades = new VisualElement();
             upgrades.AddToClassList("button-row");
             string have = "";
-            foreach (RobotModule m in new[] { RobotModule.BigBattery, RobotModule.FastDrive, RobotModule.Shielding, RobotModule.ThermalInsulation })
+            foreach (RobotModule m in new[] { RobotModule.BigBattery, RobotModule.FastDrive, RobotModule.Shielding, RobotModule.ThermalInsulation,
+                                              RobotModule.Processor, RobotModule.AdvancedProcessor })
             {
                 if (r.Has(m))
                 {
                     have += (have.Length > 0 ? ", " : "") + RobotTech.ModuleName(m).ToLowerInvariant();
                     continue;
                 }
+                if (m == RobotModule.AdvancedProcessor && !r.Has(RobotModule.Processor))
+                    continue;
                 if (sim.MilestonesReached < RobotTech.UnlockMilestone(m))
                     continue;
                 RobotModule module = m;

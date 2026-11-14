@@ -260,6 +260,13 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>The colony network: hub, relays, coverage, power (stage E).</summary>
         Robots.ColonyNetwork Network { get; }
+
+        /// <summary>Colony computing the robots' processors ask for, W, and whether it runs now (stage E).</summary>
+        double ComputingRequestW { get; }
+        bool ComputingOn { get; }
+
+        /// <summary>Survey and measurement results cut-off robots are carrying until they can sync (stage E).</summary>
+        System.Collections.Generic.IReadOnlyList<HeldFinding> HeldFindings { get; }
     }
 
     /// <summary>The ground and the materials: surveys, mining and what is on hand.</summary>

@@ -53,6 +53,26 @@ namespace KardashevAscent.Simulation.Robots
 
         public void SetPowered(bool powered) => Powered = powered;
 
+        /// <summary>Are two tiles at most <paramref name="maxHops"/> tiles apart (along neighbours)?</summary>
+        public bool Within(int a, int b, int maxHops)
+        {
+            if (a == b) return true;
+            var seen = new HashSet<int> { a };
+            var frontier = new List<int> { a };
+            for (int hop = 1; hop <= maxHops; hop++)
+            {
+                var next = new List<int>();
+                foreach (int t in frontier)
+                    foreach (int n in sphere.Neighbors[t])
+                    {
+                        if (n == b) return true;
+                        if (seen.Add(n)) next.Add(n);
+                    }
+                frontier = next;
+            }
+            return false;
+        }
+
         public void AddRelay(int tile)
         {
             if (relays.Add(tile))

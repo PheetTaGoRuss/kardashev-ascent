@@ -110,8 +110,10 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | RB-06 | Task records, scheduler scoring, reservations | CONFIRMED | spec v2; PR #57 | Tested | `Robots/TaskBook.cs` |
 | RB-07 | Facility staffing with diminishing returns | CONFIRMED for the Workshop; other buildings open (OQ-7) | PR #58 | Tested | `Robots/FacilityStaffing.cs` |
 | RB-08 | Battery ageing by depth, cold capacity, task wear, charging station, maintenance rules | CONFIRMED | PR #59 | Tested; two unsourced placeholders | `Robots/RobotBattery.cs` |
-| RB-09 | Colony network: hub, relays, range, brownout, cut-off robots | CONFIRMED | Q1 decided 2026-11-08 | In progress | `feature/building-footprints` |
-| RB-10 | AI levels, memory, synchronisation, backups, colony computing | CONFIRMED as scope; details open | spec v2 stage E | Designed | `robotic-workforce-v2-audit.md` |
+| RB-09 | Colony network: hub, relays, range, brownout, cut-off robots | CONFIRMED | Q1 decided 2026-11-08 | Tested | `Robots/ColonyNetwork.cs`, `Game/PlanetSimulation.ColonyNetwork.cs` |
+| RB-10 | AI levels (processor upgrades), nearby exchange, findings wait for sync, onboard AI power, colony computing | CONFIRMED (details 2026-11-14) | spec v2 stage E | Tested | `Robots/Workforce.cs`, `Game/PlanetSimulation.Findings.cs` |
+| RB-10a | Individual memory beyond findings, colony database, backups and loss of unsynced data | CONFIRMED as scope | spec v2 stage E | Not started (needs OQ-9) | — |
+| RB-10b | Failure ladder (alternatives, ask a robot for help, notify the player) and player-set computing priorities | CONFIRMED as scope | spec v2 §12 | Not started | — |
 | RB-11 | Component tiers and assembly (manufacturing v2) | CONFIRMED as scope | spec v2 stage F | Designed | same |
 | RB-12 | Robot inspection view, task monitor, group presets | CONFIRMED as scope | spec v2 stage G | Designed | same |
 | RB-13 | Aggregate simulation and performance budget | CONFIRMED as scope | spec v2 stage H | Designed | same |
@@ -166,6 +168,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | --- | --- | --- |
 | 2026-11-08 | Workforce decisions D1–D16, D-AO, D-CAP as recommended, with two changes made during building (sky surveys stay player actions; cold and calendar ageing deferred) | `docs/design/robotic-workforce.md` sections 7 and 9 |
 | 2026-11-08 | Colony network Q1: relay range plus hub power; the lander is the hub; a brownout takes the network down | `docs/design/robotic-workforce-v2-audit.md` section 6 |
+| 2026-11-14 | Stage E details: AI level from Processor (2) and Advanced processor (3) Workshop upgrades, unlocked by milestones until research exists; a cut-off robot's findings wait until it syncs (directly or through a robot nearby), backups and loss wait for OQ-9; colony computing is a grid load per AI level above 1, cut first in a shortage, robots then work at level 1 | `docs/design/robotic-workforce-v2-audit.md` section 6 |
 | 2026-11-09 | Solar measurements: robots turn built panels; research robots measure every solar parameter; measurement is a reasoning puzzle | `docs/design/solar-measurements.md` (on its branch) |
 | 2026-11-12 | Game vision and the ten design pillars | [`../game/game-vision.md`](../game/game-vision.md) |
 | 2026-11-12 | The player learns through observations and reports; minimal permanent interface | vision; [`../architecture/information-architecture.md`](../architecture/information-architecture.md) |
