@@ -663,6 +663,9 @@ namespace KardashevAscent.Presentation.Planet
         /// <summary>How many slots a building of this kind covers (solar: at today's tier).</summary>
         public int FootprintOf(BuildMode what) => simulation != null ? simulation.FootprintSize(TypeOf(what)) : 1;
 
+        /// <summary>Build parts a building of this kind costs, Wh.</summary>
+        public double CostOf(BuildMode what) => simulation != null ? simulation.BuildCostWh(TypeOf(what)) : 0.0;
+
         /// <summary>What a new solar building here is, e.g. "solar farm (1 km²)".</summary>
         public string NewPanelName => simulation == null ? "solar panel"
             : $"{PanelTiers.All[simulation.PanelTier].Name.ToLowerInvariant()} ({PanelTiers.FormatArea(simulation.NewPanelAreaM2(tile))})";
