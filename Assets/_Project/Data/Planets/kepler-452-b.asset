@@ -17,7 +17,7 @@ MonoBehaviour:
     displayName: Kepler-452 b
     archiveName: Kepler-452 b
     source: NASA Exoplanet Archive, table pscomppars
-    retrieved: 2026-11-08
+    retrieved: 2026-11-14
     solar:
       luminosityW: 4.6499890383241664e+26
       semiMajorAxisM: 156479372752.2
