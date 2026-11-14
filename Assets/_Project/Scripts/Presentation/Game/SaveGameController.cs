@@ -79,6 +79,12 @@ namespace KardashevAscent.Presentation.Game
                         return;
                     }
                 }
+                // Its map: a new game's random one (version 28), or the planet's own for older saves.
+                if (state != null)
+                {
+                    if (state.TerrainSeed != 0) runner.UseMap(state.TerrainSeed);
+                    else runner.UseOriginalMap();
+                }
                 // A save from a colony that landed elsewhere on this planet: land there first.
                 if (state != null && state.TileCount == runner.Simulation.TileCount && state.BaseTileId != runner.Simulation.BaseTileId)
                     runner.LandAt(state.BaseTileId, true, false);

@@ -33,6 +33,11 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>Which planet this is (the id in planets.json); saves remember it.</summary>
         public string PlanetId { get; set; } = "";
+        /// <summary>The noise seed of this planet's map: its continents and its deposits (saved, version 28).</summary>
+        public int TerrainSeed { get; } = DefaultTerrainSeed;
+
+        /// <summary>The seed a map uses when nothing else sets one.</summary>
+        public const int DefaultTerrainSeed = 7;
 
         /// <summary>
         /// Star's effective temperature, K, for the spectral match f_spec of the panels' cells (P0 item 5).

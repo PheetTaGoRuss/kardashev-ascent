@@ -17,6 +17,7 @@ namespace KardashevAscent.Simulation.Game
             var state = new SimulationState
             {
                 PlanetId = PlanetId,
+                TerrainSeed = TerrainSeed,
                 Notebook = Notebook.Capture(),
                 MilestonesReached = MilestonesReached,
                 DayAveragePowerW = DayAveragePowerW,

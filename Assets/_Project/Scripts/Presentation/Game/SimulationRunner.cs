@@ -112,6 +112,45 @@ namespace KardashevAscent.Presentation.Game
         }
 
         /// <summary>Start a new colony on planet <paramref name="index"/> of <see cref="Planets"/>. False if it cannot be landed on.</summary>
+        /// <summary>The seed of the map now on screen (and in the simulation).</summary>
+        public int TerrainSeed => record?.look?.terrainSeed ?? PlanetSimulation.DefaultTerrainSeed;
+
+        readonly System.Random mapRandom = new System.Random();
+
+        /// <summary>
+        /// A new random map for the planet now chosen (director 2026-11-14: every new game is a new map). The
+        /// continents and the deposits change; the planet's NASA values don't. Returns the seed.
+        /// </summary>
+        public int NewRandomMap()
+        {
+            int seed = mapRandom.Next(1, 2_000_000_000);
+            UseMap(seed);
+            return seed;
+        }
+
+        /// <summary>Put this map on screen and in the simulation (a saved game's map; nothing happens if it already is).</summary>
+        public void UseMap(int seed)
+        {
+            if (record == null || planet == null || seed == TerrainSeed)
+                return;
+            // A copy: the planet asset keeps its own map for the chooser and for older saves.
+            record = JsonUtility.FromJson<PlanetRecord>(JsonUtility.ToJson(record));
+            if (record.look == null) record.look = new PlanetRecord.LookRecord();
+            record.look.terrainSeed = seed;
+            landingTile = null;
+            if (planet.SetSurface(record.ToSurfaceSettings()))
+                planet.EnsureBuilt();
+            else if (planet.Sphere != null)
+                CreateSimulation();
+        }
+
+        /// <summary>The planet's own map, as in its data (for saves from before random maps).</summary>
+        public void UseOriginalMap()
+        {
+            if (CurrentIndex >= 0 && CurrentIndex < planets.Length && planets[CurrentIndex] != null)
+                UseMap(planets[CurrentIndex].Record.look?.terrainSeed ?? PlanetSimulation.DefaultTerrainSeed);
+        }
+
         public bool ChoosePlanet(int index)
         {
             if (index < 0 || index >= planets.Length || planets[index] == null || !planets[index].Record.IsPlayable)

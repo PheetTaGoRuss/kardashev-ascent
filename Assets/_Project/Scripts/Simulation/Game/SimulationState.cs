@@ -9,12 +9,17 @@ namespace KardashevAscent.Simulation.Game
     public sealed class SimulationState
     {
         /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished. 7 added robots; 8 their batteries and condition; 9 resources; 10 the Workshop; 11 programs (facility, ranking, queue); 12 movement; 13 critical damage (stage A); 14 reservations and tasks to go back to (stage B); 15 battery ageing by depth, maintenance rules (stage D); 16 building footprints. 23 industry reports.</summary>
-        public const int CurrentVersion = 27;
+        public const int CurrentVersion = 28;
 
         /// <summary>The version this state was saved with (<see cref="CurrentVersion"/> for a new one).</summary>
         public int Version = CurrentVersion;
         /// <summary>Planet id from planets.json (version 3); empty in older saves.</summary>
         public string PlanetId = "";
+        /// <summary>
+        /// The seed of the map this colony was played on (version 28: every new game gets a random map; director
+        /// 2026-11-14). 0 in older saves: the planet's own map.
+        /// </summary>
+        public int TerrainSeed;
         /// <summary>Milestones reached and the day-average power behind them (version 4; 0 in older saves).</summary>
         public int MilestonesReached;
         public double DayAveragePowerW;
