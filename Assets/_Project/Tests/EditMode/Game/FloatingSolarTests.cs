@@ -92,6 +92,27 @@ namespace KardashevAscent.Simulation.Tests.Game
         }
 
         [Test]
+        public void BoatRobot_SentToSea_SailsThere_ALandRobotCant()
+        {
+            PlanetSimulation sim = Create();
+            double[] hours = sim.Routes.Amphibious().HoursFrom(sim.BaseTileId);
+            int sea = -1;
+            for (int t = 0; t < hours.Length; t++)
+                if (Surface.Terrain[t] == TerrainType.ShallowOcean && (sea < 0 || hours[t] < hours[sea])) sea = t;
+            var r = sim.Workforce.Robots[0];
+            Assert.IsFalse(sim.SendRobot(r.Id, sea), "no land route");
+            r.Modules |= KardashevAscent.Simulation.Robots.RobotModule.Boat;
+            Assert.IsTrue(sim.SendRobot(r.Id, sea));
+            bool wet = false;
+            for (int i = 0; i < 400 && !wet; i++)
+            {
+                sim.Tick(0.25);
+                wet = Surface.Terrain[r.Tile] == TerrainType.ShallowOcean || Surface.Terrain[r.Tile] == TerrainType.DeepOcean;
+            }
+            Assert.IsTrue(wet, $"reached the sea (tile {r.Tile}, {hours[sea]:0} h away by boat)");
+        }
+
+        [Test]
         public void SaveAndLoad_KeepsFloatingPanels_AsFloating()
         {
             PlanetSimulation sim = Create();
