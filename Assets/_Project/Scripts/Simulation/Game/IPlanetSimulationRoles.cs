@@ -234,6 +234,12 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>A network relay on an empty slot (stage E). One per tile is enough: coverage is per tile.</summary>
         bool PlaceRelay(int tileId, int slot);
+
+        /// <summary>A Research Station on an empty land slot: where measurements and experiments are done.</summary>
+        bool PlaceResearchStation(int tileId, int slot);
+
+        /// <summary>What the colony still has to find out before it may build this, or null (knowledge gates buildings).</summary>
+        string KnowledgeBlocker(BuildingType type);
     }
 
     /// <summary>The robot workforce: orders, movement and the work waiting.</summary>
@@ -375,6 +381,27 @@ namespace KardashevAscent.Simulation.Game
         bool CancelMeasure(Solar.SolarParameter parameter);
         /// <summary>0–1 while a robot measures (1 once known).</summary>
         double MeasureProgress(Solar.SolarParameter parameter);
+
+        /// <summary>Why a measurement can't be ordered for this tile (no Research Station), or null.</summary>
+        string MeasureBlocker(Solar.SolarParameter parameter, int tileId);
+
+        // ---- the Research Station and its experiments (director 2026-11-14) ----
+
+        bool HasResearchStation { get; }
+        bool HasResearchStationOn(int tileId);
+        bool IsExperimentKnown(Planet.ExperimentKind kind);
+        bool IsExperimentOrdered(Planet.ExperimentKind kind);
+        /// <summary>Why an experiment can't be ordered now (no station, a prerequisite, done), or null.</summary>
+        string ExperimentBlocker(Planet.ExperimentKind kind);
+        bool OrderExperiment(Planet.ExperimentKind kind, int preferTile = -1);
+        bool CancelExperiment(Planet.ExperimentKind kind);
+        double ExperimentProgress(Planet.ExperimentKind kind);
+        /// <summary>What an experiment found, for the player, or null when not done.</summary>
+        string ExperimentResult(Planet.ExperimentKind kind);
+        /// <summary>Share of their real output solar panels deliver while values are unknown (a safety margin).</summary>
+        double SolarDesignShare { get; }
+        /// <summary>Share of battery capacity in use until the surface temperature is known.</summary>
+        double BatteryUsableShare { get; }
 
         /// <summary>
         /// What each parameter's uncertainty can change about a panel's yearly energy here (Earth years, Wh): the model

@@ -169,6 +169,10 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | IN-04 | Observation record with source, time, uncertainty | PROPOSED | information architecture §4 | Not started | — |
 | IN-05 | Reports, colony knowledge database, historical records | FUTURE | V | Power history only | `Game/PowerHistory.cs` |
 | IN-06 | Unknown substances, samples, experiments, laboratories, experimental failure | FUTURE | V | Not started | — |
+| IN-10 | Research Station: every measurement and experiment is done there by a robot, and takes time; a latitude is measured where a station stands (the sky view still works anywhere) | CONFIRMED (director 2026-11-14) | `docs/design/research-station.md` | Implemented; tested outside Unity | `Game/PlanetSimulation.Research.cs` |
+| IN-11 | Experiments: air pressure, water boiling point (Antoine), surface temperature (coldest/warmest month), gravity (pendulum); hours TBD | CONFIRMED (director 2026-11-14); hours PROPOSED | `docs/design/research-station.md` | Implemented; tested outside Unity | `Planet/Experiments.cs` |
+| IN-12 | Knowledge gates buildings (floating solar needs to know water stays liquid) and sets safety margins until known (solar: 1 − spread of unknowns, floor 50 %; batteries charge to 80 % until the surface temperature is known) | Direction CONFIRMED (director 2026-11-14); margin numbers PROPOSED | `docs/design/research-station.md` | Implemented; tested outside Unity | `Game/PlanetSimulation.Research.cs` |
+| IN-13 | Before landing: a rough brief from orbit (mean temperature, robot survival verdict, gravity, air pressure, water) with error bars (TBD) | CONFIRMED (director 2026-11-14); error bars PROPOSED | `docs/design/research-station.md` | Implemented | `UI/PlanetChooserView.cs`, `Planet/Experiments.cs` |
 | IN-07 | Scientist consultation | FUTURE | V | Not started | — |
 | IN-08 | Local AI scientific assistant; optional online references | FUTURE | V | Not started | — |
 | IN-09 | Events: anomalies, disasters, rare discoveries | FUTURE | V | Flare wear on robots only | `RobotUpkeep.cs` |
@@ -211,6 +215,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | 2026-11-14 | In-game science calculator (degrees; sin/cos/tan and inverses, ln, log, sqrt, ^): click a puzzle's numbers to put them in (also copied to the clipboard), "Put in answer" fills the answer box | UI-11 |
 | 2026-11-14 | New UI look for every screen, inspired by factory games such as Mindustry (not copied): square near-opaque grey panels with an amber strip, grey block buttons lit amber on hover, amber selected states; calculator opens any time (K / HUD "Calc"), clicking a number copies it | UI (all) |
 | 2026-11-14 | Inspect and info panels (tile info, sky, site/planner/placed boxes, building info card) drag by a grip like the calculator (double-click: put back); bigger text in them | UI (all) |
+| 2026-11-14 | Research Station: measuring and experiments happen there; knowledge gates buildings and sets safety margins; a rough brief from orbit before landing | IN-10 to IN-13 |
 | 2026-11-09 | Solar measurements: robots turn built panels; research robots measure every solar parameter; measurement is a reasoning puzzle | `docs/design/solar-measurements.md` (on its branch) |
 | 2026-11-12 | Game vision and the ten design pillars | [`../game/game-vision.md`](../game/game-vision.md) |
 | 2026-11-12 | The player learns through observations and reports; minimal permanent interface | vision; [`../architecture/information-architecture.md`](../architecture/information-architecture.md) |
