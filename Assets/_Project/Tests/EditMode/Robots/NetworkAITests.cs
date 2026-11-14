@@ -21,7 +21,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         static readonly HexSphere Sphere = HexSphere.Create(12);
         static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
 
-        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike);
+        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike) { PuzzleChance = 1.0 };   // these tests are about the puzzles
 
         /// <summary>A workforce on tile 0 with a network whose hub is far away, so every robot is cut off.</summary>
         static Workforce CutOffWorkforce(int robots)
