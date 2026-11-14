@@ -429,6 +429,7 @@ namespace KardashevAscent.Presentation.UI
                 : which == Puzzle.Sun ? book.AnswerSun(sky.Tile, snapshot, a, b, out right)
                 : which == Puzzle.Noon ? book.AnswerNoonLatitude(sky.Tile, snapshot, a, out right)
                 : book.AnswerPole(sky.Tile, snapshot, a, out right);
+            KardashevAscent.Presentation.Audio.GameAudio.Play(right ? KardashevAscent.Presentation.Audio.Sfx.Correct : KardashevAscent.Presentation.Audio.Sfx.Wrong);
             cardMessage.text = (right ? "Right! " : "") + result;
             cardMessage.style.color = right ? new Color(0.45f, 0.85f, 0.55f) : new Color(1f, 0.70f, 0.45f);
             nextText = 0f;

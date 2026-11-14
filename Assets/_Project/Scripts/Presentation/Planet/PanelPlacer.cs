@@ -1030,6 +1030,7 @@ namespace KardashevAscent.Presentation.Planet
                 BatteryVisual yard = MakeBattery(tile, s, simulation.IsUnderConstruction(tile, s));
                 ShowBattery(yard, siteView.Site, simulation.FootprintAt(tile, s));
                 batteryVisuals[(tile, s)] = yard;
+                KardashevAscent.Presentation.Audio.GameAudio.Play(KardashevAscent.Presentation.Audio.Sfx.Place);
                 return true;
             }
             double tilt = tiltDeg * Mathf.Deg2Rad, azimuth = azimuthDeg * Mathf.Deg2Rad;
@@ -1046,6 +1047,7 @@ namespace KardashevAscent.Presentation.Planet
             ShowOnSlot(visual, siteView.Site, simulation.FootprintAt(tile, s), tilt, azimuth);
             placed[(tile, s)] = new Placed { Tilt = tilt, Azimuth = azimuth, Preview = p, Rating = rating, Visual = visual };
             preview = p;
+            KardashevAscent.Presentation.Audio.GameAudio.Play(KardashevAscent.Presentation.Audio.Sfx.Place);
             return true;
         }
 
