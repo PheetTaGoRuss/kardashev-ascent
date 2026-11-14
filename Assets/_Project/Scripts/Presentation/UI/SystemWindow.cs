@@ -36,10 +36,7 @@ namespace KardashevAscent.Presentation.UI
             panel.AddToClassList("panel");
             panel.AddToClassList("hidden");
             if (Width > 0f)
-            {
-                panel.style.width = Width;
-                panel.style.maxHeight = Length.Percent(90);
-            }
+                panel.style.width = Width;   // the stylesheet's max-height (80 %) keeps it on screen under the tab bar
 
             var titleRow = new VisualElement();
             titleRow.AddToClassList("title-row");
