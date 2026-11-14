@@ -17,7 +17,7 @@ MonoBehaviour:
     displayName: Kepler-16 b
     archiveName: Kepler-16 b
     source: NASA Exoplanet Archive, table pscomppars
-    retrieved: 2026-11-08
+    retrieved: 2026-11-14
     solar:
       luminosityW: 4.785881367413777e+25
       semiMajorAxisM: 105436579269.36
