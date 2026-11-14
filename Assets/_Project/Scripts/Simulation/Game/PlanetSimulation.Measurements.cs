@@ -84,9 +84,9 @@ namespace KardashevAscent.Simulation.Game
             switch (p)
             {
                 case SolarParameter.OpticalDepth:
-                    return ParameterPuzzle.Haze(tile, g0, planet.OpticalDepth, pressure);
+                    return ParameterPuzzle.Haze(tile, g0, AnnualOpticalDepth(tile), pressure);
                 case SolarParameter.DiffuseShare:
-                    return ParameterPuzzle.Diffuse(tile, g0, planet.OpticalDepth, planet.DiffuseK, pressure);
+                    return ParameterPuzzle.Diffuse(tile, g0, AnnualOpticalDepth(tile), planet.DiffuseK, pressure);
                 case SolarParameter.Albedo:
                     return ParameterPuzzle.Albedo(tile, g0, MakePanel(tile, 0.0, 0.0, 1.0, 1.0).Albedo);
                 case SolarParameter.AirTemperature:
@@ -220,12 +220,12 @@ namespace KardashevAscent.Simulation.Game
                             hi = YearEnergyWh(tileId, PlanetAt(tileId), WithPanel(panel, panel.Latitude + SolarUnknowns.LatitudeDeg * Deg, panel.Albedo, panel.FSpec, panel.FDust));
                             break;
                         case SolarParameter.OpticalDepth:
-                            lo = YearEnergyWh(tileId, WithAir(planet, planet.OpticalDepth * (1.0 + SolarUnknowns.OpticalDepthShare), planet.DiffuseK, AnnualAirTemperature(tileId)), panel);
-                            hi = YearEnergyWh(tileId, WithAir(planet, planet.OpticalDepth * (1.0 - SolarUnknowns.OpticalDepthShare), planet.DiffuseK, AnnualAirTemperature(tileId)), panel);
+                            lo = YearEnergyWh(tileId, WithAir(planet, AnnualOpticalDepth(tileId) * (1.0 + SolarUnknowns.OpticalDepthShare), planet.DiffuseK, AnnualAirTemperature(tileId)), panel);
+                            hi = YearEnergyWh(tileId, WithAir(planet, AnnualOpticalDepth(tileId) * (1.0 - SolarUnknowns.OpticalDepthShare), planet.DiffuseK, AnnualAirTemperature(tileId)), panel);
                             break;
                         case SolarParameter.DiffuseShare:
-                            lo = YearEnergyWh(tileId, WithAir(planet, planet.OpticalDepth, Math.Min(1.0, planet.DiffuseK * (1.0 + SolarUnknowns.DiffuseShare)), AnnualAirTemperature(tileId)), panel);
-                            hi = YearEnergyWh(tileId, WithAir(planet, planet.OpticalDepth, planet.DiffuseK * (1.0 - SolarUnknowns.DiffuseShare), AnnualAirTemperature(tileId)), panel);
+                            lo = YearEnergyWh(tileId, WithAir(planet, AnnualOpticalDepth(tileId), Math.Min(1.0, planet.DiffuseK * (1.0 + SolarUnknowns.DiffuseShare)), AnnualAirTemperature(tileId)), panel);
+                            hi = YearEnergyWh(tileId, WithAir(planet, AnnualOpticalDepth(tileId), planet.DiffuseK * (1.0 - SolarUnknowns.DiffuseShare), AnnualAirTemperature(tileId)), panel);
                             break;
                         case SolarParameter.Clouds:
                             lo = baseWh * (1.0 - SolarUnknowns.CloudShare);
@@ -236,8 +236,8 @@ namespace KardashevAscent.Simulation.Game
                             hi = YearEnergyWh(tileId, PlanetAt(tileId), WithPanel(panel, panel.Latitude, Math.Min(1.0, panel.Albedo + SolarUnknowns.Albedo), panel.FSpec, panel.FDust));
                             break;
                         case SolarParameter.AirTemperature:
-                            lo = YearEnergyWh(tileId, WithAir(planet, planet.OpticalDepth, planet.DiffuseK, AnnualAirTemperature(tileId) + SolarUnknowns.AirTemperatureC), panel);
-                            hi = YearEnergyWh(tileId, WithAir(planet, planet.OpticalDepth, planet.DiffuseK, AnnualAirTemperature(tileId) - SolarUnknowns.AirTemperatureC), panel);
+                            lo = YearEnergyWh(tileId, WithAir(planet, AnnualOpticalDepth(tileId), planet.DiffuseK, AnnualAirTemperature(tileId) + SolarUnknowns.AirTemperatureC), panel);
+                            hi = YearEnergyWh(tileId, WithAir(planet, AnnualOpticalDepth(tileId), planet.DiffuseK, AnnualAirTemperature(tileId) - SolarUnknowns.AirTemperatureC), panel);
                             break;
                         case SolarParameter.Dust:
                             lo = YearEnergyWh(tileId, PlanetAt(tileId), WithPanel(panel, panel.Latitude, panel.Albedo, panel.FSpec, Math.Min(1.0, panel.FDust + SolarUnknowns.Dust)));
