@@ -421,9 +421,8 @@ namespace KardashevAscent.Presentation.Game
             b.style.height = 36;
             b.style.marginTop = 4; b.style.marginBottom = 4;
             b.style.fontSize = 15;
-            b.style.borderTopLeftRadius = b.style.borderTopRightRadius = b.style.borderBottomLeftRadius = b.style.borderBottomRightRadius = 4;
-            b.style.backgroundColor = primary ? new Color(0.56f, 0.70f, 1f) : new Color(0.56f, 0.70f, 1f, 0.12f);
-            b.style.color = primary ? new Color(0.04f, 0.05f, 0.09f) : new Color(0.9f, 0.92f, 0.96f);
+            // Square grey blocks from the theme; the main choice is the solid amber one.
+            if (primary) b.AddToClassList("primary-button");
             return b;
         }
 

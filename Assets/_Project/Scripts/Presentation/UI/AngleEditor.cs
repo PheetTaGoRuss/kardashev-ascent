@@ -143,8 +143,8 @@ namespace KardashevAscent.Presentation.UI
             gizmoLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
             gizmoLabel.style.color = new Color(0.9f, 0.93f, 1f);
             gizmoLabel.style.backgroundColor = new Color(0.04f, 0.06f, 0.1f, 0.85f);
-            gizmoLabel.style.borderTopLeftRadius = gizmoLabel.style.borderTopRightRadius = 4;
-            gizmoLabel.style.borderBottomLeftRadius = gizmoLabel.style.borderBottomRightRadius = 4;
+            gizmoLabel.style.borderTopLeftRadius = gizmoLabel.style.borderTopRightRadius = 0;
+            gizmoLabel.style.borderBottomLeftRadius = gizmoLabel.style.borderBottomRightRadius = 0;
             gizmo.Add(gizmoLabel);
             root.Add(gizmo);
         }

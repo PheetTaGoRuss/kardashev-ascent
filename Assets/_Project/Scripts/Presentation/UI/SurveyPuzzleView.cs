@@ -31,7 +31,7 @@ namespace KardashevAscent.Presentation.UI
             style.paddingTop = 4;
             style.paddingBottom = 6;
             style.borderLeftWidth = 2;
-            style.borderLeftColor = new Color(0.56f, 0.70f, 1f);
+            style.borderLeftColor = UiPalette.Accent;
 
             Add(PuzzleGuide.Text($"What's in the ground of tile #{puzzle.Tile}?", bold: true, size: PuzzleGuide.TitleSize));
             Add(PuzzleGuide.Text($"A robot drilled {puzzle.Rows.Count} rock samples (cores) across the tile and tested each one. " +
@@ -133,7 +133,7 @@ namespace KardashevAscent.Presentation.UI
                     if (header)
                     {
                         l.style.unityFontStyleAndWeight = FontStyle.Bold;
-                        l.style.color = new Color(0.62f, 0.68f, 0.8f);
+                        l.style.color = UiPalette.Muted;
                     }
                     else if (i > 0)
                         CalculatorPad.MakeClickable(l);   // a grade ("none" = 0) goes into the calculator

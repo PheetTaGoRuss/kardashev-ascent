@@ -26,7 +26,7 @@ namespace KardashevAscent.Presentation.UI
             style.paddingTop = 4;
             style.paddingBottom = 6;
             style.borderLeftWidth = 2;
-            style.borderLeftColor = new Color(0.56f, 0.70f, 1f);
+            style.borderLeftColor = UiPalette.Accent;
 
             Add(PuzzleGuide.Text($"Your latitude from a noon shadow · tile #{puzzle.Tile}", bold: true, size: PuzzleGuide.TitleSize));
             var drawing = new ShadowDrawing(puzzle);

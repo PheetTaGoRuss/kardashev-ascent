@@ -17,7 +17,7 @@ namespace KardashevAscent.Presentation.UI
         public const float TitleSize = 17f;
         public const float SmallSize = 12f;
 
-        static readonly Color ExampleTint = new Color(0.45f, 0.85f, 0.55f);
+        static readonly Color ExampleTint = UiPalette.Good;
 
         public static Label Text(string text, bool bold = false, float size = BodySize)
         {
@@ -61,7 +61,7 @@ namespace KardashevAscent.Presentation.UI
             box.style.marginTop = 8;
             box.style.paddingLeft = box.style.paddingRight = 8;
             box.style.paddingTop = box.style.paddingBottom = 5;
-            box.style.backgroundColor = new Color(0.45f, 0.85f, 0.55f, 0.10f);
+            box.style.backgroundColor = new Color(UiPalette.Good.r, UiPalette.Good.g, UiPalette.Good.b, 0.10f);
             box.style.borderLeftWidth = 3;
             box.style.borderLeftColor = ExampleTint;
             var h = Text("Example (other numbers)", bold: true);
@@ -95,7 +95,7 @@ namespace KardashevAscent.Presentation.UI
             style.paddingTop = 4;
             style.paddingBottom = 6;
             style.borderLeftWidth = 2;
-            style.borderLeftColor = new Color(0.56f, 0.70f, 1f);
+            style.borderLeftColor = UiPalette.Accent;
 
             string title, intro, ask;
             string[] steps, example;
@@ -332,7 +332,7 @@ namespace KardashevAscent.Presentation.UI
                     if (header)
                     {
                         l.style.unityFontStyleAndWeight = FontStyle.Bold;
-                        l.style.color = new Color(0.62f, 0.68f, 0.8f);
+                        l.style.color = UiPalette.Muted;
                     }
                     else if (i > 0 || !countColumn)
                         CalculatorPad.MakeClickable(l);   // click a reading: it goes into the calculator
