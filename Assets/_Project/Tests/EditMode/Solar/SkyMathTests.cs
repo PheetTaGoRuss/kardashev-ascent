@@ -117,7 +117,7 @@ namespace KardashevAscent.Simulation.Tests.Solar
             r.solar.obliquityDeg = 23.44;
             r.solar.perihelionLongitudeDeg = 282.94;
             r.solar.airTemperatureC = 25.0;
-            return new PlanetSimulation(Sphere, Surface, r);
+            return new PlanetSimulation(Sphere, Surface, r) { ConstructionTimeEnabled = false };
         }
 
         [Test]

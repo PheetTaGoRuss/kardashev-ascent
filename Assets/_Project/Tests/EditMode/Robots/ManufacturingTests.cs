@@ -20,7 +20,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
 
         static PlanetSimulation WithWorkshop()
         {
-            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { ConstructionTimeEnabled = false };
             sim.Workforce.Reset(sim.BaseTileId, 1);   // these tests follow one robot
             Assert.IsTrue(sim.PlaceWorkshop(sim.BaseTileId, 5));
             RunUntil(sim, () => sim.WorkshopCount == 1);
@@ -57,7 +57,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         [Test]
         public void OrderRobot_NeedsAWorkshopAndMaterials()
         {
-            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { ConstructionTimeEnabled = false };
             StringAssert.Contains("Workshop", sim.OrderRobot(RobotKind.General));
             sim.PlaceWorkshop(sim.BaseTileId, 5);
             sim.Materials.Clear();
@@ -279,7 +279,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             SimulationState state = a.CaptureState();
             Assert.AreEqual(SimulationState.CurrentVersion, state.Version);
 
-            var b = new PlanetSimulation(Sphere, Surface, Earthlike);
+            var b = new PlanetSimulation(Sphere, Surface, Earthlike) { ConstructionTimeEnabled = false };
             Assert.IsTrue(b.RestoreState(state));
             Assert.AreEqual(1, b.WorkshopCount);
             Assert.AreEqual(1, b.Jobs.Count);

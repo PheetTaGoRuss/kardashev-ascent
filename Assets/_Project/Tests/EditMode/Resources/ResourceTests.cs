@@ -170,7 +170,7 @@ namespace KardashevAscent.Simulation.Tests.Resources
         /// <summary>One robot and no lander cargo, so amounts mined are easy to follow.</summary>
         static PlanetSimulation Create()
         {
-            var sim = new PlanetSimulation(Sphere, Wet, Earthlike) { PuzzleChance = 1.0 };   // these tests are about the puzzles
+            var sim = new PlanetSimulation(Sphere, Wet, Earthlike) { ConstructionTimeEnabled = false, PuzzleChance = 1.0 };   // these tests are about the puzzles
             sim.Workforce.Reset(sim.BaseTileId, 1);
             sim.Materials.Clear();
             return sim;

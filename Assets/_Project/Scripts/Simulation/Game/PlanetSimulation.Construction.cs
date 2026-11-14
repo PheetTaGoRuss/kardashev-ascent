@@ -13,9 +13,26 @@ namespace KardashevAscent.Simulation.Game
     public sealed partial class PlanetSimulation
     {
         public int ConstructionQueueCount => Build.QueueCount;
+
+        /// <summary>
+        /// Buildings take robot work hours (true, director 2026-11-14) or are finished as soon as their materials are in
+        /// (false, as before; tests about other things use it, like <see cref="MovementEnabled"/>).
+        /// </summary>
+        public bool ConstructionTimeEnabled
+        {
+            get => Build.TimeEnabled;
+            set => Build.TimeEnabled = value;
+        }
         public MaterialBill ConstructionRemaining => Build.Remaining;
         public MaterialBill ConstructionShortfall => Build.Remaining.Minus(Materials);
         public MaterialBill ConstructionRemainingAt(int tileId, int slot) => Build.RemainingAt(tileId, A(tileId, slot));
+        public double ConstructionMaterialShare(int tileId, int slot) => Build.MaterialShare(tileId, A(tileId, slot));
+        public (double Done, double Total) ConstructionWork(int tileId, int slot) => Build.WorkAt(tileId, A(tileId, slot));
+        public bool IsBeingBuilt(int tileId, int slot)
+        {
+            int a = A(tileId, slot);
+            return Build.IsQueued(tileId, a) && Workforce.IsWorkedOnSite(new WorkTask(TaskKind.Build, tileId, a));
+        }
         public bool IsUnderConstruction(int tileId, int slot) => Build.IsQueued(tileId, A(tileId, slot));
         public double ConstructionProgress(int tileId, int slot) => Build.Progress(tileId, A(tileId, slot));
 

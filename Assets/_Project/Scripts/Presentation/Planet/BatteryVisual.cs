@@ -39,10 +39,23 @@ namespace KardashevAscent.Presentation.Planet
             root.transform.localPosition = up * groundRadius;
             root.transform.localRotation = Quaternion.LookRotation(north, up);
             root.transform.localScale = Vector3.one * size;
+            shownSize = size;
             root.SetActive(true);
         }
 
         public void Hide() => root.SetActive(false);
+
+        float shownSize = 1f;
+
+        /// <summary>
+        /// Height as a share of the full building (construction animation: a site rises as it is built; above 1 for the
+        /// short pop when it is finished). Widths stay as they are.
+        /// </summary>
+        public void SetGrowth(float growth)
+        {
+            float g = Mathf.Max(0.02f, growth);
+            root.transform.localScale = new Vector3(shownSize, shownSize * g, shownSize);
+        }
 
         public void SetTint(Color color)
         {

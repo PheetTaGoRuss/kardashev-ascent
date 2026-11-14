@@ -25,7 +25,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             return r;
         }
 
-        static PlanetSimulation Create(PlanetRecord r) => new PlanetSimulation(Sphere, Surface, r);
+        static PlanetSimulation Create(PlanetRecord r) => new PlanetSimulation(Sphere, Surface, r) { ConstructionTimeEnabled = false };
 
         static double Tilt(PlanetSimulation sim) => Math.Abs(sim.GetTile(sim.BaseTileId).Latitude);
 

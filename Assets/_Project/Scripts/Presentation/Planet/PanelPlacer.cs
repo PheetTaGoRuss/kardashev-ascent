@@ -308,6 +308,7 @@ namespace KardashevAscent.Presentation.Planet
         void OnBuildingCompleted(int doneTile, int doneSlot)
         {
             padsDirty = true;
+            finishedAt[(doneTile, doneSlot)] = Time.unscaledTime;
             TileSite site = siteView.SiteFor(doneTile);
             if (placed.TryGetValue((doneTile, doneSlot), out Placed p))
             {
@@ -570,12 +571,63 @@ namespace KardashevAscent.Presentation.Planet
         }
 
 
+        /// <summary>When each building was finished (real time), for its short pop.</summary>
+        readonly Dictionary<(int Tile, int Slot), float> finishedAt = new Dictionary<(int, int), float>();
+        /// <summary>The height each site is drawn at (eases toward its progress).</summary>
+        readonly Dictionary<(int Tile, int Slot), float> shownGrowth = new Dictionary<(int, int), float>();
+
+        const float PopSeconds = 0.45f;
+
+        /// <summary>
+        /// Construction animation (director 2026-11-14): a site rises from its footing as robots build it, its outline
+        /// pulses while a robot is at work, and a finished building pops up to full height.
+        /// </summary>
+        void AnimateConstruction()
+        {
+            float now = Time.unscaledTime;
+            foreach (var kv in placed)
+                Animate(kv.Key, g => kv.Value.Visual.SetGrowth(g), c => kv.Value.Visual.SetTint(c), now);
+            foreach (var kv in batteryVisuals)
+                Animate(kv.Key, kv.Value.SetGrowth, kv.Value.SetTint, now);
+            var over = new List<(int, int)>();
+            foreach (var kv in finishedAt)
+                if (now - kv.Value > PopSeconds) over.Add(kv.Key);
+            foreach (var k in over) finishedAt.Remove(k);
+        }
+
+        void Animate((int Tile, int Slot) key, Action<float> grow, Action<Color> tint, float now)
+        {
+            if (simulation.IsUnderConstruction(key.Tile, key.Slot))
+            {
+                float target = 0.12f + 0.88f * (float)simulation.ConstructionProgress(key.Tile, key.Slot);
+                float g = shownGrowth.TryGetValue(key, out float was) ? Mathf.MoveTowards(was, target, Time.unscaledDeltaTime * 0.6f) : target;
+                shownGrowth[key] = g;
+                grow(g);
+                if (simulation.IsBeingBuilt(key.Tile, key.Slot))
+                {
+                    Color c = siteTint;
+                    c.a = siteTint.a * (0.65f + 0.35f * Mathf.Sin(now * 5f));
+                    tint(c);
+                }
+                else
+                    tint(siteTint);
+                return;
+            }
+            shownGrowth.Remove(key);
+            if (finishedAt.TryGetValue(key, out float at))
+            {
+                float u = Mathf.Clamp01((now - at) / PopSeconds);
+                grow(1f + 0.18f * Mathf.Sin(u * Mathf.PI));   // overshoot, then settle
+            }
+        }
+
         void Update()
         {
             if (simulation == null)
                 return;
 
             UpdateAngleGhosts();
+            AnimateConstruction();
 
             if (bestTask != null && bestTask.IsCompleted)
             {
@@ -711,6 +763,10 @@ namespace KardashevAscent.Presentation.Planet
 
         /// <summary>True while the selected slot's building is a construction site.</summary>
         public bool SelectedIsSite => simulation != null && tile >= 0 && slot >= 0 && simulation.IsUnderConstruction(tile, slot);
+
+        /// <summary>Robot work done and needed on the selected site, hours.</summary>
+        public (double Done, double Total) SelectedSiteWork =>
+            SelectedIsSite ? simulation.ConstructionWork(tile, slot) : (0.0, 0.0);
 
         /// <summary>How much of the selected slot's site is built (0–1), and the materials it still needs.</summary>
         public void SelectedSiteProgress(out double progress, out MaterialBill remaining)

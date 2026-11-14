@@ -122,10 +122,19 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>What the site in a slot still needs (empty for a finished building or an empty slot).</summary>
         Resources.MaterialBill ConstructionRemainingAt(int tileId, int slot);
 
+        /// <summary>Share of a site's materials delivered, 0–1 (1 for no site).</summary>
+        double ConstructionMaterialShare(int tileId, int slot);
+
+        /// <summary>Robot work done and needed on a site, hours (construction takes time; director 2026-11-14).</summary>
+        (double Done, double Total) ConstructionWork(int tileId, int slot);
+
+        /// <summary>True while a robot is at work on the site in a slot (for the building animation).</summary>
+        bool IsBeingBuilt(int tileId, int slot);
+
         /// <summary>True while the building in a slot is a site waiting for materials (it does nothing yet).</summary>
         bool IsUnderConstruction(int tileId, int slot);
 
-        /// <summary>How much of the site in a slot is paid for, 0–1; 1 for a finished building or an empty slot.</summary>
+        /// <summary>How far the site in a slot is built, 0–1; 1 for a finished building or an empty slot.</summary>
         double ConstructionProgress(int tileId, int slot);
     }
 

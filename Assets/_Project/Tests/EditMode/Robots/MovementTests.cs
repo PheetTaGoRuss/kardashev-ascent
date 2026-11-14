@@ -18,7 +18,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Math.PI / 180.0,
             282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0);
 
-        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike);
+        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike) { ConstructionTimeEnabled = false };
 
         /// <summary>A land neighbour of the base, and one two hops away (reachable by land).</summary>
         static int LandNeighbour(PlanetSimulation sim, int from, int not = -1)
