@@ -3,7 +3,9 @@
     "rootNamespace": "KardashevAscent.EditorTools",
     "references": [
         "KardashevAscent.Simulation",
-        "KardashevAscent.Presentation"
+        "KardashevAscent.Presentation",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
     ],
     "includePlatforms": [
         "Editor"

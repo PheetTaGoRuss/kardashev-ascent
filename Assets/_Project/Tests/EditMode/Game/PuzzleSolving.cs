@@ -1,3 +1,4 @@
+using KardashevAscent.Simulation.Resources;
 using System.Collections.Generic;
 using KardashevAscent.Simulation.Game;
 using KardashevAscent.Simulation.Solar;

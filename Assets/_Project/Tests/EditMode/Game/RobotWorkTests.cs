@@ -1,3 +1,4 @@
+using KardashevAscent.Simulation.Energy;
 using System;
 using System.Collections.Generic;
 using KardashevAscent.Simulation.Game;
@@ -18,9 +19,9 @@ namespace KardashevAscent.Simulation.Tests.Game
         static readonly HexSphere Sphere = HexSphere.Create(12);
         static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
 
-        static StubPlanetSimulation Create() => new StubPlanetSimulation(Sphere, Surface, Earthlike);
+        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike);
 
-        static RobotGroup GroupOf(StubPlanetSimulation sim) => sim.Workforce.GetGroup(sim.Workforce.Robots[0].GroupId);
+        static RobotGroup GroupOf(PlanetSimulation sim) => sim.Workforce.GetGroup(sim.Workforce.Robots[0].GroupId);
 
         [Test]
         public void NewColony_HasOneGeneralRobotAtTheBase()

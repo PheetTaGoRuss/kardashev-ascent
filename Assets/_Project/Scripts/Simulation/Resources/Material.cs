@@ -7,7 +7,12 @@ namespace KardashevAscent.Simulation.Resources
     /// the energy every building costs; materials come on top. Aluminium (from rock, in place of copper) and sodium
     /// (in place of lithium) are substitutes that the Workshop makes (phase 3b).
     /// </summary>
-    public enum Material { Rock, Iron, Water, Copper, Lithium, Aluminium, Sodium }
+    public enum Material
+    {
+        Rock, Iron, Water, Copper, Lithium, Aluminium, Sodium,
+        /// <summary>What is left of the rock after refining (saved as an integer: add new materials after it, never before).</summary>
+        Slag,
+    }
 
     public static class Materials
     {
@@ -27,6 +32,7 @@ namespace KardashevAscent.Simulation.Resources
                 case Material.Lithium: return "Lithium";
                 case Material.Aluminium: return "Aluminium";
                 case Material.Sodium: return "Sodium";
+                case Material.Slag: return "Slag";
                 default: return m.ToString();
             }
         }
@@ -43,38 +49,9 @@ namespace KardashevAscent.Simulation.Resources
                 case Material.Lithium: return "inland basins beside highlands on planets with seas (stand-in for arid closed basins with a volcanic source)";
                 case Material.Aluminium: return "made from rock in the Workshop; replaces copper in wiring (1.6× the resistance, 30 % of the weight)";
                 case Material.Sodium: return "made in the Workshop; Na-ion batteries replace lithium (~160 vs ~250 Wh/kg)";
+                case Material.Slag: return "the rock left over when a Workshop refines aluminium or sodium (mass is conserved: rock in = metal + slag)";
                 default: return "";
             }
         }
-    }
-
-    /// <summary>
-    /// What a planet is made of, for resources (geology_resources.md claim 10). <see cref="MetalFactor"/> = 10^[Fe/H]
-    /// scales metal deposits with the host star's metals. Iron follows the planet's measured iron fraction when there
-    /// is one (TRAPPIST-1: 21 wt %, Agol et al. 2021) relative to Earth's 32 %, else the star's metals.
-    /// </summary>
-    public readonly struct PlanetChemistry
-    {
-        public const double EarthIronFraction = 0.32;
-
-        public readonly double MetallicityDex;
-        public readonly double IronMassFraction;
-        public readonly bool IronMeasured;
-        /// <summary>Seas now (or frozen seas): what copper and lithium deposits need (claims 1, 2).</summary>
-        public readonly bool WaterHistory;
-
-        public PlanetChemistry(double metallicityDex, double ironMassFraction, bool ironMeasured, bool waterHistory)
-        {
-            MetallicityDex = metallicityDex;
-            IronMassFraction = ironMassFraction > 0.0 ? ironMassFraction : EarthIronFraction;
-            IronMeasured = ironMeasured && ironMassFraction > 0.0;
-            WaterHistory = waterHistory;
-        }
-
-        public static PlanetChemistry EarthLike => new PlanetChemistry(0.0, EarthIronFraction, false, true);
-
-        public double MetalFactor => Math.Pow(10.0, MetallicityDex);
-
-        public double IronFactor => IronMeasured ? IronMassFraction / EarthIronFraction : MetalFactor;
     }
 }

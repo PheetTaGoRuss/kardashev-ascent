@@ -17,7 +17,7 @@ Decisions TD-1 to TD-9 were made before this record existed. They are reconstruc
 | TD-1 | Two layers, Simulation and Presentation, in separate assemblies. Simulation sets `noEngineReferences` | Simulation can be tested without the engine and reasoned about without the screen | `MonoBehaviour`, `Vector3` from Unity, `Time`, `Debug` in Simulation | PR #17, `CLAUDE.md` |
 | TD-2 | One interface, `IPlanetSimulation`, between the layers | Presentation work can proceed against a stand-in; the boundary is visible in one file | Views reaching into simulation classes | Issue #4, PR #17 |
 | TD-3 | SI units, except time in hours and energy in Wh. `double` everywhere in Simulation. Radians in code, degrees in files and on screen | Colony time scales are hours and days; Wh matches how energy is quoted | Mixed units inside Simulation | `docs/simulation-interface.md` |
-| TD-4 | The simulation advances in fixed sub-steps of at most 0.25 h | Results do not depend on frame rate or game speed | Passing frame time straight into models | `StubPlanetSimulation.Tick` |
+| TD-4 | The simulation advances in fixed sub-steps of at most 0.25 h | Results do not depend on frame rate or game speed | Passing frame time straight into models | `PlanetSimulation.Tick` |
 | TD-5 | Scenes are built by `MainSceneSetup`. Scene and prefab files are never edited as text. Files are moved and renamed inside Unity; `.meta` files are committed | Several people and sessions work at once; text edits to scenes break them | Hand-wired scene objects that the setup script does not know | `CLAUDE.md`, `CONTRIBUTING.md` |
 | TD-6 | All UI uses UI Toolkit | One UI system; layouts are text and merge cleanly | uGUI canvases | PR #31, #34 |
 | TD-7 | One save object, `SimulationState`, versioned by an integer, serialised with `JsonUtility` by Presentation. Older versions load with defaults | Simple, readable saves; Simulation stays free of serialisation code | Binary saves; Simulation reading files | PR #37 |
@@ -36,6 +36,9 @@ Decisions made with the architecture foundation of 2026-11-12:
 | TD-15 | A .NET project, `tools/simtests`, compiles and runs the simulation tests without Unity | Sessions without the editor can check their work; it makes continuous integration possible. Unity's Test Runner stays authoritative | Treating a pass outside Unity as final | In force |
 | TD-16 | Enums that appear in saved games are append-only | `JsonUtility` stores them as integers | Reordering, inserting or deleting members | In force |
 | TD-17 | Feature status is tracked in `feature-registry.md` with separate design and implementation columns | Planned and built were being confused across documents | Status lines scattered through specifications as the only record | In force |
+| TD-18 | `PlanetSimulation` is a `partial` class split by system until each system has its own class | Keeps files reviewable without changing behaviour or saves | One 1,800-line file | In force |
+| TD-19 | Namespace dependencies follow the order in `tools/check_layers.py`, checked in CI | The tiers in the architecture document are enforced, not hoped for | New cycles | In force |
+| TD-20 | Tests read `SimulationState.CurrentVersion`, not a literal | A save version bump touches one line | Hard-coded versions in tests | In force |
 
 ## 2. Proposed
 
@@ -43,13 +46,13 @@ Each needs a decision before the work starts. Details are in the documents named
 
 | # | Proposal | Where |
 | --- | --- | --- |
-| TD-P1 | Split and rename the orchestrator | Architecture M1, M2 |
+| TD-P1 | Move each system's bookkeeping out of the orchestrator into its own class | Architecture M1 (second half) |
 | TD-P2 | Role interfaces and read models on the simulation interface | Architecture M4, M5 |
 | TD-P3 | Content definitions with string ids, loaded through the planet pattern | Data architecture §6 |
 | TD-P4 | Named loads and sources on the power grid | Architecture M7 |
 | TD-P5 | An observation record and a knowledge store in Simulation | Information architecture §4, §6 |
 | TD-P6 | A civilization object above planet simulations | Architecture M9 |
-| TD-P7 | Continuous integration running `tools/simtests` and the Python tests | Testing standards §8 |
+| TD-P7 | ~~Continuous integration~~ done: `.github/workflows/tests.yml` | Testing standards §8 |
 
 ## 3. Never decided
 

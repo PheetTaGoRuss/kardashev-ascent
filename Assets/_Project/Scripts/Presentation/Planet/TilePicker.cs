@@ -85,7 +85,7 @@ namespace KardashevAscent.Presentation.Planet
                 if (click && !HoldSelection)
                     Select(HoveredTile);
             }
-            if (Input.GetKeyDown(KeyCode.Escape) && !(EscapeHandler != null && EscapeHandler()))
+            if (ScreenInput.KeyDown(KeyCode.Escape) && !(EscapeHandler != null && EscapeHandler()))
                 Select(-1);
         }
 
@@ -131,6 +131,21 @@ namespace KardashevAscent.Presentation.Planet
             if (t < 0f)
                 return false;
             hit = origin + direction * t;
+            // Relief: the tile under the sea-level hit may stand higher; meet its top instead (one refinement step
+            // is enough at these heights).
+            int tile = planet.Sphere.FindTile(new System.Numerics.Vector3(hit.x, hit.y, hit.z));
+            float top = planet.TileRadius(tile);
+            if (top > r)
+            {
+                float c2 = origin.sqrMagnitude - top * top;
+                float disc2 = b * b - c2;
+                if (disc2 >= 0f)
+                {
+                    float t2 = -b - Mathf.Sqrt(disc2);
+                    if (t2 >= 0f)
+                        hit = origin + direction * t2;
+                }
+            }
             return true;
         }
 
@@ -145,7 +160,7 @@ namespace KardashevAscent.Presentation.Planet
             set
             {
                 showSelectedOutline = value;
-                selected.Show(planet.Sphere, value ? SelectedTile : -1, planet.Radius, selectedWidth, lift * 1.5f);
+                selected.Show(planet.Sphere, value ? SelectedTile : -1, planet.TileRadius(SelectedTile), selectedWidth, lift * 1.5f);
             }
         }
 
@@ -165,8 +180,8 @@ namespace KardashevAscent.Presentation.Planet
             if (tile == SelectedTile)
                 return;
             SelectedTile = tile;
-            selected.Show(planet.Sphere, showSelectedOutline ? tile : -1, planet.Radius, selectedWidth, lift * 1.5f);
-            hover.Show(planet.Sphere, HoveredTile == tile ? -1 : HoveredTile, planet.Radius, hoverWidth, lift);
+            selected.Show(planet.Sphere, showSelectedOutline ? tile : -1, planet.TileRadius(tile), selectedWidth, lift * 1.5f);
+            hover.Show(planet.Sphere, HoveredTile == tile ? -1 : HoveredTile, planet.TileRadius(HoveredTile), hoverWidth, lift);
             SelectedTileChanged?.Invoke(tile);
         }
 
@@ -175,7 +190,7 @@ namespace KardashevAscent.Presentation.Planet
             if (tile == HoveredTile)
                 return;
             HoveredTile = tile;
-            hover.Show(planet.Sphere, tile == SelectedTile ? -1 : tile, planet.Radius, hoverWidth, lift);
+            hover.Show(planet.Sphere, tile == SelectedTile ? -1 : tile, planet.TileRadius(tile), hoverWidth, lift);
             HoveredTileChanged?.Invoke(tile);
         }
 

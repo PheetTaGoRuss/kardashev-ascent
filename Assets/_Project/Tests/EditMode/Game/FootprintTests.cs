@@ -17,7 +17,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         static readonly HexSphere Sphere = HexSphere.Create(12);
         static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
 
-        static StubPlanetSimulation Create() => new StubPlanetSimulation(Sphere, Surface, Earthlike);
+        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike);
 
         [Test]
         public void NearestSlots_AnchorFirst_ThenItsNeighbours()

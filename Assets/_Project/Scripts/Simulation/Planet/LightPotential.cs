@@ -1,7 +1,7 @@
 using System;
-using KardashevAscent.Simulation.Planet;
+using KardashevAscent.Simulation.Solar;
 
-namespace KardashevAscent.Simulation.Solar
+namespace KardashevAscent.Simulation.Planet
 {
     /// <summary>
     /// How much a standard solar panel would make per year at each place on the planet, for the

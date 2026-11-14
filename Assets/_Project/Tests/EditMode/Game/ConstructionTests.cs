@@ -1,3 +1,4 @@
+using KardashevAscent.Simulation.Energy;
 using System;
 using KardashevAscent.Simulation.Game;
 using KardashevAscent.Simulation.Planet;
@@ -90,12 +91,12 @@ namespace KardashevAscent.Simulation.Tests.Game
         static readonly HexSphere Sphere = HexSphere.Create(12);
         static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
 
-        static StubPlanetSimulation Create() => new StubPlanetSimulation(Sphere, Surface, Earthlike);
+        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike);
 
-        static double Tilt(StubPlanetSimulation sim) => Math.Abs(sim.GetTile(sim.BaseTileId).Latitude);
+        static double Tilt(PlanetSimulation sim) => Math.Abs(sim.GetTile(sim.BaseTileId).Latitude);
 
         /// <summary>Place panels until one becomes a site; returns its slot.</summary>
-        static int FillStock(StubPlanetSimulation sim)
+        static int FillStock(PlanetSimulation sim)
         {
             int t = sim.BaseTileId;
             for (int s = 0; s < sim.SlotCount(t); s++)

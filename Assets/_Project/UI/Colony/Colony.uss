@@ -1,6 +1,6 @@
 .colony {
     position: absolute;
-    top: 92px;   /* under the system tab bar */
+    top: 116px;   /* under the system tab bar, which sits under the HUD */
     left: 50%;
     translate: -50% 0;
     width: 460px;

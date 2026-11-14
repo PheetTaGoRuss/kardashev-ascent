@@ -25,9 +25,9 @@ namespace KardashevAscent.Simulation.Tests.Game
             return r;
         }
 
-        static StubPlanetSimulation Create(PlanetRecord r) => new StubPlanetSimulation(Sphere, Surface, r);
+        static PlanetSimulation Create(PlanetRecord r) => new PlanetSimulation(Sphere, Surface, r);
 
-        static double Tilt(StubPlanetSimulation sim) => Math.Abs(sim.GetTile(sim.BaseTileId).Latitude);
+        static double Tilt(PlanetSimulation sim) => Math.Abs(sim.GetTile(sim.BaseTileId).Latitude);
 
         [Test]
         public void Record_SetsIdStarAndClouds()

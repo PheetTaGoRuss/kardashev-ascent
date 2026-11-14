@@ -53,7 +53,7 @@ namespace KardashevAscent.Presentation.UI
             bar = new VisualElement();
             bar.AddToClassList("panel");
             bar.style.position = Position.Absolute;
-            bar.style.top = 52;
+            bar.style.top = 78;
             bar.style.left = new Length(50, LengthUnit.Percent);
             bar.style.translate = new Translate(new Length(-50, LengthUnit.Percent), 0);
             bar.style.flexDirection = FlexDirection.Row;
@@ -121,7 +121,7 @@ namespace KardashevAscent.Presentation.UI
         void Update()
         {
             foreach (SystemWindow w in windows)
-                if (Input.GetKeyDown(w.Key))
+                if (ScreenInput.KeyDown(w.Key))
                     SystemTabs.Toggle(w.Id);
 
             if (Time.unscaledTime < nextRefresh)

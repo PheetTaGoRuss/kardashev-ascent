@@ -21,7 +21,11 @@ namespace KardashevAscent.Simulation.Tests.Planet
             Assert.AreEqual(before.IceLatitudeDeg, s.IceLatitudeDeg);
             Assert.AreEqual(before.NoiseScale, s.NoiseScale);
             Assert.IsFalse(s.IceAroundSubStellar);
-            CollectionAssert.AreEqual(PlanetSurface.Generate(Sphere, before).Terrain, PlanetSurface.Generate(Sphere, s).Terrain);
+            // The second terrain pass only turns lowland, highland and mountain into forest, wetland, beach or volcanic rock.
+            TerrainType[] plain = PlanetSurface.Generate(Sphere, before).Terrain, rich = PlanetSurface.Generate(Sphere, s).Terrain;
+            for (int t = 0; t < plain.Length; t++)
+                if (plain[t] != rich[t])
+                    Assert.GreaterOrEqual(Array.IndexOf(new[] { TerrainType.Forest, TerrainType.Wetland, TerrainType.Beach, TerrainType.VolcanicRock }, rich[t]), 0, "tile " + t);
         }
 
         [TestCase(0.0, 70.0)]
@@ -87,7 +91,7 @@ namespace KardashevAscent.Simulation.Tests.Planet
             PlanetRecord r = PlanetRecordTests.ProximaForOtherTests();
             r.look.terrainSeed = 1697376206;
             PlanetSurface surface = PlanetSurface.Generate(Sphere, r.ToSurfaceSettings());
-            var sim = new StubPlanetSimulation(Sphere, surface, r);
+            var sim = new PlanetSimulation(Sphere, surface, r);
             Assert.AreEqual(TerrainType.Lowland, surface.Terrain[sim.BaseTileId]);
             Assert.IsTrue(sim.IsDayAtBase);
             Assert.Greater(Count(surface, TerrainType.Tundra), 0, "cold bare ground");

@@ -1,0 +1,28 @@
+name: Tests
+
+# Runs the simulation tests without Unity (tools/simtests) and the Python tool tests on every pull request.
+# The Unity Test Runner stays the authoritative check before merging simulation changes.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  simulation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - name: Simulation tests
+        run: dotnet test tools/simtests/SimTests.csproj --nologo
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Namespace layers
+        run: python tools/check_layers.py
+      - name: Exoplanet tool tests
+        run: python -m unittest discover tools/exoplanets

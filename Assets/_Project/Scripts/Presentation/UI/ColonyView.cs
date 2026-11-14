@@ -160,7 +160,7 @@ namespace KardashevAscent.Presentation.UI
 
         void Update()
         {
-            if (Input.GetKeyDown(toggleKey))
+            if (ScreenInput.KeyDown(toggleKey))
                 SystemTabs.Toggle("overview");
             if (!Visible || panelRoot == null || Time.unscaledTime < nextRefresh)
                 return;
@@ -267,7 +267,7 @@ namespace KardashevAscent.Presentation.UI
             foreach (BuildingRecord r in sim.CaptureState().Buildings)
             {
                 perTile.TryGetValue(r.Tile, out var n);
-                if (r.Type == BuildingType.SolarPanel)
+                if (r.Type == BuildingType.SolarPanel || r.Type == BuildingType.FloatingSolar)
                 {
                     panels++;
                     panelArea += r.AreaM2;

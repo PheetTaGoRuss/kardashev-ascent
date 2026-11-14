@@ -167,9 +167,9 @@ namespace KardashevAscent.Simulation.Tests.Resources
 
         // ---- Survey and mining in the colony ----
 
-        static StubPlanetSimulation Create() => new StubPlanetSimulation(Sphere, Wet, Earthlike);
+        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Wet, Earthlike);
 
-        static int LandTileWith(StubPlanetSimulation sim, Material m)
+        static int LandTileWith(PlanetSimulation sim, Material m)
         {
             for (int t = 0; t < sim.TileCount; t++)
                 if (sim.Deposits.GradeOf(t, m) > 0.0) return t;

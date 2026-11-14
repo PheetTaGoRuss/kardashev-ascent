@@ -21,7 +21,7 @@ Section 1 describes `main` as audited on 2026-11-12. Sections 2–5 are standard
 | Recipes, modules, unlocks | `Robots/Manufacturing.cs` (`RobotTech`) | Methods returning recipes | No |
 | Panel tiers | `Game/PanelTiers.cs` | Static array | Centralised, in code |
 | Lander start values | `PowerGrid.Lander()`, `BuildCosts.LanderStockWh` | Constants | No |
-| Simulation settings | `StubPlanetSimulation` properties, constants such as `MaxStepHours` | Properties and constants | No |
+| Simulation settings | `PlanetSimulation` properties, constants such as `MaxStepHours` | Properties and constants | No |
 | Technology, research discoveries, energy sources other than solar, environment parameters per tile | — | Do not exist | — |
 
 Generated files carry a header that says so. Never edit them by hand; change the tool and run it again.
@@ -92,7 +92,7 @@ Not everything should be a file. Move a table when at least one of these is true
 | Step | Change | Unblocks |
 | --- | --- | --- |
 | D1 | **Material definitions.** One catalogue with id, name, phase, density, storage class and origin text. The uncommitted industrial-production work already starts a `MaterialCatalog`; align with it instead of making a second | Industry, storage, logistics, water |
-| D2 | **Building definitions.** One table: id, footprint, cost, staffing, charging capability, unlock | Every new building; removes the per-type bookkeeping in the orchestrator |
+| D2 | **Started (2026-11-13):** `BuildingCatalog` holds name, footprint and fixed cost. Staffing, charging capability and unlock are still elsewhere | Every new building; removes the per-type bookkeeping in the orchestrator |
 | D3 | **Recipe definitions.** Inputs, outputs, byproducts, electricity, heat, work hours, required facility. Validated for mass balance | Industry and chemical processing |
 | D4 | **String ids in saves** for materials, buildings and recipes, with a migration from enum integers | Safe growth of every content list |
 | D5 | **One unlock table** replacing the three found by the audit | Technology and research |

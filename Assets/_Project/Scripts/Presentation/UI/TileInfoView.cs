@@ -162,7 +162,7 @@ namespace KardashevAscent.Presentation.UI
         /// </summary>
         static bool CoresWaiting(IPlanetSimulation sim, int tile)
         {
-            foreach (KardashevAscent.Simulation.Solar.SurveyPuzzle p in sim.SurveyPuzzles)
+            foreach (KardashevAscent.Simulation.Resources.SurveyPuzzle p in sim.SurveyPuzzles)
                 if (p.Tile == tile) return true;
             return false;
         }
@@ -253,7 +253,7 @@ namespace KardashevAscent.Presentation.UI
             double latDeg = info.Latitude * Mathf.Rad2Deg, lonDeg = info.Longitude * Mathf.Rad2Deg;
             title.text = $"Tile #{tile} · {Pretty(info.Terrain)}";
             place.text = $"{Math.Abs(latDeg):0.0}° {(latDeg >= 0 ? "N" : "S")}, {Math.Abs(lonDeg):0.0}° {(lonDeg >= 0 ? "E" : "W")}" +
-                         (info.IsWater ? " · no building on water" : $" · {sim.SlotCount(tile)} building slots");
+                         (!info.IsBuildableLand ? (Terrains.AllowsFloating(info.Terrain) ? " · floating solar only" : " · no building on water") : $" · {sim.SlotCount(tile)} building slots");
 
             PlanetSolarParams planet = runner.SolarParams;
             if (planet.TidallyLocked)
@@ -295,7 +295,7 @@ namespace KardashevAscent.Presentation.UI
             else
             {
                 bestLabel.text = info.IsWater ? "–" : "…";
-                bestCaption.text = info.IsWater ? "no panels on water" : "searching";
+                bestCaption.text = !info.IsBuildableLand ? (Terrains.AllowsFloating(info.Terrain) ? "floating solar only" : "no panels on deep water") : "searching";
             }
 
             // Where the star is now, in this tile's sky.

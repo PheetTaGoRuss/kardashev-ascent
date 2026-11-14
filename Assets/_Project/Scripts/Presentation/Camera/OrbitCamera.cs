@@ -94,7 +94,11 @@ namespace KardashevAscent.Presentation.CameraControl
         /// <summary>Raised when the player zooms out past the site view's limit.</summary>
         public event System.Action SiteExitRequested;
 
-        void Awake() => cam = GetComponent<Camera>();
+        void Awake()
+        {
+            cam = GetComponent<Camera>();
+            showHelp = false;   // the full controls list is one key away (H); the first-steps hints teach the basics
+        }
 
         void Start()
         {
@@ -227,25 +231,25 @@ namespace KardashevAscent.Presentation.CameraControl
             }
 
             float horizontal = 0f, vertical = 0f;
-            if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) horizontal += 1f;
-            if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) horizontal -= 1f;
+            if (ScreenInput.Key(KeyCode.A) || ScreenInput.Key(KeyCode.LeftArrow)) horizontal += 1f;
+            if (ScreenInput.Key(KeyCode.D) || ScreenInput.Key(KeyCode.RightArrow)) horizontal -= 1f;
             // Keys move the view like a map (W = north, D = east); dragging pulls the surface with the mouse.
-            if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) vertical += 1f;
-            if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) vertical -= 1f;
+            if (ScreenInput.Key(KeyCode.W) || ScreenInput.Key(KeyCode.UpArrow)) vertical += 1f;
+            if (ScreenInput.Key(KeyCode.S) || ScreenInput.Key(KeyCode.DownArrow)) vertical -= 1f;
             goalYaw += horizontal * keySpeed * speedScale * Time.unscaledDeltaTime;
             goalPitch += vertical * keySpeed * speedScale * Time.unscaledDeltaTime;
             goalPitch = Mathf.Clamp(goalPitch, -89f, 89f);
 
             float zoom = Mathf.Pow(1f - wheelZoom, Input.mouseScrollDelta.y);
-            if (Input.GetKey(KeyCode.E) || Input.GetKey(KeyCode.Equals) || Input.GetKey(KeyCode.KeypadPlus))
+            if (ScreenInput.Key(KeyCode.E) || ScreenInput.Key(KeyCode.Equals) || ScreenInput.Key(KeyCode.KeypadPlus))
                 zoom *= Mathf.Exp(-keyZoom * Time.unscaledDeltaTime);
-            if (Input.GetKey(KeyCode.Q) || Input.GetKey(KeyCode.Minus) || Input.GetKey(KeyCode.KeypadMinus))
+            if (ScreenInput.Key(KeyCode.Q) || ScreenInput.Key(KeyCode.Minus) || ScreenInput.Key(KeyCode.KeypadMinus))
                 zoom *= Mathf.Exp(keyZoom * Time.unscaledDeltaTime);
             goalAltitude = Mathf.Clamp(goalAltitude * zoom, minDistance - 1f, maxDistance - 1f);
 
-            if (Input.GetKeyDown(KeyCode.R))
+            if (ScreenInput.KeyDown(KeyCode.R))
                 ResetView(false);
-            if (Input.GetKeyDown(KeyCode.H))
+            if (ScreenInput.KeyDown(KeyCode.H))
                 showHelp = !showHelp;
         }
 
@@ -261,30 +265,30 @@ namespace KardashevAscent.Presentation.CameraControl
             }
 
             float turn = 0f, lean = 0f;
-            if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) turn += 1f;
-            if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) turn -= 1f;
-            if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) lean += 1f;
-            if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) lean -= 1f;
+            if (ScreenInput.Key(KeyCode.A) || ScreenInput.Key(KeyCode.LeftArrow)) turn += 1f;
+            if (ScreenInput.Key(KeyCode.D) || ScreenInput.Key(KeyCode.RightArrow)) turn -= 1f;
+            if (ScreenInput.Key(KeyCode.W) || ScreenInput.Key(KeyCode.UpArrow)) lean += 1f;
+            if (ScreenInput.Key(KeyCode.S) || ScreenInput.Key(KeyCode.DownArrow)) lean -= 1f;
             goalHeading += turn * keySpeed * Time.unscaledDeltaTime;
             goalTilt = Mathf.Clamp(goalTilt + lean * keySpeed * 0.5f * Time.unscaledDeltaTime, 0f, 80f);
 
             float wheel = ScreenInput.PointerOverUi ? 0f : Input.mouseScrollDelta.y;
             float zoom = Mathf.Pow(1f - wheelZoom, wheel);
-            if (Input.GetKey(KeyCode.E) || Input.GetKey(KeyCode.Equals) || Input.GetKey(KeyCode.KeypadPlus))
+            if (ScreenInput.Key(KeyCode.E) || ScreenInput.Key(KeyCode.Equals) || ScreenInput.Key(KeyCode.KeypadPlus))
                 zoom *= Mathf.Exp(-keyZoom * Time.unscaledDeltaTime);
-            if (Input.GetKey(KeyCode.Q) || Input.GetKey(KeyCode.Minus) || Input.GetKey(KeyCode.KeypadMinus))
+            if (ScreenInput.Key(KeyCode.Q) || ScreenInput.Key(KeyCode.Minus) || ScreenInput.Key(KeyCode.KeypadMinus))
                 zoom *= Mathf.Exp(keyZoom * Time.unscaledDeltaTime);
             if (wheel < 0f && goalSiteDistance >= siteMaxDistance - 1e-3f)
                 SiteExitRequested?.Invoke();
             goalSiteDistance = Mathf.Clamp(goalSiteDistance * zoom, siteMinDistance, siteMaxDistance);
 
-            if (Input.GetKeyDown(KeyCode.R))
+            if (ScreenInput.KeyDown(KeyCode.R))
             {
                 goalHeading = 0f;
                 goalTilt = siteStartTilt;
                 goalSiteDistance = siteStartDistance;
             }
-            if (Input.GetKeyDown(KeyCode.H))
+            if (ScreenInput.KeyDown(KeyCode.H))
                 showHelp = !showHelp;
         }
 

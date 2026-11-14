@@ -11,14 +11,16 @@ What gets tested, how, and what "done" means for a change. Sections 1–2 descri
 | Save migration tests | Inside the feature's test file (for example `VersionOneSave_LoadsEverythingFinished_WithTheLanderParts`, `Save_Version6_LoadsWithOneGeneralRobot_AndItsSitesKeepGoing`) | Six found; not every one of the 16 versions has its own |
 | Data validation | `Planet/PlanetRecordTests.cs`; `tools/exoplanets/test_convert.py` (Python `unittest`) | Planets only |
 | Presentation tests | — | None |
-| Whole-simulation determinism | — | None (planned as workforce stage H) |
-| Performance | — | None (planned as workforce stage H) |
-| Conservation balances | — | None |
-| Continuous integration | — | None; tests run on a developer's machine |
+| Whole-simulation determinism | `Game/ConservationAndDeterminismTests.cs` | Same inputs give the same colony; chunked ticking gives the same time |
+| Performance | `Game/PerformanceTests.cs` | A first loose budget: one step with 1 robot (0.02 ms) and with 300 robots (5 ms) must stay under 50 ms |
+| Conservation balances | same file | Energy balances on every step (found and fixed a 2 kW accounting gap); mass checked only for non-negative stock |
+| Continuous integration | `.github/workflows/tests.yml` | Runs the simulation tests, `tools/check_layers.py` and the Python tests on pull requests (written, not yet seen to run on GitHub) |
 
 ## 2. Running the tests
 
 **In Unity (authoritative):** Window → General → Test Runner → EditMode → Run All. An AI developer with the Unity MCP connection runs the same tests through it.
+
+**Inside Unity from a script:** the editor driver (`Assets/_Project/Scripts/Editor/DevDriver.cs`) runs every EditMode test when sent `tests`, and writes `TESTS passed=… failed=…` to `Temp/dev-driver.log` (803 pass on 2026-11-13).
 
 **Outside Unity (fast check, added with this document):**
 

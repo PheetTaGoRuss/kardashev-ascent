@@ -60,8 +60,8 @@ namespace KardashevAscent.Simulation.Planet
         }
 
         /// <summary>Chemistry for the deposit rules: metals from the star, iron measured or assumed.</summary>
-        public Resources.PlanetChemistry ToChemistry() =>
-            new Resources.PlanetChemistry(chemistry?.metallicityDex ?? 0.0, chemistry?.ironMassFraction ?? 0.32,
+        public PlanetChemistry ToChemistry() =>
+            new PlanetChemistry(chemistry?.metallicityDex ?? 0.0, chemistry?.ironMassFraction ?? 0.32,
                                           OriginOf("chemistry.ironMassFraction") == ValueOrigin.Derived, HasLiquidWater);
 
         [Serializable]
