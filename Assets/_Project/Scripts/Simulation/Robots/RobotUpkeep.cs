@@ -59,12 +59,15 @@ namespace KardashevAscent.Simulation.Robots
                 // A facility that is gone (taken down) sends its robots back.
                 if (r.Activity != RobotActivity.None && (!r.Facility.HasValue || !byKey.ContainsKey(r.Facility.Value)))
                     Leave(r);
-                if (r.Activity == RobotActivity.Charging && r.Battery.StateOfCharge >= RobotSpecs.ResumeWorkFraction - 1e-9)
+                // Charged to 80 %, or to what a long trip needs (TripCharge).
+                if (r.Activity == RobotActivity.Charging
+                    && r.Battery.StateOfCharge >= Math.Max(RobotSpecs.ResumeWorkFraction, r.TripCharge) - 1e-6)
                     Leave(r);
                 // Above 20 % a robot doesn't wait at a charger that gave it nothing (no spare power): it goes back to
                 // work and charges again when it is below 20 % (design decision 2026-11-08: "keep working").
+                // A robot charging for a long trip waits: there is nothing else it can reach.
                 if (r.Activity == RobotActivity.Charging && r.Battery.StateOfCharge >= RobotSpecs.ReturnToChargeFraction
-                    && r.LastChargeW <= 0.0 && r.ChargedBefore)
+                    && r.LastChargeW <= 0.0 && r.ChargedBefore && r.TripCharge <= 0.0)
                     Leave(r);
                 if (r.Activity == RobotActivity.Maintenance && r.Condition >= 1.0 - 1e-12 && !r.Battery.WornOut && !r.CriticallyDamaged)
                     Leave(r);
@@ -114,7 +117,8 @@ namespace KardashevAscent.Simulation.Robots
                     dockRequest[r.Id] = req;
                     DockRequestW += req;
                 }
-                else if (r.Battery.StateOfCharge < RobotSpecs.ReturnToChargeFraction)
+                // Below 20 %, or charging for a long trip (served right after the colony, game rule 2026-11-14).
+                else if (r.Battery.StateOfCharge < RobotSpecs.ReturnToChargeFraction || r.TripCharge > 0.0)
                 {
                     criticalRequest[r.Id] = req;
                     CriticalRequestW += req;

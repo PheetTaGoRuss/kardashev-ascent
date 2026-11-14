@@ -113,6 +113,35 @@ namespace KardashevAscent.Simulation.Tests.Game
         }
 
         [Test]
+        public void FarSea_BoatRobot_ChargesFully_ThenBuildsIt()
+        {
+            PlanetSimulation sim = Create();
+            foreach (var m in KardashevAscent.Simulation.Resources.Materials.All) sim.Materials.Add(m, 1e5);
+            // A shallow sea 15-19 h away by boat: the round trip needs more than the usual 80 % charge (2.4 kWh at
+            // 50 W keeping 20 %: 80 % covers 28.9 h), but a full battery covers it (38.5 h).
+            double[] hours = sim.Routes.Amphibious().HoursFrom(sim.BaseTileId);
+            int sea = -1;
+            for (int t = 0; t < hours.Length; t++)
+                if (Surface.Terrain[t] == TerrainType.ShallowOcean && hours[t] > 15.0 && hours[t] < 19.0) { sea = t; break; }
+            Assume.That(sea >= 0, "this test planet has a sea that far");
+            foreach (var r in sim.Workforce.Robots)
+            {
+                r.Modules |= KardashevAscent.Simulation.Robots.RobotModule.Boat;
+                r.Battery.Restore(r.Battery.DeliveredWh, 0.5 * r.Battery.CapacityWh);   // half charged: too little to go now
+            }
+            Assert.IsTrue(sim.PlaceFloatingPanel(sea, 0, 0.3, Math.PI));
+            bool charged = false;
+            for (int i = 0; i < 1200 && sim.IsUnderConstruction(sea, 0); i++)
+            {
+                sim.Tick(0.25);
+                foreach (var r in sim.Workforce.Robots)
+                    if (r.TripCharge > 0.8) charged = true;
+            }
+            Assert.IsTrue(charged, "a robot charged past 80 % for the trip");
+            Assert.IsFalse(sim.IsUnderConstruction(sea, 0), $"built {hours[sea]:0} h out at sea");
+        }
+
+        [Test]
         public void SaveAndLoad_KeepsFloatingPanels_AsFloating()
         {
             PlanetSimulation sim = Create();
