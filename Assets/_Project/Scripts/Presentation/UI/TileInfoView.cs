@@ -123,34 +123,43 @@ namespace KardashevAscent.Presentation.UI
             RefreshLanding(sim, tile);
         }
 
-        /// <summary>Where the colony landed, and (before anything is built) a button to land on this tile instead.</summary>
+        /// <summary>
+        /// While choosing where to land (time stopped), a button to land on this tile; once landed, where the colony is.
+        /// The colony can't move after landing (decided 2026-11-14).
+        /// </summary>
         void RefreshLanding(IPlanetSimulation sim, int tile)
         {
             if (landingText == null || landingActions == null)
                 return;
-            bool here = tile == sim.BaseTileId, water = sim.GetTile(tile).IsWater, canMove = runner.CanMoveLanding;
-            string shape = $"{tile}|{sim.BaseTileId}|{canMove}";
+            bool here = tile == sim.BaseTileId, water = sim.GetTile(tile).IsWater;
+            bool landing = GameFlow.Phase == GamePhase.Landing;
+            string shape = $"{tile}|{sim.BaseTileId}|{landing}";
             if (shape == landingShape)
                 return;
             landingShape = shape;
             landingActions.Clear();
-            if (here)
-                landingText.text = canMove
-                    ? "Your lander is here. Before you build, you can land somewhere else: pick a land tile and press Land here."
-                    : "Your colony's landing site. Press R to fly back here.";
-            else if (canMove && !water)
+            if (landing && water)
+                landingText.text = "The lander needs land: pick a tile that isn't sea.";
+            else if (landing)
             {
-                landingText.text = $"Nothing is built yet: the lander can still come down here instead (tile #{sim.BaseTileId} now).";
+                landingText.text = "Land the colony here? Time starts when the lander is down, and the colony can't move afterwards.";
                 var b = new Button(() =>
                 {
-                    string why = runner.LandAt(tile);
-                    landingText.text = why ?? "Landed here.";
+                    string why = runner.LandAt(tile, true);
                     landingShape = null;
+                    if (why != null)
+                    {
+                        landingText.text = why;
+                        return;
+                    }
+                    GameFlow.Landed(tile);
                 }) { text = "Land here" };
                 b.AddToClassList("ground-button");
                 b.AddToClassList("on");
                 landingActions.Add(b);
             }
+            else if (here)
+                landingText.text = "Your colony's landing site. Press R to fly back here.";
             else
                 landingText.text = "";
             landingText.EnableInClassList("hidden", landingText.text.Length == 0);

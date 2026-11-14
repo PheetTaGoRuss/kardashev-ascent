@@ -74,12 +74,12 @@ namespace KardashevAscent.Presentation.UI
 
         void Update()
         {
-            if (showAtStart && !shownAtStart && runner != null && runner.Simulation != null && runner.Planets.Count > 0)
+            if (showAtStart && !shownAtStart && !GameFlow.Active && runner != null && runner.Simulation != null && runner.Planets.Count > 0)
             {
                 shownAtStart = true;
                 SetVisible(true);
             }
-            if (ScreenInput.KeyDown(toggleKey))
+            if (ScreenInput.KeyDown(toggleKey) && GameFlow.Phase != GamePhase.MainMenu)
                 SetVisible(!Visible);
             else if (Visible && ScreenInput.KeyDown(KeyCode.Escape))
                 SetVisible(false);
@@ -98,7 +98,7 @@ namespace KardashevAscent.Presentation.UI
                     speedWhenOpened = runner.Clock.Speed;
                     runner.SetSpeed(ClockSpeed.Paused);
                 }
-                else if (closing && runner.Clock.Speed == ClockSpeed.Paused && speedWhenOpened != ClockSpeed.Paused)
+                else if (closing && GameFlow.IsPlaying && runner.Clock.Speed == ClockSpeed.Paused && speedWhenOpened != ClockSpeed.Paused)
                     runner.SetSpeed(speedWhenOpened);
             }
             if (opening)
@@ -118,9 +118,13 @@ namespace KardashevAscent.Presentation.UI
         {
             if (runner == null || selected < 0)
                 return;
-            if (selected != runner.CurrentIndex && !runner.ChoosePlanet(selected))
+            bool newPlanet = selected != runner.CurrentIndex;
+            if (newPlanet && !runner.ChoosePlanet(selected))
                 return;
             SetVisible(false);
+            // A new planet (or the first one) means choosing where to land next.
+            if (newPlanet || GameFlow.Phase == GamePhase.ChoosingPlanet)
+                GameFlow.PlanetChosen();
         }
 
         void Rebuild()
