@@ -38,8 +38,7 @@ namespace KardashevAscent.Presentation.UI
             {
                 case SolarParameter.OpticalDepth:
                     title = "Air haze τ: the Langley plot";
-                    intro = $"A robot pointed a sun photometer at the star through the day. Above the air the light is G₀ = {puzzle.G0:0} W/m². " +
-                            "Air mass m is how many thicknesses of air the light crosses (1 straight up).";
+                    intro = $"Sun photometer through the day · above the air G₀ = {puzzle.G0:0} W/m² · m = thicknesses of air crossed";
                     head.AddRange(new[] { "sun height h", "air mass m", "direct DNI" });
                     for (int i = 0; i < puzzle.Dni.Length; i++)
                         rows.Add(new[] { $"{puzzle.AltitudeDeg[i]:0}°", $"{puzzle.AirMass[i]:0.000}", $"{puzzle.Dni[i]:0} W/m²" });
@@ -49,8 +48,7 @@ namespace KardashevAscent.Presentation.UI
                     break;
                 case SolarParameter.DiffuseShare:
                     title = "Diffuse light share k";
-                    intro = $"A robot set up two sensors: one shaded from the star (reads only the sky's diffuse light DHI) and a " +
-                            $"tracker that reads the direct beam DNI. Above the air: G₀ = {puzzle.G0:0} W/m².";
+                    intro = $"Shaded sensor (sky glow DHI) + tracker (direct beam DNI) · G₀ = {puzzle.G0:0} W/m²";
                     head.AddRange(new[] { "sun height h", "direct DNI", "diffuse DHI" });
                     for (int i = 0; i < puzzle.Dhi.Length; i++)
                         rows.Add(new[] { $"{puzzle.AltitudeDeg[i]:0}°", $"{puzzle.Dni[i]:0} W/m²", $"{puzzle.Dhi[i]:0.0} W/m²" });
@@ -61,8 +59,7 @@ namespace KardashevAscent.Presentation.UI
                     break;
                 case SolarParameter.Albedo:
                     title = "Ground reflectance ρ_g";
-                    intro = "A robot set two light sensors over open ground: one facing up (light coming in) and one facing " +
-                            "down (light the ground throws back), read three times through the day.";
+                    intro = "Sensor facing up (light in) and down (light the ground throws back)";
                     head.AddRange(new[] { "reading", "incoming (up)", "reflected (down)" });
                     for (int i = 0; i < puzzle.Incoming.Length; i++)
                         rows.Add(new[] { $"{i + 1}", $"{puzzle.Incoming[i]:0} W/m²", $"{puzzle.Reflected[i]:0.0} W/m²" });
@@ -73,7 +70,7 @@ namespace KardashevAscent.Presentation.UI
                     break;
                 case SolarParameter.AirTemperature:
                     title = "Air temperature: the weather station";
-                    intro = "A robot set up a weather station and read it every 3 hours through one day.";
+                    intro = "Weather station, read every 3 hours for a day";
                     head.AddRange(new[] { "time", "air temperature", "" });
                     for (int i = 0; i < puzzle.TemperatureC.Length; i++)
                         rows.Add(new[] { $"{puzzle.HourOfDay[i]:00}:00", $"{puzzle.TemperatureC[i]:0.0} °C", "" });
@@ -84,8 +81,7 @@ namespace KardashevAscent.Presentation.UI
                     break;
                 case SolarParameter.Dust:
                     title = "Dust on panels";
-                    intro = "A robot left two reference cells side by side for a week: one wiped clean every day, one left " +
-                            "alone. Their output was read three times.";
+                    intro = "Two test cells for a week: one wiped daily, one left dusty";
                     head.AddRange(new[] { "reading", "clean cell", "dusty cell" });
                     for (int i = 0; i < puzzle.CleanW.Length; i++)
                         rows.Add(new[] { $"{i + 1}", $"{puzzle.CleanW[i]:0.0} W", $"{puzzle.DustyW[i]:0.0} W" });
@@ -95,9 +91,7 @@ namespace KardashevAscent.Presentation.UI
                     break;
                 case SolarParameter.Spectrum:
                     title = "The star's spectrum";
-                    intro = "A robot pointed a spectrometer at the star and read its brightness in 10 nm steps across the " +
-                            "spectrum (100 = the brightest bin). A star glows like a blackbody: hotter stars peak at " +
-                            "shorter (bluer) wavelengths.";
+                    intro = "Spectrometer on the star, 10 nm steps (100 = brightest) · hotter stars peak bluer";
                     head.AddRange(new[] { "wavelength", "brightness", "" });
                     for (int i = 0; i < puzzle.WavelengthNm.Length; i++)
                         rows.Add(new[] { $"{puzzle.WavelengthNm[i]:0} nm", $"{puzzle.Brightness[i]:0.0}", "" });
@@ -109,7 +103,7 @@ namespace KardashevAscent.Presentation.UI
                     break;
                 default:
                     title = "Clouds: the light log";
-                    intro = "A robot logged the light on flat ground for five days, next to what a clear sky would have given.";
+                    intro = "Five days of light on flat ground next to a clear sky";
                     head.AddRange(new[] { "day", "clear sky", "measured" });
                     for (int d = 0; d < puzzle.ClearKwh.Length; d++)
                         rows.Add(new[] { $"{d + 1}", $"{puzzle.ClearKwh[d]:0.00} kWh/m²", $"{puzzle.MeasuredKwh[d]:0.00} kWh/m²" });
@@ -119,7 +113,15 @@ namespace KardashevAscent.Presentation.UI
                     break;
             }
 
-            Add(MakeLabel(title, "robot-name"));
+            // A symbol badge and the title, then one line on what the robot brought (director 2026-11-14: less text).
+            var titleRow = new VisualElement();
+            titleRow.style.flexDirection = FlexDirection.Row;
+            titleRow.style.alignItems = Align.Center;
+            titleRow.Add(ParameterLook.Badge(puzzle.Parameter, 22f));
+            Label t = MakeLabel(title, "robot-name");
+            t.style.flexGrow = 1;
+            titleRow.Add(t);
+            Add(titleRow);
             Add(MakeLabel(intro, "job-text"));
             if (puzzle.Parameter == SolarParameter.OpticalDepth)
                 Add(new LangleyPlot(puzzle));
@@ -142,10 +144,10 @@ namespace KardashevAscent.Presentation.UI
 
             var buttons = new VisualElement();
             buttons.AddToClassList("button-row");
-            var submit = new Button(Submit) { text = "Submit" };
+            var submit = new Button(Submit) { text = "Check" };
             submit.AddToClassList("small-button");
             buttons.Add(submit);
-            var hint = new Button(() => hints.style.display = DisplayStyle.Flex) { text = "Show the formulas" };
+            var hint = new Button(() => hints.style.display = DisplayStyle.Flex) { text = "? Formula" };
             hint.AddToClassList("small-button");
             buttons.Add(hint);
             Add(buttons);
