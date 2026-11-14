@@ -84,7 +84,6 @@ namespace KardashevAscent.Presentation.Audio
                 clips[s] = Clip(s.ToString(), SoundSynth.Make(s));
             musicSource.clip = Clip("Ambience", SoundSynth.Ambience());
             ApplyMusic();
-            musicSource.Play();
         }
 
         static AudioClip Clip(string name, float[] samples)
@@ -164,6 +163,9 @@ namespace KardashevAscent.Presentation.Audio
 
         void Update()
         {
+            // The ambience starts once the audio system runs, and comes back if anything stopped it.
+            if (musicSource != null && musicSource.clip != null && !musicSource.isPlaying)
+                musicSource.Play();
             if (Time.unscaledTime < nextPanelScan) return;
             nextPanelScan = Time.unscaledTime + 1f;
             foreach (UIDocument d in FindObjectsByType<UIDocument>(FindObjectsSortMode.None))
