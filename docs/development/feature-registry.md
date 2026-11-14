@@ -56,6 +56,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | PL-03 | Real planets from the NASA Exoplanet Archive with provenance labels | CONFIRMED | PR #16, #43 | Tested | `Planet/PlanetRecord.cs`, `tools/exoplanets` |
 | PL-04 | Choose the planet and the landing tile | CONFIRMED | PR #43, #55 | Tested (simulation side) | `SimulationRunner`, `PlanetChooserView` |
 | PL-04a | Landing is a required first step: after choosing the planet, time stays stopped and no building site opens until the player picks a land tile and presses Land here; the colony can't move afterwards (replaces "move before the first building") | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Implemented | `Presentation/Game/GameFlow.cs`, `UI/TileInfoView.cs` |
+| PL-04b | Landing needs flat, open ground: lowland, desert, dry basin, beach, forest or tundra; not sea, wetland, mountain, highland, volcanic rock or ice (saved colonies elsewhere still load) | CONFIRMED (director 2026-11-14); which ground counts PROPOSED | chat 2026-11-14 | Tested; seen in Play mode | `Planet/PlanetSurface.cs` (`Terrains.LandingProblem`) |
 | PL-05 | Building slots per tile; multi-slot footprints | CONFIRMED | PR #28, #33, #61 | Tested | `Planet/TileSite.cs`, `Game/BuildingFootprints.cs` |
 | PL-06 | Earth cloud climatology on Earth-like planets | CONFIRMED | PR #23 | Tested | `Climate/CloudClimate.cs` |
 | PL-10 | New terrain: forest, wetland, beach, volcanic rock (second terrain pass on warm wet planets; volcanic rock anywhere). Wetland is too soft for land buildings; forest and beach keep the landing rank of lowland; forest, wetland and volcanic rock slow robots; albedo and names per terrain | CONFIRMED (director's choice of all four, 2026-11-13) | chat 2026-11-13 | Tested; seen in Play mode | `Planet/PlanetSurface.cs` |
@@ -75,6 +76,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | EN-01 | Solar panel model: orbit to yearly energy | CONFIRMED | PR #2, #21, #23 | Verified (pvlib, NASA POWER) | `Solar/*`, `docs/physics/physics-verification.md` |
 | EN-02 | Spectral match by star temperature; binary stars; tidally locked planets | CONFIRMED | PR #23 | Tested | `Solar/SpectralMatch.cs`, `BinaryStar.cs` |
 | EN-03 | Panel placement with angles, best-angle search and bonus | CONFIRMED | PR #27, #32 | Tested | `Game/PanelAngleSearch.cs`, `PanelPlacer` |
+| EN-03a | A new panel starts flat (β = 0) or copies the angles of a panel already on its tile; the best angle is never set for you (and nothing gives the latitude away before it is measured) | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/Planet/PanelPlacer.cs` |
 | EN-04 | Light-potential map | CONFIRMED | PR #26 | Tested | `Solar/LightPotential.cs` |
 | EN-05 | Power grid: one bus, battery, RTGs, brownouts | CONFIRMED | PR #29 | Tested | `Energy/PowerGrid.cs` |
 | EN-06 | Battery yards as buildings | CONFIRMED | PR #36 | Tested | orchestrator |
@@ -179,6 +181,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | UI-06 | Windows build from a menu | CONFIRMED | PR #44 | Implemented | `Editor/BuildWindows.cs` |
 | UI-08 | Game menu: main menu at launch (New game, Continue saved game, Quit) and a pause menu on Esc (Resume, Save, Load, Main menu, Quit); time is stopped on both | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Implemented | `Presentation/Game/GameFlow.cs` |
 | UI-09 | Setup tutorial right after landing: time stays stopped while it asks for a solar panel, battery yard, charging station and Robot Workshop on the landing tile; Skip places the rest automatically; time starts when all four are placed | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/Game/GameFlow.cs`, `PanelPlacer.AutoPlace` |
+| UI-10 | Research window: symbol badges per value, a bar for how unsure each is, one-word status and one button per row; a four-step picture tutorial the first time (and with ?); puzzle cards with a badge and one-line intros | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/UI/SystemWindows.cs` (`ResearchWindow`, `ParameterLook`), `LightPuzzleView.cs` |
 | UI-07 | Build bar in categories (Power, Stations) with an (i) description per building | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/UI/BuildInfo.cs`, `PanelsView.cs` |
 
 ## 3. Decisions approved by the director
@@ -192,6 +195,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | 2026-11-14 | Game flow: main menu plus pause menu; the player must pick the first landing tile before time starts, with the game paused while picking | PL-04a, UI-08 |
 | 2026-11-14 | After landing a tutorial asks for the essential buildings or places them on Skip; 3 starter robots; boat upgrade for work on water; fastest speed 1 day/s; buildings use real materials, not power (answers OQ-3) | UI-09, RB-17, RB-18, CO-01a, CO-03a |
 | 2026-11-14 | Long-trip charging and no work for sites without materials approved; calculation puzzles occasional (research will always have its own puzzle); construction takes time, with a building animation | RB-19, CO-04a, RS-12, RS-13, CO-04b |
+| 2026-11-14 | No landing on sea, wetland or unbuildable ground; new panels flat or copying the tile; friendlier measuring with symbols, bars and a tutorial | PL-04b, EN-03a, UI-10 |
 | 2026-11-14 | Rivers removed after a look in Play mode ("bugged and weird"); RiverMap, its rules and its drawing deleted | PL-12 |
 | 2026-11-09 | Solar measurements: robots turn built panels; research robots measure every solar parameter; measurement is a reasoning puzzle | `docs/design/solar-measurements.md` (on its branch) |
 | 2026-11-12 | Game vision and the ten design pillars | [`../game/game-vision.md`](../game/game-vision.md) |
