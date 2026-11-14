@@ -24,10 +24,13 @@ namespace KardashevAscent.Presentation.UI
         UIDocument document;
         Label date, time, season, power, demand, battery, kLabel, kPlanetLabel, kDetailLabel, kHeading, brownout, toast, buildStock, buildQueue;
         VisualElement batteryFill, kFill;
-        readonly Button[] speedButtons = new Button[5];
+        // The fastest speed is a day per second (director, 2026-11-14): no year per minute.
+        readonly Button[] speedButtons = new Button[4];
         static readonly ClockSpeed[] Speeds =
-            { ClockSpeed.Paused, ClockSpeed.RealTime, ClockSpeed.HourPerSecond, ClockSpeed.DayPerSecond, ClockSpeed.YearPerMinute };
+            { ClockSpeed.Paused, ClockSpeed.RealTime, ClockSpeed.HourPerSecond, ClockSpeed.DayPerSecond };
         float nextText;
+
+        static string Mass(double kg) => kg >= 1000.0 ? $"{kg / 1000.0:0.#} t" : $"{kg:0} kg";
 
         void OnEnable()
         {
@@ -56,7 +59,7 @@ namespace KardashevAscent.Presentation.UI
             batteryFill = root.Q("battery-fill");
             kFill = root.Q("k-fill");
 
-            string[] names = { "speed-paused", "speed-real", "speed-hour", "speed-day", "speed-year" };
+            string[] names = { "speed-paused", "speed-real", "speed-hour", "speed-day" };
             for (int i = 0; i < names.Length; i++)
             {
                 ClockSpeed speed = Speeds[i];
@@ -183,17 +186,22 @@ namespace KardashevAscent.Presentation.UI
                 : $"needed {Format.Power(sim.DemandW)}";
             string flow = sim.BatteryPowerW > 1.0 ? $"+{Format.Power(sim.BatteryPowerW)}"
                 : sim.BatteryPowerW < -1.0 ? $"−{Format.Power(-sim.BatteryPowerW)}"
-                : sim.CurtailedW > 1.0 || sim.BuildPowerW > 1.0 ? "full" : "idle";
+                : sim.CurtailedW > 1.0 ? "full" : "idle";
             battery.text = $"{soc * 100.0:0} % of {Format.Energy(sim.BatteryCapacityWh)} · {flow}";
 
             if (buildStock != null)
             {
-                string making = sim.BuildPowerW > 1.0 ? $"+{Format.Power(sim.BuildPowerW)}" : "no spare power";
-                buildStock.text = Format.Energy(sim.BuildStockWh);
+                // Materials on hand (the ones buildings take), then what the sites still lack.
+                string stock = "";
+                foreach (var m in new[] { KardashevAscent.Simulation.Resources.Material.Iron, KardashevAscent.Simulation.Resources.Material.Copper,
+                                          KardashevAscent.Simulation.Resources.Material.Lithium, KardashevAscent.Simulation.Resources.Material.Rock })
+                    stock += (stock.Length > 0 ? " · " : "") + $"{KardashevAscent.Simulation.Resources.Materials.Name(m).Substring(0, 2)} {Mass(sim.Materials[m])}";
+                buildStock.text = stock;
+                KardashevAscent.Simulation.Resources.MaterialBill shortfall = sim.ConstructionShortfall;
                 buildQueue.text = sim.ConstructionQueueCount == 0
-                    ? making
-                    : $"{making} · {sim.ConstructionQueueCount} site{(sim.ConstructionQueueCount == 1 ? "" : "s")}, " +
-                      $"{Format.Energy(sim.ConstructionRemainingWh)} to go";
+                    ? "no sites waiting"
+                    : $"{sim.ConstructionQueueCount} site{(sim.ConstructionQueueCount == 1 ? "" : "s")}" +
+                      (shortfall.IsEmpty ? " · materials in stock" : $" · short: {shortfall.Describe()}");
             }
             kLabel.text = Format.Power(sim.KardashevPowerW);
             if (kHeading != null)

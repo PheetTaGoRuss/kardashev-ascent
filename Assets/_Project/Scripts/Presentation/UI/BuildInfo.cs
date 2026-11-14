@@ -60,7 +60,8 @@ namespace KardashevAscent.Presentation.UI
                     break;
             }
             int slots = placer.FootprintOf(m);
-            return what + $"\nCost: {Format.Energy(placer.CostOf(m))} of build parts · covers {slots} slot{(slots == 1 ? "" : "s")}" +
+            return what + $"\nTakes: {placer.CostOf(m).Describe()} · covers {slots} slot{(slots == 1 ? "" : "s")}" +
+                   (m == BuildMode.FloatingSolar ? "\nBuilt by a robot with a boat hull (Workshop upgrade)." : "") +
                    "\nDrag it from the bar onto the site. Trees and rocks on its slots are cleared.";
         }
     }

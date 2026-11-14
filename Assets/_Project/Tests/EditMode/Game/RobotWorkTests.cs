@@ -19,17 +19,27 @@ namespace KardashevAscent.Simulation.Tests.Game
         static readonly HexSphere Sphere = HexSphere.Create(12);
         static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
 
-        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike);
+        /// <summary>A colony with one robot (these tests follow what one robot does).</summary>
+        static PlanetSimulation Create()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
+            sim.Workforce.Reset(sim.BaseTileId, 1);
+            return sim;
+        }
 
         static RobotGroup GroupOf(PlanetSimulation sim) => sim.Workforce.GetGroup(sim.Workforce.Robots[0].GroupId);
 
         [Test]
-        public void NewColony_HasOneGeneralRobotAtTheBase()
+        public void NewColony_HasThreeGeneralRobotsAtTheBase()
         {
-            var sim = Create();
-            Assert.AreEqual(1, sim.Workforce.Robots.Count);
-            Assert.AreEqual(RobotKind.General, sim.Workforce.Robots[0].Kind);
-            Assert.AreEqual(sim.BaseTileId, sim.Workforce.Robots[0].Tile);
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
+            Assert.AreEqual(3, Workforce.StarterRobots, "director, 2026-11-14");
+            Assert.AreEqual(Workforce.StarterRobots, sim.Workforce.Robots.Count);
+            foreach (Robot r in sim.Workforce.Robots)
+            {
+                Assert.AreEqual(RobotKind.General, r.Kind);
+                Assert.AreEqual(sim.BaseTileId, r.Tile);
+            }
         }
 
         [Test]
@@ -54,10 +64,10 @@ namespace KardashevAscent.Simulation.Tests.Game
             int t = sim.BaseTileId;
             RobotGroup g = GroupOf(sim);
             sim.Workforce.Pause(g.Id);
-            double stock = sim.BuildStockWh;
+            double stock = sim.Materials[KardashevAscent.Simulation.Resources.Material.Iron];
             Assert.IsTrue(sim.PlacePanel(t, 0, 0.3, Math.PI));
             Assert.IsTrue(sim.IsUnderConstruction(t, 0), "no robot works on it");
-            Assert.AreEqual(stock, sim.BuildStockWh, "nothing was taken from stock");
+            Assert.AreEqual(stock, sim.Materials[KardashevAscent.Simulation.Resources.Material.Iron], "nothing was taken from stock");
             Assert.AreEqual(0.0, sim.ConstructionProgress(t, 0));
 
             sim.Tick(1.0);
@@ -77,6 +87,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             var sim = Create();
             int t = sim.BaseTileId;
             sim.Workforce.Pause(GroupOf(sim).Id);
+            foreach (var (m, kg) in sim.BuildBill(BuildingType.Battery).Times(3).Items()) sim.Materials.Add(m, kg);
             for (int s = 0; s < 3; s++) Assert.IsTrue(sim.PlaceBattery(t, 20 * s));   // two-slot footprints, kept apart
             var events = new List<(int, int)>();
             sim.BuildingCompleted += (a, b) => events.Add((a, b));
@@ -105,13 +116,14 @@ namespace KardashevAscent.Simulation.Tests.Game
 
             var salvaged = new List<(int, int)>();
             sim.BuildingSalvaged += (a, b) => salvaged.Add((a, b));
-            double stock = sim.BuildStockWh;
+            double stock = sim.Materials[KardashevAscent.Simulation.Resources.Material.Iron];
             sim.Workforce.Resume(g.Id);
             sim.RefreshWork();
             Assert.AreEqual(BuildingType.None, sim.GetBuilding(t, 0));
             Assert.IsFalse(sim.IsSalvageOrdered(t, 0));
             CollectionAssert.AreEqual(new[] { (t, 0) }, salvaged);
-            Assert.AreEqual(stock + BuildCosts.SalvageShare * sim.BuildCostWh(BuildingType.Battery), sim.BuildStockWh, 1e-3);
+            Assert.AreEqual(stock + BuildCosts.SalvageShare * sim.BuildBill(BuildingType.Battery)[KardashevAscent.Simulation.Resources.Material.Iron],
+                            sim.Materials[KardashevAscent.Simulation.Resources.Material.Iron], 1e-6);
         }
 
         [Test]
@@ -147,8 +159,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             var sim = Create();
             int t = sim.BaseTileId;
             sim.PlaceBattery(t, 0);
-            // Use up the stock so the next site has to wait for parts with the robot on it.
-            sim.Build.Reset(0.0);
+            // Use up the stock so the next site has to wait for materials with the robot on it.
+            sim.Materials.Clear();
             sim.PlacePanel(t, 1, 0.3, Math.PI);
             Robot r = sim.Workforce.Robots[0];
             Assert.AreEqual(TaskKind.Build, r.Task.Value.Kind, "the robot waits at the site for parts");
@@ -182,11 +194,11 @@ namespace KardashevAscent.Simulation.Tests.Game
         }
 
         [Test]
-        public void Save_Version6_LoadsWithOneGeneralRobot_AndItsSitesKeepGoing()
+        public void Save_Version6_LoadsWithTheStarterRobots_AndItsSitesKeepGoing()
         {
             var a = Create();
             int t = a.BaseTileId;
-            a.Build.Reset(0.0);
+            a.Materials.Clear();
             a.PlacePanel(t, 0, 0.3, Math.PI);
             SimulationState state = a.CaptureState();
             state.Version = 6;
@@ -196,7 +208,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             var b = Create();
             b.Workforce.AddRobot(RobotKind.General, 0);
             Assert.IsTrue(b.RestoreState(state));
-            Assert.AreEqual(1, b.Workforce.Robots.Count);
+            Assert.AreEqual(Workforce.StarterRobots, b.Workforce.Robots.Count, "a save from before robots gets the lander's crew");
             Assert.AreEqual(b.BaseTileId, b.Workforce.Robots[0].Tile);
             Assert.IsTrue(b.IsUnderConstruction(t, 0));
             Assert.AreEqual(TaskKind.Build, b.Workforce.Robots[0].Task.Value.Kind, "the starting robot took the site");

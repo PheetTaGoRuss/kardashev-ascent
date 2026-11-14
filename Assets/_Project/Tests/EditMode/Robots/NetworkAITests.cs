@@ -222,7 +222,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             var held = new HeldFinding { RobotId = r.Id, Kind = FindingKind.SurveyRockOnly, Tile = t };
             a.heldFindings.Add(held);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(25, state.Version);
+            Assert.AreEqual(SimulationState.CurrentVersion, state.Version);
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));
             Assert.AreEqual(1, b.HeldFindings.Count);

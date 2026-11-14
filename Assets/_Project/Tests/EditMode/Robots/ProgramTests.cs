@@ -14,7 +14,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         static Workforce Start()
         {
             var w = new Workforce();
-            w.Reset(0);
+            w.Reset(0, 1);
             return w;
         }
 
@@ -176,7 +176,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             Robot r = sim.Workforce.Robots[0];
             sim.Workforce.SetGroupProgram(r.GroupId, OperatingProgram.Demand);
             sim.OrderMining(t, KardashevAscent.Simulation.Resources.Material.Rock);
-            sim.Build.Reset(0.0);
+            sim.Materials.Clear();
             sim.Workforce.Pause(r.GroupId);
             sim.PlaceBattery(t, 0);
             sim.Workforce.Resume(r.GroupId);

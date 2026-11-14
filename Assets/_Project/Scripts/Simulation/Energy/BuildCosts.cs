@@ -1,32 +1,101 @@
+using KardashevAscent.Simulation.Resources;
+
 namespace KardashevAscent.Simulation.Energy
 {
     /// <summary>
-    /// What buildings cost (game rules on top of real embodied-energy numbers).
-    /// The colony builds from <em>build parts</em>, counted in Wh of the energy that went into making them. Only the
-    /// on-site share of a building's embodied energy is paid on the planet (assembly, site work, local processing);
-    /// the refined materials (wafers, cells, glass) come with the lander's cargo. That share is a game rule.
+    /// What buildings cost in real materials (director, 2026-11-14: buildings are built from materials, not power).
+    /// A building's bill is the real material mass of the whole installation times <see cref="OnSiteShare"/>: the colony
+    /// supplies that share from what its robots mine and refine; the rest (wafers, cells, electronics) stands for parts
+    /// the colony can't make yet. The share is a game rule. The game has no glass, polymer or phosphate yet, so rock
+    /// stands in for them (glass and silicon are made from silica, phosphate from phosphate rock); that is a game rule too.
     /// </summary>
     public static class BuildCosts
     {
-        /// <summary>Share of a building's embodied energy paid on site (game rule).</summary>
+        /// <summary>Share of an installation's real material mass the colony supplies on site (game rule, TBD).</summary>
         public const double OnSiteShare = 0.01;
 
-        /// <summary>
-        /// Embodied energy of Li-ion storage per Wh of capacity, electricity-equivalent (about 100; cradle-to-gate
-        /// studies give roughly 300 Wh of primary energy per Wh, about a third of that as electricity).
-        /// </summary>
-        public const double LiIonEmbodiedWhPerWh = 100.0;
-
-        /// <summary>Build parts the lander brings: enough for the first few buildings, Wh.</summary>
-        public const double LanderStockWh = 200_000_000.0;
-
-        /// <summary>Share of a finished building's cost that comes back as parts when it is taken down (game rule).</summary>
+        /// <summary>Share of a finished building's materials that comes back when it is taken down (game rule).</summary>
         public const double SalvageShare = 0.5;
 
-        /// <summary>On-site cost of a panel of <paramref name="areaM2"/>, Wh.</summary>
-        public static double Panel(double embodiedWhPerM2, double areaM2) => OnSiteShare * embodiedWhPerM2 * areaM2;
+        // ---- Crystalline silicon PV module ----
 
-        /// <summary>On-site cost of a battery building of <paramref name="capacityWh"/>, Wh.</summary>
-        public static double Battery(double capacityWh) => OnSiteShare * LiIonEmbodiedWhPerWh * capacityWh;
+        /// <summary>
+        /// Module mass per m², kg. TBD: typical 60-cell modules weigh about 18–20 kg for 1.6–1.7 m²; no single source
+        /// checked yet.
+        /// </summary>
+        public const double PanelModuleKgPerM2 = 11.5;
+
+        /// <summary>
+        /// Mass shares of a typical c-Si module: glass 75 %, polymers 12 %, aluminium frame 9 %, silicon 3 %, copper 1 %
+        /// (Michigan State University study citing a 2022 source; other sources give glass 67–75 %, aluminium 9–18 %,
+        /// silicon 3–4 %, copper ~1 %).
+        /// </summary>
+        public const double PanelGlassShare = 0.75, PanelPolymerShare = 0.12, PanelFrameShare = 0.09,
+                            PanelSiliconShare = 0.03, PanelCopperShare = 0.01;
+
+        /// <summary>
+        /// Materials for <paramref name="areaM2"/> of panels. The frame is steel (iron) rather than aluminium, which
+        /// the colony can't refine at first (game rule; steel-framed modules exist).
+        /// </summary>
+        public static MaterialBill Panel(double areaM2)
+        {
+            double kg = PanelModuleKgPerM2 * areaM2 * OnSiteShare;
+            return new MaterialBill()
+                .Add(Material.Rock, kg * (PanelGlassShare + PanelSiliconShare + PanelPolymerShare))
+                .Add(Material.Iron, kg * PanelFrameShare)
+                .Add(Material.Copper, kg * PanelCopperShare);
+        }
+
+        // ---- LFP (lithium iron phosphate) storage ----
+
+        /// <summary>LiFePO₄ cathode material per kWh of cell capacity, kg (Guan et al., as tabulated in RSC supplementary data).</summary>
+        public const double LfpCathodeKgPerKWh = 2.05;
+
+        /// <summary>Mass shares of LiFePO₄ (molar masses: Li 6.94, Fe 55.845, LiFePO₄ 157.76 g/mol).</summary>
+        public const double LfpLithiumShare = 6.94 / 157.76, LfpIronShare = 55.845 / 157.76;
+
+        /// <summary>
+        /// Cathode materials of a LFP battery of <paramref name="capacityWh"/>, at full mass (robot batteries are made
+        /// whole). The anode, foils and casing aren't counted yet (no sourced figures).
+        /// </summary>
+        public static MaterialBill BatteryCells(double capacityWh)
+        {
+            double cathode = LfpCathodeKgPerKWh * capacityWh / 1000.0;
+            return new MaterialBill()
+                .Add(Material.Lithium, cathode * LfpLithiumShare)
+                .Add(Material.Iron, cathode * LfpIronShare)
+                .Add(Material.Rock, cathode * (1.0 - LfpLithiumShare - LfpIronShare));
+        }
+
+        /// <summary>Materials for a battery building of <paramref name="capacityWh"/> (its on-site share).</summary>
+        public static MaterialBill Battery(double capacityWh) => BatteryCells(capacityWh).Times(OnSiteShare);
+
+        // ---- Stations (game rules, TBD: no installation data yet) ----
+
+        public static readonly MaterialBill Workshop = new MaterialBill()
+            .Add(Material.Iron, 600.0).Add(Material.Rock, 400.0).Add(Material.Copper, 30.0);
+
+        public static readonly MaterialBill ChargingStation = new MaterialBill()
+            .Add(Material.Iron, 150.0).Add(Material.Rock, 50.0).Add(Material.Copper, 20.0);
+
+        public static readonly MaterialBill Relay = new MaterialBill()
+            .Add(Material.Iron, 60.0).Add(Material.Rock, 30.0).Add(Material.Copper, 10.0);
+
+        /// <summary>
+        /// What the lander brings: about one solar panel, battery yard, charging station and Workshop, with some to spare
+        /// (game rule, TBD).
+        /// </summary>
+        public static readonly MaterialBill LanderCargo = new MaterialBill()
+            .Add(Material.Rock, 2500.0).Add(Material.Iron, 1500.0).Add(Material.Copper, 100.0).Add(Material.Lithium, 25.0);
+
+        // ---- Before save version 26: buildings cost "build parts" in Wh ----
+
+        /// <summary>The old on-site share of embodied energy, for reading old saves only.</summary>
+        public const double LegacyOnSiteShare = 0.01;
+        /// <summary>The old Li-ion embodied energy per Wh, for reading old saves only.</summary>
+        public const double LegacyLiIonWhPerWh = 100.0;
+        public const double LegacyWorkshopWh = 2_000_000.0, LegacyChargingStationWh = 500_000.0, LegacyRelayWh = 200_000.0;
+        public static double LegacyPanelWh(double embodiedWhPerM2, double areaM2) => LegacyOnSiteShare * embodiedWhPerM2 * areaM2;
+        public static double LegacyBatteryWh(double capacityWh) => LegacyOnSiteShare * LegacyLiIonWhPerWh * capacityWh;
     }
 }

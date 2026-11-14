@@ -35,7 +35,7 @@ namespace KardashevAscent.Simulation.Game
         {
             if (!CanPlace(BuildingType.Workshop, tileId, slot))
                 return false;
-            Build.Start(tileId, slot, BuildCostWh(BuildingType.Workshop), 0.0, false);
+            Build.Start(tileId, slot, BuildBill(BuildingType.Workshop));
             workshops.Add((tileId, slot));
             Occupy(tileId, FootprintFor(BuildingType.Workshop, tileId, slot));
             Settle((tileId, slot));
@@ -63,13 +63,10 @@ namespace KardashevAscent.Simulation.Game
             foreach (var kv in need)
                 if (Materials[kv.Key] < kv.Value - 1e-9)
                     missing += (missing.Length > 0 ? ", " : "") + $"{kv.Value - Materials[kv.Key]:0.#} kg {Resources.Materials.Name(kv.Key).ToLowerInvariant()}";
-            if (Build.StockWh < recipe.PartsWh - 1e-9)
-                missing += (missing.Length > 0 ? ", " : "") + $"{(recipe.PartsWh - Build.StockWh) / 1000.0:0.#} kWh of build parts";
             if (missing.Length > 0)
                 return "Missing " + missing + ".";
             foreach (var kv in need)
                 Materials.TryTake(kv.Key, kv.Value);
-            Build.Take(recipe.PartsWh);
             return null;
         }
 
@@ -140,7 +137,6 @@ namespace KardashevAscent.Simulation.Game
             jobs.RemoveAt(index);
             foreach (var (m, kg) in j.Recipe.Inputs)
                 Materials.Add(m, kg);
-            Build.AddParts(j.Recipe.PartsWh, 1.0);
             Settle(null);
             return true;
         }
@@ -196,6 +192,9 @@ namespace KardashevAscent.Simulation.Game
             tileAreaM2 = 4.0 * Math.PI * planetRadiusM * planetRadiusM / sphere.TileCount;
             BaseTileId = baseTileId >= 0 ? baseTileId : PickBaseTile();
             Workforce.Reset(BaseTileId);
+            // The lander's cargo: materials for the first buildings (game rule, TBD).
+            foreach (var (m, kg) in BuildCosts.LanderCargo.Items())
+                Materials.Add(m, kg);
             Workforce.CapacityOf = t => FacilityStaffing.CapacityFor(t.Kind);
             Network = new ColonyNetwork(sphere, BaseTileId);
             Workforce.Network = Network;

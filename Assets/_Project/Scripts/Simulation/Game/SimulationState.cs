@@ -9,7 +9,7 @@ namespace KardashevAscent.Simulation.Game
     public sealed class SimulationState
     {
         /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished. 7 added robots; 8 their batteries and condition; 9 resources; 10 the Workshop; 11 programs (facility, ranking, queue); 12 movement; 13 critical damage (stage A); 14 reservations and tasks to go back to (stage B); 15 battery ageing by depth, maintenance rules (stage D); 16 building footprints. 23 industry reports.</summary>
-        public const int CurrentVersion = 25;
+        public const int CurrentVersion = 26;
 
         /// <summary>The version this state was saved with (<see cref="CurrentVersion"/> for a new one).</summary>
         public int Version = CurrentVersion;
@@ -29,7 +29,7 @@ namespace KardashevAscent.Simulation.Game
         public double ColonyAverageGenerationW;
         public double ColonyDayEnergyWh;
         public double ColonyDayClockHours;
-        /// <summary>Build parts on hand, Wh.</summary>
+        /// <summary>Build parts on hand, Wh (before version 26; buildings now take materials).</summary>
         public double BuildStockWh;
         /// <summary>Recent power samples, oldest first, and the totals since landing (missing in older saves: they start empty).</summary>
         public List<PowerSample> History = new List<PowerSample>();
@@ -115,10 +115,12 @@ namespace KardashevAscent.Simulation.Game
         public BuildingType Type;
         public double Tilt;
         public double Azimuth;
-        /// <summary>True for a construction site still waiting for parts.</summary>
+        /// <summary>True for a construction site still waiting for materials.</summary>
         public bool UnderConstruction;
-        /// <summary>Parts already put into the site, Wh.</summary>
+        /// <summary>Parts already put into the site, Wh (before version 26).</summary>
         public double PaidWh;
+        /// <summary>Share of the site's bill of materials already put in, 0–1 (version 26).</summary>
+        public double PaidShare;
         /// <summary>The site's place in the construction queue (0 = next to finish).</summary>
         public int QueueOrder;
         /// <summary>Ground a panel covers, m² (version 5; 0 in older saves = a base panel field).</summary>

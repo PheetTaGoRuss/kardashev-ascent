@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using KardashevAscent.Presentation.Game;
+using MaterialBill = KardashevAscent.Simulation.Resources.MaterialBill;
+using MaterialStock = KardashevAscent.Simulation.Resources.MaterialStock;
 using KardashevAscent.Simulation.Game;
 using KardashevAscent.Simulation.Planet;
 using KardashevAscent.Presentation.UI;
@@ -16,9 +18,9 @@ namespace KardashevAscent.Presentation.Planet
     /// in the background (<see cref="PanelAngleSearch"/>); placing within 98 % of it earns the best-angle bonus.
     /// The angles carry over from slot to slot on the same tile. With several slots selected (drag a box in the site
     /// view), P builds on every empty one, Delete removes every panel in the selection, and "set angle" re-builds the
-    /// selected panels at the planned angles (turning a panel is free). Building takes build parts
-    /// (<see cref="IPlanetSimulation.BuildCostWh"/>); without enough, a building stands as a see-through construction
-    /// site until spare power has made the rest, then it turns into the real thing.
+    /// selected panels at the planned angles (turning a panel is free). Building takes materials
+    /// (<see cref="IConstructionReadout.BuildBill"/>): a building stands as a see-through construction site until a robot
+    /// has brought them from the colony's stock, then it turns into the real thing.
     /// Keys: P place, B use best angle, Delete remove.
     /// </summary>
     /// <summary>What the placer builds.</summary>
@@ -52,7 +54,7 @@ namespace KardashevAscent.Presentation.Planet
         [SerializeField] KeyCode removeKey = KeyCode.Delete;
         [SerializeField] Color ghostCanPlace = new Color(0.45f, 0.85f, 1f, 0.5f);
         [SerializeField] Color ghostBlocked = new Color(1f, 0.38f, 0.3f, 0.5f);
-        [Tooltip("Tint of a construction site waiting for build parts.")]
+        [Tooltip("Tint of a construction site waiting for materials.")]
         [SerializeField] Color siteTint = new Color(1f, 0.72f, 0.25f, 0.55f);
         [Tooltip("Panel width as a share of the slot spacing.")]
         [Range(0.3f, 1f)] [SerializeField] float panelScale = 0.78f;
@@ -672,8 +674,8 @@ namespace KardashevAscent.Presentation.Planet
         /// <summary>Storage one battery yard adds, Wh.</summary>
         public double BatteryUnitWh => simulation != null ? simulation.BatteryUnitWh : 0.0;
 
-        /// <summary>Build parts one building of the current mode costs, Wh.</summary>
-        public double BuildCostWh => simulation != null ? simulation.BuildCostWh(TypeOf(mode)) : 0.0;
+        /// <summary>Materials one building of the current mode takes.</summary>
+        public MaterialBill BuildBill => simulation != null ? simulation.BuildBill(TypeOf(mode)) : new MaterialBill();
 
         /// <summary>With several slots selected: how many buildings of the current mode P would make there.</summary>
         public int PlannedBuildings { get; private set; }
@@ -684,8 +686,8 @@ namespace KardashevAscent.Presentation.Planet
         /// <summary>How many slots a building of this kind covers (solar: at today's tier).</summary>
         public int FootprintOf(BuildMode what) => simulation != null ? simulation.FootprintSize(TypeOf(what)) : 1;
 
-        /// <summary>Build parts a building of this kind costs, Wh.</summary>
-        public double CostOf(BuildMode what) => simulation != null ? simulation.BuildCostWh(TypeOf(what)) : 0.0;
+        /// <summary>Materials a building of this kind takes.</summary>
+        public MaterialBill CostOf(BuildMode what) => simulation != null ? simulation.BuildBill(TypeOf(what)) : new MaterialBill();
 
         /// <summary>What a new solar building here is, e.g. "solar farm (1 km²)".</summary>
         public string NewPanelName => simulation == null ? "solar panel"
@@ -704,22 +706,22 @@ namespace KardashevAscent.Presentation.Planet
             }
         }
 
-        /// <summary>Build parts on hand, Wh.</summary>
-        public double BuildStockWh => simulation != null ? simulation.BuildStockWh : 0.0;
+        /// <summary>The colony's materials on hand (null before a game).</summary>
+        public MaterialStock Stock => simulation?.Materials;
 
         /// <summary>True while the selected slot's building is a construction site.</summary>
         public bool SelectedIsSite => simulation != null && tile >= 0 && slot >= 0 && simulation.IsUnderConstruction(tile, slot);
 
-        /// <summary>How much of the selected slot's site is paid for (0–1), and the parts it still needs, Wh.</summary>
-        public void SelectedSiteProgress(out double progress, out double remainingWh)
+        /// <summary>How much of the selected slot's site is built (0–1), and the materials it still needs.</summary>
+        public void SelectedSiteProgress(out double progress, out MaterialBill remaining)
         {
             progress = 1.0;
-            remainingWh = 0.0;
+            remaining = new MaterialBill();
             BuildingType type = SelectedBuilding;
             if (!SelectedIsSite || type == BuildingType.None)
                 return;
             progress = simulation.ConstructionProgress(tile, slot);
-            remainingWh = (1.0 - progress) * simulation.BuildCostWh(type);
+            remaining = simulation.ConstructionRemainingAt(tile, slot);
         }
 
         AngleRating RatingOf(PanelPreview p) => bestReady && best.Found

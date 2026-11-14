@@ -18,6 +18,9 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Materials on hand, kg.</summary>
         public MaterialStock Materials { get; } = new MaterialStock();
 
+        /// <summary>Grid power the Workshop's jobs drew in the last step, W (their recipes' energy over their work hours).</summary>
+        public double WorkshopPowerW { get; private set; }
+
         readonly List<int> surveyOrders = new List<int>();
         readonly List<(int Tile, Material Material)> miningOrders = new List<(int, Material)>();
         /// <summary>Hours of work done on survey tasks and the current mining batch.</summary>
@@ -116,6 +119,7 @@ namespace KardashevAscent.Simulation.Game
                     crews[t] = crew = new List<double>();
                 crew.Add(RobotCatalog.Productivity(r, t.Kind, MilestonesReached));
             }
+            double workshopW = 0.0;
             foreach (var kv in crews)
             {
                 WorkTask t = kv.Key;
@@ -123,8 +127,12 @@ namespace KardashevAscent.Simulation.Game
                 if (t.Kind == TaskKind.Manufacture)
                 {
                     int index = FinishedWorkshops().IndexOf((t.Tile, t.Slot));
+                    // A job draws its recipe's energy from the grid, spread over its work hours, as a priority load
+                    // (it doesn't stop in a brownout yet: TBD).
                     if (index >= 0 && index < jobs.Count)
                     {
+                        if (jobs[index].Recipe.WorkHours > 0.0)
+                            workshopW += speed * jobs[index].Recipe.EnergyWh / jobs[index].Recipe.WorkHours;
                         double before = jobs[index].DoneHours;
                         jobs[index].DoneHours += dt * speed;
                         // Long jobs go in rounds, like mining batches, so the robot still takes more urgent work between them.
@@ -137,6 +145,7 @@ namespace KardashevAscent.Simulation.Game
                     continue;
                 fieldWork[t] = (fieldWork.TryGetValue(t, out double h) ? h : 0.0) + dt * speed;
             }
+            WorkshopPowerW = workshopW;
             for (int i = jobs.Count - 1; i >= 0; i--)
             {
                 ManufacturingJob j = jobs[i];

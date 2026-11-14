@@ -98,25 +98,31 @@ namespace KardashevAscent.Simulation.Game
         int MilestonesReached { get; }
     }
 
-    /// <summary>Build parts and construction sites (read only).</summary>
+    /// <summary>Construction sites and what buildings cost in materials (read only).</summary>
     public interface IConstructionReadout
     {
-        /// <summary>Build parts on hand, Wh. Spare power is turned into parts; new buildings take their cost from them.</summary>
-        double BuildStockWh { get; }
+        /// <summary>
+        /// Materials one building of this type takes (director, 2026-11-14: buildings are built from materials, not
+        /// power). A robot brings them from the colony's stock while it works on the site.
+        /// </summary>
+        Resources.MaterialBill BuildBill(BuildingType type);
 
-        /// <summary>Spare power going into build parts now, W.</summary>
-        double BuildPowerW { get; }
+        /// <summary>Grid power the Workshop's jobs draw now, W.</summary>
+        double WorkshopPowerW { get; }
 
-        /// <summary>Parts one building of this type costs, Wh.</summary>
-        double BuildCostWh(BuildingType type);
-
-        /// <summary>Construction sites waiting for parts.</summary>
+        /// <summary>Construction sites waiting for materials or a robot.</summary>
         int ConstructionQueueCount { get; }
 
-        /// <summary>Parts still needed to finish every site, Wh.</summary>
-        double ConstructionRemainingWh { get; }
+        /// <summary>Materials still needed to finish every site.</summary>
+        Resources.MaterialBill ConstructionRemaining { get; }
 
-        /// <summary>True while the building in a slot is a site waiting for parts (it does nothing yet).</summary>
+        /// <summary>What the sites still need beyond the stock on hand (mine or refine these).</summary>
+        Resources.MaterialBill ConstructionShortfall { get; }
+
+        /// <summary>What the site in a slot still needs (empty for a finished building or an empty slot).</summary>
+        Resources.MaterialBill ConstructionRemainingAt(int tileId, int slot);
+
+        /// <summary>True while the building in a slot is a site waiting for materials (it does nothing yet).</summary>
         bool IsUnderConstruction(int tileId, int slot);
 
         /// <summary>How much of the site in a slot is paid for, 0–1; 1 for a finished building or an empty slot.</summary>
@@ -146,7 +152,7 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>
         /// Build a panel in one slot of a tile. Returns false (and changes nothing) if the slot cannot take one.
-        /// The panel takes <see cref="BuildCostWh"/> from the parts in stock; without enough it starts as a construction site.
+        /// The panel starts as a construction site; a robot brings its <see cref="IConstructionReadout.BuildBill"/> of materials.
         /// </summary>
         bool PlacePanel(int tileId, int slot, double tilt, double azimuth);
 

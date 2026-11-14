@@ -137,34 +137,33 @@ namespace KardashevAscent.Simulation.Game
             UpdateStar();
 
             // Robots at the lander charge from its RTGs first (D10); elsewhere, robots below 20 % charge right after the
-            // colony and the rest top up from spare power before build parts (D6).
+            // colony and the rest top up from spare power (D6).
             Movement moving = CurrentMovement();
             Workforce.Movement = moving;
             Upkeep.Plan(Workforce, RobotFacilities(), dt, moving);
             // The network hub and relays draw as a priority load: they stay up until the colony itself browns out.
             GridStep grid = Grid.Step(ComputeGeneration(), dt, TimeHours / Rtg.HoursPerYear,
-                                      Upkeep.CriticalRequestW + Network.PowerW + ComputingLoadW(), Upkeep.DockRequestW);
+                                      Upkeep.CriticalRequestW + Network.PowerW + ComputingLoadW() + WorkshopPowerW, Upkeep.DockRequestW);
             GenerationW = grid.GenerationW;
             RtgW = grid.RtgW;
             DemandW = grid.DemandW;
             BatteryPowerW = grid.ChargeW - grid.DischargeW;
-            // Spare power (battery full or at its limit) is turned into build parts, which then pay the sites.
+            // Spare power (battery full or at its limit) tops up robots; the rest is curtailed. Buildings are made from
+            // materials, not power (director, 2026-11-14).
             double topUpW = Math.Min(grid.CurtailedW, Upkeep.TopUpRequestW);
-            BuildPowerW = grid.CurtailedW - topUpW;
-            CurtailedW = grid.CurtailedW - topUpW - BuildPowerW;
+            CurtailedW = grid.CurtailedW - topUpW;
             // The network's hub and relays are served first from the priority power; robots' critical charging gets the rest.
             double networkServedW = Math.Min(Network.PowerW, grid.PriorityServedW);
-            Upkeep.Apply(Workforce, dt, grid.DockServedW, grid.PriorityServedW - networkServedW, topUpW, IsFlaringStar, Build, moving,
+            Upkeep.Apply(Workforce, dt, grid.DockServedW, grid.PriorityServedW - networkServedW, topUpW, IsFlaringStar, moving,
                          Materials, planet.AirTemperatureC);
             RobotChargingW = Upkeep.ChargingW;
             Network.SetPowered(!Grid.IsBrownout);
             Workforce.UpdateConnections(dt);
             DeliverHeldFindings();
             AdvanceFieldWork(dt);
-            Build.AddParts(BuildPowerW, dt);
             Settle(null);
-            // Used power: what reached the loads, went into the battery or made build parts; curtailed power is not used.
-            KardashevPowerW = grid.ServedW + grid.ChargeW + BuildPowerW + RobotChargingW + networkServedW;
+            // Used power: what reached the loads (the Workshop's included) or went into the battery; curtailed power is not used.
+            KardashevPowerW = grid.ServedW + grid.ChargeW + RobotChargingW + networkServedW;
             // Milestones are judged on a whole day's average, so a sunny noon doesn't count.
             dayEnergyWh += KardashevPowerW * dt;
             dayHours += dt;
@@ -178,7 +177,7 @@ namespace KardashevAscent.Simulation.Game
             Colony.Step(dt, grid.GenerationW, grid.ServedW, grid.IsBrownout);
             Grid.DemandW = Colony.DemandW;
             double soc = Grid.Battery.CapacityWh > 0.0 ? Grid.Battery.StoredWh / Grid.Battery.CapacityWh : 0.0;
-            History.Add(dt, TimeHours, grid.GenerationW, grid.DemandW, grid.ServedW, BuildPowerW, soc, grid.IsBrownout);
+            History.Add(dt, TimeHours, grid.GenerationW, grid.DemandW, grid.ServedW, WorkshopPowerW, soc, grid.IsBrownout);
 
             bool day = SunAt(BaseTileId).Up > 0.0;
             if (day != IsDayAtBase)

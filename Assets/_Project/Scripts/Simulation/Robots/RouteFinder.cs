@@ -28,14 +28,40 @@ namespace KardashevAscent.Simulation.Robots
         readonly PlanetSurface surface;
         readonly Dictionary<int, (double[] Hours, int[] Previous)> cache = new Dictionary<int, (double[], int[])>();
 
-        public RouteFinder(HexSphere sphere, PlanetSurface surface, double gravityMs2 = EarthGravity)
+        /// <param name="onWater">Routes for a robot with a boat module: open water can be crossed too.</param>
+        public RouteFinder(HexSphere sphere, PlanetSurface surface, double gravityMs2 = EarthGravity, bool onWater = false)
         {
             this.sphere = sphere ?? throw new ArgumentNullException(nameof(sphere));
             this.surface = surface ?? throw new ArgumentNullException(nameof(surface));
             GravityMs2 = gravityMs2 > 0.0 ? gravityMs2 : EarthGravity;
+            OnWater = onWater;
         }
 
         public double GravityMs2 { get; }
+
+        /// <summary>True for routes of robots with a boat module: they cross open water as well as land.</summary>
+        public bool OnWater { get; }
+
+        RouteFinder amphibious;
+
+        /// <summary>The same planet's routes for a robot that can go on water (made once, then kept).</summary>
+        public RouteFinder Amphibious() =>
+            OnWater ? this : amphibious ?? (amphibious = new RouteFinder(sphere, surface, GravityMs2, true));
+
+        /// <summary>
+        /// Hours to cross a tile of open water with a boat module (game rule, TBD): shallow sea 1.5 flat tiles, deep
+        /// ocean 2 (waves and longer crossings). ∞ for land, which <see cref="HopHours"/> covers.
+        /// </summary>
+        public static double WaterHopHours(TerrainType t) =>
+            t == TerrainType.ShallowOcean ? FlatHopHours * 1.5
+            : t == TerrainType.DeepOcean ? FlatHopHours * 2.0 : double.PositiveInfinity;
+
+        /// <summary>Hours to cross a tile of this terrain on these routes.</summary>
+        public double Hop(TerrainType t)
+        {
+            double land = HopHours(t);
+            return OnWater && double.IsInfinity(land) ? WaterHopHours(t) : land;
+        }
 
         /// <summary>Drive power on this planet, W: ∝ g (rolling resistance).</summary>
         public double DrivePowerW => BaseDrivePowerW * GravityMs2 / EarthGravity;
@@ -58,7 +84,7 @@ namespace KardashevAscent.Simulation.Robots
             }
         }
 
-        public double HopHoursAt(int tile) => HopHours(surface.Terrain[tile]);
+        public double HopHoursAt(int tile) => Hop(surface.Terrain[tile]);
 
         /// <summary>Driving hours from <paramref name="from"/> to every tile (∞ where unreachable).</summary>
         public double[] HoursFrom(int from) => Search(from).Hours;
@@ -117,7 +143,7 @@ namespace KardashevAscent.Simulation.Robots
                 if (h > hours[t]) continue;
                 foreach (int nb in sphere.Neighbors[t])
                 {
-                    double step = HopHours(surface.Terrain[nb]);
+                    double step = Hop(surface.Terrain[nb]);
                     if (double.IsInfinity(step)) continue;
                     double nh = h + step;
                     if (nh < hours[nb])
@@ -136,15 +162,25 @@ namespace KardashevAscent.Simulation.Robots
     /// <summary>What the workforce needs to plan trips this step: routes, where chargers are, and drive power.</summary>
     public sealed class Movement
     {
-        public Movement(RouteFinder routes, double[] hoursToCharger)
+        public Movement(RouteFinder routes, double[] hoursToCharger, double[] hoursToChargerOnWater = null)
         {
             Routes = routes;
             HoursToCharger = hoursToCharger;
+            HoursToChargerOnWater = hoursToChargerOnWater;
         }
 
         public RouteFinder Routes { get; }
         /// <summary>Driving hours from each tile to the nearest charger.</summary>
         public double[] HoursToCharger { get; }
+        /// <summary>The same for a robot with a boat module (null: as on land).</summary>
+        public double[] HoursToChargerOnWater { get; }
+
+        /// <summary>The routes this robot can take: across water too with a boat module.</summary>
+        public RouteFinder RoutesFor(Robot r) => r != null && r.Has(RobotModule.Boat) ? Routes.Amphibious() : Routes;
+
+        /// <summary>Hours from each tile to the nearest charger for this robot.</summary>
+        public double[] HoursToChargerFor(Robot r) =>
+            r != null && r.Has(RobotModule.Boat) && HoursToChargerOnWater != null ? HoursToChargerOnWater : HoursToCharger;
         public double DrivePowerW => Routes.DrivePowerW;
 
         /// <summary>Energy to drive for <paramref name="hours"/>, Wh, taken from the battery (one-way efficiency counted by the battery).</summary>
