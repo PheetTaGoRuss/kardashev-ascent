@@ -37,12 +37,12 @@ namespace KardashevAscent.Simulation.Game
                 return new PanelPreview(false, "Land panels cannot go on water or wetland (floating solar can).", 0, 0, 0, 0);
             double area = NewPanelAreaM2(tileId);
             PanelParams panel = MakePanel(tileId, tilt, azimuth, 1.0, area);
-            AnnualYieldResult year = AnnualYield.Calculate(planet, panel);
+            AnnualYieldResult year = AnnualYield.Calculate(PlanetAt(tileId), panel);
             double energy = year.EnergyWh, capacityFactor = year.CapacityFactor;
             if (Clouds == CloudModel.EarthClimatology && energy > 0.0)
             {
                 // Clouds as a multiplier on output, month by month (weighted by when the panel makes its energy).
-                double[] months = MonthlyYield.Calculate(planet, panel);
+                double[] months = MonthlyYield.Calculate(PlanetAt(tileId), panel);
                 double clear = 0.0, cloudy = 0.0;
                 for (int m = 0; m < months.Length; m++)
                 {
@@ -69,7 +69,7 @@ namespace KardashevAscent.Simulation.Game
         {
             if (tileId < 0 || tileId >= TileCount || GetTile(tileId).IsWater)
                 return null;
-            double[] months = MonthlyYield.Calculate(planet, MakePanel(tileId, tilt, azimuth, 1.0, NewPanelAreaM2(tileId)));
+            double[] months = MonthlyYield.Calculate(PlanetAt(tileId), MakePanel(tileId, tilt, azimuth, 1.0, NewPanelAreaM2(tileId)));
             if (Clouds == CloudModel.EarthClimatology)
                 for (int m = 0; m < months.Length; m++)
                     months[m] *= CloudFactor(tileId, MonthMeanAnomaly(m, months.Length));
@@ -100,14 +100,14 @@ namespace KardashevAscent.Simulation.Game
                     continue;
                 PanelParams p = MakePanel(pair.Key.Tile, pair.Value.Tilt, pair.Value.Azimuth,
                                           CloudFactor(pair.Key.Tile, meanAnomaly), pair.Value.Area);
-                double power = PanelPowerNow(p, sun, out _, out _, out _, out _);
+                double power = PanelPowerNow(p, sun, AirTemperatureAt(pair.Key.Tile, meanAnomaly), out _, out _, out _, out _);
                 total += floatingPanels.Contains(pair.Key) ? power * (1.0 + FloatingCoolingGain) : power;
             }
             return total;
         }
 
         /// <summary>One panel's power under the star right now (sun up), with the light and temperature along the way.</summary>
-        double PanelPowerNow(in PanelParams p, Double3 sun, out double dni, out double dhi, out double poa, out double cellT)
+        double PanelPowerNow(in PanelParams p, Double3 sun, double airTemperatureC, out double dni, out double dhi, out double poa, out double cellT)
         {
             double airMass = Atmosphere.AirMassKastenYoung(SunPosition.ZenithDegrees(sun), p.PressureRatio);
             dni = Atmosphere.DirectNormal(currentIrradiance, planet.OpticalDepth, airMass);
@@ -115,7 +115,7 @@ namespace KardashevAscent.Simulation.Game
             double ghi = Atmosphere.GlobalHorizontal(dni, dhi, sun.Up);
             double cosTheta = PanelModel.CosIncidence(PanelModel.Normal(p.Tilt, p.Azimuth), sun);
             poa = PanelModel.PlaneOfArray(dni, dhi, ghi, cosTheta, p.Tilt, p.Albedo, p.FShade);
-            cellT = PanelModel.CellTemperature(planet.AirTemperatureC, poa, p.Noct,
+            cellT = PanelModel.CellTemperature(airTemperatureC, poa, p.Noct,
                                                planet.SurfacePressureEarth * p.PressureRatio, p.Efficiency);
             return PanelModel.Power(poa, p.Area, p.Efficiency, cellT, p.TempCoefficient, p.FSpec, p.FDust);
         }
@@ -136,9 +136,10 @@ namespace KardashevAscent.Simulation.Game
             Double3 sun = SunAt(tileId);
             double cloud = CloudFactor(tileId, meanAnomaly);
             PanelParams p = MakePanel(tileId, tilt, azimuth, cloud, NewPanelAreaM2(tileId));
-            double dni = 0.0, dhi = 0.0, poa = 0.0, cellT = planet.AirTemperatureC, power = 0.0;
+            double air = AirTemperatureAt(tileId, meanAnomaly);
+            double dni = 0.0, dhi = 0.0, poa = 0.0, cellT = air, power = 0.0;
             if (sun.Up > 0.0)
-                power = PanelPowerNow(p, sun, out dni, out dhi, out poa, out cellT);
+                power = PanelPowerNow(p, sun, air, out dni, out dhi, out poa, out cellT);
             return new SkyReport(planet.TidallyLocked, Sphere.Latitude(tileId) * deg, planet.Obliquity * deg, lambda,
                                  declination, hourAngle, planet.TidallyLocked ? double.NaN : SimClock.LocalTime24(hourAngle / deg),
                                  Math.Asin(Math.Max(-1.0, Math.Min(1.0, sun.Up))) * deg, SunPosition.AzimuthDegrees(sun),
@@ -149,6 +150,25 @@ namespace KardashevAscent.Simulation.Game
         double CurrentMeanAnomaly() => YearLengthHours > 0 ? 2.0 * Math.PI * TimeHours / YearLengthHours : 0.0;
 
         static double MonthMeanAnomaly(int month, int months) => 2.0 * Math.PI * (month + 0.5) / months;
+
+        /// <summary>
+        /// Air temperature over a tile at this point of the orbit, °C: on Earth-like planets NASA POWER's monthly
+        /// climatology by latitude (<see cref="Climate.EarthAirTemperature"/>), elsewhere the planet's one value.
+        /// </summary>
+        public double AirTemperatureAt(int tileId, double meanAnomaly) =>
+            Clouds == CloudModel.EarthClimatology && tileId >= 0 && tileId < TileCount
+                ? Climate.EarthAirTemperature.Celsius(Sphere.Latitude(tileId), Climate.CloudClimate.YearFractionFromMeanAnomaly(meanAnomaly))
+                : planet.AirTemperatureC;
+
+        /// <summary>The tile's air temperature over a whole year, °C (Earth-like planets: NASA POWER; else the planet's value).</summary>
+        public double AnnualAirTemperature(int tileId) =>
+            Clouds == CloudModel.EarthClimatology && tileId >= 0 && tileId < TileCount
+                ? Climate.EarthAirTemperature.AnnualMean(Sphere.Latitude(tileId))
+                : planet.AirTemperatureC;
+
+        /// <summary>The planet as seen from one tile: its own yearly air temperature on Earth-like planets.</summary>
+        PlanetSolarParams PlanetAt(int tileId) =>
+            Clouds == CloudModel.EarthClimatology ? WithAir(planet, planet.OpticalDepth, planet.DiffuseK, AnnualAirTemperature(tileId)) : planet;
 
         /// <summary>Share of clear-sky light reaching panels on a tile at this point of the orbit (1 without clouds).</summary>
         public double CloudFactor(int tileId, double meanAnomaly) =>
