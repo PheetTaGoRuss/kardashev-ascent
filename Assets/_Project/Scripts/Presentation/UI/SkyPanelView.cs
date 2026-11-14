@@ -282,7 +282,7 @@ namespace KardashevAscent.Presentation.UI
                     c.Add(Line($"A {SkyNotebook.GnomonLengthM:0.000} m stick stands straight up. Its shadow is {shadow:0.000} m long and points to {bearing:0}° on the compass.", true));
                     answerA = Field(c, "Sun's height h (°)");
                     answerB = Field(c, "Sun's direction A_s (°)");
-                    hint = "tan h = stick ÷ shadow, so h = arctan(stick ÷ shadow).\nThe sun is on the other side of the stick from its shadow: A_s = bearing − 180° (add 360° if it is negative).";
+                    hint = "tan h = stick / shadow, so h = arctan(stick / shadow).\nThe sun is on the other side of the stick from its shadow: A_s = bearing − 180° (add 360° if it is negative).";
                     break;
                 }
                 case Puzzle.Noon:
@@ -410,7 +410,7 @@ namespace KardashevAscent.Presentation.UI
         {
             ("Find your place from the sky", "Before GPS, people found where they were with a stick, a shadow and the date. You'll do the same here.", 0),
             ("1 · The date gives δ", "The planet's tilt and its place on the orbit give the sun's declination δ: how far north or south of the equator it shines.", 0),
-            ("2 · A stick's shadow gives the sun", "A stick 1 m tall: the shorter its shadow, the higher the sun. tan h = stick ÷ shadow, and the sun is opposite the shadow.", 1),
+            ("2 · A stick's shadow gives the sun", "A stick 1 m tall: the shorter its shadow, the higher the sun. tan h = stick / shadow, and the sun is opposite the shadow.", 1),
             ("3 · Noon gives your latitude", "At noon the sun is highest: φ = 90° − h + δ. At night, sight the celestial pole with a quadrant instead.", 2),
             ("Your latitude unlocks the best angle", "Once φ is known, B sets a panel to the best angle for this place, and every tile's latitude is known.", 1),
         };

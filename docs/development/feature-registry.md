@@ -186,6 +186,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | UI-08 | Game menu: main menu at launch (New game, Continue saved game, Quit) and a pause menu on Esc (Resume, Save, Load, Main menu, Quit); time is stopped on both | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Implemented | `Presentation/Game/GameFlow.cs` |
 | UI-09 | Setup tutorial right after landing: time stays stopped while it asks for a solar panel, battery yard, charging station and Robot Workshop on the landing tile; Skip places the rest automatically; time starts when all four are placed | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/Game/GameFlow.cs`, `PanelPlacer.AutoPlace` |
 | UI-10 | Research window: symbol badges per value, a bar for how unsure each is, one-word status and one button per row; a four-step picture tutorial the first time (and with ?); puzzle cards with a badge and one-line intros | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/UI/SystemWindows.cs` (`ResearchWindow`, `ParameterLook`), `LightPuzzleView.cs` |
+| UI-11 | Sky view measuring as puzzles from real instruments: δ from tilt and orbit position (sin δ = sin ε · sin λ); the sun from a 1 m stick's shadow (h = arctan(stick / shadow), A_s = shadow bearing ± 180°); latitude from the noon sun (φ = 90° − h + δ) or the celestial pole with a quadrant (φ = 90° − reading); answers within 1° (sun direction 2°); a five-step first-time tutorial (? reopens) | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Tested; seen in Play mode | `Simulation/Solar/SkyNotebook.cs`, `Presentation/UI/SkyPanelView.cs` |
 | UI-07 | Build bar in categories (Power, Stations) with an (i) description per building | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/UI/BuildInfo.cs`, `PanelsView.cs` |
 
 ## 3. Decisions approved by the director
@@ -203,6 +204,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | 2026-11-14 | More NASA data: Earth air temperature from NASA POWER; every NASA source listed in docs/nasa-data.md | PL-06a |
 | 2026-11-14 | More NASA data: ground reflectance and aerosol haze from NASA POWER | PL-06b |
 | 2026-11-14 | More NASA data: five more archive planets and Mars from the NASA fact sheet; a random map for every new game | PL-03a, PL-15 |
+| 2026-11-14 | Sky view measuring is a set of real-instrument puzzles (stick shadow, quadrant), with a tutorial, not click-to-know | UI-11 |
 | 2026-11-14 | Rivers removed after a look in Play mode ("bugged and weird"); RiverMap, its rules and its drawing deleted | PL-12 |
 | 2026-11-09 | Solar measurements: robots turn built panels; research robots measure every solar parameter; measurement is a reasoning puzzle | `docs/design/solar-measurements.md` (on its branch) |
 | 2026-11-12 | Game vision and the ten design pillars | [`../game/game-vision.md`](../game/game-vision.md) |
