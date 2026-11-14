@@ -288,8 +288,7 @@ namespace KardashevAscent.Presentation.UI
                 $"New panels are  {PanelTiers.All[sim.PanelTier].Name.ToLowerInvariant()}s ({PanelTiers.FormatArea(sim.NewPanelAreaM2(sim.BaseTileId))} per slot)" +
                 NextTier(sim) + "\n" +
                 $"Battery yards  {yards}{Sites(yardSites)} · storage {Format.Energy(sim.BatteryCapacityWh)}\n" +
-                $"Build parts  {Format.Energy(sim.BuildStockWh)}" +
-                (sim.ConstructionQueueCount > 0 ? $" · {Format.Energy(sim.ConstructionRemainingWh)} still needed" : "");
+                (sim.ConstructionQueueCount > 0 ? $"Sites still need  {sim.ConstructionRemaining.Describe()}" : "No sites waiting");
 
             if (perTile.Count == 0)
             {
@@ -348,7 +347,8 @@ namespace KardashevAscent.Presentation.UI
                     stock += (stock.Length > 0 ? ", " : "") + $"{KardashevAscent.Simulation.Resources.Materials.Name(m).ToLowerInvariant()} {sim.Materials[m]:0} kg";
             int surveyed = 0;
             foreach (int _ in sim.Deposits.Surveyed) surveyed++;
-            resourcesText.text = $"Build parts {Format.Energy(sim.BuildStockWh)}\nMaterials: {(stock.Length > 0 ? stock : "none yet")}\n" +
+            resourcesText.text = $"Materials: {(stock.Length > 0 ? stock : "none yet")}\n" +
+                                 (sim.ConstructionShortfall.IsEmpty ? "" : $"Sites are short of {sim.ConstructionShortfall.Describe()}\n") +
                                  $"{surveyed} tile{(surveyed == 1 ? "" : "s")} surveyed. Workshops and jobs: Manufacturing (U).";
         }
     }

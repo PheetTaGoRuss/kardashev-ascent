@@ -12,7 +12,7 @@ namespace KardashevAscent.Presentation.Game
     /// <summary>
     /// Owns the planet's simulation and its clock: builds a <see cref="PlanetSimulation"/> for the chosen
     /// <see cref="PlanetDNA"/> (real NASA planets or hand-made ones, #11), then ticks it with game time every frame.
-    /// Keys: Space pause/resume, 1–5 speed (pause, real time, 1 hour/s, 1 day/s, 1 year/min).
+    /// Keys: Space pause/resume, 1–4 speed (pause, real time, 1 hour/s, 1 day/s; no faster, director 2026-11-14).
     /// </summary>
     public sealed class SimulationRunner : MonoBehaviour
     {
@@ -198,13 +198,15 @@ namespace KardashevAscent.Presentation.Game
             if (ScreenInput.KeyDown(KeyCode.Alpha2)) SetSpeed(ClockSpeed.RealTime);
             if (ScreenInput.KeyDown(KeyCode.Alpha3)) SetSpeed(ClockSpeed.HourPerSecond);
             if (ScreenInput.KeyDown(KeyCode.Alpha4)) SetSpeed(ClockSpeed.DayPerSecond);
-            if (ScreenInput.KeyDown(KeyCode.Alpha5)) SetSpeed(ClockSpeed.YearPerMinute);
         }
 
         public void SetSpeed(ClockSpeed speed)
         {
             if (Clock == null)
                 return;
+            // The fastest speed is a day per second (director, 2026-11-14).
+            if (speed > ClockSpeed.DayPerSecond)
+                speed = ClockSpeed.DayPerSecond;
             if (Clock.Speed != ClockSpeed.Paused)
                 speedBeforePause = Clock.Speed;
             Clock.Speed = speed;

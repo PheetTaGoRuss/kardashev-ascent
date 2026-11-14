@@ -148,12 +148,6 @@ namespace KardashevAscent.Simulation.Tests.Robots
             Assert.AreEqual(RobotActivity.Maintenance, r.Activity);
         }
 
-        sealed class Parts : IPartsStore
-        {
-            public double StockWh => 1e12;
-            public double Take(double wh) => wh;
-        }
-
         [Test]
         public void Repairs_UseIron_OrGoSlowerWithout()
         {
@@ -167,7 +161,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
                 var lander = new List<RobotFacility> { new RobotFacility(0, -1, ChargingCapability.Lander) };
                 var up = new RobotUpkeep();
                 up.Plan(w, lander, 1.0);
-                up.Apply(w, 1.0, 0.0, 0.0, 0.0, false, new Parts(), null, stock);
+                up.Apply(w, 1.0, 0.0, 0.0, 0.0, false, null, stock);
                 return r.Condition - 0.1;
             }
             double with = Repaired(1000.0), without = Repaired(0.0);

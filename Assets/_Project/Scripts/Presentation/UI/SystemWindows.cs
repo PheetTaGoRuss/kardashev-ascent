@@ -51,7 +51,7 @@ namespace KardashevAscent.Presentation.UI
         protected override void RefreshBody(IPlanetSimulation sim)
         {
             status.text = $"{sim.WorkshopCount} Workshop{(sim.WorkshopCount == 1 ? "" : "s")} · milestone {sim.MilestonesReached} · " +
-                          $"build parts {Format.Energy(sim.BuildStockWh)}";
+                          $"Workshop power {Format.Power(sim.WorkshopPowerW)}";
             stock.text = Stock(sim);
             string shape = sim.MilestonesReached + "|" + sim.WorkshopCount + "|" + sim.Jobs.Count;
             if (shape != shownShape)
@@ -186,7 +186,7 @@ namespace KardashevAscent.Presentation.UI
             now.EnableInClassList("message", sim.IsBrownout);
             sources.text = $"Solar panels {Format.Power(System.Math.Max(0.0, solar))}\nRTGs (lander) {Format.Power(sim.RtgW)}\n" +
                            $"Wasted (nowhere to put it) {Format.Power(sim.CurtailedW)}";
-            uses.text = $"Colony {Format.Power(sim.DemandW)}\nConstruction {Format.Power(sim.BuildPowerW)}\n" +
+            uses.text = $"Colony {Format.Power(sim.DemandW)}\nWorkshop {Format.Power(sim.WorkshopPowerW)}\n" +
                         $"Robot charging {Format.Power(sim.RobotChargingW)}";
             double share = sim.BatteryCapacityWh > 0.0 ? sim.BatteryStoredWh / sim.BatteryCapacityWh : 0.0;
             string flow = sim.BatteryPowerW > 1.0 ? $"charging {Format.Power(sim.BatteryPowerW)}"

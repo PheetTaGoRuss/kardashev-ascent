@@ -159,7 +159,10 @@ namespace KardashevAscent.Simulation.Tests.Energy
         static PlanetSimulation Create()
         {
             var sphere = HexSphere.Create(12);
-            return new PlanetSimulation(sphere, PlanetSurface.Generate(sphere, new SurfaceSettings(7)), Earthlike);
+            var sim = new PlanetSimulation(sphere, PlanetSurface.Generate(sphere, new SurfaceSettings(7)), Earthlike);
+            // Plenty of materials: these tests are about power, not about mining.
+            foreach (var m in KardashevAscent.Simulation.Resources.Materials.All) sim.Materials.Add(m, 1e6);
+            return sim;
         }
 
         [Test]

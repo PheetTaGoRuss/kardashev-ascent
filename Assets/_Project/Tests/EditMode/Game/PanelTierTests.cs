@@ -93,7 +93,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.AreEqual(1, big.PanelTier);
             int t = big.BaseTileId;
             Assert.AreEqual(1e6, big.NewPanelAreaM2(t), 1e-6);
-            Assert.AreEqual(100.0 * small.BuildCostWh(BuildingType.SolarPanel), big.BuildCostWh(BuildingType.SolarPanel), 1e-3);
+            Assert.AreEqual(100.0 * small.BuildBill(BuildingType.SolarPanel).TotalKg, big.BuildBill(BuildingType.SolarPanel).TotalKg, 1e-3);
             // Same star: output scales with area; capacity factor, payback and EROI don't depend on size.
             PanelPreview a = Create(1e-5).PreviewPanel(t, Tilt(small), Math.PI);
             PanelPreview b = big.PreviewPanel(t, Tilt(big), Math.PI);
@@ -113,11 +113,13 @@ namespace KardashevAscent.Simulation.Tests.Game
             sim.Tick(24.0);
             Assert.GreaterOrEqual(sim.PanelTier, 1);
             Assert.AreEqual(10_000.0, sim.PanelAreaAt(t, 0), "still a panel field");
+            Assert.IsFalse(sim.IsUnderConstruction(t, 0));
 
-            double stock = sim.BuildStockWh;
+            var rock = KardashevAscent.Simulation.Resources.Material.Rock;
+            double stock = sim.Materials[rock];
             Assert.IsTrue(sim.RemovePanel(t, 0));
-            double smallCost = BuildCosts.Panel(sim.EmbodiedWhPerM2, 10_000.0);
-            Assert.AreEqual(stock + BuildCosts.SalvageShare * smallCost, sim.BuildStockWh, 1e-3, "salvage at its own size");
+            double smallCost = BuildCosts.Panel(10_000.0)[rock];
+            Assert.AreEqual(stock + BuildCosts.SalvageShare * smallCost, sim.Materials[rock], 1e-6, "salvage at its own size");
         }
 
         [Test]

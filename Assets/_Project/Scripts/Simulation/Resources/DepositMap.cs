@@ -201,4 +201,94 @@ namespace KardashevAscent.Simulation.Resources
             for (int i = 0; i < kg.Length; i++) kg[i] = 0.0;
         }
     }
+
+    /// <summary>
+    /// An amount of each material, kg: what a building costs, what a site still needs, what a lander brings.
+    /// Changing a bill never changes another one (every operation returns a new bill).
+    /// </summary>
+    public sealed class MaterialBill
+    {
+        readonly double[] kg = new double[Materials.All.Length];
+
+        public double this[Material m] => kg[(int)m];
+
+        /// <summary>A bill with <paramref name="amountKg"/> more of <paramref name="m"/> (negative amounts are ignored).</summary>
+        public MaterialBill Add(Material m, double amountKg)
+        {
+            MaterialBill b = Copy();
+            if (amountKg > 0.0) b.kg[(int)m] += amountKg;
+            return b;
+        }
+
+        public MaterialBill Times(double factor)
+        {
+            var b = new MaterialBill();
+            for (int i = 0; i < kg.Length; i++) b.kg[i] = kg[i] * Math.Max(0.0, factor);
+            return b;
+        }
+
+        public MaterialBill Plus(MaterialBill other)
+        {
+            MaterialBill b = Copy();
+            if (other != null)
+                for (int i = 0; i < kg.Length; i++) b.kg[i] += other.kg[i];
+            return b;
+        }
+
+        /// <summary>What is left of this bill once <paramref name="stock"/> is used (never below 0).</summary>
+        public MaterialBill Minus(MaterialStock stock)
+        {
+            var b = new MaterialBill();
+            for (int i = 0; i < kg.Length; i++) b.kg[i] = Math.Max(0.0, kg[i] - (stock != null ? stock[(Material)i] : 0.0));
+            return b;
+        }
+
+        public double TotalKg
+        {
+            get
+            {
+                double sum = 0.0;
+                foreach (double v in kg) sum += v;
+                return sum;
+            }
+        }
+
+        public bool IsEmpty => TotalKg <= 1e-9;
+
+        /// <summary>The materials in the bill, largest first.</summary>
+        public List<(Material Material, double Kg)> Items()
+        {
+            var list = new List<(Material, double)>();
+            for (int i = 0; i < kg.Length; i++)
+                if (kg[i] > 1e-9) list.Add(((Material)i, kg[i]));
+            list.Sort((a, b) => b.Item2.CompareTo(a.Item2));
+            return list;
+        }
+
+        /// <summary>"1,035 kg rock, 104 kg iron, 12 kg copper" (or "nothing").</summary>
+        public string Describe()
+        {
+            List<(Material Material, double Kg)> items = Items();
+            if (items.Count == 0) return "nothing";
+            var parts = new List<string>();
+            foreach (var (m, v) in items)
+                parts.Add($"{(v >= 10.0 ? v.ToString("#,0") : v.ToString("0.#"))} kg {Materials.Name(m).ToLowerInvariant()}");
+            return string.Join(", ", parts);
+        }
+
+        /// <summary>True when the stock holds all of it.</summary>
+        public bool CoveredBy(MaterialStock stock)
+        {
+            for (int i = 0; i < kg.Length; i++)
+                if (kg[i] > 1e-9 && (stock == null || stock[(Material)i] < kg[i] - 1e-9)) return false;
+            return true;
+        }
+
+        MaterialBill Copy()
+        {
+            var b = new MaterialBill();
+            Array.Copy(kg, b.kg, kg.Length);
+            return b;
+        }
+    }
 }

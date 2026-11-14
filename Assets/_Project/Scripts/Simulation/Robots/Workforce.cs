@@ -202,7 +202,7 @@ namespace KardashevAscent.Simulation.Robots
         {
             Robot r = GetRobot(robotId);
             if (r == null || Movement == null || r.Tile == tile || r.IsShutDown || r.Activity != RobotActivity.None
-                || Movement.Routes.Route(r.Tile, tile) == null)
+                || Movement.RoutesFor(r).Route(r.Tile, tile) == null)
                 return false;
             r.Task = null;
             r.OnTemporaryTask = false;
@@ -223,7 +223,7 @@ namespace KardashevAscent.Simulation.Robots
             }
             if (r.Destination == tile)
                 return;
-            List<int> route = Movement.Routes.Route(r.Tile, tile);
+            List<int> route = Movement.RoutesFor(r).Route(r.Tile, tile);
             r.Route.Clear();
             r.HopProgress = 0.0;
             if (route != null)
@@ -236,8 +236,8 @@ namespace KardashevAscent.Simulation.Robots
             if (Movement == null)
                 return true;
             double speed = r.Attribute(RobotAttribute.Speed);
-            double go = Movement.Routes.HoursBetween(r.Tile, t.Tile) / speed;
-            double back = Movement.HoursToCharger[t.Tile] / speed;
+            double go = Movement.RoutesFor(r).HoursBetween(r.Tile, t.Tile) / speed;
+            double back = Movement.HoursToChargerFor(r)[t.Tile] / speed;
             if (double.IsInfinity(go) || double.IsInfinity(back))
                 return false;
             double usableCapacity = r.Battery.ColdFactor * r.Battery.CapacityWh;
@@ -926,7 +926,7 @@ namespace KardashevAscent.Simulation.Robots
 
         Score ScoreOf(Robot r, WorkTask t, int staffed)
         {
-            double hours = Movement != null ? Movement.Routes.HoursBetween(r.Tile, t.Tile) / r.Attribute(RobotAttribute.Speed) : 0.0;
+            double hours = Movement != null ? Movement.RoutesFor(r).HoursBetween(r.Tile, t.Tile) / r.Attribute(RobotAttribute.Speed) : 0.0;
             return new Score((int)ProgramPriority(r, t.Kind), GetGroup(r.GroupId).RankOf(t.Kind), staffed,
                              RobotCatalog.Productivity(r, t.Kind, Milestones), hours, r.Battery.StateOfCharge, t.Order, r.Id);
         }
@@ -1058,8 +1058,8 @@ namespace KardashevAscent.Simulation.Robots
             if (Movement == null)
                 return true;
             double speed = r.Attribute(RobotAttribute.Speed);
-            double go = Movement.Routes.HoursBetween(r.Tile, t.Tile) / speed;
-            double back = Movement.HoursToCharger[t.Tile] / speed;
+            double go = Movement.RoutesFor(r).HoursBetween(r.Tile, t.Tile) / speed;
+            double back = Movement.HoursToChargerFor(r)[t.Tile] / speed;
             if (double.IsInfinity(go) || double.IsInfinity(back))
                 return false;
             double usableCapacity = r.Battery.ColdFactor * r.Battery.CapacityWh;
@@ -1293,14 +1293,19 @@ namespace KardashevAscent.Simulation.Robots
         }
 
         /// <summary>Back to the start of a colony: one General robot at <paramref name="tile"/> (spec: starting_units 1).</summary>
-        public void Reset(int tile)
+        /// <param name="starters">General robots to start with (tests that follow one robot use 1).</param>
+        public void Reset(int tile, int starters = StarterRobots)
         {
             robots.Clear();
             groups.Clear();
             nextRobotId = nextGroupId = 1;
             groupCapacity = DefaultGroupCapacity;
-            AddRobot(RobotKind.General, tile);
+            for (int i = 0; i < Math.Max(1, starters); i++)
+                AddRobot(RobotKind.General, tile);
         }
+
+        /// <summary>General robots the lander brings (director, 2026-11-14; was 1).</summary>
+        public const int StarterRobots = 3;
 
         static int MaxId(List<Robot> list)
         {

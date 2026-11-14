@@ -21,15 +21,23 @@ namespace KardashevAscent.Simulation.Robots
         Processor = 16,
         /// <summary>An advanced processor: onboard AI level 3. Needs <see cref="Processor"/> first.</summary>
         AdvancedProcessor = 32,
+        /// <summary>
+        /// A boat hull and propeller: the robot crosses open water and builds floating panels (director, 2026-11-14).
+        /// Saved as a flag: add new modules after it, never before.
+        /// </summary>
+        Boat = 64,
     }
 
     public enum JobKind { Robot, Upgrade, Refine }
 
-    /// <summary>What a Workshop job takes: materials (kg), build parts (Wh) and robot work (hours).</summary>
+    /// <summary>
+    /// What a Workshop job takes: materials (kg), electricity (Wh, drawn from the grid while the job is worked) and
+    /// robot work (hours).
+    /// </summary>
     public sealed class Recipe
     {
         public readonly List<(Material Material, double Kg)> Inputs = new List<(Material, double)>();
-        public double PartsWh;
+        public double EnergyWh;
         public double WorkHours;
 
         public Recipe Add(Material m, double kg)
@@ -95,7 +103,8 @@ namespace KardashevAscent.Simulation.Robots
             module == RobotModule.BigBattery || module == RobotModule.ThermalInsulation ? 2
             : module == RobotModule.FastDrive || module == RobotModule.Shielding ? 3
             : module == RobotModule.Processor ? ProcessorMilestone
-            : module == RobotModule.AdvancedProcessor ? AdvancedProcessorMilestone : int.MaxValue;
+            : module == RobotModule.AdvancedProcessor ? AdvancedProcessorMilestone
+            : module == RobotModule.Boat ? 0 : int.MaxValue;   // boats from the start: floating solar is available from the start
 
         /// <summary>Milestones that unlock the processors, until research exists (game rule, TBD).</summary>
         public const int ProcessorMilestone = 4, AdvancedProcessorMilestone = 6;
@@ -103,10 +112,6 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>An insulated battery is kept at least this warm, °C. TBD.</summary>
         public const double InsulatedBatteryC = 0.0;
 
-        /// <summary>Charging station building: build parts, Wh. TBD.</summary>
-        public const double ChargingStationPartsWh = 500_000.0;
-        /// <summary>Build parts for a network relay, Wh. TBD.</summary>
-        public const double RelayPartsWh = 200_000.0;
 
         /// <summary>Refining a substitute: aluminium (for copper) at 1, sodium (for lithium) at 2.</summary>
         public static int UnlockMilestone(Material refined) =>
@@ -131,17 +136,15 @@ namespace KardashevAscent.Simulation.Robots
         public static string ModuleName(RobotModule m) =>
             m == RobotModule.BigBattery ? "Bigger battery" : m == RobotModule.FastDrive ? "Faster drive" : m == RobotModule.Shielding ? "Flare shielding"
             : m == RobotModule.ThermalInsulation ? "Thermal insulation"
-            : m == RobotModule.Processor ? "Processor (AI 2)" : m == RobotModule.AdvancedProcessor ? "Advanced processor (AI 3)" : m.ToString();
+            : m == RobotModule.Processor ? "Processor (AI 2)" : m == RobotModule.AdvancedProcessor ? "Advanced processor (AI 3)"
+            : m == RobotModule.Boat ? "Boat hull (works on water)" : m.ToString();
 
         // ---- Recipes (TBD) ----
 
-        /// <summary>Workshop building: build parts, Wh. TBD.</summary>
-        public const double WorkshopPartsWh = 2_000_000.0;
-
-        /// <summary>A new robot; manufacture costs more parts than a full repair (spec §7).</summary>
+        /// <summary>A new robot.</summary>
         public static Recipe Robot(RobotKind kind, bool sodium, bool aluminium)
         {
-            var r = new Recipe { PartsWh = 50_000.0, WorkHours = 24.0 }
+            var r = new Recipe { EnergyWh = 50_000.0, WorkHours = 24.0 }
                 .Add(Material.Iron, 400.0).Add(Material.Rock, 200.0)
                 .Add(aluminium ? Material.Aluminium : Material.Copper, 40.0)
                 .Add(sodium ? Material.Sodium : Material.Lithium, sodium ? 6.0 : 2.0);
@@ -151,7 +154,7 @@ namespace KardashevAscent.Simulation.Robots
 
         public static Recipe Upgrade(RobotModule module, bool sodium, bool aluminium)
         {
-            var r = new Recipe { PartsWh = 5_000.0, WorkHours = 6.0 };
+            var r = new Recipe { EnergyWh = 5_000.0, WorkHours = 6.0 };
             switch (module)
             {
                 case RobotModule.BigBattery: return r.Add(sodium ? Material.Sodium : Material.Lithium, sodium ? 3.0 : 1.0);
@@ -161,6 +164,8 @@ namespace KardashevAscent.Simulation.Robots
                 // Processors: copper wiring and silicon from rock (placeholder amounts, TBD).
                 case RobotModule.Processor: return r.Add(aluminium ? Material.Aluminium : Material.Copper, 5.0).Add(Material.Rock, 10.0);
                 case RobotModule.AdvancedProcessor: return r.Add(aluminium ? Material.Aluminium : Material.Copper, 10.0).Add(Material.Rock, 20.0);
+                // A steel hull with sealed floats and a small motor (placeholder amounts, TBD).
+                case RobotModule.Boat: return r.Add(Material.Iron, 60.0).Add(Material.Rock, 20.0).Add(aluminium ? Material.Aluminium : Material.Copper, 5.0);
                 default: return r;
             }
         }
@@ -176,8 +181,8 @@ namespace KardashevAscent.Simulation.Robots
         {
             double kg = RefineBatchKg(output);
             return output == Material.Aluminium
-                ? new Recipe { PartsWh = 15_000.0 * kg, WorkHours = 4.0 }.Add(Material.Rock, 6.0 * kg)
-                : new Recipe { PartsWh = 15_000.0 * kg, WorkHours = 4.0 }.Add(Material.Rock, 45.0 * kg);
+                ? new Recipe { EnergyWh = 15_000.0 * kg, WorkHours = 4.0 }.Add(Material.Rock, 6.0 * kg)
+                : new Recipe { EnergyWh = 15_000.0 * kg, WorkHours = 4.0 }.Add(Material.Rock, 45.0 * kg);
         }
     }
 }

@@ -21,8 +21,11 @@ namespace KardashevAscent.Simulation.Tests.Robots
         static PlanetSimulation WithWorkshop()
         {
             var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
+            sim.Workforce.Reset(sim.BaseTileId, 1);   // these tests follow one robot
             Assert.IsTrue(sim.PlaceWorkshop(sim.BaseTileId, 5));
-            Assert.AreEqual(1, sim.WorkshopCount, "built from the lander's parts at once");
+            RunUntil(sim, () => sim.WorkshopCount == 1);
+            Assert.AreEqual(1, sim.WorkshopCount, "a starter robot builds it from the lander's cargo");
+            sim.Materials.Clear();   // tests stock exactly what they need
             return sim;
         }
 
@@ -47,9 +50,8 @@ namespace KardashevAscent.Simulation.Tests.Robots
         {
             var sim = WithWorkshop();
             Assert.AreEqual(BuildingType.Workshop, sim.GetBuilding(sim.BaseTileId, 5));
-            double stock = sim.BuildStockWh;
             Assert.IsTrue(sim.RemoveBuilding(sim.BaseTileId, 5));
-            Assert.AreEqual(stock + BuildCosts.SalvageShare * RobotTech.WorkshopPartsWh, sim.BuildStockWh, 1e-3);
+            Assert.AreEqual(BuildCosts.SalvageShare * BuildCosts.Workshop[Material.Iron], sim.Materials[Material.Iron], 1e-6);
         }
 
         [Test]
@@ -58,6 +60,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
             StringAssert.Contains("Workshop", sim.OrderRobot(RobotKind.General));
             sim.PlaceWorkshop(sim.BaseTileId, 5);
+            sim.Materials.Clear();
             StringAssert.StartsWith("Missing", sim.OrderRobot(RobotKind.General));
             Assert.AreEqual(0, sim.Jobs.Count);
         }
@@ -67,12 +70,10 @@ namespace KardashevAscent.Simulation.Tests.Robots
         {
             var sim = WithWorkshop();
             Stock(sim, 1000.0);
-            double parts = sim.BuildStockWh;
             Assert.IsNull(sim.OrderRobot(RobotKind.General));
             Assert.AreEqual(1000.0 - 400.0, sim.Materials[Material.Iron], 1e-9);
             Assert.AreEqual(1000.0 - 40.0, sim.Materials[Material.Copper], 1e-9, "copper while there is enough");
             Assert.AreEqual(1000.0 - 2.0, sim.Materials[Material.Lithium], 1e-9);
-            Assert.AreEqual(parts - 50_000.0, sim.BuildStockWh, 1e-6);
             Assert.AreEqual(TaskKind.Manufacture, sim.Workforce.Robots[0].Task.Value.Kind);
             sim.Tick(23.0);
             Assert.AreEqual(1, sim.Workforce.Robots.Count, "24 hours of work");
@@ -99,9 +100,10 @@ namespace KardashevAscent.Simulation.Tests.Robots
         }
 
         [Test]
-        public void ManufactureCostsMoreThanARepair()
+        public void ManufactureTakesMoreIronThanARepair()
         {
-            Assert.Greater(RobotTech.Robot(RobotKind.General, false, false).PartsWh, RobotSpecs.RepairPartsWh);
+            Assert.Greater(RobotTech.Robot(RobotKind.General, false, false).Inputs.Find(i => i.Material == Material.Iron).Kg,
+                           RobotSpecs.RepairIronKg);
         }
 
         [Test]
@@ -193,11 +195,9 @@ namespace KardashevAscent.Simulation.Tests.Robots
         {
             var sim = WithWorkshop();
             Stock(sim, 1000.0);
-            double parts = sim.BuildStockWh;
             sim.OrderRobot(RobotKind.General);
             Assert.IsTrue(sim.CancelJob(0));
             Assert.AreEqual(1000.0, sim.Materials[Material.Iron], 1e-9);
-            Assert.AreEqual(parts, sim.BuildStockWh, 1e-6);
             Assert.IsFalse(sim.CancelJob(0));
         }
 
@@ -247,15 +247,15 @@ namespace KardashevAscent.Simulation.Tests.Robots
             var up = new RobotUpkeep();
             var lander = new System.Collections.Generic.List<RobotFacility> { new RobotFacility(0, -1, ChargingCapability.Lander) };
             up.Plan(w, lander, 1.0);
-            var parts = new BigParts();
-            up.Apply(w, 1.0, 0.0, 0.0, 0.0, false, parts);
+            up.Apply(w, 1.0, 0.0, 0.0, 0.0, false, null, Plenty());
             Assert.AreEqual(RobotSpecs.RepairPerHour * RobotSpecs.SpecialistSpeed, hurt.Condition, 1e-12);
         }
 
-        sealed class BigParts : IPartsStore
+        static KardashevAscent.Simulation.Resources.MaterialStock Plenty()
         {
-            public double StockWh => 1e12;
-            public double Take(double wh) => wh;
+            var s = new KardashevAscent.Simulation.Resources.MaterialStock();
+            foreach (var m in KardashevAscent.Simulation.Resources.Materials.All) s.Add(m, 1e9);
+            return s;
         }
 
         [Test]

@@ -313,9 +313,12 @@ namespace KardashevAscent.Presentation.UI
             string siteLine = "";
             if (isSite)
             {
-                placer.SelectedSiteProgress(out double progress, out double remaining);
-                siteLine = $"Under construction: {progress * 100.0:0} % · needs {Format.Energy(remaining)} more build parts " +
-                           "(made from spare power; taken only while a robot works here). Works once finished.\n";
+                placer.SelectedSiteProgress(out double progress, out KardashevAscent.Simulation.Resources.MaterialBill remaining);
+                KardashevAscent.Simulation.Resources.MaterialBill short_ = remaining.Minus(placer.Stock);
+                string boat = placer.SelectedBuilding == BuildingType.FloatingSolar ? " Needs a robot with a boat hull (Workshop upgrade)." : "";
+                siteLine = $"Under construction: {progress * 100.0:0} % · needs {remaining.Describe()} " +
+                           "(a robot brings it from stock while it works here)" +
+                           (short_.IsEmpty ? "" : $"; short of {short_.Describe()}: mine or refine it") + $". Works once finished.{boat}\n";
             }
             if (hasPanel && placer.SelectedSalvageOrdered)
                 siteLine = "Salvage ordered: it works until a robot takes it down (Del again to cancel).\n" + siteLine;
@@ -397,14 +400,14 @@ namespace KardashevAscent.Presentation.UI
                 placeButton.text = $"Place {thing} (P)";
             }
             batteryText.text = relayMode
-                ? $"Costs {Format.Energy(placer.BuildCostWh)} of build parts. Extends the colony network " +
+                ? $"Takes {placer.BuildBill.Describe()}. Extends the colony network " +
                   $"{KardashevAscent.Simulation.Robots.ColonyNetwork.RangeTiles} tiles around it, so robots working out there stay connected. " +
                   "Draws a little grid power; the Network window (N) shows the coverage."
                 : stationMode
-                ? $"Costs {Format.Energy(placer.BuildCostWh)} of build parts. Charges robots from the grid, faster than a " +
+                ? $"Takes {placer.BuildBill.Describe()}. Charges robots from the grid, faster than a " +
                   "battery yard and more at once. Build one near where robots work: they drive to the nearest charger."
                 : workshopMode
-                ? $"Costs {Format.Energy(placer.BuildCostWh)} of build parts. Makes new robots, upgrades, and aluminium " +
+                ? $"Takes {placer.BuildBill.Describe()}. Makes new robots, upgrades, and aluminium " +
                   "or sodium from rock. Order jobs in the Robots panel (G)."
                 : $"Stores {Format.Energy(placer.BatteryUnitWh)}: charges from surplus by day, " +
                   "carries the colony through the night so it can keep growing.";
@@ -446,12 +449,12 @@ namespace KardashevAscent.Presentation.UI
             placeButton.SetEnabled(preview.CanPlace && (!multi || empty > 0));
 
             int count = multi ? empty : 1;
-            double cost = placer.BuildCostWh * count, stock = placer.BuildStockWh;
+            KardashevAscent.Simulation.Resources.MaterialBill cost = placer.BuildBill.Times(count);
+            KardashevAscent.Simulation.Resources.MaterialBill missing = cost.Minus(placer.Stock);
             Show(plannerCost, count > 0 && !blocked);
-            plannerCost.text = cost <= stock
-                ? $"Costs {Format.Energy(cost)} of build parts · {Format.Energy(stock)} on hand"
-                : $"Costs {Format.Energy(cost)} of build parts · {Format.Energy(stock)} on hand: " +
-                  "the rest waits as a construction site until spare power makes it";
+            plannerCost.text = missing.IsEmpty
+                ? $"Takes {cost.Describe()} · in stock; a robot brings it"
+                : $"Takes {cost.Describe()} · short of {missing.Describe()}: the site waits until it is mined or refined";
         }
 
         void UpdateLegend()
