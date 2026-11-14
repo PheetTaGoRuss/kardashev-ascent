@@ -287,7 +287,7 @@ namespace KardashevAscent.Presentation.UI
             {
                 int tile = picker.HoveredTile;
                 double kwh = lightMap != null ? lightMap.ValueAt(tile) : double.NaN;
-                hoverText.text = picker.Describe(tile) + (double.IsNaN(kwh) ? "" : $"\nSunlight {kwh:N0} kWh/m²/yr");
+                hoverText.text = picker.Describe(tile, placer != null && placer.KnowsLatitude(tile)) + (double.IsNaN(kwh) ? "" : $"\nSunlight {kwh:N0} kWh/m²/yr");
             }
 
             if (siteOpen)
