@@ -1,57 +1,148 @@
 {
-  "_comment": "Which planets the game loads. archiveName must match pl_name in the NASA Exoplanet Archive table pscomppars exactly; null = hand-made planet. 'assumed' holds values the archive cannot give (axial tilt, day length, atmosphere); they are marked as assumed in the output so the game can show players which numbers are real.",
-  "planets": [
-    {
-      "id": "viridia",
-      "displayName": "Viridia",
-      "archiveName": null,
-      "assumed": {
-        "luminositySun": 1.0,
-        "starTeffK": 5772,
-        "starMassSun": 1.0,
-        "semiMajorAxisAu": 1.0,
-        "eccentricity": 0.0167,
-        "yearLengthDays": 365.256,
-        "radiusEarth": 1.0,
-        "massEarth": 1.0,
-        "obliquityDeg": 23.44,
-        "perihelionLongitudeDeg": 282.94,
-        "dayLengthHours": 24.0,
-        "opticalDepth": 0.32,
-        "diffuseK": 0.3,
-        "airTemperatureC": 25.0,
-        "clouds": "earth",
-        "terrainSeed": 7,
-        "bondAlbedo": 0.306
-      }
-    },
-    {
-      "id": "proxima-cen-b",
-      "displayName": "Proxima Centauri b",
-      "archiveName": "Proxima Cen b",
-      "assumed": { "tidallyLocked": true, "water": "none", "oceanFraction": 0.5 }
-    },
-    {
-      "id": "trappist-1-e",
-      "displayName": "TRAPPIST-1 e",
-      "archiveName": "TRAPPIST-1 e",
-      "assumed": {
-        "tidallyLocked": true, "oceanFraction": 0.85,
-        "ironMassFraction": 0.21,
-        "ironMassFractionNote": "Agol et al. 2021, PSJ 2:1: all seven TRAPPIST-1 planets fit ~21 wt % iron (Earth 32 %)"
-      }
-    },
-    {
-      "id": "kepler-16-b",
-      "displayName": "Kepler-16 b",
-      "archiveName": "Kepler-16 b",
-      "assumed": { "obliquityDeg": 0.0, "dayLengthHours": 24.0 }
-    },
-    {
-      "id": "kepler-452-b",
-      "displayName": "Kepler-452 b",
-      "archiveName": "Kepler-452 b",
-      "assumed": { "obliquityDeg": 23.44, "dayLengthHours": 24.0, "water": "none", "oceanFraction": 0.45 }
-    }
-  ]
+ "_comment": "Which planets the game loads. archiveName must match pl_name in the NASA Exoplanet Archive table pscomppars exactly; null = hand-made planet. 'assumed' holds values the archive cannot give (axial tilt, day length, atmosphere); they are marked as assumed in the output so the game can show players which numbers are real.",
+ "planets": [
+  {
+   "id": "viridia",
+   "displayName": "Viridia",
+   "archiveName": null,
+   "assumed": {
+    "luminositySun": 1.0,
+    "starTeffK": 5772,
+    "starMassSun": 1.0,
+    "semiMajorAxisAu": 1.0,
+    "eccentricity": 0.0167,
+    "yearLengthDays": 365.256,
+    "radiusEarth": 1.0,
+    "massEarth": 1.0,
+    "obliquityDeg": 23.44,
+    "perihelionLongitudeDeg": 282.94,
+    "dayLengthHours": 24.0,
+    "opticalDepth": 0.32,
+    "diffuseK": 0.3,
+    "airTemperatureC": 25.0,
+    "clouds": "earth",
+    "terrainSeed": 7,
+    "bondAlbedo": 0.306
+   }
+  },
+  {
+   "id": "proxima-cen-b",
+   "displayName": "Proxima Centauri b",
+   "archiveName": "Proxima Cen b",
+   "assumed": {
+    "tidallyLocked": true,
+    "water": "none",
+    "oceanFraction": 0.5
+   }
+  },
+  {
+   "id": "trappist-1-e",
+   "displayName": "TRAPPIST-1 e",
+   "archiveName": "TRAPPIST-1 e",
+   "assumed": {
+    "tidallyLocked": true,
+    "oceanFraction": 0.85,
+    "ironMassFraction": 0.21,
+    "ironMassFractionNote": "Agol et al. 2021, PSJ 2:1: all seven TRAPPIST-1 planets fit ~21 wt % iron (Earth 32 %)"
+   }
+  },
+  {
+   "id": "kepler-16-b",
+   "displayName": "Kepler-16 b",
+   "archiveName": "Kepler-16 b",
+   "assumed": {
+    "obliquityDeg": 0.0,
+    "dayLengthHours": 24.0
+   }
+  },
+  {
+   "id": "kepler-452-b",
+   "displayName": "Kepler-452 b",
+   "archiveName": "Kepler-452 b",
+   "assumed": {
+    "obliquityDeg": 23.44,
+    "dayLengthHours": 24.0,
+    "water": "none",
+    "oceanFraction": 0.45
+   }
+  },
+  {
+   "id": "mars",
+   "displayName": "Mars",
+   "archiveName": null,
+   "nasaSource": "NASA NSSDC Mars Fact Sheet (updated 2025-05-19)",
+   "nasaFields": [
+    "solar.semiMajorAxisM",
+    "solar.eccentricity",
+    "solar.yearLengthHours",
+    "solar.dayLengthHours",
+    "solar.obliquityDeg",
+    "solar.surfacePressureEarth",
+    "solar.airTemperatureC",
+    "planet.radiusM",
+    "planet.massKg",
+    "planet.bondAlbedo"
+   ],
+   "assumed": {
+    "luminositySun": 1.0,
+    "starTeffK": 5772,
+    "starMassSun": 1.0,
+    "semiMajorAxisAu": 1.523792,
+    "eccentricity": 0.0935,
+    "yearLengthDays": 686.98,
+    "radiusEarth": 0.532,
+    "massEarth": 0.107,
+    "obliquityDeg": 25.19,
+    "dayLengthHours": 24.6597,
+    "perihelionLongitudeDeg": 250.87,
+    "perihelionLongitudeNote": "Mars solar longitude of perihelion Ls = 250.87 deg (Allison & McEwen 2000, NASA GISS Mars24); the fact sheet's 336.04 deg is measured from Earth's equinox",
+    "surfacePressureEarth": 0.00628,
+    "airTemperatureC": -59.0,
+    "bondAlbedo": 0.25,
+    "opticalDepth": 0.5,
+    "water": "none",
+    "oceanFraction": 0.33,
+    "clouds": "none"
+   }
+  },
+  {
+   "id": "trappist-1-f",
+   "displayName": "TRAPPIST-1 f",
+   "archiveName": "TRAPPIST-1 f",
+   "assumed": {
+    "tidallyLocked": true,
+    "oceanFraction": 0.85,
+    "ironMassFraction": 0.21,
+    "ironMassFractionNote": "Agol et al. 2021, PSJ 2:1: all seven TRAPPIST-1 planets fit ~21 wt % iron (Earth 32 %)"
+   }
+  },
+  {
+   "id": "toi-700-d",
+   "displayName": "TOI-700 d",
+   "archiveName": "TOI-700 d",
+   "assumed": {
+    "tidallyLocked": true
+   }
+  },
+  {
+   "id": "lhs-1140-b",
+   "displayName": "LHS 1140 b",
+   "archiveName": "LHS 1140 b",
+   "assumed": {
+    "tidallyLocked": true
+   }
+  },
+  {
+   "id": "kepler-186-f",
+   "displayName": "Kepler-186 f",
+   "archiveName": "Kepler-186 f",
+   "assumed": {}
+  },
+  {
+   "id": "kepler-442-b",
+   "displayName": "Kepler-442 b",
+   "archiveName": "Kepler-442 b",
+   "assumed": {}
+  }
+ ]
 }
