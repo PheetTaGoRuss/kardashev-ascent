@@ -122,7 +122,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.AreEqual(BuildingType.None, sim.GetBuilding(t, 0));
             Assert.IsFalse(sim.IsSalvageOrdered(t, 0));
             CollectionAssert.AreEqual(new[] { (t, 0) }, salvaged);
-            Assert.AreEqual(stock + BuildCosts.SalvageShare * sim.BuildBill(BuildingType.Battery)[KardashevAscent.Simulation.Resources.Material.Iron],
+            Assert.AreEqual(stock + KardashevAscent.Simulation.Resources.BuildCosts.SalvageShare * sim.BuildBill(BuildingType.Battery)[KardashevAscent.Simulation.Resources.Material.Iron],
                             sim.Materials[KardashevAscent.Simulation.Resources.Material.Iron], 1e-6);
         }
 

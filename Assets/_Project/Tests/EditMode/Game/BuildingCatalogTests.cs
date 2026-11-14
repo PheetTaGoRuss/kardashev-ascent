@@ -24,9 +24,9 @@ namespace KardashevAscent.Simulation.Tests.Game
         [Test]
         public void FixedBills_AreTheStationBills()
         {
-            Assert.AreSame(KardashevAscent.Simulation.Energy.BuildCosts.Workshop, BuildingCatalog.Get(BuildingType.Workshop).FixedBill);
-            Assert.AreSame(KardashevAscent.Simulation.Energy.BuildCosts.ChargingStation, BuildingCatalog.Get(BuildingType.ChargingStation).FixedBill);
-            Assert.AreSame(KardashevAscent.Simulation.Energy.BuildCosts.Relay, BuildingCatalog.Get(BuildingType.Relay).FixedBill);
+            Assert.AreSame(KardashevAscent.Simulation.Resources.BuildCosts.Workshop, BuildingCatalog.Get(BuildingType.Workshop).FixedBill);
+            Assert.AreSame(KardashevAscent.Simulation.Resources.BuildCosts.ChargingStation, BuildingCatalog.Get(BuildingType.ChargingStation).FixedBill);
+            Assert.AreSame(KardashevAscent.Simulation.Resources.BuildCosts.Relay, BuildingCatalog.Get(BuildingType.Relay).FixedBill);
             Assert.IsNull(BuildingCatalog.Get(BuildingType.SolarPanel).FixedBill, "panels are priced from their area");
             Assert.IsNull(BuildingCatalog.Get(BuildingType.Battery).FixedBill, "batteries are priced from their size");
         }

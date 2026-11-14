@@ -118,8 +118,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             var rock = KardashevAscent.Simulation.Resources.Material.Rock;
             double stock = sim.Materials[rock];
             Assert.IsTrue(sim.RemovePanel(t, 0));
-            double smallCost = BuildCosts.Panel(10_000.0)[rock];
-            Assert.AreEqual(stock + BuildCosts.SalvageShare * smallCost, sim.Materials[rock], 1e-6, "salvage at its own size");
+            double smallCost = KardashevAscent.Simulation.Resources.BuildCosts.Panel(10_000.0)[rock];
+            Assert.AreEqual(stock + KardashevAscent.Simulation.Resources.BuildCosts.SalvageShare * smallCost, sim.Materials[rock], 1e-6, "salvage at its own size");
         }
 
         [Test]
