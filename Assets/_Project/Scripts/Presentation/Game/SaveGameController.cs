@@ -23,9 +23,13 @@ namespace KardashevAscent.Presentation.Game
 
         static string FilePath => Path.Combine(Application.persistentDataPath, FileName);
 
+        /// <summary>True when there is a saved game to load.</summary>
+        public bool HasSave => File.Exists(FilePath);
+
         void Update()
         {
-            if (ScreenInput.KeyDown(saveKey))
+            // Nothing to save before the colony has landed.
+            if (ScreenInput.KeyDown(saveKey) && GameFlow.IsPlaying)
                 Save();
             else if (ScreenInput.KeyDown(loadKey))
                 Load();

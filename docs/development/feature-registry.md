@@ -55,6 +55,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | PL-02 | Terrain per planet from seed and flags | CONFIRMED | PR #45 | Tested | `Planet/PlanetSurface.cs` |
 | PL-03 | Real planets from the NASA Exoplanet Archive with provenance labels | CONFIRMED | PR #16, #43 | Tested | `Planet/PlanetRecord.cs`, `tools/exoplanets` |
 | PL-04 | Choose the planet and the landing tile | CONFIRMED | PR #43, #55 | Tested (simulation side) | `SimulationRunner`, `PlanetChooserView` |
+| PL-04a | Landing is a required first step: after choosing the planet, time stays stopped and no building site opens until the player picks a land tile and presses Land here; the colony can't move afterwards (replaces "move before the first building") | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Implemented | `Presentation/Game/GameFlow.cs`, `UI/TileInfoView.cs` |
 | PL-05 | Building slots per tile; multi-slot footprints | CONFIRMED | PR #28, #33, #61 | Tested | `Planet/TileSite.cs`, `Game/BuildingFootprints.cs` |
 | PL-06 | Earth cloud climatology on Earth-like planets | CONFIRMED | PR #23 | Tested | `Climate/CloudClimate.cs` |
 | PL-10 | New terrain: forest, wetland, beach, volcanic rock (second terrain pass on warm wet planets; volcanic rock anywhere). Wetland is too soft for land buildings; forest and beach keep the landing rank of lowland; forest, wetland and volcanic rock slow robots; albedo and names per terrain | CONFIRMED (director's choice of all four, 2026-11-13) | chat 2026-11-13 | Tested; seen in Play mode | `Planet/PlanetSurface.cs` |
@@ -165,6 +166,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | UI-04 | One window per game system with a tab bar | No decision recorded in the repository | — | In progress | `feature/building-footprints` |
 | UI-05 | Minimal permanent interface | CONFIRMED as a principle | V | Not started | — |
 | UI-06 | Windows build from a menu | CONFIRMED | PR #44 | Implemented | `Editor/BuildWindows.cs` |
+| UI-08 | Game menu: main menu at launch (New game, Continue saved game, Quit) and a pause menu on Esc (Resume, Save, Load, Main menu, Quit); time is stopped on both | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Implemented | `Presentation/Game/GameFlow.cs` |
 | UI-07 | Build bar in categories (Power, Stations) with an (i) description per building | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/UI/BuildInfo.cs`, `PanelsView.cs` |
 
 ## 3. Decisions approved by the director
@@ -175,6 +177,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | 2026-11-08 | Colony network Q1: relay range plus hub power; the lander is the hub; a brownout takes the network down | `docs/design/robotic-workforce-v2-audit.md` section 6 |
 | 2026-11-14 | Stage E details: AI level from Processor (2) and Advanced processor (3) Workshop upgrades, unlocked by milestones until research exists; a cut-off robot's findings wait until it syncs (directly or through a robot nearby), backups and loss wait for OQ-9; colony computing is a grid load per AI level above 1, cut first in a shortage, robots then work at level 1 | `docs/design/robotic-workforce-v2-audit.md` section 6 |
 | 2026-11-14 | Terrain and build bar: buildings clear trees and rocks on their slots, visual only; exaggerated relief from orbit; build bar in Power and Stations with (i) descriptions | PL-11 to PL-14, UI-07 |
+| 2026-11-14 | Game flow: main menu plus pause menu; the player must pick the first landing tile before time starts, with the game paused while picking | PL-04a, UI-08 |
 | 2026-11-14 | Rivers removed after a look in Play mode ("bugged and weird"); RiverMap, its rules and its drawing deleted | PL-12 |
 | 2026-11-09 | Solar measurements: robots turn built panels; research robots measure every solar parameter; measurement is a reasoning puzzle | `docs/design/solar-measurements.md` (on its branch) |
 | 2026-11-12 | Game vision and the ten design pillars | [`../game/game-vision.md`](../game/game-vision.md) |

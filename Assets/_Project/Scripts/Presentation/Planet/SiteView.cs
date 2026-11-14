@@ -196,6 +196,12 @@ namespace KardashevAscent.Presentation.Planet
                 Close();
                 return;
             }
+            // Before the colony lands there is nothing to build: a click only shows the tile.
+            if (!GameFlow.IsPlaying)
+            {
+                Close();
+                return;
+            }
             Site = SiteFor(tile);
             if (picker != null)
                 picker.ShowSelectedOutline = false;
