@@ -347,6 +347,18 @@ namespace KardashevAscent.Presentation.Game
             pbox.Add(loadButton);
             pbox.Add(MenuButton("Main menu", () => SetPhase(GamePhase.MainMenu)));
             pbox.Add(MenuButton("Quit", Quit));
+            // Sound (director 2026-11-14): effects and ambience volumes, and mute; kept between games.
+            var soundHead = new Label("SOUND");
+            soundHead.AddToClassList("heading");
+            soundHead.style.marginTop = 10;
+            pbox.Add(soundHead);
+            pbox.Add(VolumeSlider("Effects", KardashevAscent.Presentation.Audio.GameAudio.SfxVolume,
+                                  v => { KardashevAscent.Presentation.Audio.GameAudio.SetSfxVolume(v); KardashevAscent.Presentation.Audio.GameAudio.Play(KardashevAscent.Presentation.Audio.Sfx.Click); }));
+            pbox.Add(VolumeSlider("Ambience", KardashevAscent.Presentation.Audio.GameAudio.MusicVolume, KardashevAscent.Presentation.Audio.GameAudio.SetMusicVolume));
+            var mute = new Toggle("Mute all") { value = KardashevAscent.Presentation.Audio.GameAudio.Muted };
+            mute.RegisterValueChangedCallback(e => KardashevAscent.Presentation.Audio.GameAudio.SetMuted(e.newValue));
+            mute.style.marginTop = 4;
+            pbox.Add(mute);
             pauseMessage = new Label(""); pauseMessage.AddToClassList("caption");
             pauseMessage.style.unityTextAlign = TextAnchor.MiddleCenter; pauseMessage.style.marginTop = 6;
             pbox.Add(pauseMessage);
@@ -425,6 +437,29 @@ namespace KardashevAscent.Presentation.Game
             // Square grey blocks from the theme; the main choice is the solid amber one.
             if (primary) b.AddToClassList("primary-button");
             return b;
+        }
+
+        static VisualElement VolumeSlider(string name, float value, System.Action<float> changed)
+        {
+            var row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.alignItems = Align.Center;
+            row.style.marginTop = 4;
+            var label = new Label(name);
+            label.AddToClassList("body");
+            label.style.width = 80;
+            row.Add(label);
+            var slider = new Slider(0f, 1f) { value = value };
+            slider.AddToClassList("slider");
+            slider.style.flexGrow = 1;
+            var pct = new Label($"{value * 100f:0} %");
+            pct.AddToClassList("caption");
+            pct.style.width = 44;
+            pct.style.unityTextAlign = TextAnchor.MiddleRight;
+            slider.RegisterValueChangedCallback(e => { pct.text = $"{e.newValue * 100f:0} %"; changed(e.newValue); });
+            row.Add(slider);
+            row.Add(pct);
+            return row;
         }
 
         static void Show(VisualElement e, bool visible)

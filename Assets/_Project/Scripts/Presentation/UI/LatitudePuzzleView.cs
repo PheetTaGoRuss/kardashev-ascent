@@ -102,6 +102,7 @@ namespace KardashevAscent.Presentation.UI
                 return;
             }
             string result = sim.AnswerLatitudePuzzle(puzzle.Tile, phi, out LatitudePuzzle.Grade grade);
+            KardashevAscent.Presentation.Audio.GameAudio.Play(grade != LatitudePuzzle.Grade.Wrong ? KardashevAscent.Presentation.Audio.Sfx.Correct : KardashevAscent.Presentation.Audio.Sfx.Wrong);
             message.text = notes + (grade == LatitudePuzzle.Grade.Wrong ? result
                 : grade == LatitudePuzzle.Grade.Precise ? "Precise! " + result : "Close enough (rough fix). " + result);
             if (grade != LatitudePuzzle.Grade.Wrong)

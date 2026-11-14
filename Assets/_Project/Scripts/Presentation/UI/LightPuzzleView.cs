@@ -306,6 +306,7 @@ namespace KardashevAscent.Presentation.UI
                 return;
             }
             string result = sim.AnswerParameterPuzzle(puzzle.Parameter, v, out LatitudePuzzle.Grade grade);
+            KardashevAscent.Presentation.Audio.GameAudio.Play(grade != LatitudePuzzle.Grade.Wrong ? KardashevAscent.Presentation.Audio.Sfx.Correct : KardashevAscent.Presentation.Audio.Sfx.Wrong);
             message.text = grade == LatitudePuzzle.Grade.Precise ? "Precise! " + result : result;
             if (grade != LatitudePuzzle.Grade.Wrong)
                 solved?.Invoke(message.text);
