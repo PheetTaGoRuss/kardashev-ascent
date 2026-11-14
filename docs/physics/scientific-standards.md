@@ -76,7 +76,7 @@ Shared constants live in `Solar/SolarConstants.cs` and match the constants liste
 6. **Keep prototypes in step.** A formula in `prototypes/solar/solar.py` and its C# port change together, and both test suites run.
 7. **Then use it** in a colony system.
 
-An AI developer does not add a formula from memory. If no source can be reached, the value is a placeholder marked `TBD`, the gap is listed in `physics-verification.md`, and the pull request says so.
+A contributor must not add a formula from memory. If no source can be reached, the value is a placeholder marked `TBD`, the gap is listed in `physics-verification.md`, and the pull request says so.
 
 ## 6. Numerical rules
 
