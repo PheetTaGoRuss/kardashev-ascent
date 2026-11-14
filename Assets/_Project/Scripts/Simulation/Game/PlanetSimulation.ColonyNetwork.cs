@@ -14,9 +14,6 @@ namespace KardashevAscent.Simulation.Game
     {
         public ColonyNetwork Network { get; private set; }
 
-        /// <summary>The planet's rivers (drawn, more water deposits, slower to cross). Derived from the tiles: not saved.</summary>
-        public RiverMap Rivers { get; private set; }
-
         public bool PlaceRelay(int tileId, int slot)
         {
             if (!CanPlace(BuildingType.Relay, tileId, slot))
