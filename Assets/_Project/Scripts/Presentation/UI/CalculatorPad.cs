@@ -215,7 +215,7 @@ namespace KardashevAscent.Presentation.UI
             close.style.fontSize = 16;
             bar.Add(close);
             w.Add(bar);
-            Drag(bar, w);
+            PanelDrag.Attach(bar, w);
 
             display = new TextField { maxLength = 80 };
             display.AddToClassList("puzzle-field");
@@ -293,31 +293,5 @@ namespace KardashevAscent.Presentation.UI
 
         static string ResultText() =>
             ScienceCalculator.TryEvaluate(display?.value, out double v, out _) ? ScienceCalculator.Format(v) : "";
-
-        static void Drag(VisualElement handle, VisualElement target)
-        {
-            bool dragging = false;
-            Vector2 start = default, origin = default;
-            handle.RegisterCallback<PointerDownEvent>(e =>
-            {
-                if (e.target is Button) return;
-                dragging = true;
-                start = e.position;
-                origin = new Vector2(target.resolvedStyle.left, target.resolvedStyle.top);
-                handle.CapturePointer(e.pointerId);
-            });
-            handle.RegisterCallback<PointerMoveEvent>(e =>
-            {
-                if (!dragging) return;
-                Vector2 d = (Vector2)e.position - start;
-                target.style.left = origin.x + d.x;
-                target.style.top = origin.y + d.y;
-            });
-            handle.RegisterCallback<PointerUpEvent>(e =>
-            {
-                dragging = false;
-                handle.ReleasePointer(e.pointerId);
-            });
-        }
     }
 }

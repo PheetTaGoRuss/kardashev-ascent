@@ -50,6 +50,7 @@ namespace KardashevAscent.Presentation.UI
             ScreenInput.Register(root.panel);
 
             panelRoot = root.Q("tile-info");
+            PanelDrag.AddGrip(panelRoot);   // drag it anywhere (director 2026-11-14)
             title = root.Q<Label>("title");
             place = root.Q<Label>("place");
             sunlight = root.Q<Label>("sunlight");

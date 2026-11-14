@@ -1,8 +1,8 @@
 .screen { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
 
-.left-column { position: absolute; left: 12px; top: 80px; width: 300px; }
+.left-column { position: absolute; left: 12px; top: 80px; width: 390px; }
 .box { padding: 8px 12px; margin-bottom: 8px; }
-.body { font-size: 13px; white-space: normal; padding: 0; margin: 1px 0; }
+.body { font-size: 15px; white-space: normal; padding: 0; margin: 1px 0; }
 .numbers { margin-top: 6px; }
 .box .caption { white-space: normal; margin-top: 2px; }
 .warn { color: var(--critical); }
@@ -18,8 +18,8 @@
 .action-button {
     flex-grow: 1;
     margin: 0 4px 0 0;
-    padding: 4px 8px;
-    font-size: 12px;
+    padding: 5px 10px;
+    font-size: 14px;
     color: var(--text);
     background-color: var(--button);
     border-width: 2px;
@@ -33,7 +33,7 @@
 
 .bottom-left { position: absolute; left: 12px; bottom: 12px; width: 320px; }
 .hint { margin-bottom: 4px; }
-.help { font-size: 12px; color: var(--text-muted); margin-bottom: 0; padding: 8px 12px; }
+.help { font-size: 14px; color: var(--text-muted); margin-bottom: 0; padding: 8px 12px; }
 
 .legend { position: absolute; left: 50%; bottom: 12px; width: 300px; translate: -50% 0; }
 .legend .caption { white-space: normal; }
@@ -62,8 +62,14 @@
 }
 .info-button:hover { background-color: rgba(255, 199, 92, 0.3); }
 .info-button.selected { color: var(--accent); background-color: rgba(255, 199, 92, 0.16); border-color: var(--accent); }
-.build-info { position: absolute; left: 50%; bottom: 130px; translate: -50% 0; width: 420px; }
+.build-info { position: absolute; left: 50%; bottom: 130px; translate: -50% 0; width: 540px; }
 .build-info-head { flex-direction: row; justify-content: space-between; align-items: center; }
 .info-close { width: 22px; height: 22px; margin: 0; padding: 0; background-color: rgba(0, 0, 0, 0); border-width: 0; color: var(--text-muted); font-size: 16px; }
 .legend.above-build-bar { bottom: 100px; }
 .action-button.mode.selected { color: var(--accent); background-color: rgba(255, 199, 92, 0.16); border-color: var(--accent); -unity-font-style: bold; }
+
+/* Bigger, easier-to-read inspect and info text (director 2026-11-14). */
+.box .value { font-size: 19px; }
+.box .caption { font-size: 13px; }
+.box .heading { font-size: 12px; }
+.bottom-left { width: 390px; }
