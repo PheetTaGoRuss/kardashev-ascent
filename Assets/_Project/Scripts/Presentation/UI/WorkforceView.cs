@@ -347,6 +347,10 @@ namespace KardashevAscent.Presentation.UI
                 case TaskKind.Mine: return $"Mine {Materials.Name((Material)t.Slot).ToLowerInvariant()} · tile {t.Tile}";
                 case TaskKind.Manufacture:
                     return t.Order < sim.Jobs.Count ? $"Workshop: {sim.Jobs[t.Order].Describe()}" : "Workshop job";
+                case TaskKind.Measure:
+                    return $"Measure {KardashevAscent.Simulation.Solar.SolarUnknowns.Name((KardashevAscent.Simulation.Solar.SolarParameter)t.Slot).ToLowerInvariant()} · Research Station, tile {t.Tile}";
+                case TaskKind.Experiment:
+                    return $"Experiment: {KardashevAscent.Simulation.Planet.Experiments.Name((KardashevAscent.Simulation.Planet.ExperimentKind)t.Slot).ToLowerInvariant()} · Research Station, tile {t.Tile}";
                 default: return t.ToString();
             }
         }

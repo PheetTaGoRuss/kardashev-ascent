@@ -184,6 +184,7 @@ namespace KardashevAscent.Presentation.Game
             (BuildMode.Battery, BuildingType.Battery, "Battery yard", "Power", "carries the colony through the night"),
             (BuildMode.ChargingStation, BuildingType.ChargingStation, "Charging station", "Stations", "robots charge here between jobs"),
             (BuildMode.Workshop, BuildingType.Workshop, "Robot Workshop", "Stations", "makes robots, upgrades (a boat hull for work on water) and refines metals"),
+            (BuildMode.ResearchStation, BuildingType.ResearchStation, "Research Station", "Stations", "robots measure the planet and run experiments here"),
         };
 
         bool Has(BuildingType type)

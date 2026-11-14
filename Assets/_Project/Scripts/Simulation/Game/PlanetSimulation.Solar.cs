@@ -31,6 +31,9 @@ namespace KardashevAscent.Simulation.Game
             {
                 if (!Terrains.AllowsFloating(ground))
                     return new PanelPreview(false, "Floating solar needs shallow sea or wetland.", 0, 0, 0, 0);
+                string unknown = restoringState ? null : KnowledgeBlocker(BuildingType.FloatingSolar);
+                if (unknown != null)
+                    return new PanelPreview(false, unknown, 0, 0, 0, 0);
             }
             // Saved colonies keep what they built, even on ground that is wetland now.
             else if (restoringState ? GetTile(tileId).IsWater : !GetTile(tileId).IsBuildableLand)
