@@ -254,7 +254,7 @@ namespace KardashevAscent.Presentation.UI
                 foreach (string k in line)
                 {
                     string key = k;
-                    var b = new Button(() => Key(key)) { text = key.TrimEnd('(') };
+                    var b = new Button(() => Key(key)) { text = key.Length > 1 ? key.TrimEnd('(') : key };
                     b.style.flexGrow = 1;
                     b.style.flexBasis = 0;
                     b.style.height = 30;

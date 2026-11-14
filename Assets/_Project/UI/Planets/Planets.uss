@@ -8,7 +8,7 @@
     max-height: 84%;
     padding: 10px 12px;
 }
-.planets.panel { background-color: rgba(22, 22, 26, 0.97); }
+.planets.panel { background-color: rgb(22, 22, 26); }
 
 .title-row { flex-direction: row; align-items: flex-start; }
 .title-text { flex-grow: 1; }

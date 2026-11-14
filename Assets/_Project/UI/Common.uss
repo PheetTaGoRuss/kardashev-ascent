@@ -2,7 +2,7 @@
    with an amber accent, in the spirit of factory games such as Mindustry (inspired by, not copied).
    The same colours for code-built UI are in Scripts/Presentation/UI/UiPalette.cs. */
 :root {
-    --panel-bg: rgba(22, 22, 26, 0.94);
+    --panel-bg: rgba(22, 22, 26, 0.97);
     --panel-border: rgb(69, 69, 77);
     --text: rgb(242, 242, 242);
     --text-muted: rgb(166, 166, 171);
@@ -83,7 +83,10 @@
     border-radius: 0;
 }
 .unity-button:hover { background-color: var(--button-hover); border-color: var(--accent); }
-.unity-button:active { background-color: var(--accent-dark); }
+.unity-button:active,
+.unity-button:hover:active { background-color: var(--accent-dark); color: var(--text); }
+.unity-button:focus { background-color: var(--button); }
+.unity-button:focus:hover { background-color: var(--button-hover); }
 .unity-button:disabled { opacity: 0.4; }
 /* The main action on a panel: a solid amber block. */
 .primary-button { color: var(--on-accent); background-color: var(--accent); border-color: var(--accent); -unity-font-style: bold; }
