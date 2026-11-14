@@ -17,6 +17,10 @@ namespace KardashevAscent.Simulation.Robots
         Shielding = 4,
         /// <summary>Thermal insulation: the battery stays at least at <see cref="RobotTech.InsulatedBatteryC"/> (spec v2 §11).</summary>
         ThermalInsulation = 8,
+        /// <summary>A processor upgrade: onboard AI level 2 (workforce v2 stage E). Needs colony computing to use it.</summary>
+        Processor = 16,
+        /// <summary>An advanced processor: onboard AI level 3. Needs <see cref="Processor"/> first.</summary>
+        AdvancedProcessor = 32,
     }
 
     public enum JobKind { Robot, Upgrade, Refine }
@@ -89,7 +93,12 @@ namespace KardashevAscent.Simulation.Robots
 
         public static int UnlockMilestone(RobotModule module) =>
             module == RobotModule.BigBattery || module == RobotModule.ThermalInsulation ? 2
-            : module == RobotModule.FastDrive || module == RobotModule.Shielding ? 3 : int.MaxValue;
+            : module == RobotModule.FastDrive || module == RobotModule.Shielding ? 3
+            : module == RobotModule.Processor ? ProcessorMilestone
+            : module == RobotModule.AdvancedProcessor ? AdvancedProcessorMilestone : int.MaxValue;
+
+        /// <summary>Milestones that unlock the processors, until research exists (game rule, TBD).</summary>
+        public const int ProcessorMilestone = 4, AdvancedProcessorMilestone = 6;
 
         /// <summary>An insulated battery is kept at least this warm, °C. TBD.</summary>
         public const double InsulatedBatteryC = 0.0;
@@ -121,7 +130,8 @@ namespace KardashevAscent.Simulation.Robots
 
         public static string ModuleName(RobotModule m) =>
             m == RobotModule.BigBattery ? "Bigger battery" : m == RobotModule.FastDrive ? "Faster drive" : m == RobotModule.Shielding ? "Flare shielding"
-            : m == RobotModule.ThermalInsulation ? "Thermal insulation" : m.ToString();
+            : m == RobotModule.ThermalInsulation ? "Thermal insulation"
+            : m == RobotModule.Processor ? "Processor (AI 2)" : m == RobotModule.AdvancedProcessor ? "Advanced processor (AI 3)" : m.ToString();
 
         // ---- Recipes (TBD) ----
 
@@ -148,6 +158,9 @@ namespace KardashevAscent.Simulation.Robots
                 case RobotModule.FastDrive: return r.Add(aluminium ? Material.Aluminium : Material.Copper, 10.0).Add(Material.Iron, 20.0);
                 case RobotModule.Shielding: return r.Add(Material.Iron, 50.0).Add(Material.Water, 100.0);
                 case RobotModule.ThermalInsulation: return r.Add(Material.Rock, 30.0);
+                // Processors: copper wiring and silicon from rock (placeholder amounts, TBD).
+                case RobotModule.Processor: return r.Add(aluminium ? Material.Aluminium : Material.Copper, 5.0).Add(Material.Rock, 10.0);
+                case RobotModule.AdvancedProcessor: return r.Add(aluminium ? Material.Aluminium : Material.Copper, 10.0).Add(Material.Rock, 20.0);
                 default: return r;
             }
         }
