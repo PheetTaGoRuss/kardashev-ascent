@@ -224,6 +224,9 @@ namespace KardashevAscent.Presentation.Planet
         /// Best-angle advice needs this tile's latitude: measured in the sky view (V), or surveyed after the
         /// colony's first latitude fix. Until then the search still runs, but nothing about it is shown.
         /// </summary>
+        /// <summary>The colony knows this tile's latitude (measured, or from the map once one was measured).</summary>
+        public bool KnowsLatitude(int t) => simulation != null && simulation.Notebook != null && simulation.Notebook.KnowsLatitude(t);
+
         public bool BestAngleUnlocked => simulation != null && tile >= 0 && simulation.Notebook.CanUseBestAngle(tile);
 
         /// <summary>This tile's latitude as the colony knows it (degrees), or NaN before it is found.</summary>
