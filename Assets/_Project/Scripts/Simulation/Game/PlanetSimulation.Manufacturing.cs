@@ -95,6 +95,8 @@ namespace KardashevAscent.Simulation.Game
             if (MilestonesReached < RobotTech.UnlockMilestone(module))
                 return $"{RobotTech.ModuleName(module)} unlocks at milestone {RobotTech.UnlockMilestone(module)}.";
             if (r.Has(module)) return $"{r.Name} already has it.";
+            if (module == RobotModule.AdvancedProcessor && !r.Has(RobotModule.Processor))
+                return $"{r.Name} needs a processor first.";
             foreach (ManufacturingJob j in jobs)
                 if (j.Kind == JobKind.Upgrade && j.RobotId == robotId && j.Module == module)
                     return "Already ordered.";

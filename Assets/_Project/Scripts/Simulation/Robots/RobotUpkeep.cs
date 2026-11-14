@@ -187,7 +187,8 @@ namespace KardashevAscent.Simulation.Robots
                             break;
                         bool working = r.Task.HasValue;
                         double efficiency = r.Attribute(RobotAttribute.EnergyEfficiency);
-                        r.Battery.Draw((working ? RobotSpecs.WorkingPowerW(r.Task.Value.Kind) : RobotSpecs.IdlePowerW) / efficiency, hours);
+                        r.Battery.Draw(((working ? RobotSpecs.WorkingPowerW(r.Task.Value.Kind) : RobotSpecs.IdlePowerW)
+                                        + RobotSpecs.OnboardAIW(r.AILevel, !r.Connected)) / efficiency, hours);
                         if (working)
                             r.Condition -= RobotSpecs.WearPerWorkingHour * RobotCatalog.WearFactor(r.Task.Value.Kind) * hours
                                            / r.Attribute(RobotAttribute.Durability);

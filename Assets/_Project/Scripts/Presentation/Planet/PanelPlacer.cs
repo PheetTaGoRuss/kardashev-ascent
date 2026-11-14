@@ -638,7 +638,28 @@ namespace KardashevAscent.Presentation.Planet
             {
                 padsDirty = false;
                 siteView.RefreshPads();
+                UpdateClearedForest();
             }
+        }
+
+        /// <summary>From orbit, each tile's forest thins out with the share of its slots that are built on.</summary>
+        void UpdateClearedForest()
+        {
+            if (simulation == null || planet == null)
+                return;
+            var slots = new Dictionary<int, int>();
+            foreach (var key in placed.Keys)
+                slots[key.Tile] = (slots.TryGetValue(key.Tile, out int a) ? a : 0) + simulation.FootprintAt(key.Tile, key.Slot).Count;
+            foreach (var key in batteryVisuals.Keys)
+                slots[key.Tile] = (slots.TryGetValue(key.Tile, out int a) ? a : 0) + simulation.FootprintAt(key.Tile, key.Slot).Count;
+            var share = new Dictionary<int, float>();
+            foreach (var kv in slots)
+            {
+                int total = simulation.SlotCount(kv.Key);
+                if (total > 0)
+                    share[kv.Key] = Mathf.Clamp01(kv.Value / (float)total);
+            }
+            planet.SetBuiltShare(share);
         }
 
         bool SlotHasPanel => placed.ContainsKey((tile, Anchor(tile, slot)));
@@ -662,6 +683,9 @@ namespace KardashevAscent.Presentation.Planet
 
         /// <summary>How many slots a building of this kind covers (solar: at today's tier).</summary>
         public int FootprintOf(BuildMode what) => simulation != null ? simulation.FootprintSize(TypeOf(what)) : 1;
+
+        /// <summary>Build parts a building of this kind costs, Wh.</summary>
+        public double CostOf(BuildMode what) => simulation != null ? simulation.BuildCostWh(TypeOf(what)) : 0.0;
 
         /// <summary>What a new solar building here is, e.g. "solar farm (1 km²)".</summary>
         public string NewPanelName => simulation == null ? "solar panel"

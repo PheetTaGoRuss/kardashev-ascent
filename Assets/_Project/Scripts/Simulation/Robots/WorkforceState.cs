@@ -33,6 +33,9 @@ namespace KardashevAscent.Simulation.Robots
         public OperatingProgram CachedProgram;
         public List<PriorityRecord> CachedPriorities = new List<PriorityRecord>();
         public int UnsyncedFindings;
+        /// <summary>Stage E second part (save version 25): the colony's needs at the last sync.</summary>
+        public bool CachedBrownoutRisk;
+        public bool CachedSitesWaiting;
         public bool HasProgramOverride;
         public OperatingProgram ProgramOverride;
         public List<PriorityRecord> PriorityOverrides = new List<PriorityRecord>();

@@ -102,6 +102,23 @@ Each stage raises `SimulationState.Version` by one and keeps reading older saves
     lander's RTGs, and the hub goes with it. This is by design (Q1), and the Network window says so. Tests that need the
     network up give the colony panels first.
   - Survey and measurement results still land at once while cut off; "unsynced findings" is counted but not yet delayed.
+- **Stage E, second part — BUILT 2026-11-14** (save version 25; decisions by the director the same day):
+  - **AI level** = 1 + Processor + Advanced processor (Workshop upgrades; the advanced one needs a processor first;
+    milestones 4 and 6 unlock them until research exists, TBD). Levels change only how a cut-off robot works:
+    level 1 follows its cached program and priorities; level 2 also keeps the colony's needs from its last sync, so a
+    cached Demand program still raises building when the colony needed it; level 3 also reaches robots 2 tiles away.
+  - **Nearby exchange:** a cut-off robot within 1 tile (2 at level 3) of a connected robot syncs its rules through it
+    and hands over its findings. It stays off the network itself.
+  - **Findings wait for sync:** a survey or measurement finished by a robot that can't sync stays with that robot
+    (`HeldFinding`) and reaches the colony when it can. Backups, the colony database and loss of unsynced data wait for
+    OQ-9 (robots can't be destroyed yet).
+  - **Onboard AI power** from the robot's own battery: 5, 15 or 30 W by level, doubled while cut off (TBD).
+  - **Colony computing:** 300 W per AI level above 1 (TBD), served with the priority loads. It is the first thing cut:
+    off in a brownout, or when there's no spare power and the grid battery is under 30 % (game rule, TBD). Without it,
+    every robot works at level 1. Basic autonomy never needs it. Player-set computing priorities are not built yet.
+  - **Note:** the spec says robots keep local processing during outages, while the approved rule makes levels 2-3
+    depend on colony computing. In a brownout both happen together (network down, computing cut), so cut-off robots
+    then work at level 1. Flagged here in case the director wants onboard processing to keep level 2 alive.
 - **Q1 (network): DECIDED 2026-11-08: relay range + hub power.** Stage E builds it like this; the details below are design choices, and the numbers are configurable TBD placeholders.
   - **Hub:** the lander is the network hub. It draws a small load from `PowerGrid` as part of colony demand. When the colony is in brownout, the hub is unpowered and the whole network is down.
   - **Range:** a robot is connected while it is within the relay range of the hub or of a powered **Relay** (a new building). Range is counted in tiles along `HexSphere.Neighbors` (TBD). Relays extend coverage and need power too; a relay on a browned-out grid is down.
