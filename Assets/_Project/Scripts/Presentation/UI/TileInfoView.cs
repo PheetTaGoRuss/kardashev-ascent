@@ -138,8 +138,9 @@ namespace KardashevAscent.Presentation.UI
                 return;
             landingShape = shape;
             landingActions.Clear();
-            if (landing && water)
-                landingText.text = "The lander needs land: pick a tile that isn't sea.";
+            string problem = Terrains.LandingProblem(sim.GetTile(tile).Terrain);
+            if (landing && problem != null)
+                landingText.text = problem + " Pick another tile.";
             else if (landing)
             {
                 landingText.text = "Land the colony here? Time starts when the lander is down, and the colony can't move afterwards.";

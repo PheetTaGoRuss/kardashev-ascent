@@ -14,6 +14,21 @@ namespace KardashevAscent.Simulation.Tests.Planet
         static int Count(PlanetSurface s, TerrainType t) => s.Terrain.Count(x => x == t);
 
         [Test]
+        public void Landing_NeedsFlatOpenGround()
+        {
+            // Director 2026-11-14: no landing on sea, wetland or ground the colony can't start on.
+            Assert.IsNotNull(Terrains.LandingProblem(TerrainType.ShallowOcean));
+            Assert.IsNotNull(Terrains.LandingProblem(TerrainType.DeepOcean));
+            Assert.IsNotNull(Terrains.LandingProblem(TerrainType.Wetland));
+            Assert.IsNotNull(Terrains.LandingProblem(TerrainType.Mountain));
+            Assert.IsNotNull(Terrains.LandingProblem(TerrainType.Ice));
+            foreach (TerrainType t in new[] { TerrainType.Lowland, TerrainType.Desert, TerrainType.DryBasin, TerrainType.Beach, TerrainType.Forest, TerrainType.Tundra })
+                Assert.IsNull(Terrains.LandingProblem(t), t.ToString());
+            foreach (TerrainType t in System.Enum.GetValues(typeof(TerrainType)))
+                Assert.AreEqual(Terrains.BaseSiteRank(t) > 0, Terrains.LandingProblem(t) == null, t.ToString());
+        }
+
+        [Test]
         public void WetPlanet_GetsAllFourNewTerrains()
         {
             PlanetSurface s = PlanetSurface.Generate(Sphere, SurfaceSettings.ForClimate(7, 15.0, false));
