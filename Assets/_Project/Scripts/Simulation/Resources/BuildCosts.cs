@@ -1,6 +1,4 @@
-using KardashevAscent.Simulation.Resources;
-
-namespace KardashevAscent.Simulation.Energy
+namespace KardashevAscent.Simulation.Resources
 {
     /// <summary>
     /// What buildings cost in real materials (director, 2026-11-14: buildings are built from materials, not power).

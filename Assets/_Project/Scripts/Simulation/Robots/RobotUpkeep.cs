@@ -219,7 +219,7 @@ namespace KardashevAscent.Simulation.Robots
 
         /// <summary>
         /// Repairs are paid in materials (director, 2026-11-14): a new battery takes the cells' materials
-        /// (<see cref="BuildCosts.BatteryCells"/>), minor battery ageing a share of them, and basic maintenance iron.
+        /// (<see cref="Resources.BuildCosts.BatteryCells"/>), minor battery ageing a share of them, and basic maintenance iron.
         /// </summary>
         static void Repair(Robot r, double hours, double speed, Resources.MaterialStock materials)
         {
@@ -227,7 +227,7 @@ namespace KardashevAscent.Simulation.Robots
                 return;
             if (r.Battery.WornOut)
             {
-                Resources.MaterialBill cells = BuildCosts.BatteryCells(r.Battery.NominalWh);
+                Resources.MaterialBill cells = Resources.BuildCosts.BatteryCells(r.Battery.NominalWh);
                 if (cells.CoveredBy(materials))
                 {
                     Take(materials, cells);
@@ -238,7 +238,7 @@ namespace KardashevAscent.Simulation.Robots
             if (!r.Battery.WornOut && r.Battery.Health < 1.0)
             {
                 double health = Math.Min(1.0 - r.Battery.Health, RobotSpecs.MinorBatteryRepairPerHour * hours);
-                Resources.MaterialBill cost = BuildCosts.BatteryCells(r.Battery.NominalWh).Times(health);
+                Resources.MaterialBill cost = Resources.BuildCosts.BatteryCells(r.Battery.NominalWh).Times(health);
                 if (health > 0.0 && cost.CoveredBy(materials) && r.Battery.RepairMinor(health) > 0.0)
                     Take(materials, cost);
             }
