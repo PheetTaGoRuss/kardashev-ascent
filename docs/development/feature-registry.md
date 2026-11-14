@@ -216,6 +216,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | 2026-11-14 | New UI look for every screen, inspired by factory games such as Mindustry (not copied): square near-opaque grey panels with an amber strip, grey block buttons lit amber on hover, amber selected states; calculator opens any time (K / HUD "Calc"), clicking a number copies it | UI (all) |
 | 2026-11-14 | Inspect and info panels (tile info, sky, site/planner/placed boxes, building info card) drag by a grip like the calculator (double-click: put back); bigger text in them | UI (all) |
 | 2026-11-14 | Research Station: measuring and experiments happen there; knowledge gates buildings and sets safety margins; a rough brief from orbit before landing | IN-10 to IN-13 |
+| 2026-11-14 | Sound: effects and a looping space ambience synthesised in code (no files to license); button clicks, building, puzzles right/wrong, discoveries, brownout alarm, milestones; volume sliders and mute in the pause menu | UI (all) |
 | 2026-11-09 | Solar measurements: robots turn built panels; research robots measure every solar parameter; measurement is a reasoning puzzle | `docs/design/solar-measurements.md` (on its branch) |
 | 2026-11-12 | Game vision and the ten design pillars | [`../game/game-vision.md`](../game/game-vision.md) |
 | 2026-11-12 | The player learns through observations and reports; minimal permanent interface | vision; [`../architecture/information-architecture.md`](../architecture/information-architecture.md) |
