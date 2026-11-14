@@ -54,6 +54,8 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | PL-01 | Hex-tiled planet, tile picking | CONFIRMED | PR #3, #19 | Tested | `Planet/HexSphere.cs` |
 | PL-02 | Terrain per planet from seed and flags | CONFIRMED | PR #45 | Tested | `Planet/PlanetSurface.cs` |
 | PL-03 | Real planets from the NASA Exoplanet Archive with provenance labels | CONFIRMED | PR #16, #43 | Tested | `Planet/PlanetRecord.cs`, `tools/exoplanets` |
+| PL-03a | Six more planets: TRAPPIST-1 f, TOI-700 d, LHS 1140 b, Kepler-186 f, Kepler-442 b from the NASA Exoplanet Archive, and Mars from the NASA NSSDC fact sheet | CONFIRMED (director 2026-11-14: add more NASA data) | chat 2026-11-14 | Tested; seen in Play mode | `tools/exoplanets/planets.json`, `Data/Planets/*.asset` |
+| PL-15 | Every new colony lands on a new random map of its planet (continents and deposits); the seed is saved (version 28); older saves keep the planet's own map | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Tested; seen in Play mode | `Presentation/Game/SimulationRunner.cs` (`NewRandomMap`, `UseMap`), `GameFlow.cs` |
 | PL-04 | Choose the planet and the landing tile | CONFIRMED | PR #43, #55 | Tested (simulation side) | `SimulationRunner`, `PlanetChooserView` |
 | PL-04a | Landing is a required first step: after choosing the planet, time stays stopped and no building site opens until the player picks a land tile and presses Land here; the colony can't move afterwards (replaces "move before the first building") | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Implemented | `Presentation/Game/GameFlow.cs`, `UI/TileInfoView.cs` |
 | PL-04b | Landing needs flat, open ground: lowland, desert, dry basin, beach, forest or tundra; not sea, wetland, mountain, highland, volcanic rock or ice (saved colonies elsewhere still load) | CONFIRMED (director 2026-11-14); which ground counts PROPOSED | chat 2026-11-14 | Tested; seen in Play mode | `Planet/PlanetSurface.cs` (`Terrains.LandingProblem`) |
@@ -200,6 +202,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | 2026-11-14 | No landing on sea, wetland or unbuildable ground; new panels flat or copying the tile; friendlier measuring with symbols, bars and a tutorial | PL-04b, EN-03a, UI-10 |
 | 2026-11-14 | More NASA data: Earth air temperature from NASA POWER; every NASA source listed in docs/nasa-data.md | PL-06a |
 | 2026-11-14 | More NASA data: ground reflectance and aerosol haze from NASA POWER | PL-06b |
+| 2026-11-14 | More NASA data: five more archive planets and Mars from the NASA fact sheet; a random map for every new game | PL-03a, PL-15 |
 | 2026-11-14 | Rivers removed after a look in Play mode ("bugged and weird"); RiverMap, its rules and its drawing deleted | PL-12 |
 | 2026-11-09 | Solar measurements: robots turn built panels; research robots measure every solar parameter; measurement is a reasoning puzzle | `docs/design/solar-measurements.md` (on its branch) |
 | 2026-11-12 | Game vision and the ten design pillars | [`../game/game-vision.md`](../game/game-vision.md) |
