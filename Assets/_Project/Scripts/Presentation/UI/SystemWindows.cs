@@ -412,7 +412,8 @@ namespace KardashevAscent.Presentation.UI
                 if (r.Connected) sb.Append("connected");
                 else
                 {
-                    sb.Append($"out of range for {r.HoursOffline:0.0} h on tile #{r.Tile}");
+                    sb.Append(net.Powered ? $"out of range for {r.HoursOffline:0.0} h on tile #{r.Tile}"
+                                          : $"cut off for {r.HoursOffline:0.0} h (network down) on tile #{r.Tile}");
                     var via = r.ExchangeVia.HasValue ? w.GetRobot(r.ExchangeVia.Value) : null;
                     sb.Append(via != null ? $" · syncing through {via.Name} nearby" : $" · running cached rules ({r.CachedProgram})");
                 }
