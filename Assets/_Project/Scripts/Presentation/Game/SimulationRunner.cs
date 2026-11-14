@@ -60,14 +60,16 @@ namespace KardashevAscent.Presentation.Game
         /// Land the colony on <paramref name="tileId"/> instead (a new colony on the same planet). Returns null if it
         /// moved, else why not. <paramref name="force"/> skips the "nothing built yet" rule (loading a save).
         /// </summary>
-        public string LandAt(int tileId, bool force = false)
+        /// <param name="checkGround">False when a saved game puts its colony back (older saves may sit on ground no longer allowed).</param>
+        public string LandAt(int tileId, bool force = false, bool checkGround = true)
         {
             if (Simulation == null || planet == null || planet.Sphere == null)
                 return "The planet isn't ready.";
             if (tileId < 0 || tileId >= Simulation.TileCount)
                 return "No such tile.";
-            if (Simulation.GetTile(tileId).IsWater)
-                return "The lander can't come down on water.";
+            string problem = Terrains.LandingProblem(Simulation.GetTile(tileId).Terrain);
+            if (problem != null && (checkGround || Simulation.GetTile(tileId).IsWater))
+                return problem;
             if (tileId == Simulation.BaseTileId)
                 return null;
             if (!force && !CanMoveLanding)

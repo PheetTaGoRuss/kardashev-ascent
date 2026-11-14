@@ -469,6 +469,23 @@ namespace KardashevAscent.Presentation.Planet
             padsDirty = true;
         }
 
+        /// <summary>The angles of a solar panel already on this tile (the lowest slot), else flat: β 0°, facing south.</summary>
+        void CopyTileLayoutOrFlat()
+        {
+            for (int s = 0; s < simulation.SlotCount(tile); s++)
+            {
+                BuildingType b = simulation.GetBuilding(tile, s);
+                if ((b == BuildingType.SolarPanel || b == BuildingType.FloatingSolar) && simulation.TryGetPanelAngles(tile, s, out double t, out double a))
+                {
+                    tiltDeg = Mathf.Round((float)(t * Mathf.Rad2Deg));
+                    azimuthDeg = Mathf.Repeat(Mathf.Round((float)(a * Mathf.Rad2Deg)), 360f);
+                    return;
+                }
+            }
+            tiltDeg = 0f;
+            azimuthDeg = 180f;
+        }
+
         void OnSiteChanged(int newTile)
         {
             tile = newTile;
@@ -480,10 +497,9 @@ namespace KardashevAscent.Presentation.Planet
             if (simulation == null || tile < 0)
                 return;
 
-            // Rule of thumb until the search reports: tilt = |latitude|, facing the equator.
-            double lat = simulation.Sphere.Latitude(tile);
-            tiltDeg = Mathf.Round(Mathf.Clamp(Mathf.Abs((float)(lat * Mathf.Rad2Deg)), 0f, 90f));
-            azimuthDeg = lat >= 0.0 ? 180f : 0f;
+            // New panels start flat (β = 0), or copy the panels already on this tile (director 2026-11-14): the best
+            // angle is never set for you, and nothing here gives the latitude away before it is measured.
+            CopyTileLayoutOrFlat();
 
             IPlanetSimulation sim = simulation;
             int searchTile = tile;
