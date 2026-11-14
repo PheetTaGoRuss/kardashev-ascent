@@ -193,10 +193,10 @@ namespace KardashevAscent.Presentation.UI
             {
                 // The metals buildings take (chemical symbols keep it short), then rock and the sites.
                 buildStock.text = $"Fe {Mass(sim.Materials[KardashevAscent.Simulation.Resources.Material.Iron])} · " +
-                                  $"Cu {Mass(sim.Materials[KardashevAscent.Simulation.Resources.Material.Copper])} · " +
-                                  $"Li {Mass(sim.Materials[KardashevAscent.Simulation.Resources.Material.Lithium])}";
+                                  $"Cu {Mass(sim.Materials[KardashevAscent.Simulation.Resources.Material.Copper])}";
                 int sites = sim.ConstructionQueueCount;
-                buildQueue.text = $"rock {Mass(sim.Materials[KardashevAscent.Simulation.Resources.Material.Rock])} · " +
+                buildQueue.text = $"Li {Mass(sim.Materials[KardashevAscent.Simulation.Resources.Material.Lithium])} · " +
+                                  $"rock {Mass(sim.Materials[KardashevAscent.Simulation.Resources.Material.Rock])} · " +
                                   (sites == 0 ? "no sites waiting"
                                    : sim.ConstructionShortfall.IsEmpty ? $"{sites} site{(sites == 1 ? "" : "s")}, in stock"
                                    : $"{sites} site{(sites == 1 ? "" : "s")} short");
