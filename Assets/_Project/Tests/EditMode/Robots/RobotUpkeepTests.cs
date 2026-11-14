@@ -221,8 +221,10 @@ namespace KardashevAscent.Simulation.Tests.Robots
             var up = new RobotUpkeep();
             up.Plan(w, LanderOnly, 1.0);
             up.Apply(w, 1.0, 0.0, 0.0, 0.0, false, null);
-            Assert.AreEqual(2408.0 - RobotSpecs.IdlePowerW / Math.Sqrt(Battery.LithiumIonRoundTrip), idle.Battery.StoredWh, 1e-6);
-            Assert.AreEqual(2408.0 - RobotSpecs.BuildPowerW / Math.Sqrt(Battery.LithiumIonRoundTrip), busy.Battery.StoredWh, 1e-6);
+            // Plus the onboard AI (stage E): a level-1 robot, connected (no network in this test counts as connected).
+            double ai = RobotSpecs.OnboardAIW(1, false);
+            Assert.AreEqual(2408.0 - (RobotSpecs.IdlePowerW + ai) / Math.Sqrt(Battery.LithiumIonRoundTrip), idle.Battery.StoredWh, 1e-6);
+            Assert.AreEqual(2408.0 - (RobotSpecs.BuildPowerW + ai) / Math.Sqrt(Battery.LithiumIonRoundTrip), busy.Battery.StoredWh, 1e-6);
             Assert.AreEqual(1.0, idle.Condition, 1e-12);
             Assert.AreEqual(1.0 - RobotSpecs.WearPerWorkingHour * RobotCatalog.WearFactor(TaskKind.Build), busy.Condition, 1e-12);
         }

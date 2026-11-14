@@ -154,16 +154,12 @@ namespace KardashevAscent.Simulation.Game
                     fieldWork.Remove(t);
                     surveyOrders.Remove(tile);
                     SurveyPuzzle puzzle = SurveyPuzzle.Make(tile, Deposits.At(tile));
-                    if (puzzle.Materials.Count == 0)
-                    {
-                        // Only rock here: nothing to estimate, the survey is simply done.
-                        Deposits.MarkSurveyed(tile);
-                        TileSurveyed?.Invoke(tile);
-                        continue;
-                    }
-                    surveyPuzzles.RemoveAll(q => q.Tile == tile);
-                    surveyPuzzles.Add(puzzle);
-                    PuzzleReady?.Invoke(SolarParameter.Latitude);   // "a puzzle is waiting"; the kind is in SurveyPuzzles
+                    // Only rock here: nothing to estimate, the survey is simply done (once the colony has it).
+                    var finding = puzzle.Materials.Count == 0
+                        ? new HeldFinding { Kind = FindingKind.SurveyRockOnly, Tile = tile }
+                        : new HeldFinding { Kind = FindingKind.SurveyCores, Tile = tile, Survey = puzzle };
+                    if (!HoldIfCutOff(t, finding))
+                        Deliver(finding);
                 }
             }
             foreach (var mo in measureOrders.ToArray())
@@ -173,22 +169,26 @@ namespace KardashevAscent.Simulation.Game
                     continue;
                 fieldWork.Remove(t);
                 measureOrders.Remove(mo);
-                Workforce.Release(t);
+                HeldFinding readings = null;
                 if (HasPuzzle(mo.Parameter))
-                {
-                    parameterPuzzles.RemoveAll(q => q.Parameter == mo.Parameter);
-                    parameterPuzzles.Add(MakeLightPuzzle(mo.Parameter, mo.Tile));
-                    PuzzleReady?.Invoke(mo.Parameter);
-                    continue;
-                }
-                if (mo.Parameter == SolarParameter.Latitude)
+                    readings = new HeldFinding { Kind = FindingKind.LightReadings, Tile = mo.Tile, Parameter = mo.Parameter,
+                                                 Light = MakeLightPuzzle(mo.Parameter, mo.Tile) };
+                else if (mo.Parameter == SolarParameter.Latitude)
                 {
                     // The readings are in; the player works out the latitude (stage C).
                     double lat = Sphere.Latitude(mo.Tile) * 180.0 / Math.PI;
-                    latitudePuzzles.Add(LatitudePuzzle.Make(mo.Tile, lat, DescribeSky(mo.Tile, 0.0, 0.0).DeclinationDeg));
-                    PuzzleReady?.Invoke(mo.Parameter);
+                    readings = new HeldFinding { Kind = FindingKind.ShadowReadings, Tile = mo.Tile, Parameter = mo.Parameter,
+                                                 Latitude = LatitudePuzzle.Make(mo.Tile, lat, DescribeSky(mo.Tile, 0.0, 0.0).DeclinationDeg) };
+                }
+                if (readings != null)
+                {
+                    // A cut-off robot keeps the readings until it can sync (stage E); the worker is known before release.
+                    if (!HoldIfCutOff(t, readings))
+                        Deliver(readings);
+                    Workforce.Release(t);
                     continue;
                 }
+                Workforce.Release(t);
                 Parameters.MarkMeasured(mo.Parameter);
                 ParameterMeasured?.Invoke(mo.Parameter);
             }
