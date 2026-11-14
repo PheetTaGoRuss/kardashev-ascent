@@ -199,8 +199,9 @@ namespace KardashevAscent.Simulation.Game
             Workforce.CapacityOf = t => FacilityStaffing.CapacityFor(t.Kind);
             Network = new ColonyNetwork(sphere, BaseTileId);
             Workforce.Network = Network;
-            Deposits = new DepositMap(sphere, surface, PlanetChemistry.EarthLike, 7);
-            Routes = new RouteFinder(sphere, surface);
+            Rivers = RiverMap.Generate(sphere, surface, 7);
+            Deposits = new DepositMap(sphere, surface, PlanetChemistry.EarthLike, 7, Rivers);
+            Routes = new RouteFinder(sphere, surface, rivers: Rivers);
 
             // Start mid-morning at the base: hour angle −0.4π. A tidally locked planet has the star fixed over
             // longitude 0, as in LightPotential and AnnualYield, so the base (picked near longitude 0) is in daylight.
@@ -229,9 +230,10 @@ namespace KardashevAscent.Simulation.Game
             PlanetId = record.id ?? "";
             StarTemperatureK = record.star.teffK;
             Clouds = record.Clouds;
-            Deposits = new DepositMap(sphere, surface, record.ToChemistry(), record.look?.terrainSeed ?? 7);
-            if (record.planet.surfaceGravityMs2 > 0.0)
-                Routes = new RouteFinder(sphere, surface, record.planet.surfaceGravityMs2);
+            int terrainSeed = record.look?.terrainSeed ?? 7;
+            Rivers = RiverMap.Generate(sphere, surface, terrainSeed);
+            Deposits = new DepositMap(sphere, surface, record.ToChemistry(), terrainSeed, Rivers);
+            Routes = new RouteFinder(sphere, surface, record.planet.surfaceGravityMs2 > 0.0 ? record.planet.surfaceGravityMs2 : RouteFinder.EarthGravity, Rivers);
         }
     }
 }
