@@ -365,7 +365,7 @@ namespace KardashevAscent.Presentation.Game
             setupPanel = new VisualElement();
             setupPanel.AddToClassList("panel");
             setupPanel.style.position = Position.Absolute;
-            setupPanel.style.top = 96;
+            setupPanel.style.top = 116;   // under the system tab bar
             setupPanel.style.left = new Length(50, LengthUnit.Percent);
             setupPanel.style.translate = new Translate(new Length(-50, LengthUnit.Percent), 0);
             setupPanel.style.width = 560;

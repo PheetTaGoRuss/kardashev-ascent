@@ -30,7 +30,7 @@ namespace KardashevAscent.Presentation.UI
             { ClockSpeed.Paused, ClockSpeed.RealTime, ClockSpeed.HourPerSecond, ClockSpeed.DayPerSecond };
         float nextText;
 
-        static string Mass(double kg) => kg >= 1000.0 ? $"{kg / 1000.0:0.#} t" : $"{kg:0} kg";
+        static string Mass(double kg) => kg >= 1000.0 ? $"{kg / 1000.0:0.#}t" : $"{kg:0}kg";
 
         void OnEnable()
         {
@@ -191,17 +191,15 @@ namespace KardashevAscent.Presentation.UI
 
             if (buildStock != null)
             {
-                // Materials on hand (the ones buildings take), then what the sites still lack.
-                string stock = "";
-                foreach (var m in new[] { KardashevAscent.Simulation.Resources.Material.Iron, KardashevAscent.Simulation.Resources.Material.Copper,
-                                          KardashevAscent.Simulation.Resources.Material.Lithium, KardashevAscent.Simulation.Resources.Material.Rock })
-                    stock += (stock.Length > 0 ? " · " : "") + $"{KardashevAscent.Simulation.Resources.Materials.Name(m).Substring(0, 2)} {Mass(sim.Materials[m])}";
-                buildStock.text = stock;
-                KardashevAscent.Simulation.Resources.MaterialBill shortfall = sim.ConstructionShortfall;
-                buildQueue.text = sim.ConstructionQueueCount == 0
-                    ? "no sites waiting"
-                    : $"{sim.ConstructionQueueCount} site{(sim.ConstructionQueueCount == 1 ? "" : "s")}" +
-                      (shortfall.IsEmpty ? " · materials in stock" : $" · short: {shortfall.Describe()}");
+                // The metals buildings take (chemical symbols keep it short), then rock and the sites.
+                buildStock.text = $"Fe {Mass(sim.Materials[KardashevAscent.Simulation.Resources.Material.Iron])} · " +
+                                  $"Cu {Mass(sim.Materials[KardashevAscent.Simulation.Resources.Material.Copper])} · " +
+                                  $"Li {Mass(sim.Materials[KardashevAscent.Simulation.Resources.Material.Lithium])}";
+                int sites = sim.ConstructionQueueCount;
+                buildQueue.text = $"rock {Mass(sim.Materials[KardashevAscent.Simulation.Resources.Material.Rock])} · " +
+                                  (sites == 0 ? "no sites waiting"
+                                   : sim.ConstructionShortfall.IsEmpty ? $"{sites} site{(sites == 1 ? "" : "s")}, in stock"
+                                   : $"{sites} site{(sites == 1 ? "" : "s")} short");
             }
             kLabel.text = Format.Power(sim.KardashevPowerW);
             if (kHeading != null)
