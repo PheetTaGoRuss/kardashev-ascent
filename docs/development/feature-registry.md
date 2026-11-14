@@ -210,6 +210,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | 2026-11-14 | Puzzle cards for beginners: bigger text and windows (Research 640 px, sky view 480 px), numbered "how to solve it" steps and a worked example with other numbers on every puzzle | UI-11 |
 | 2026-11-14 | In-game science calculator (degrees; sin/cos/tan and inverses, ln, log, sqrt, ^): click a puzzle's numbers to put them in (also copied to the clipboard), "Put in answer" fills the answer box | UI-11 |
 | 2026-11-14 | New UI look for every screen, inspired by factory games such as Mindustry (not copied): square near-opaque grey panels with an amber strip, grey block buttons lit amber on hover, amber selected states; calculator opens any time (K / HUD "Calc"), clicking a number copies it | UI (all) |
+| 2026-11-14 | Inspect and info panels (tile info, sky, site/planner/placed boxes, building info card) drag by a grip like the calculator (double-click: put back); bigger text in them | UI (all) |
 | 2026-11-09 | Solar measurements: robots turn built panels; research robots measure every solar parameter; measurement is a reasoning puzzle | `docs/design/solar-measurements.md` (on its branch) |
 | 2026-11-12 | Game vision and the ten design pillars | [`../game/game-vision.md`](../game/game-vision.md) |
 | 2026-11-12 | The player learns through observations and reports; minimal permanent interface | vision; [`../architecture/information-architecture.md`](../architecture/information-architecture.md) |
