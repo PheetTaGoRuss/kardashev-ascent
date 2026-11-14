@@ -28,22 +28,12 @@ namespace KardashevAscent.Simulation.Robots
         readonly PlanetSurface surface;
         readonly Dictionary<int, (double[] Hours, int[] Previous)> cache = new Dictionary<int, (double[], int[])>();
 
-        public RouteFinder(HexSphere sphere, PlanetSurface surface, double gravityMs2 = EarthGravity, RiverMap rivers = null)
+        public RouteFinder(HexSphere sphere, PlanetSurface surface, double gravityMs2 = EarthGravity)
         {
             this.sphere = sphere ?? throw new ArgumentNullException(nameof(sphere));
             this.surface = surface ?? throw new ArgumentNullException(nameof(surface));
             GravityMs2 = gravityMs2 > 0.0 ? gravityMs2 : EarthGravity;
-            this.rivers = rivers;
         }
-
-        readonly RiverMap rivers;
-
-        /// <summary>Crossing a river tile takes this much longer: fording, or finding a crossing (game rule, TBD).</summary>
-        public const double RiverCrossingFactor = 1.5;
-
-        /// <summary>Hours to drive into this tile: its terrain, slower over a river.</summary>
-        double StepHours(int tile) =>
-            HopHours(surface.Terrain[tile]) * (rivers != null && rivers.IsRiver(tile) ? RiverCrossingFactor : 1.0);
 
         public double GravityMs2 { get; }
 
@@ -68,7 +58,7 @@ namespace KardashevAscent.Simulation.Robots
             }
         }
 
-        public double HopHoursAt(int tile) => StepHours(tile);
+        public double HopHoursAt(int tile) => HopHours(surface.Terrain[tile]);
 
         /// <summary>Driving hours from <paramref name="from"/> to every tile (∞ where unreachable).</summary>
         public double[] HoursFrom(int from) => Search(from).Hours;
@@ -127,7 +117,7 @@ namespace KardashevAscent.Simulation.Robots
                 if (h > hours[t]) continue;
                 foreach (int nb in sphere.Neighbors[t])
                 {
-                    double step = StepHours(nb);
+                    double step = HopHours(surface.Terrain[nb]);
                     if (double.IsInfinity(step)) continue;
                     double nh = h + step;
                     if (nh < hours[nb])

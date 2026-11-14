@@ -45,10 +45,7 @@ namespace KardashevAscent.Simulation.Resources
         readonly List<Deposit>[] deposits;
         readonly HashSet<int> surveyed = new HashSet<int>();
 
-        /// <summary>Water you can pump from a river tile, grade (game rule, TBD). Rivers are water on land.</summary>
-        public const double RiverWaterGrade = 0.8;
-
-        public DepositMap(HexSphere sphere, PlanetSurface surface, PlanetChemistry chemistry, int seed, RiverMap rivers = null)
+        public DepositMap(HexSphere sphere, PlanetSurface surface, PlanetChemistry chemistry, int seed)
         {
             if (sphere == null) throw new ArgumentNullException(nameof(sphere));
             if (surface == null) throw new ArgumentNullException(nameof(surface));
@@ -56,7 +53,7 @@ namespace KardashevAscent.Simulation.Resources
             deposits = new List<Deposit>[sphere.TileCount];
             int[] toSea = SeaDistance(sphere, surface);
             for (int t = 0; t < sphere.TileCount; t++)
-                deposits[t] = Generate(sphere, surface, chemistry, seed, t, toSea[t], rivers != null && rivers.IsRiver(t));
+                deposits[t] = Generate(sphere, surface, chemistry, seed, t, toSea[t]);
         }
 
         public PlanetChemistry Chemistry { get; }
@@ -112,7 +109,7 @@ namespace KardashevAscent.Simulation.Resources
             return d;
         }
 
-        static List<Deposit> Generate(HexSphere sphere, PlanetSurface surface, PlanetChemistry chem, int seed, int t, int tilesToSea, bool river = false)
+        static List<Deposit> Generate(HexSphere sphere, PlanetSurface surface, PlanetChemistry chem, int seed, int t, int tilesToSea)
         {
             var list = new List<Deposit>();
             TerrainType here = surface.Terrain[t];
@@ -133,7 +130,6 @@ namespace KardashevAscent.Simulation.Resources
             double ice = here == TerrainType.Ice || here == TerrainType.FrozenSea ? 1.0
                        : here == TerrainType.Tundra ? TundraIceGrade
                        : waterNeighbour ? 1.0   // a shore: pump the sea
-                       : river ? RiverWaterGrade   // a river: pump the river
                        : 0.0;
             if (ice > 0.0)
                 list.Add(new Deposit(Material.Water, ice * Vary(seed, t, 2)));

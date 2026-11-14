@@ -6,8 +6,8 @@ using UnityEngine.Rendering;
 namespace KardashevAscent.Presentation.Planet
 {
     /// <summary>
-    /// What the planet's surface shows from orbit, on top of the tiles: a peak on each mountain tile, a few tree crowns
-    /// on each forest tile, and the rivers as ribbons from tile to tile. One mesh for the whole planet. The tile the
+    /// What the planet's surface shows from orbit, on top of the tiles: a peak on each mountain tile and a few tree
+    /// crowns on each forest tile. One mesh for the whole planet. The tile the
     /// player is zoomed into is left out, so its close-up detail (<see cref="SiteDecor"/>) takes over there.
     /// </summary>
     public static class TerrainFeatures
@@ -15,13 +15,12 @@ namespace KardashevAscent.Presentation.Planet
         static readonly Color32 Rock = new Color32(118, 110, 102, 40);
         static readonly Color32 Snow = new Color32(232, 238, 244, 90);
         static readonly Color32 Canopy = new Color32(34, 78, 38, 20);
-        static readonly Color32 River = new Color32(70, 150, 215, 220);
 
         /// <param name="tileRadius">The tile tops' distance from the centre (relief).</param>
         /// <param name="seaRadius">Sea level.</param>
         /// <param name="excludeTile">The tile shown close up (−1: none).</param>
         /// <param name="builtShare">Share of each tile's slots built on (missing: 0). Forest crowns thin out to match.</param>
-        public static Mesh Build(HexSphere sphere, PlanetSurface surface, RiverMap rivers, IReadOnlyList<float> tileRadius,
+        public static Mesh Build(HexSphere sphere, PlanetSurface surface, IReadOnlyList<float> tileRadius,
                                  float seaRadius, int excludeTile, IReadOnlyDictionary<int, float> builtShare = null)
         {
             var v = new List<Vector3>();
@@ -62,20 +61,6 @@ namespace KardashevAscent.Presentation.Planet
                         Vector3 north = Vector3.Cross(up, east);
                         Vector3 dir = (up * r + (east * Mathf.Cos(a) + north * Mathf.Sin(a)) * d).normalized;
                         Cone(v, n, c, tri, dir * r, dir, span * 0.09f, span * 0.2f, Canopy);
-                    }
-                }
-                if (rivers != null && rivers.IsRiver(t))
-                {
-                    int next = rivers.Downstream(t);
-                    if (next >= 0 && next != excludeTile)
-                    {
-                        // From this tile's centre to the next one's, just above both tops (or sea level).
-                        float width = span * (0.12f + 0.05f * Mathf.Min(6, rivers.Flow(t)));
-                        Vector3 a = up * (r + span * 0.02f);
-                        Vector3 nextUp = ToUnity(sphere.Centers[next]);
-                        float rNext = Terrains.IsWater(surface.Terrain[next]) ? seaRadius : tileRadius[next];
-                        Vector3 b = nextUp * (rNext + span * 0.02f);
-                        Ribbon(v, n, c, tri, a, b, up, nextUp, width, River);
                     }
                 }
             }
@@ -120,22 +105,6 @@ namespace KardashevAscent.Presentation.Planet
                 ring[i] = baseCentre + (e * Mathf.Cos(a) + f * Mathf.Sin(a)) * radius;
             }
             Pyramid(v, n, c, tri, ring, baseCentre + up * height, colour, colour);
-        }
-
-        /// <summary>A flat strip from a to b, facing up (a river).</summary>
-        public static void Ribbon(List<Vector3> v, List<Vector3> n, List<Color32> c, List<int> tri, Vector3 a, Vector3 b,
-                                  Vector3 upA, Vector3 upB, float width, Color32 colour)
-        {
-            Vector3 along = (b - a).normalized;
-            Vector3 sideA = Vector3.Cross(upA, along).normalized * (width * 0.5f);
-            Vector3 sideB = Vector3.Cross(upB, along).normalized * (width * 0.5f);
-            int s = v.Count;
-            v.Add(a - sideA); v.Add(a + sideA); v.Add(b + sideB); v.Add(b - sideB);
-            n.Add(upA); n.Add(upA); n.Add(upB); n.Add(upB);
-            c.Add(colour); c.Add(colour); c.Add(colour); c.Add(colour);
-            // Both windings (see Pyramid).
-            tri.Add(s); tri.Add(s + 1); tri.Add(s + 2); tri.Add(s); tri.Add(s + 2); tri.Add(s + 3);
-            tri.Add(s); tri.Add(s + 2); tri.Add(s + 1); tri.Add(s); tri.Add(s + 3); tri.Add(s + 2);
         }
 
         /// <summary>A stable number in [0, 1) for a tile and an index.</summary>

@@ -31,7 +31,7 @@ namespace KardashevAscent.Presentation.Planet
         [Tooltip("Height of the highest land above sea level, as a share of the radius. About 10x true scale so " +
                  "mountains read from orbit (Earth's highest peak is 0.14 % of its radius).")]
         [Range(0f, 0.05f)] [SerializeField] float reliefScale = 0.015f;
-        [Tooltip("Peaks, tree crowns and rivers drawn over the tiles.")]
+        [Tooltip("Peaks and tree crowns drawn over the tiles.")]
         [SerializeField] bool showFeatures = true;
 
         [Header("Look")]
@@ -66,9 +66,6 @@ namespace KardashevAscent.Presentation.Planet
         public HexSphere Sphere { get; private set; }
         public PlanetSurface Surface { get; private set; }
 
-        /// <summary>The planet's rivers: the same map the simulation uses (same tiles and seed).</summary>
-        public RiverMap Rivers { get; private set; }
-
         float[] tileRadius;
         GameObject features;
         Mesh featuresMesh;
@@ -91,7 +88,7 @@ namespace KardashevAscent.Presentation.Planet
         }
 
         /// <summary>
-        /// Show close-up detail on this tile (the open building site): its orbit-scale peak, crowns and river leave
+        /// Show close-up detail on this tile (the open building site): its orbit-scale peak and crowns leave
         /// so the site's own detail takes over. −1: none.
         /// </summary>
         public void SetDetailTile(int tile)
@@ -126,7 +123,6 @@ namespace KardashevAscent.Presentation.Planet
             dirty = false;
             Sphere = HexSphere.Create(frequency);
             Surface = PlanetSurface.Generate(Sphere, Settings);
-            Rivers = RiverMap.Generate(Sphere, Surface, seed);
             tileRadius = new float[Sphere.TileCount];
             for (int t = 0; t < tileRadius.Length; t++)
             {
@@ -182,7 +178,7 @@ namespace KardashevAscent.Presentation.Planet
             BuildFeatures();
         }
 
-        /// <summary>Peaks, crowns and rivers over the tiles (hidden while a data map is shown).</summary>
+        /// <summary>Peaks and crowns over the tiles (hidden while a data map is shown).</summary>
         void BuildFeatures()
         {
             if (Sphere == null || tileRadius == null)
@@ -206,7 +202,7 @@ namespace KardashevAscent.Presentation.Planet
                 if (Application.isPlaying) Destroy(featuresMesh);
                 else DestroyImmediate(featuresMesh);
             }
-            featuresMesh = TerrainFeatures.Build(Sphere, Surface, Rivers, tileRadius, radius, detailTile, builtShare);
+            featuresMesh = TerrainFeatures.Build(Sphere, Surface, tileRadius, radius, detailTile, builtShare);
             featuresMesh.hideFlags = HideFlags.DontSave;
             features.GetComponent<MeshFilter>().sharedMesh = featuresMesh;
             features.GetComponent<MeshRenderer>().sharedMaterial = terrainMaterial;

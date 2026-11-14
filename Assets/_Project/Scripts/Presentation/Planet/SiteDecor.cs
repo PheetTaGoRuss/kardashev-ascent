@@ -6,9 +6,8 @@ using UnityEngine.Rendering;
 namespace KardashevAscent.Presentation.Planet
 {
     /// <summary>
-    /// Close-up nature on the open building site: trees on forest (and a few on lowland), rocks on high and dry ground,
-    /// and the river's channel when one runs through the tile. A building clears its slots: trees, rocks and the river
-    /// there disappear when the site starts (visual only, decided 2026-11-14; nothing grows back). From orbit the
+    /// Close-up nature on the open building site: trees on forest (and a few on lowland), reeds on wetland and rocks on
+    /// high and dry ground. A building clears its slots: trees and rocks there disappear when the site starts (visual only, decided 2026-11-14; nothing grows back). From orbit the
     /// same tile shows its large-scale features instead (<see cref="TerrainFeatures"/>). Sets itself up after the scene
     /// loads, next to the <see cref="SiteView"/>.
     /// </summary>
@@ -20,7 +19,6 @@ namespace KardashevAscent.Presentation.Planet
         static readonly Color32 Reed = new Color32(96, 128, 60, 15);
         static readonly Color32 Stone = new Color32(128, 120, 110, 40);
         static readonly Color32 DarkStone = new Color32(58, 52, 50, 50);
-        static readonly Color32 Water = new Color32(70, 150, 215, 230);
 
         SiteView site;
         PlanetView planet;
@@ -89,15 +87,9 @@ namespace KardashevAscent.Presentation.Planet
             TerrainType terrain = planet.Surface.Terrain[tile];
             float slot = (float)s.Spacing * planet.Radius;   // one slot's width, world units
 
-            // The river's channel first: the slots it crosses get no trees or rocks.
-            var riverSlots = new HashSet<int>();
-            RiverMap rivers = planet.Rivers;
-            if (rivers != null && rivers.IsRiver(tile))
-                AddRiver(s, rivers, slot, riverSlots, v, n, c, tri);
-
             for (int k = 0; k < s.SlotCount; k++)
             {
-                if (Built(k) || riverSlots.Contains(k))
+                if (Built(k))
                     continue;
                 Vector3 centre = ToUnity(s.SlotDirections[k]);
                 switch (terrain)
@@ -144,51 +136,6 @@ namespace KardashevAscent.Presentation.Planet
 
         /// <summary>A building (or its site) covers this slot: its nature is cleared.</summary>
         bool Built(int slot) => site.PadTint != null && site.PadTint(slot).HasValue;
-
-        /// <summary>
-        /// The channel: in from the upstream neighbour's side (or a spring at the centre), out toward the downstream
-        /// tile, as short ribbon pieces on the ground. Pieces over a built slot are left out (filled in).
-        /// </summary>
-        void AddRiver(TileSite s, RiverMap rivers, float slot, HashSet<int> riverSlots,
-                      List<Vector3> v, List<Vector3> n, List<Color32> c, List<int> tri)
-        {
-            int tile = s.Tile;
-            Vector3 centre = ToUnity(s.Centre);
-            Vector3 entry = centre;
-            foreach (int nb in planet.Sphere.Neighbors[tile])
-                if (rivers.Downstream(nb) == tile)
-                {
-                    entry = Vector3.Lerp(centre, ToUnity(planet.Sphere.Centers[nb]), 0.5f).normalized;   // the shared edge
-                    break;
-                }
-            int down = rivers.Downstream(tile);
-            Vector3 exit = down >= 0 ? Vector3.Lerp(centre, ToUnity(planet.Sphere.Centers[down]), 0.5f).normalized : centre;
-            float width = slot * (0.9f + 0.2f * Mathf.Min(6, rivers.Flow(tile)));
-            const int pieces = 16;
-            var points = new List<Vector3>();
-            for (int i = 0; i <= pieces; i++)
-            {
-                float f = i / (float)pieces;
-                // Through the centre with a gentle bend: a quadratic curve entry → centre → exit.
-                Vector3 p = ((1 - f) * (1 - f) * entry + 2f * (1 - f) * f * centre + f * f * exit).normalized;
-                points.Add(p);
-            }
-            for (int i = 0; i < pieces; i++)
-            {
-                Vector3 mid = (points[i] + points[i + 1]).normalized;
-                int under = s.FindSlot(new System.Numerics.Vector3(mid.x, mid.y, mid.z));
-                if (under >= 0)
-                {
-                    riverSlots.Add(under);
-                    if (Built(under))
-                        continue;   // the building filled this stretch in
-                }
-                float lift = slot * 0.015f;
-                Vector3 a = points[i] * (site.GroundRadius(points[i]) + lift);
-                Vector3 b = points[i + 1] * (site.GroundRadius(points[i + 1]) + lift);
-                TerrainFeatures.Ribbon(v, n, c, tri, a, b, points[i], points[i + 1], width, Water);
-            }
-        }
 
         void Tree(Vector3 slotCentre, float slot, int tile, int k, int i, Color32 crown, float scale,
                   List<Vector3> v, List<Vector3> n, List<Color32> c, List<int> tri)

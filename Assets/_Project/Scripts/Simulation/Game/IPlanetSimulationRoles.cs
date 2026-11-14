@@ -261,9 +261,6 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>The colony network: hub, relays, coverage, power (stage E).</summary>
         Robots.ColonyNetwork Network { get; }
 
-        /// <summary>The planet's rivers (derived from the tiles and seed).</summary>
-        Planet.RiverMap Rivers { get; }
-
         /// <summary>Colony computing the robots' processors ask for, W, and whether it runs now (stage E).</summary>
         double ComputingRequestW { get; }
         bool ComputingOn { get; }
