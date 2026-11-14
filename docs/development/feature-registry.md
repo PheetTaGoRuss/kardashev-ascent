@@ -97,6 +97,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | CO-03 | Build parts in Wh from spare power; sites; salvage | REJECTED (director 2026-11-14: buildings use real materials, not power; replaced by CO-03a) | PR #38 | Removed (old saves convert) | — |
 | CO-03a | Buildings take a bill of real materials: the real mass of the installation (c-Si module composition; LFP cathode) times 1 % on site (game rule); stations have placeholder bills (TBD). A robot takes them from stock while it works on the site; spare power makes nothing; Workshop jobs draw their energy from the grid; repairs take iron and battery-cell materials. The lander brings a cargo for the first buildings (game rule, TBD). Save version 26 | CONFIRMED (director 2026-11-14); amounts PROPOSED | chat 2026-11-14 | Tested; seen in Play mode | `Resources/BuildCosts.cs`, `Game/Construction.cs` |
 | CO-04 | Sites progress only while a robot works on them | CONFIRMED | WF D2 | Tested | orchestrator, `Workforce` |
+| CO-04b | Construction takes robot work: 2 h plus 4 h per square root of a tonne of materials (TBD), at the crew's rate, never ahead of the materials delivered; a site is finished when both are in. Sites rise from the ground as they are built, pulse while a robot works, and pop when finished; robots hop while building. Save version 27 | CONFIRMED (director 2026-11-14); hours PROPOSED | chat 2026-11-14 | Tested; seen in Play mode | `Game/Construction.cs`, `Presentation/Planet/PanelPlacer.cs` |
 | CO-05 | Absolute K beside planet K | CONFIRMED | PR #42 | Tested | `Civilization/Kardashev.cs` |
 | CO-06 | Milestones every 0.1 of planet K on a day's average | CONFIRMED | PR #44 | Tested | `Kardashev.cs`, orchestrator |
 | CO-07 | Milestones as the unlock mechanism ("energy quotas") | CONFIRMED | WF D7, D8 | Tested | `PanelTiers`, `RobotTech` |
@@ -142,6 +143,8 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | RS-04 | Mining into one colony stock | CONFIRMED | PR #52 | Tested | orchestrator |
 | RS-05 | Robot Workshop: robots, upgrades, substitute materials. Refining conserves mass: leftover rock is slag (PROPOSED addition, not yet approved) | CONFIRMED | PR #52 | Tested; placeholder recipes | `Robots/Manufacturing.cs` |
 | RS-06 | Industrial production foundation: phases, storage classes, production blockers | Unknown: no decision recorded in the repository | — | In progress (uncommitted, seen locally 2026-11-12) | `Resources/IndustrialProduction.cs` in the main checkout |
+| RS-12 | Calculation puzzles are occasional: a survey or measurement comes back as a puzzle 25 % of the time (TBD; a stable roll from tile, kind and hour); otherwise the robot works the result out exactly | CONFIRMED (director 2026-11-14); 25 % PROPOSED | chat 2026-11-14 | Tested | `Game/PlanetSimulation.Findings.cs` (`RollPuzzle`) |
+| RS-13 | Research always ends in its own unique puzzle | FUTURE (director 2026-11-14) | chat 2026-11-14 | Not started | — |
 | RS-07 | Deposit depletion; purity | FUTURE | V | Not started | — |
 | RS-08 | Storage and logistics | FUTURE | V | Not started | — |
 | RS-09 | Chemical processing, production chains, byproducts, waste, recycling | FUTURE | V | Not started | — |
@@ -186,6 +189,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | 2026-11-14 | Terrain and build bar: buildings clear trees and rocks on their slots, visual only; exaggerated relief from orbit; build bar in Power and Stations with (i) descriptions | PL-11 to PL-14, UI-07 |
 | 2026-11-14 | Game flow: main menu plus pause menu; the player must pick the first landing tile before time starts, with the game paused while picking | PL-04a, UI-08 |
 | 2026-11-14 | After landing a tutorial asks for the essential buildings or places them on Skip; 3 starter robots; boat upgrade for work on water; fastest speed 1 day/s; buildings use real materials, not power (answers OQ-3) | UI-09, RB-17, RB-18, CO-01a, CO-03a |
+| 2026-11-14 | Long-trip charging and no work for sites without materials approved; calculation puzzles occasional (research will always have its own puzzle); construction takes time, with a building animation | RB-19, CO-04a, RS-12, RS-13, CO-04b |
 | 2026-11-14 | Rivers removed after a look in Play mode ("bugged and weird"); RiverMap, its rules and its drawing deleted | PL-12 |
 | 2026-11-09 | Solar measurements: robots turn built panels; research robots measure every solar parameter; measurement is a reasoning puzzle | `docs/design/solar-measurements.md` (on its branch) |
 | 2026-11-12 | Game vision and the ten design pillars | [`../game/game-vision.md`](../game/game-vision.md) |
