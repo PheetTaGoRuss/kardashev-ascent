@@ -164,9 +164,12 @@ namespace KardashevAscent.Simulation.Game
                     surveyOrders.Remove(tile);
                     SurveyPuzzle puzzle = SurveyPuzzle.Make(tile, Deposits.At(tile));
                     // Only rock here: nothing to estimate, the survey is simply done (once the colony has it).
+                    // Otherwise the cores are a puzzle only now and then; usually the robot works the grades out itself.
                     var finding = puzzle.Materials.Count == 0
                         ? new HeldFinding { Kind = FindingKind.SurveyRockOnly, Tile = tile }
-                        : new HeldFinding { Kind = FindingKind.SurveyCores, Tile = tile, Survey = puzzle };
+                        : RollPuzzle(tile, 1)
+                        ? new HeldFinding { Kind = FindingKind.SurveyCores, Tile = tile, Survey = puzzle }
+                        : new HeldFinding { Kind = FindingKind.SurveyWorkedOut, Tile = tile };
                     if (!HoldIfCutOff(t, finding))
                         Deliver(finding);
                 }
@@ -179,7 +182,10 @@ namespace KardashevAscent.Simulation.Game
                 fieldWork.Remove(t);
                 measureOrders.Remove(mo);
                 HeldFinding readings = null;
-                if (HasPuzzle(mo.Parameter))
+                if (!RollPuzzle(mo.Tile, 2 + (int)mo.Parameter))
+                    // No puzzle this time: the robot works the value out itself.
+                    readings = new HeldFinding { Kind = FindingKind.ValueWorkedOut, Tile = mo.Tile, Parameter = mo.Parameter };
+                else if (HasPuzzle(mo.Parameter))
                     readings = new HeldFinding { Kind = FindingKind.LightReadings, Tile = mo.Tile, Parameter = mo.Parameter,
                                                  Light = MakeLightPuzzle(mo.Parameter, mo.Tile) };
                 else if (mo.Parameter == SolarParameter.Latitude)
