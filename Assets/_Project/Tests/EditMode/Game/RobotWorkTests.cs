@@ -22,7 +22,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         /// <summary>A colony with one robot (these tests follow what one robot does).</summary>
         static PlanetSimulation Create()
         {
-            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { ConstructionTimeEnabled = false };
             sim.Workforce.Reset(sim.BaseTileId, 1);
             return sim;
         }
@@ -32,7 +32,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         [Test]
         public void NewColony_HasThreeGeneralRobotsAtTheBase()
         {
-            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { ConstructionTimeEnabled = false };
             Assert.AreEqual(3, Workforce.StarterRobots, "director, 2026-11-14");
             Assert.AreEqual(Workforce.StarterRobots, sim.Workforce.Robots.Count);
             foreach (Robot r in sim.Workforce.Robots)

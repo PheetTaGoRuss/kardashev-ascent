@@ -57,7 +57,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         [Test]
         public void Start_QueuesASite_AnEmptyBillIsFinishedAtOnce()
         {
-            var c = new Construction();
+            var c = new Construction { TimeEnabled = false };
             Assert.IsTrue(c.Start(1, 0, new MaterialBill()));
             Assert.IsFalse(c.IsQueued(1, 0));
             Assert.IsFalse(c.Start(1, 1, Bill(60.0)));
@@ -70,7 +70,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         [Test]
         public void Pay_TakesTheSameShareOfEveryMaterial_AsTheScarcestAllows()
         {
-            var c = new Construction();
+            var c = new Construction { TimeEnabled = false };
             c.Start(1, 0, Bill(100.0, 10.0));
             MaterialStock stock = Stock(1000.0, 4.0);   // copper for 40 % only
             Assert.AreEqual(0, c.Pay(stock, null).Count);
@@ -90,7 +90,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         [Test]
         public void Pay_OnlySitesARobotWorksOn_InQueueOrder()
         {
-            var c = new Construction();
+            var c = new Construction { TimeEnabled = false };
             c.Start(1, 0, Bill(100.0));
             c.Start(1, 1, Bill(100.0));
             MaterialStock stock = Stock(150.0);
@@ -106,7 +106,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         [Test]
         public void Cancel_RefundsWhatWasPutIn_Salvage_GivesBackHalf()
         {
-            var c = new Construction();
+            var c = new Construction { TimeEnabled = false };
             c.Start(2, 5, Bill(100.0));
             MaterialStock stock = Stock(30.0);
             c.Pay(stock, null);
@@ -122,9 +122,87 @@ namespace KardashevAscent.Simulation.Tests.Game
         [Test]
         public void SameSlotTwice_Throws()
         {
-            var c = new Construction();
+            var c = new Construction { TimeEnabled = false };
             c.Start(0, 0, Bill(10.0));
             Assert.Throws<InvalidOperationException>(() => c.Start(0, 0, Bill(10.0)));
+        }
+    }
+
+    public class ConstructionTimeTests
+    {
+        static readonly PlanetSolarParams Earthlike = new PlanetSolarParams(
+            SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Math.PI / 180.0,
+            282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0);
+        static readonly HexSphere Sphere = HexSphere.Create(12);
+        static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
+
+        [Test]
+        public void BuildHours_GrowWithTheRootOfTheMass()
+        {
+            // 2 h + 4 h per root tonne (game rule, TBD): a 1 150 kg panel field 6.29 h; 100 times the mass, 10 times the extra.
+            MaterialBill panel = BuildCosts.Panel(10_000.0);
+            Assert.AreEqual(2.0 + 4.0 * Math.Sqrt(1.15), BuildCosts.BuildHours(panel), 1e-9);
+            Assert.AreEqual(2.0 + 40.0 * Math.Sqrt(1.15), BuildCosts.BuildHours(panel.Times(100.0)), 1e-9);
+            Assert.AreEqual(0.0, BuildCosts.BuildHours(new MaterialBill()));
+        }
+
+        [Test]
+        public void Work_CannotRunAheadOfTheMaterials_AndBothFinishTheSite()
+        {
+            var c = new Construction();
+            MaterialBill bill = new MaterialBill().Add(Material.Iron, 1000.0);   // 6 h of work
+            c.Start(0, 0, bill);
+            var stock = new MaterialStock();
+            stock.Add(Material.Iron, 500.0);
+            c.Pay(stock, null);
+            Assert.AreEqual(3.0, c.Work(0, 0, 10.0), 1e-9, "half the materials: half the work");
+            Assert.AreEqual(0.5, c.Progress(0, 0), 1e-9);
+            Assert.AreEqual(0, c.Pay(stock, null).Count);
+            stock.Add(Material.Iron, 500.0);
+            Assert.AreEqual(0, c.Pay(stock, null).Count, "materials in, but work left");
+            Assert.AreEqual(1.0, c.MaterialShare(0, 0), 1e-9);
+            Assert.AreEqual(3.0, c.Work(0, 0, 10.0), 1e-9);
+            Assert.AreEqual(1, c.Pay(stock, null).Count);
+        }
+
+        [Test]
+        public void ARobotTakesHours_ToPutUpAPanel()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
+            sim.Workforce.Reset(sim.BaseTileId, 1);
+            int t = sim.BaseTileId;
+            Assert.IsTrue(sim.PlacePanel(t, 0, 0.3, Math.PI));
+            Assert.IsTrue(sim.IsUnderConstruction(t, 0), "not at once any more");
+            double hours = sim.ConstructionWork(t, 0).Total;
+            Assert.AreEqual(BuildCosts.BuildHours(sim.BuildBill(BuildingType.SolarPanel)), hours, 1e-9);
+            sim.Tick(1.0);
+            Assert.IsTrue(sim.IsBeingBuilt(t, 0));
+            Assert.Greater(sim.ConstructionProgress(t, 0), 0.0);
+            double elapsed = 1.0;
+            while (sim.IsUnderConstruction(t, 0) && elapsed < 48.0) { sim.Tick(0.25); elapsed += 0.25; }
+            Assert.IsFalse(sim.IsUnderConstruction(t, 0));
+            Assert.GreaterOrEqual(elapsed, hours - 0.25, "about its work hours (a robot may stop to charge)");
+        }
+
+        [Test]
+        public void Save_KeepsTheWorkDone_AnOlderSiteWorksAsFarAsItsMaterials()
+        {
+            var a = new PlanetSimulation(Sphere, Surface, Earthlike);
+            a.Workforce.Reset(a.BaseTileId, 1);
+            int t = a.BaseTileId;
+            Assert.IsTrue(a.PlacePanel(t, 0, 0.3, Math.PI));
+            a.Tick(2.0);
+            double done = a.ConstructionWork(t, 0).Done;
+            Assert.Greater(done, 0.0);
+            SimulationState state = a.CaptureState();
+            var b = new PlanetSimulation(Sphere, Surface, Earthlike);
+            Assert.IsTrue(b.RestoreState(state));
+            Assert.AreEqual(done, b.ConstructionWork(t, 0).Done, 1e-9);
+
+            state.Version = 26;
+            var c = new PlanetSimulation(Sphere, Surface, Earthlike);
+            Assert.IsTrue(c.RestoreState(state));
+            Assert.AreEqual(c.ConstructionWork(t, 0).Total * c.ConstructionMaterialShare(t, 0), c.ConstructionWork(t, 0).Done, 1e-9);
         }
     }
 
@@ -137,7 +215,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         static readonly HexSphere Sphere = HexSphere.Create(12);
         static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
 
-        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike);
+        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike) { ConstructionTimeEnabled = false };
 
         static double Tilt(PlanetSimulation sim) => Math.Abs(sim.GetTile(sim.BaseTileId).Latitude);
 

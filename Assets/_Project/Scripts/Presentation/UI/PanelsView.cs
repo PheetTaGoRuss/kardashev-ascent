@@ -316,8 +316,9 @@ namespace KardashevAscent.Presentation.UI
                 placer.SelectedSiteProgress(out double progress, out KardashevAscent.Simulation.Resources.MaterialBill remaining);
                 KardashevAscent.Simulation.Resources.MaterialBill short_ = remaining.Minus(placer.Stock);
                 string boat = placer.SelectedBuilding == BuildingType.FloatingSolar ? " Needs a robot with a boat hull (Workshop upgrade)." : "";
-                siteLine = $"Under construction: {progress * 100.0:0} % · needs {remaining.Describe()} " +
-                           "(a robot brings it from stock while it works here)" +
+                var (workDone, workTotal) = placer.SelectedSiteWork;
+                string materials = remaining.IsEmpty ? "materials all in" : $"still needs {remaining.Describe()}";
+                siteLine = $"Under construction: {progress * 100.0:0} % built · {workDone:0.#} of {workTotal:0.#} h of robot work · {materials}" +
                            (short_.IsEmpty ? "" : $"; short of {short_.Describe()}: mine or refine it") + $". Works once finished.{boat}\n";
             }
             if (hasPanel && placer.SelectedSalvageOrdered)

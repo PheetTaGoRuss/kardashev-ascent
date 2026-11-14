@@ -19,7 +19,7 @@ namespace KardashevAscent.Simulation.Tests.Game
 
         static int Find(TerrainType type) => Array.IndexOf(Surface.Terrain, type);
 
-        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike);
+        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike) { ConstructionTimeEnabled = false };
 
         [Test]
         public void Floats_OnShallowSea_AndWetland_ButNotOnDeepSeaOrLand()

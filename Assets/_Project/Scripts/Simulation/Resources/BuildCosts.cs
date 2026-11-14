@@ -12,6 +12,16 @@ namespace KardashevAscent.Simulation.Resources
         /// <summary>Share of an installation's real material mass the colony supplies on site (game rule, TBD).</summary>
         public const double OnSiteShare = 0.01;
 
+        /// <summary>Robot work hours every building takes at least (game rule, TBD; director 2026-11-14: construction takes time).</summary>
+        public const double BaseBuildHours = 2.0;
+
+        /// <summary>Further work hours per square root of a tonne of materials (game rule, TBD): bigger builds take longer, less than in proportion.</summary>
+        public const double BuildHoursPerRootTonne = 4.0;
+
+        /// <summary>Robot work hours to put up a building with this bill (one General robot; a crew is faster).</summary>
+        public static double BuildHours(MaterialBill bill) =>
+            bill == null || bill.IsEmpty ? 0.0 : BaseBuildHours + BuildHoursPerRootTonne * System.Math.Sqrt(bill.TotalKg / 1000.0);
+
         /// <summary>Share of a finished building's materials that comes back when it is taken down (game rule).</summary>
         public const double SalvageShare = 0.5;
 

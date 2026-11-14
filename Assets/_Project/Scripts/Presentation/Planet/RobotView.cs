@@ -76,7 +76,11 @@ namespace KardashevAscent.Presentation.Planet
                     facing = next - here;
                 }
                 float size = (float)site.Spacing * planet.Radius * sizeOfSlot;
-                rover.Show(direction, siteView.GroundRadius(site, direction), size, facing);
+                // At work on a site: a small hop, like tools going (construction animation).
+                bool building = r.Task.HasValue && r.Task.Value.Kind == TaskKind.Build && !r.IsTravelling
+                                && r.Tile == r.Task.Value.Tile && r.Activity == RobotActivity.None;
+                float hop = building ? size * 0.08f * Mathf.Abs(Mathf.Sin(Time.unscaledTime * 6f + r.Id)) : 0f;
+                rover.Show(direction, siteView.GroundRadius(site, direction) + hop, size, facing);
                 rover.SetLight(Light(r));
             }
 

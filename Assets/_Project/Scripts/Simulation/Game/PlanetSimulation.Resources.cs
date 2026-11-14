@@ -141,6 +141,12 @@ namespace KardashevAscent.Simulation.Game
                     }
                     continue;
                 }
+                // Construction takes time (director 2026-11-14): the crew's hours go into the site.
+                if (t.Kind == TaskKind.Build)
+                {
+                    Build.Work(t.Tile, t.Slot, dt * speed);
+                    continue;
+                }
                 if (t.Kind != TaskKind.Survey && t.Kind != TaskKind.Mine && t.Kind != TaskKind.Measure)
                     continue;
                 fieldWork[t] = (fieldWork.TryGetValue(t, out double h) ? h : 0.0) + dt * speed;

@@ -102,14 +102,15 @@ namespace KardashevAscent.Simulation.Game
                 if (footprintMap.TryGetFootprint(r.Tile, r.Slot, out List<int> f))
                     for (int i = 1; i < f.Count; i++) r.Covered.Add(f[i]);
             int order = 0;
-            var sites = new Dictionary<(int, int), (double Paid, int Order)>();
+            var sites = new Dictionary<(int, int), (double Paid, double Work, int Order)>();
             foreach (var site in Build.Sites())
-                sites[(site.Tile, site.Slot)] = (site.Share, order++);
+                sites[(site.Tile, site.Slot)] = (site.Share, site.WorkDone, order++);
             foreach (BuildingRecord r in state.Buildings)
                 if (sites.TryGetValue((r.Tile, r.Slot), out var site))
                 {
                     r.UnderConstruction = true;
                     r.PaidShare = site.Paid;
+                    r.WorkDoneHours = site.Work;
                     r.QueueOrder = site.Order;
                 }
             return state;
@@ -270,6 +271,9 @@ namespace KardashevAscent.Simulation.Game
 
         int restoringVersion = SimulationState.CurrentVersion;
 
+        /// <summary>Work saved for a site (version 27), or null for an older save (work as far as its materials).</summary>
+        double? WorkOf(BuildingRecord r) => restoringVersion >= 27 ? r.WorkDoneHours : (double?)null;
+
         /// <summary>Share of a saved site already paid: saved as a share since version 26, as parts (Wh) before.</summary>
         double PaidShareOf(BuildingRecord r, double areaM2)
         {
@@ -289,35 +293,35 @@ namespace KardashevAscent.Simulation.Game
                 if (floating) floatingPanels.Add((r.Tile, r.Slot));
                 // Saves before version 5 have no area: their panels are base panel fields.
                 double area = r.AreaM2 > 0.0 ? r.AreaM2 : PanelAreaM2;
-                if (site) Build.RestoreSite(r.Tile, r.Slot, PanelCost(area).Times(floating ? FloatingCostFactor : 1.0), PaidShareOf(r, area));
+                if (site) Build.RestoreSite(r.Tile, r.Slot, PanelCost(area).Times(floating ? FloatingCostFactor : 1.0), PaidShareOf(r, area), WorkOf(r));
                 AddPanel(r.Tile, r.Slot, r.Tilt, r.Azimuth, area);
             }
             else if (r.Type == BuildingType.ChargingStation)
             {
                 if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
                     return;
-                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildBill(BuildingType.ChargingStation), PaidShareOf(r, 0.0));
+                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildBill(BuildingType.ChargingStation), PaidShareOf(r, 0.0), WorkOf(r));
                 stations.Add((r.Tile, r.Slot));
             }
             else if (r.Type == BuildingType.Relay)
             {
                 if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
                     return;
-                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildBill(BuildingType.Relay), PaidShareOf(r, 0.0));
+                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildBill(BuildingType.Relay), PaidShareOf(r, 0.0), WorkOf(r));
                 relays.Add((r.Tile, r.Slot));
             }
             else if (r.Type == BuildingType.Workshop)
             {
                 if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
                     return;
-                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildBill(BuildingType.Workshop), PaidShareOf(r, 0.0));
+                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildBill(BuildingType.Workshop), PaidShareOf(r, 0.0), WorkOf(r));
                 workshops.Add((r.Tile, r.Slot));
             }
             else if (r.Type == BuildingType.Battery)
             {
                 if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
                     return;
-                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildBill(BuildingType.Battery), PaidShareOf(r, 0.0));
+                if (site) Build.RestoreSite(r.Tile, r.Slot, BuildBill(BuildingType.Battery), PaidShareOf(r, 0.0), WorkOf(r));
                 else Grid.Battery.AddCapacity(BatteryUnitWh);
                 AddBattery(r.Tile, r.Slot);
             }

@@ -9,8 +9,9 @@ namespace KardashevAscent.Simulation.Game
     /// The colony's construction sites (director, 2026-11-14: buildings are built from real materials, not power).
     /// A new building waits as a site with its bill of materials (<see cref="BuildCosts"/>). While a robot works on it,
     /// it takes materials from the colony's stock (<see cref="Pay"/>): each time, the same share of every material on
-    /// its bill, as much as the scarcest one allows, so a site is always some share paid. It is finished when the share
-    /// reaches 1; a site does nothing until then. Cancelling a site gives back what was put into it; taking down a
+    /// its bill, as much as the scarcest one allows, so a site is always some share paid. Robots on the site also put in
+    /// work (<see cref="Work"/>, <see cref="BuildCosts.BuildHours"/>), never more than the materials delivered allow. It is
+    /// finished when all its materials are in and the work is done; a site does nothing until then. Cancelling a site gives back what was put into it; taking down a
     /// finished building gives back <see cref="BuildCosts.SalvageShare"/> of its bill.
     /// </summary>
     public sealed class Construction
@@ -20,9 +21,17 @@ namespace KardashevAscent.Simulation.Game
             public (int Tile, int Slot) Key;
             public MaterialBill Bill;
             public double Share;
+            public double WorkHours;
+            public double WorkDone;
+
+            /// <summary>Building progress 0–1: the work done (the work can't run ahead of the materials).</summary>
+            public double Progress => WorkHours > 0.0 ? Math.Min(1.0, WorkDone / WorkHours) : Share;
         }
 
         readonly List<Site> queue = new List<Site>();
+
+        /// <summary>False: a site is finished as soon as its materials are in (no work time; for tests about other things).</summary>
+        public bool TimeEnabled { get; set; } = true;
 
         /// <summary>Construction sites still waiting for materials or a robot.</summary>
         public int QueueCount => queue.Count;
@@ -41,11 +50,41 @@ namespace KardashevAscent.Simulation.Game
 
         public bool IsQueued(int tile, int slot) => Find((tile, slot)) >= 0;
 
-        /// <summary>How much of a site is paid for, 0–1; 1 when it is not a site (finished, or nothing there).</summary>
+        /// <summary>How far a site is built, 0–1; 1 when it is not a site (finished, or nothing there).</summary>
         public double Progress(int tile, int slot)
         {
             int i = Find((tile, slot));
+            return i < 0 ? 1.0 : queue[i].Progress;
+        }
+
+        /// <summary>Share of a site's materials delivered, 0–1 (1 when it is no site).</summary>
+        public double MaterialShare(int tile, int slot)
+        {
+            int i = Find((tile, slot));
             return i < 0 ? 1.0 : queue[i].Share;
+        }
+
+        /// <summary>Work done and work needed on a site, hours (0, 0 when it is no site).</summary>
+        public (double Done, double Total) WorkAt(int tile, int slot)
+        {
+            int i = Find((tile, slot));
+            return i < 0 ? (0.0, 0.0) : (queue[i].WorkDone, queue[i].WorkHours);
+        }
+
+        /// <summary>
+        /// Robots put <paramref name="hours"/> of work into a site (a crew's hours at its rate), up to what the materials
+        /// delivered so far allow. Returns the hours that went in.
+        /// </summary>
+        public double Work(int tile, int slot, double hours)
+        {
+            int i = Find((tile, slot));
+            if (i < 0 || hours <= 0.0)
+                return 0.0;
+            Site s = queue[i];
+            double cap = s.Share * s.WorkHours;
+            double add = Math.Max(0.0, Math.Min(hours, cap - s.WorkDone));
+            s.WorkDone += add;
+            return add;
         }
 
         /// <summary>What a site still needs (empty when it is no site).</summary>
@@ -65,15 +104,22 @@ namespace KardashevAscent.Simulation.Game
             if (IsQueued(tile, slot)) throw new InvalidOperationException($"Slot {tile}.{slot} is already a construction site.");
             if (bill.IsEmpty)
                 return true;
-            queue.Add(new Site { Key = (tile, slot), Bill = bill, Share = 0.0 });
+            queue.Add(new Site { Key = (tile, slot), Bill = bill, Share = 0.0, WorkHours = TimeEnabled ? BuildCosts.BuildHours(bill) : 0.0 });
             return false;
         }
 
-        /// <summary>Put back a site exactly as it was (when a game is loaded); it goes to the end of the queue.</summary>
-        public void RestoreSite(int tile, int slot, MaterialBill bill, double share)
+        /// <summary>
+        /// Put back a site exactly as it was (when a game is loaded); it goes to the end of the queue.
+        /// <paramref name="workDone"/> null: a save from before construction time (version 27): work as far as its materials.
+        /// </summary>
+        public void RestoreSite(int tile, int slot, MaterialBill bill, double share, double? workDone = null)
         {
             if (IsQueued(tile, slot)) throw new InvalidOperationException($"Slot {tile}.{slot} is already a construction site.");
-            queue.Add(new Site { Key = (tile, slot), Bill = bill ?? new MaterialBill(), Share = Math.Max(0.0, Math.Min(share, 1.0)) });
+            bill = bill ?? new MaterialBill();
+            share = Math.Max(0.0, Math.Min(share, 1.0));
+            double hours = TimeEnabled ? BuildCosts.BuildHours(bill) : 0.0;
+            queue.Add(new Site { Key = (tile, slot), Bill = bill, Share = share, WorkHours = hours,
+                                 WorkDone = Math.Max(0.0, Math.Min(workDone ?? share * hours, share * hours)) });
         }
 
         /// <summary>Remove a site and give back the materials already in it. Returns them (empty if it was no site).</summary>
@@ -129,7 +175,7 @@ namespace KardashevAscent.Simulation.Game
                         stock.Take(m, kg * left * f);
                     s.Share = f >= 1.0 - 1e-12 ? 1.0 : s.Share + left * f;
                 }
-                if (s.Share < 1.0 - 1e-9)
+                if (s.Share < 1.0 - 1e-9 || s.WorkDone < s.WorkHours - 1e-9)
                 {
                     i++;
                     continue;
@@ -140,11 +186,11 @@ namespace KardashevAscent.Simulation.Game
             return finished;
         }
 
-        /// <summary>The sites in queue order, with each bill and the share paid (for saving).</summary>
-        public IEnumerable<(int Tile, int Slot, MaterialBill Bill, double Share)> Sites()
+        /// <summary>The sites in queue order, with each bill, the share paid and the work done, hours (for saving).</summary>
+        public IEnumerable<(int Tile, int Slot, MaterialBill Bill, double Share, double WorkDone)> Sites()
         {
             foreach (Site s in queue)
-                yield return (s.Key.Tile, s.Key.Slot, s.Bill, s.Share);
+                yield return (s.Key.Tile, s.Key.Slot, s.Bill, s.Share, s.WorkDone);
         }
 
         /// <summary>Drop every site without refunds (when a game is loaded).</summary>
