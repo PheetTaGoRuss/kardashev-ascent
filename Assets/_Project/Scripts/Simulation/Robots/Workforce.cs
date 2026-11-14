@@ -201,8 +201,19 @@ namespace KardashevAscent.Simulation.Robots
         public bool SendTo(int robotId, int tile)
         {
             Robot r = GetRobot(robotId);
-            if (r == null || Movement == null || r.Tile == tile || r.IsShutDown || r.Activity != RobotActivity.None
-                || Movement.RoutesFor(r).Route(r.Tile, tile) == null)
+            if (r == null || Movement == null || r.Tile == tile || r.IsShutDown || Movement.RoutesFor(r).Route(r.Tile, tile) == null)
+                return false;
+            // A robot on charge goes when you send it, if it has the charge to get there and back to a charger
+            // keeping 20 % (director 2026-11-14: robots must answer orders); in maintenance it stays.
+            if (r.Activity == RobotActivity.Charging)
+            {
+                if (!InRange(r, new WorkTask(TaskKind.Survey, tile, -1)))
+                    return false;
+                r.Activity = RobotActivity.None;
+                r.Facility = null;
+                r.TripCharge = 0.0;
+            }
+            else if (r.Activity != RobotActivity.None)
                 return false;
             r.Task = null;
             r.OnTemporaryTask = false;

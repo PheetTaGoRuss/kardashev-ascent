@@ -117,8 +117,10 @@ namespace KardashevAscent.Simulation.Robots
                     dockRequest[r.Id] = req;
                     DockRequestW += req;
                 }
-                // Below 20 %, or charging for a long trip (served right after the colony, game rule 2026-11-14).
-                else if (r.Battery.StateOfCharge < RobotSpecs.ReturnToChargeFraction || r.TripCharge > 0.0)
+                // A robot that has plugged in charges at priority, right after the colony, up to 80 % (or what a long
+                // trip needs): director 2026-11-14, robots were leaving the charger at ~40 % because top-up power
+                // only came once the grid battery was full. Top-up (after the grid battery) is only above that.
+                else if (r.Battery.StateOfCharge < Math.Max(RobotSpecs.ResumeWorkFraction, r.TripCharge) - 1e-6)
                 {
                     criticalRequest[r.Id] = req;
                     CriticalRequestW += req;

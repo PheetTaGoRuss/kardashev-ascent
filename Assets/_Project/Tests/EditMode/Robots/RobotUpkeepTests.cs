@@ -153,11 +153,30 @@ namespace KardashevAscent.Simulation.Tests.Robots
 
             up.Plan(w, yard, 0.25);
             Assert.AreEqual(RobotActivity.Charging, r.Activity, "it got power last step: it stays");
-            Assert.Greater(up.TopUpRequestW, 0.0);
-            up.Apply(w, 0.25, 0.0, 0.0, 0.0, false, null);                    // no spare power for a top-up
+            Assert.Greater(up.CriticalRequestW, 0.0, "plugged in: priority charging up to 80 % (director 2026-11-14)");
+            Assert.AreEqual(0.0, up.TopUpRequestW);
+            up.Apply(w, 0.25, 0.0, 0.0, 0.0, false, null);                    // a brownout: nothing came
             up.Plan(w, yard, 0.25);
             Assert.AreEqual(RobotActivity.None, r.Activity, "nothing came: back to work above 20 %");
             Assert.IsTrue(r.Available);
+        }
+
+        [Test]
+        public void PluggedIn_ChargesAtPriority_AllTheWayTo80()
+        {
+            Workforce w = WithRobots(1, 0.1);
+            Robot r = w.Robots[0];
+            var yard = new List<RobotFacility> { new RobotFacility(0, 3, ChargingCapability.BatteryYard) };
+            var up = new RobotUpkeep();
+            for (int i = 0; i < 40 && r.Activity != RobotActivity.None || i == 0; i++)
+            {
+                up.Plan(w, yard, 0.25);
+                Assert.AreEqual(0.0, up.TopUpRequestW, "no waiting for the grid battery to fill");
+                up.Apply(w, 0.25, 0.0, up.CriticalRequestW, 0.0, false, null);
+            }
+            up.Plan(w, yard, 0.25);
+            Assert.GreaterOrEqual(r.Battery.StateOfCharge, RobotSpecs.ResumeWorkFraction - 1e-6);
+            Assert.AreEqual(RobotActivity.None, r.Activity, "charged: back to work");
         }
 
         [Test]

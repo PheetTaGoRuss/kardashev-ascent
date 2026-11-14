@@ -119,6 +119,21 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.IsFalse(sim.IsUnderConstruction(t, 0));
         }
 
+        [Test]
+        public void ARobotOnCharge_GoesWhenSent_IfItHasTheCharge()
+        {
+            var sim = Create();
+            Robot r = sim.Workforce.Robots[0];
+            int next = NextLandTile(sim);
+            r.Battery.Restore(r.Battery.DeliveredWh, 0.6 * r.Battery.CapacityWh);
+            r.Activity = RobotActivity.Charging;
+            r.Facility = (sim.BaseTileId, -1);
+            Assert.IsTrue(sim.SendRobot(r.Id, next), "it has the charge for a hop and back");
+            Assert.AreEqual(RobotActivity.None, r.Activity);
+            sim.Tick(12.0);
+            Assert.AreEqual(next, r.Tile);
+        }
+
         static double PowerGridLanderCapacity() => KardashevAscent.Simulation.Energy.PowerGrid.Lander().Battery.CapacityWh;
 
         [Test]

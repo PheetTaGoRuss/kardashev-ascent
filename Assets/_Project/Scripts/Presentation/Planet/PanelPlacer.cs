@@ -56,6 +56,8 @@ namespace KardashevAscent.Presentation.Planet
         [SerializeField] Color ghostBlocked = new Color(1f, 0.38f, 0.3f, 0.5f);
         [Tooltip("Tint of a construction site waiting for materials.")]
         [SerializeField] Color siteTint = new Color(1f, 0.72f, 0.25f, 0.55f);
+        [Tooltip("Tint of a construction site the stock can't supply yet (director 2026-11-14: red until the materials are there).")]
+        [SerializeField] Color shortTint = new Color(1f, 0.22f, 0.18f, 0.6f);
         [Tooltip("Panel width as a share of the slot spacing.")]
         [Range(0.3f, 1f)] [SerializeField] float panelScale = 0.78f;
         [Tooltip("Seconds between live previews while a slider moves.")]
@@ -603,14 +605,17 @@ namespace KardashevAscent.Presentation.Planet
                 float g = shownGrowth.TryGetValue(key, out float was) ? Mathf.MoveTowards(was, target, Time.unscaledDeltaTime * 0.6f) : target;
                 shownGrowth[key] = g;
                 grow(g);
+                // Red while the stock can't cover what it still needs; yellow (waiting to be built) once it can.
+                bool shortOf = !simulation.ConstructionRemainingAt(key.Tile, key.Slot).Minus(simulation.Materials).IsEmpty;
+                Color baseTint = shortOf ? shortTint : siteTint;
                 if (simulation.IsBeingBuilt(key.Tile, key.Slot))
                 {
-                    Color c = siteTint;
-                    c.a = siteTint.a * (0.65f + 0.35f * Mathf.Sin(now * 5f));
+                    Color c = baseTint;
+                    c.a = baseTint.a * (0.65f + 0.35f * Mathf.Sin(now * 5f));
                     tint(c);
                 }
                 else
-                    tint(siteTint);
+                    tint(baseTint);
                 return;
             }
             shownGrowth.Remove(key);

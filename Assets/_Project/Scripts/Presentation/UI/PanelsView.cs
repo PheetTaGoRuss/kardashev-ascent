@@ -319,7 +319,7 @@ namespace KardashevAscent.Presentation.UI
                 var (workDone, workTotal) = placer.SelectedSiteWork;
                 string materials = remaining.IsEmpty ? "materials all in" : $"still needs {remaining.Describe()}";
                 siteLine = $"Under construction: {progress * 100.0:0} % built · {workDone:0.#} of {workTotal:0.#} h of robot work · {materials}" +
-                           (short_.IsEmpty ? "" : $"; short of {short_.Describe()}: mine or refine it") + $". Works once finished.{boat}\n";
+                           (short_.IsEmpty ? " · materials in stock: waiting to be built (yellow)" : $"; short of {short_.Describe()}: mine or refine it (red until it is in stock)") + $". Works once finished.{boat}\n";
             }
             if (hasPanel && placer.SelectedSalvageOrdered)
                 siteLine = "Salvage ordered: it works until a robot takes it down (Del again to cancel).\n" + siteLine;
