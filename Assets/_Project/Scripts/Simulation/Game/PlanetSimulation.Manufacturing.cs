@@ -226,6 +226,7 @@ namespace KardashevAscent.Simulation.Game
                    record.planet.radiusM > 0.0 ? record.planet.radiusM : Kardashev.EarthRadiusM, baseTileId)
         {
             PlanetId = record.id ?? "";
+            TerrainSeed = record.look?.terrainSeed ?? DefaultTerrainSeed;
             StarTemperatureK = record.star.teffK;
             Clouds = record.Clouds;
             Deposits = new DepositMap(sphere, surface, record.ToChemistry(), record.look?.terrainSeed ?? 7);

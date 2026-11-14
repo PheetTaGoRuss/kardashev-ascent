@@ -30,6 +30,24 @@ namespace KardashevAscent.Simulation.Tests.Game
         static double Tilt(PlanetSimulation sim) => Math.Abs(sim.GetTile(sim.BaseTileId).Latitude);
 
         [Test]
+        public void TheMapSeed_ComesFromTheRecord_AndIsSaved()
+        {
+            // Director 2026-11-14: every new game gets a random map, so a save must say which one it was played on.
+            PlanetRecord r = Sunlike();
+            r.look.terrainSeed = 123456789;
+            var sim = Create(r);
+            Assert.AreEqual(123456789, sim.TerrainSeed);
+            SimulationState state = sim.CaptureState();
+            Assert.AreEqual(123456789, state.TerrainSeed);
+            Assert.AreEqual(28, SimulationState.CurrentVersion);
+            var older = JsonUtility_Free_OldState();
+            Assert.AreEqual(0, older.TerrainSeed, "a save from before random maps names none: the planet's own map");
+        }
+
+        /// <summary>A version-27 save as JSON would read it: no TerrainSeed field.</summary>
+        static SimulationState JsonUtility_Free_OldState() => new SimulationState { Version = 27 };
+
+        [Test]
         public void Record_SetsIdStarAndClouds()
         {
             PlanetRecord r = Sunlike("viridia");

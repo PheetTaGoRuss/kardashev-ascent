@@ -140,8 +140,11 @@ namespace KardashevAscent.Presentation.Game
             }
             if (phase == GamePhase.ChoosingPlanet && chooser != null)
                 chooser.SetVisible(true);
-            if (phase == GamePhase.Landing && picker != null)
-                picker.Select(-1);
+            if (phase == GamePhase.Landing)
+            {
+                NewMap();
+                if (picker != null) picker.Select(-1);
+            }
         }
 
         /// <summary>The chooser picked a planet (or was closed): pick a tile to land on next.</summary>
@@ -150,6 +153,9 @@ namespace KardashevAscent.Presentation.Game
             if (instance != null && (Phase == GamePhase.ChoosingPlanet || Phase == GamePhase.Playing))
                 instance.SetPhase(GamePhase.Landing);
         }
+
+        /// <summary>Every new colony lands on a new random map of its planet (director 2026-11-14).</summary>
+        void NewMap() => runner?.NewRandomMap();
 
         /// <summary>
         /// The colony landed on this tile: its building site opens and the setup tutorial asks for the essential
