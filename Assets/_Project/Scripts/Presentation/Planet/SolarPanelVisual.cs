@@ -27,6 +27,9 @@ namespace KardashevAscent.Presentation.Planet
         MaterialPropertyBlock block, cellBlock;
         float shownSize = 1f;
         float growth = 1f;
+        readonly FootprintLinks links;
+        readonly List<Vector3> linkPositions = new List<Vector3>();
+        readonly List<Vector3> linkUps = new List<Vector3>();
 
         public SolarPanelVisual(string name, Transform planet, Material frame, Material cell)
         {
@@ -34,6 +37,7 @@ namespace KardashevAscent.Presentation.Planet
             this.planet = planet;
             this.frame = frame;
             this.cell = cell;
+            links = new FootprintLinks(name, planet, frame, frame, withDuct: false);
             AddTable();
         }
 
@@ -105,12 +109,22 @@ namespace KardashevAscent.Presentation.Planet
                 t.Pivot.localRotation = Quaternion.Inverse(tileRotation) * Quaternion.LookRotation(along, normal);
                 t.Root.SetActive(true);
             }
+            // One field across its slots: a service deck between the tables.
+            linkPositions.Clear();
+            linkUps.Clear();
+            for (int i = 0; i < directions.Count && i < tables.Count; i++)
+            {
+                linkPositions.Add(tables[i].Root.transform.localPosition);
+                linkUps.Add(tables[i].Root.transform.localRotation * Vector3.up);
+            }
+            links.Show(linkPositions, linkUps, size, growth);
         }
 
         public void Hide()
         {
             foreach (Table t in tables)
                 t.Root.SetActive(false);
+            links.Hide();
         }
 
         /// <summary>
@@ -131,6 +145,7 @@ namespace KardashevAscent.Presentation.Planet
             block.SetColor("_Color", color);
             foreach (Renderer r in renderers)
                 r.SetPropertyBlock(block);
+            links.SetTint(color);
         }
 
         /// <summary>Colour only the cells (bigger installations: farms, parks, arrays get their own colour).</summary>
@@ -145,6 +160,7 @@ namespace KardashevAscent.Presentation.Planet
 
         public void Destroy()
         {
+            links.Destroy();
             foreach (Table t in tables)
                 if (t.Root != null)
                     Object.Destroy(t.Root);

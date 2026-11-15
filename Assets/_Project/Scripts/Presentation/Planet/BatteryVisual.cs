@@ -20,6 +20,9 @@ namespace KardashevAscent.Presentation.Planet
         MaterialPropertyBlock block;
         float shownSize = 1f;
         float growth = 1f;
+        readonly FootprintLinks links;
+        readonly List<Vector3> linkPositions = new List<Vector3>();
+        readonly List<Vector3> linkUps = new List<Vector3>();
 
         public BatteryVisual(string name, Transform planet, Material body, Material top)
         {
@@ -27,6 +30,7 @@ namespace KardashevAscent.Presentation.Planet
             this.planet = planet;
             this.body = body;
             this.top = top;
+            links = new FootprintLinks(name, planet, body, top, withDuct: true);
             AddModule();
         }
 
@@ -79,12 +83,22 @@ namespace KardashevAscent.Presentation.Planet
                 m.transform.localScale = new Vector3(size, size * growth, size);
                 m.SetActive(true);
             }
+            // One building across its slots: decks and a duct between the modules.
+            linkPositions.Clear();
+            linkUps.Clear();
+            for (int i = 0; i < directions.Count && i < modules.Count; i++)
+            {
+                linkPositions.Add(modules[i].transform.localPosition);
+                linkUps.Add(modules[i].transform.localRotation * Vector3.up);
+            }
+            links.Show(linkPositions, linkUps, size, growth);
         }
 
         public void Hide()
         {
             foreach (GameObject m in modules)
                 m.SetActive(false);
+            links.Hide();
         }
 
         /// <summary>
@@ -96,6 +110,8 @@ namespace KardashevAscent.Presentation.Planet
             growth = Mathf.Max(0.02f, g);
             foreach (GameObject m in modules)
                 m.transform.localScale = new Vector3(shownSize, shownSize * growth, shownSize);
+            if (linkPositions.Count > 1)
+                links.Show(linkPositions, linkUps, shownSize, growth);
         }
 
         public void SetTint(Color color)
@@ -104,10 +120,12 @@ namespace KardashevAscent.Presentation.Planet
             block.SetColor("_Color", color);
             foreach (Renderer r in renderers)
                 r.SetPropertyBlock(block);
+            links.SetTint(color);
         }
 
         public void Destroy()
         {
+            links.Destroy();
             foreach (GameObject m in modules)
                 if (m != null)
                     Object.Destroy(m);
