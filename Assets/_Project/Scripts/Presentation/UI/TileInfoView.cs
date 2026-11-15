@@ -35,6 +35,11 @@ namespace KardashevAscent.Presentation.UI
         string groundShape, landingShape;
         Label title, place, sunlight, bestLabel, bestCaption, sunPathCaption, monthlyCaption, monthlyHover, legend1, legend2;
         SunPathChart sunPath;
+        // Short lines with the full story behind "i" (director 2026-11-15, after Oxygen Not Included), in two tabs.
+        InfoTip placeTip, sunlightTip, bestTip, groundTip, sunTip;
+        VisualElement groundChips, overviewTab, sunTab;
+        Button overviewButton, sunButton;
+        static bool showSunTab;
         int shownTile = -1;
         bool shownKnowsLatitude;
         double shownTilt = double.NaN, shownAzimuth = double.NaN;
@@ -70,6 +75,8 @@ namespace KardashevAscent.Presentation.UI
             groundActions = root.Q("ground-actions");
             groundShape = null;
 
+            BuildTabsAndTips(root);
+
             VisualElement holder = root.Q("sunpath");
             sunPath = new SunPathChart();
             sunPath.style.flexGrow = 1;
@@ -88,6 +95,82 @@ namespace KardashevAscent.Presentation.UI
                 monthLabels.Add(label);
             }
             shownTile = -1;
+        }
+
+        void BuildTabsAndTips(VisualElement root)
+        {
+            // Two tabs under the title: Overview (sunlight, best angle, ground) and Sun (path, months, formulas).
+            var tabBar = new VisualElement();
+            tabBar.style.flexDirection = FlexDirection.Row;
+            tabBar.style.marginTop = 8;
+            overviewButton = new Button(() => { showSunTab = false; ApplyTab(); }) { text = "Overview" };
+            sunButton = new Button(() => { showSunTab = true; ApplyTab(); }) { text = "Sun" };
+            foreach (Button b in new[] { overviewButton, sunButton })
+            {
+                b.AddToClassList("tab");
+                b.style.flexGrow = 1;
+                tabBar.Add(b);
+            }
+            overviewTab = new VisualElement();
+            sunTab = new VisualElement();
+            VisualElement parent = landingActions.parent;
+            int at = parent.IndexOf(landingActions) + 1;
+            parent.Insert(at, tabBar);
+            parent.Insert(at + 1, overviewTab);
+            parent.Insert(at + 2, sunTab);
+
+            VisualElement statRow = root.Q(className: "stat-row");
+            Label groundHead = null;
+            root.Query<Label>().ForEach(l => { if (l.text == "GROUND") groundHead = l; });
+            foreach (VisualElement e in new[] { statRow, groundHead, ground, groundActions })
+                if (e != null) overviewTab.Add(e);
+            groundChips = new VisualElement();
+            groundChips.style.flexDirection = FlexDirection.Row;
+            groundChips.style.flexWrap = Wrap.Wrap;
+            overviewTab.Insert(overviewTab.IndexOf(ground) + 1, groundChips);
+
+            // The formulas move behind the sun path's "i".
+            var formulas = root.Q<Foldout>("formulas");
+            string formulaText = "";
+            if (formulas != null)
+            {
+                formulas.Query<Label>(className: "formula").ForEach(l => formulaText += l.text + "\n");
+                formulas.RemoveFromHierarchy();
+            }
+            foreach (string name in new[] { "sunpath-fold", "monthly-fold" })
+            {
+                VisualElement e = root.Q(name);
+                if (e != null) sunTab.Add(e);
+            }
+
+            // The "i" boxes.
+            placeTip = InfoTip.After(place, "");
+            if (statRow != null)
+            {
+                var heads = statRow.Query<Label>(className: "heading").ToList();
+                if (heads.Count > 0)
+                    sunlightTip = InfoTip.After(heads[0], "Yearly starlight on one flat square metre here, in kWh, after the air and " +
+                                                 "the clouds (NASA climate records where there are some). A tilted panel gets more or less.");
+                if (heads.Count > 1)
+                    bestTip = InfoTip.After(heads[1], "The tilt β (from flat) and facing γ (from north) that catch the most energy over a " +
+                                             "year here. It needs your latitude, measured in the sky view (V). Rule of thumb: tilt about " +
+                                             "your latitude, facing the equator.");
+            }
+            if (groundHead != null)
+                groundTip = InfoTip.After(groundHead, "");
+            sunTip = InfoTip.After(sunPathCaption, "Looking straight up: the centre is overhead, the rim is the horizon, north at " +
+                                   "the top. The lines are the star's path on the shortest day, the longest day and an equinox.\n\n" +
+                                   "Formulas:\n" + formulaText.TrimEnd('\n'));
+            ApplyTab();
+        }
+
+        void ApplyTab()
+        {
+            if (overviewTab == null) return;
+            overviewTab.style.display = showSunTab ? DisplayStyle.None : DisplayStyle.Flex;
+            sunTab.style.display = showSunTab ? DisplayStyle.Flex : DisplayStyle.None;
+            overviewButton.EnableInClassList("selected", !showSunTab);
+            sunButton.EnableInClassList("selected", showSunTab);
         }
 
         void OnDisable()
@@ -148,7 +231,7 @@ namespace KardashevAscent.Presentation.UI
                 landingText.text = problem + " Pick another tile.";
             else if (landing)
             {
-                landingText.text = "Land the colony here? Time starts when the lander is down, and the colony can't move afterwards.";
+                landingText.text = "Land here? The colony can't move later.";
                 var b = new Button(() =>
                 {
                     string why = runner.LandAt(tile, true);
@@ -172,7 +255,7 @@ namespace KardashevAscent.Presentation.UI
                 landingActions.Add(b);
             }
             else if (here)
-                landingText.text = "Your colony's landing site. Press R to fly back here.";
+                landingText.text = "Landing site · R: fly back";
             else
                 landingText.text = "";
             landingText.EnableInClassList("hidden", landingText.text.Length == 0);
@@ -222,7 +305,13 @@ namespace KardashevAscent.Presentation.UI
                         (map.Chemistry.WaterHistory ? "" : ". No seas: no copper or lithium ores");
             }
             text += $"\nOn hand: {Stock(sim)}";
-            ground.text = text;
+            // Short line here; the whole story behind "i" (director 2026-11-15).
+            if (groundTip != null)
+                groundTip.Text = text.Trim();
+            ground.text = water ? "Sea floor · can't reach yet"
+                : !surveyed ? (sim.IsSurveyOrdered(tile) ? $"Surveying {sim.SurveyProgress(tile) * 100.0:0} %"
+                               : CoresWaiting(sim, tile) ? "Cores waiting" : "Not surveyed · only rock known")
+                : sim.IsRoughSurvey(tile) ? "Surveyed (rough ±)" : "Surveyed";
 
             string shape = $"{tile}|{water}|{surveyed}|{sim.IsSurveyOrdered(tile)}|{CoresWaiting(sim, tile)}";
             foreach (Material m in Materials.Mined)
@@ -231,6 +320,25 @@ namespace KardashevAscent.Presentation.UI
                 return;
             groundShape = shape;
             groundActions.Clear();
+            // Deposits as icons with their grade (1 = an ordinary deposit on Earth).
+            groundChips.Clear();
+            if (surveyed && !water)
+                foreach (Deposit d in map.At(tile))
+                {
+                    var chip = new VisualElement();
+                    chip.style.flexDirection = FlexDirection.Row;
+                    chip.style.alignItems = Align.Center;
+                    chip.style.marginRight = 10;
+                    chip.style.marginTop = 3;
+                    chip.Add(MaterialChips.Icon(d.Material, 18f));
+                    bool rough = sim.IsRoughSurvey(tile) && d.Material != Material.Rock;
+                    var g = new Label($"×{(rough ? "±" : "")}{d.Grade:0.00}{(sim.IsMiningOrdered(tile, d.Material) ? " · mining" : "")}");
+                    g.style.marginLeft = 4;
+                    g.style.fontSize = 14;
+                    chip.Add(g);
+                    chip.tooltip = $"{Materials.Name(d.Material)}: grade {d.Grade:0.00} (1 = an ordinary deposit on Earth)";
+                    groundChips.Add(chip);
+                }
             if (water)
                 return;
             if (!surveyed && CoresWaiting(sim, tile))
@@ -294,19 +402,25 @@ namespace KardashevAscent.Presentation.UI
             bool knowsLatitude = sim.Notebook != null && sim.Notebook.KnowsLatitude(tile);
             place.text = (knowsLatitude
                              ? $"{Math.Abs(latDeg):0.0}° {(latDeg >= 0 ? "N" : "S")}, {Math.Abs(lonDeg):0.0}° {(lonDeg >= 0 ? "E" : "W")}"
-                             : "Latitude unknown (measure it: V)") +
-                         (!info.IsBuildableLand ? (Terrains.AllowsFloating(info.Terrain) ? " · floating solar only" : " · no building on water") : $" · {sim.SlotCount(tile)} building slots");
+                             : "Latitude ?") +
+                         (!info.IsBuildableLand ? (Terrains.AllowsFloating(info.Terrain) ? " · floating only" : " · water") : $" · {sim.SlotCount(tile)} slots");
+            if (placeTip != null)
+                placeTip.Text = (knowsLatitude ? "Latitude and longitude of the tile's centre." :
+                                    "Where the tile is stays unknown until you measure a latitude in the sky view (V); then the map gives every tile's.") +
+                                (!info.IsBuildableLand
+                                    ? (Terrains.AllowsFloating(info.Terrain) ? " Shallow water: only floating solar can go here." : " Deep water: nothing can be built here.")
+                                    : $" A site has {sim.SlotCount(tile)} building slots; bigger buildings cover several.");
 
             PlanetSolarParams planet = runner.SolarParams;
             if (planet.TidallyLocked)
             {
-                sunPathCaption.text = "Tidally locked: the star stands still in this tile's sky.";
+                sunPathCaption.text = "Locked: the star stands still";
                 sunPath.SetPaths(null, null, null, info.Latitude);
                 return;
             }
             if (!knowsLatitude)
             {
-                sunPathCaption.text = "The sun's path here needs your latitude: measure it in the sky view (V).";
+                sunPathCaption.text = "Needs your latitude (V)";
                 sunPath.SetPaths(null, null, null, 0.0);
                 return;
             }
@@ -314,8 +428,8 @@ namespace KardashevAscent.Presentation.UI
             bool north = info.Latitude >= 0.0;
             legend1.text = north ? "Winter solstice" : "Summer solstice";
             legend2.text = north ? "Summer solstice" : "Winter solstice";
-            sunPathCaption.text = $"Noon height: {SunPath.NoonElevationDeg(info.Latitude, planet.Obliquity):0}° in summer, " +
-                                  $"{SunPath.NoonElevationDeg(info.Latitude, -planet.Obliquity):0}° in winter";
+            sunPathCaption.text = $"Noon {SunPath.NoonElevationDeg(info.Latitude, planet.Obliquity):0}° summer · " +
+                                  $"{SunPath.NoonElevationDeg(info.Latitude, -planet.Obliquity):0}° winter";
             double day = planet.DayLengthHours;
             sunPath.SetPaths(SunPath.Day(info.Latitude, -planet.Obliquity, day),
                              SunPath.Day(info.Latitude, planet.Obliquity, day),
@@ -333,12 +447,12 @@ namespace KardashevAscent.Presentation.UI
             if (placer != null && placer.Tile == tile && placer.TryGetBest(out PanelAngles best))
             {
                 bestLabel.text = $"{best.Tilt * Mathf.Rad2Deg:0}° · {best.Azimuth * Mathf.Rad2Deg:0}°";
-                bestCaption.text = "tilt · facing (from north)";
+                bestCaption.text = "tilt · facing";
             }
             else if (!info.IsWater && placer != null && placer.Tile == tile && !placer.BestAngleUnlocked)
             {
                 bestLabel.text = "?";
-                bestCaption.text = "find your latitude first (V: sky view)";
+                bestCaption.text = "needs latitude (V)";
             }
             else
             {
