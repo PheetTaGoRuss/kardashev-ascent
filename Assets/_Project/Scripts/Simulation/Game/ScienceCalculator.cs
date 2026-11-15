@@ -6,7 +6,8 @@ namespace KardashevAscent.Simulation.Game
     /// <summary>
     /// The colony's pocket science calculator (director 2026-11-14): works out a typed expression such as
     /// <c>atan(1/2.684)</c> or <c>ln(1361/742)/2</c>. Angles are in degrees, like the puzzles. Game tool, not physics.
-    /// <para>Grammar: + − × / ^ and brackets; functions sin cos tan asin acos atan ln log sqrt; constants π (pi) and e.
+    /// <para>Grammar: + − × / ^ and brackets; functions sin cos tan asin acos atan ln log sqrt; constants π (pi) and e;
+    /// <c>ans</c> for the previous result.
     /// Missing closing brackets at the end are closed for you, the way pocket calculators do.</para>
     /// </summary>
     public static class ScienceCalculator
@@ -14,7 +15,11 @@ namespace KardashevAscent.Simulation.Game
         const double Deg = Math.PI / 180.0;
 
         /// <summary>The expression's value, or false with a short reason when it can't be worked out.</summary>
-        public static bool TryEvaluate(string expression, out double value, out string error)
+        public static bool TryEvaluate(string expression, out double value, out string error) =>
+            TryEvaluate(expression, double.NaN, out value, out error);
+
+        /// <summary>The same, with <c>ans</c> standing for <paramref name="previousAnswer"/> (the last result, NaN when none).</summary>
+        public static bool TryEvaluate(string expression, double previousAnswer, out double value, out string error)
         {
             value = double.NaN;
             error = null;
@@ -23,7 +28,7 @@ namespace KardashevAscent.Simulation.Game
                 error = "Type or click a number";
                 return false;
             }
-            var p = new Parser(Normalise(expression));
+            var p = new Parser(Normalise(expression)) { Ans = previousAnswer };
             try
             {
                 value = p.Expression();
@@ -63,6 +68,7 @@ namespace KardashevAscent.Simulation.Game
         {
             public readonly string Text;
             public int Pos;
+            public double Ans = double.NaN;
 
             public Parser(string text) { Text = text; }
 
@@ -144,6 +150,11 @@ namespace KardashevAscent.Simulation.Game
                     while (Pos < Text.Length && char.IsLetter(Text[Pos])) Pos++;
                     string name = Text.Substring(start, Pos - start);
                     if (name == "pi") return Math.PI;
+                    if (name == "ans")
+                    {
+                        if (double.IsNaN(Ans)) throw new FormatException("No answer yet to use as ans");
+                        return Ans;
+                    }
                     if (name == "e") return Math.E;
                     if (!Eat('('))
                         throw new FormatException($"{name} needs brackets: {name}( … )");
