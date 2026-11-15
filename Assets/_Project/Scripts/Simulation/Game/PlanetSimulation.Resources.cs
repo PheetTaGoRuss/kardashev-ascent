@@ -28,6 +28,9 @@ namespace KardashevAscent.Simulation.Game
 
         public event Action<int> TileSurveyed;
 
+        /// <summary>A deposit was mined out (tile, material); its mining order ended.</summary>
+        public event Action<int, Material> DepositExhausted;
+
         /// <summary>A Workshop job finished (a new robot, an upgrade or a refined batch).</summary>
         public event Action<ManufacturingJob> JobFinished;
 
@@ -68,7 +71,7 @@ namespace KardashevAscent.Simulation.Game
         public bool OrderMining(int tileId, Material material)
         {
             if (tileId < 0 || tileId >= TileCount || !Deposits.IsKnown(tileId, material) || Deposits.GradeOf(tileId, material) <= 0.0
-                || miningOrders.Contains((tileId, material)))
+                || Deposits.IsExhausted(tileId, material) || miningOrders.Contains((tileId, material)))
                 return false;
             miningOrders.Add((tileId, material));
             Settle(null);
@@ -220,8 +223,19 @@ namespace KardashevAscent.Simulation.Game
                 if (!fieldWork.TryGetValue(t, out double h) || h < RobotSpecs.MiningBatchHours - 1e-9)
                     continue;
                 fieldWork[t] = h - RobotSpecs.MiningBatchHours;
-                Materials.Add(order.Material, RobotSpecs.MiningKgPerHour * RobotSpecs.MiningBatchHours * Deposits.GradeOf(order.Tile, order.Material));
+                // What comes out is taken from the ground: a deposit runs out (director 2026-11-15; KI-12).
+                double want = RobotSpecs.MiningKgPerHour * RobotSpecs.MiningBatchHours * Deposits.GradeOf(order.Tile, order.Material);
+                Materials.Add(order.Material, Deposits.Extract(order.Tile, order.Material, want));
                 Workforce.Release(t);
+                if (Deposits.IsExhausted(order.Tile, order.Material))
+                {
+                    miningOrders.Remove(order);
+                    Workforce.Tasks.MarkCancelled(t);
+                    fieldWork.Remove(t);
+                    industrialReports.Add(TimeHours, "Mining", IndustrialBlocker.None,
+                        $"The {Resources.Materials.Name(order.Material).ToLowerInvariant()} on tile {order.Tile} is used up. Survey further out for more.");
+                    DepositExhausted?.Invoke(order.Tile, order.Material);
+                }
             }
         }
     }
