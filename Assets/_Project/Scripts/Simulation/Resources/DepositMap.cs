@@ -234,6 +234,14 @@ namespace KardashevAscent.Simulation.Resources
             return b;
         }
 
+        /// <summary>This bill with none of <paramref name="m"/>.</summary>
+        public MaterialBill Without(Material m)
+        {
+            MaterialBill b = Copy();
+            b.kg[(int)m] = 0.0;
+            return b;
+        }
+
         public MaterialBill Times(double factor)
         {
             var b = new MaterialBill();

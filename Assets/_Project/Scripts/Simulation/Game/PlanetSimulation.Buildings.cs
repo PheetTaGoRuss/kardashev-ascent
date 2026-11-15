@@ -20,7 +20,7 @@ namespace KardashevAscent.Simulation.Game
                 return false;
             double area = NewPanelAreaM2(tileId);
             // It waits as a site until a robot works on it; an idle robot takes it now (design D2).
-            Build.Start(tileId, slot, PanelCost(area));
+            StartSite(tileId, slot, PanelCost(area));
             AddPanel(tileId, slot, tilt, azimuth, area);
             Occupy(tileId, FootprintFor(BuildingType.SolarPanel, tileId, slot));
             Settle((tileId, slot));
@@ -36,11 +36,15 @@ namespace KardashevAscent.Simulation.Game
             {
                 Build.Cancel(tileId, slot, Materials);
                 Workforce.Tasks.MarkCancelled(new WorkTask(TaskKind.Build, tileId, slot));
+                standIns.Remove((tileId, slot));
                 return;
             }
             // A panel gives back a share of what its own size cost, not the current tier's.
-            Build.Salvage((type == BuildingType.SolarPanel || type == BuildingType.FloatingSolar) && panels.TryGetValue((tileId, slot), out var p)
-                ? PanelCost(p.Area).Times(wasFloating ? FloatingCostFactor : 1.0) : BuildBill(type), Materials);
+            MaterialBill made = (type == BuildingType.SolarPanel || type == BuildingType.FloatingSolar) && panels.TryGetValue((tileId, slot), out var p)
+                ? PanelCost(p.Area).Times(wasFloating ? FloatingCostFactor : 1.0) : BuildBill(type);
+            // It gives back what it was made of: aluminium if it was wired with aluminium.
+            Build.Salvage(WithStandIns(made, tileId, slot), Materials);
+            standIns.Remove((tileId, slot));
             if (type == BuildingType.Battery)
                 Grid.Battery.RemoveCapacity(BatteryUnitWh);
         }
@@ -53,7 +57,7 @@ namespace KardashevAscent.Simulation.Game
             if (!CanPlace(BuildingType.FloatingSolar, tileId, slot) || !PreviewFloatingPanel(tileId, tilt, azimuth).CanPlace)
                 return false;
             double area = NewPanelAreaM2(tileId);
-            Build.Start(tileId, slot, PanelCost(area).Times(FloatingCostFactor));
+            StartSite(tileId, slot, PanelCost(area).Times(FloatingCostFactor));
             AddPanel(tileId, slot, tilt, azimuth, area);
             floatingPanels.Add((tileId, slot));
             Occupy(tileId, FootprintFor(BuildingType.FloatingSolar, tileId, slot));
@@ -105,7 +109,7 @@ namespace KardashevAscent.Simulation.Game
         {
             if (!CanPlace(BuildingType.Battery, tileId, slot))
                 return false;
-            bool finished = Build.Start(tileId, slot, BuildBill(BuildingType.Battery));
+            bool finished = StartSite(tileId, slot, BuildBill(BuildingType.Battery));
             AddBattery(tileId, slot);
             Occupy(tileId, FootprintFor(BuildingType.Battery, tileId, slot));
             if (finished)

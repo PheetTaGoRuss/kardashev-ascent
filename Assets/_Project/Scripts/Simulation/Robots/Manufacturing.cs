@@ -113,9 +113,12 @@ namespace KardashevAscent.Simulation.Robots
         public const double InsulatedBatteryC = 0.0;
 
 
-        /// <summary>Refining a substitute: aluminium (for copper) at 1, sodium (for lithium) at 2.</summary>
+        /// <summary>
+        /// Refining a substitute: aluminium (for copper) and sodium (for lithium) from the start (director 2026-11-15:
+        /// every planet must be startable, and a planet with no copper or lithium ore still has rock).
+        /// </summary>
         public static int UnlockMilestone(Material refined) =>
-            refined == Material.Aluminium ? 1 : refined == Material.Sodium ? 2 : int.MaxValue;
+            refined == Material.Aluminium || refined == Material.Sodium ? 0 : int.MaxValue;
 
         /// <summary>Group capacity: the placeholder start, +2 at milestones 2, 4 and 6 (TBD).</summary>
         public static int GroupCapacity(int milestones) =>

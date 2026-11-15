@@ -74,6 +74,19 @@ namespace KardashevAscent.Simulation.Tests.Game
         }
 
         [Test]
+        public void TheStandIns_AreExplained()
+        {
+            var pages = GuideBook.All();
+            GuidePage al = pages.First(p => p.Material == Material.Aluminium);
+            Assert.IsTrue(al.Mentions("instead of copper"));
+            Assert.IsTrue(al.Mentions("Solar panel"), "lists the buildings that take copper");
+            Assert.IsTrue(al.Mentions("from the start"));
+            GuidePage na = pages.First(p => p.Material == Material.Sodium);
+            Assert.IsTrue(na.Mentions("Battery yard"));
+            Assert.IsTrue(pages.Any(p => p.Mentions("Mars") && p.Mentions("aluminium")), "a page on starting a dry planet");
+        }
+
+        [Test]
         public void Search_FindsPagesByAnyWord()
         {
             var pages = GuideBook.All();
