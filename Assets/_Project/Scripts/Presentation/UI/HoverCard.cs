@@ -110,13 +110,17 @@ namespace KardashevAscent.Presentation.UI
             pointer = Input.mousePosition;
 
             string head = null, text = null;
+            anchor = null;
             // UI first: the nearest element (or its parent) with a description.
+            if (hoveredUi != null && !UnderPointer(hoveredUi))
+                hoveredUi = null;   // it closed or moved away without a pointer-out (a window shut under the mouse)
             for (VisualElement e = hoveredUi; e != null; e = e.parent)
             {
                 if (e.panel == null) break;
                 if (!string.IsNullOrEmpty(e.tooltip))
                 {
                     text = e.tooltip;
+                    anchor = e;
                     head = e is Button b && !string.IsNullOrEmpty(b.text) && b.text.Length < 40 ? b.text : null;
                     break;
                 }
@@ -148,20 +152,43 @@ namespace KardashevAscent.Presentation.UI
             Place();
         }
 
-        /// <summary>Beside the pointer, kept on screen.</summary>
+        VisualElement anchor;
+
+        /// <summary>True while the element is shown and the pointer is over it.</summary>
+        bool UnderPointer(VisualElement e)
+        {
+            if (e.panel == null) return false;
+            for (VisualElement p = e; p != null; p = p.parent)
+                if (p.resolvedStyle.display == DisplayStyle.None || p.ClassListContains("hidden")) return false;
+            Vector2 at = RuntimePanelUtils.ScreenToPanel(e.panel, new Vector2(pointer.x, Screen.height - pointer.y));
+            return e.worldBound.Contains(at);
+        }
+
+        /// <summary>Under the hovered element (or beside the pointer over the world), kept on screen.</summary>
         void Place()
         {
             IPanel panel = document.rootVisualElement.panel;
             if (panel == null) return;
-            Vector2 screen = new Vector2(pointer.x, Screen.height - pointer.y);
-            Vector2 at = RuntimePanelUtils.ScreenToPanel(panel, screen);
             Rect root = document.rootVisualElement.layout;
             float w = card.layout.width > 1f ? card.layout.width : MaxWidth, h = card.layout.height > 1f ? card.layout.height : 60f;
-            float x = at.x + 18f, y = at.y + 18f;
-            if (x + w > root.width - 4f) x = at.x - w - 12f;
-            if (y + h > root.height - 4f) y = at.y - h - 12f;
-            card.style.left = Mathf.Max(4f, x);
-            card.style.top = Mathf.Max(4f, y);
+            float x, y;
+            if (anchor != null && anchor.panel != null)
+            {
+                // The other documents use the same panel settings, so their coordinates line up with this one's.
+                Rect b = anchor.worldBound;
+                x = b.xMin;
+                y = b.yMax + 6f;
+                if (y + h > root.height - 4f) y = b.yMin - h - 6f;
+            }
+            else
+            {
+                Vector2 at = RuntimePanelUtils.ScreenToPanel(panel, new Vector2(pointer.x, Screen.height - pointer.y));
+                x = at.x + 18f;
+                y = at.y + 18f;
+                if (y + h > root.height - 4f) y = at.y - h - 12f;
+            }
+            card.style.left = Mathf.Clamp(x, 4f, Mathf.Max(4f, root.width - w - 4f));
+            card.style.top = Mathf.Clamp(y, 4f, Mathf.Max(4f, root.height - h - 4f));
         }
 
         SimulationRunner runner;
