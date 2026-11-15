@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using KardashevAscent.Presentation.Planet;
 using KardashevAscent.Presentation.UI;
 using KardashevAscent.Simulation.Game;
@@ -120,6 +121,8 @@ namespace KardashevAscent.Presentation.Game
 
         void OnDisable()
         {
+            menuPlanet?.Dispose();
+            menuPlanet = null;
             if (saveGame != null)
                 saveGame.Loaded -= OnLoaded;
             if (instance == this)
@@ -142,7 +145,7 @@ namespace KardashevAscent.Presentation.Game
             Show(settingsScreen, false);
             Show(creditsScreen, false);
             ShowMenuGuide(false);
-            if (phase == GamePhase.MainMenu) FadeIn(menuHome);
+            if (phase == GamePhase.MainMenu) PlayIntro();
             Show(pauseMenu, false);
             Show(landingBanner, phase == GamePhase.Landing);
             Show(setupPanel, phase == GamePhase.Setup);
@@ -283,6 +286,7 @@ namespace KardashevAscent.Presentation.Game
 
         void Update()
         {
+            AnimateMenu();
             if (Phase == GamePhase.Setup && Time.unscaledTime >= nextSetupRefresh)
             {
                 nextSetupRefresh = Time.unscaledTime + 0.25f;
@@ -436,103 +440,336 @@ namespace KardashevAscent.Presentation.Game
 
         // ---- The space menu (director 2026-11-15: make it beautiful) ----
 
+        // Pieces of the menu the intro animates.
+        SpaceBackdrop menuBack, menuFront;
+        MenuPlanet menuPlanet;
+        VisualElement blackout, flash, shockRing, menuLine;
+        Label menuKicker, menuTag, menuFooter;
+        readonly System.Collections.Generic.List<Label> titleWords = new System.Collections.Generic.List<Label>();
+        readonly System.Collections.Generic.List<Button> menuItems = new System.Collections.Generic.List<Button>();
+        static bool introPlayed;
+        bool introRunning;
+        float shakeUntil, ringStart = -10f;
+
         void BuildMainMenu()
         {
             mainMenu = Screen(dim: 0f);
             mainMenu.style.alignItems = Align.Stretch;
             mainMenu.style.justifyContent = Justify.FlexStart;
-            mainMenu.Add(new SpaceBackdrop());
+            menuBack = new SpaceBackdrop(SpaceBackdrop.Layer.Back);
+            mainMenu.Add(menuBack);
+
+            // The real planet in 3D, behind the title (director 2026-11-15), with the moon's near half drawn over it.
+            PlanetView view = FindAnyObjectByType<PlanetView>();
+            if (view != null)
+            {
+                menuPlanet = new MenuPlanet(view);
+                menuBack.PlanetIs3D = true;
+                mainMenu.Add(menuPlanet.Element);
+                menuBack.RegisterCallback<GeometryChangedEvent>(_ => PlacePlanet());
+            }
+            menuFront = new SpaceBackdrop(SpaceBackdrop.Layer.Front);
+            mainMenu.Add(menuFront);
 
             menuHome = new VisualElement();
             menuHome.style.position = Position.Absolute;
             menuHome.style.left = new Length(7, LengthUnit.Percent);
-            menuHome.style.top = new Length(18, LengthUnit.Percent);
-            menuHome.style.width = 520;
+            menuHome.style.top = new Length(16, LengthUnit.Percent);
+            menuHome.style.width = 560;
             mainMenu.Add(menuHome);
 
-            var kicker = new Label("A PLANETARY ENGINEERING GAME");
-            kicker.style.fontSize = 14; kicker.style.letterSpacing = 6;
-            kicker.style.color = UiPalette.Accent; kicker.style.marginBottom = 6;
-            menuHome.Add(kicker);
+            menuKicker = new Label("A PLANETARY ENGINEERING GAME");
+            menuKicker.style.fontSize = 14; menuKicker.style.letterSpacing = 8;
+            menuKicker.style.color = UiPalette.Accent; menuKicker.style.marginBottom = 6;
+            menuHome.Add(menuKicker);
+            titleWords.Clear();
             foreach (string word in new[] { "KARDASHEV", "ASCENT" })
             {
                 var t = new Label(word);
-                t.style.fontSize = 76; t.style.unityFontStyleAndWeight = FontStyle.Bold;
-                t.style.letterSpacing = 14; t.style.color = Color.white;
+                t.style.fontSize = 80; t.style.unityFontStyleAndWeight = FontStyle.Bold;
+                t.style.letterSpacing = 16; t.style.color = Color.white;
                 t.style.marginTop = -10; t.style.marginBottom = -10;
-                t.style.textShadow = new TextShadow { offset = new Vector2(0, 0), blurRadius = 18, color = new Color(0.4f, 0.7f, 1f, 0.55f) };
+                t.style.textShadow = new TextShadow { offset = Vector2.zero, blurRadius = 22, color = new Color(0.4f, 0.7f, 1f, 0.6f) };
+                t.style.transformOrigin = new TransformOrigin(Length.Percent(0), Length.Percent(50));
                 menuHome.Add(t);
+                titleWords.Add(t);
             }
-            var line = new VisualElement();
-            line.style.height = 2; line.style.width = 140;
-            line.style.backgroundColor = UiPalette.Accent;
-            line.style.marginTop = 18; line.style.marginBottom = 14;
-            menuHome.Add(line);
-            var tag = new Label("From one lander to a civilisation that harnesses its star.\nReal exoplanets · NASA data · real physics.");
-            tag.style.fontSize = 17; tag.style.whiteSpace = WhiteSpace.Normal;
-            tag.style.color = new Color(0.82f, 0.86f, 0.92f);
-            tag.style.marginBottom = 34;
-            menuHome.Add(tag);
+            menuLine = new VisualElement();
+            menuLine.style.height = 2; menuLine.style.width = 160;
+            menuLine.style.backgroundColor = UiPalette.Accent;
+            menuLine.style.marginTop = 20; menuLine.style.marginBottom = 14;
+            menuHome.Add(menuLine);
+            menuTag = new Label("From one lander to a civilisation that harnesses its star.\nReal exoplanets · NASA data · real physics.");
+            menuTag.style.fontSize = 17; menuTag.style.whiteSpace = WhiteSpace.Normal;
+            menuTag.style.color = new Color(0.82f, 0.86f, 0.92f);
+            menuTag.style.marginBottom = 30;
+            menuHome.Add(menuTag);
 
             menuButtons = new VisualElement();
-            menuButtons.style.width = 320;
+            menuButtons.style.width = 340;
             menuHome.Add(menuButtons);
-            menuButtons.Add(SpaceButton("New mission", () => SetPhase(GamePhase.ChoosingPlanet), primary: true));
-            continueButton = SpaceButton("Continue", () =>
+            menuItems.Clear();
+            menuItems.Add(SpaceButton("NEW MISSION", NewMission, primary: true));
+            continueButton = SpaceButton("CONTINUE", () =>
             {
                 saveGame?.Load();
                 if (Phase == GamePhase.MainMenu) menuMessage.text = saveGame != null ? saveGame.Message : "";
             });
-            menuButtons.Add(continueButton);
-            menuButtons.Add(SpaceButton("Guide book", () => ShowMenuGuide(true)));
-            menuButtons.Add(SpaceButton("Settings", () => ShowSettings(true)));
-            menuButtons.Add(SpaceButton("Credits", () => ShowCredits(true)));
-            menuButtons.Add(SpaceButton("Quit", Quit));
+            menuItems.Add(continueButton);
+            menuItems.Add(SpaceButton("GUIDE BOOK", () => ShowMenuGuide(true)));
+            menuItems.Add(SpaceButton("SETTINGS", () => ShowSettings(true)));
+            menuItems.Add(SpaceButton("CREDITS", () => ShowCredits(true)));
+            menuItems.Add(SpaceButton("QUIT", Quit));
+            foreach (Button b in menuItems) menuButtons.Add(b);
             menuMessage = new Label("");
             menuMessage.style.fontSize = 13; menuMessage.style.color = new Color(0.65f, 0.7f, 0.78f);
-            menuMessage.style.marginTop = 8;
+            menuMessage.style.marginTop = 8; menuMessage.style.paddingLeft = 18;
             menuButtons.Add(menuMessage);
 
-            var footer = new Label("NASA Space Apps Challenge 2026  ·  Space Mission Design Game");
-            footer.style.position = Position.Absolute;
-            footer.style.left = new Length(7, LengthUnit.Percent);
-            footer.style.bottom = 28;
-            footer.style.fontSize = 13; footer.style.letterSpacing = 2;
-            footer.style.color = new Color(0.6f, 0.65f, 0.75f, 0.9f);
-            mainMenu.Add(footer);
+            menuFooter = new Label("TEAM GIE  ·  NASA SPACE APPS CHALLENGE 2026  ·  SPACE MISSION DESIGN GAME");
+            menuFooter.style.position = Position.Absolute;
+            menuFooter.style.left = new Length(7, LengthUnit.Percent);
+            menuFooter.style.bottom = 28;
+            menuFooter.style.fontSize = 12; menuFooter.style.letterSpacing = 3;
+            menuFooter.style.color = new Color(0.6f, 0.65f, 0.75f, 0.9f);
+            mainMenu.Add(menuFooter);
+
+            // The intro's effects: a shock ring, a white flash and the black it fades in from.
+            shockRing = new VisualElement { pickingMode = PickingMode.Ignore };
+            shockRing.style.position = Position.Absolute;
+            shockRing.style.borderTopWidth = shockRing.style.borderBottomWidth = shockRing.style.borderLeftWidth = shockRing.style.borderRightWidth = 3;
+            shockRing.style.display = DisplayStyle.None;
+            mainMenu.Add(shockRing);
+            flash = new VisualElement { pickingMode = PickingMode.Ignore };
+            flash.style.position = Position.Absolute;
+            flash.style.left = 0; flash.style.right = 0; flash.style.top = 0; flash.style.bottom = 0;
+            flash.style.backgroundColor = new Color(1f, 0.93f, 0.8f);
+            flash.style.opacity = 0f;
+            mainMenu.Add(flash);
+            blackout = new VisualElement { pickingMode = PickingMode.Ignore };
+            blackout.style.position = Position.Absolute;
+            blackout.style.left = 0; blackout.style.right = 0; blackout.style.top = 0; blackout.style.bottom = 0;
+            blackout.style.backgroundColor = Color.black;
+            blackout.style.opacity = 0f;
+            mainMenu.Add(blackout);
+            // Any click skips the intro.
+            mainMenu.RegisterCallback<PointerDownEvent>(_ => { if (introRunning) FinishIntro(); }, TrickleDown.TrickleDown);
         }
 
-        /// <summary>A menu button: text on space, an amber bar and glow on hover; the main choice is solid amber.</summary>
+        /// <summary>Put the 3D planet's picture exactly where the backdrop draws its glow and orbit.</summary>
+        void PlacePlanet()
+        {
+            if (menuPlanet == null) return;
+            SpaceBackdrop.PlanetGeometry(menuBack.contentRect, out Vector2 c, out float r);
+            float size = 2f * r / MenuPlanet.Fill;
+            VisualElement e = menuPlanet.Element;
+            e.style.left = c.x - size * 0.5f;
+            e.style.top = c.y - size * 0.5f;
+            e.style.width = size;
+            e.style.height = size;
+        }
+
+        // ---- The intro (director 2026-11-15: "boom and epic like a AAA game") ----
+
+        static System.Collections.Generic.List<TimeValue> Seconds(float s) =>
+            new System.Collections.Generic.List<TimeValue> { new TimeValue(s, TimeUnit.Second) };
+
+        static System.Collections.Generic.List<EasingFunction> Ease(EasingMode m) =>
+            new System.Collections.Generic.List<EasingFunction> { new EasingFunction(m) };
+
+        /// <summary>
+        /// Black; a whoosh as the stars fade in; BOOM: the title slams in with a flash, a shock ring and a shake; then the
+        /// tagline and the buttons slide in one by one. A click skips it. Only the first time the menu opens.
+        /// </summary>
+        void PlayIntro()
+        {
+            if (introPlayed) { FinishIntro(); return; }
+            introPlayed = true;
+            introRunning = true;
+            foreach (VisualElement e in IntroParts()) { e.style.transitionDuration = Seconds(0f); e.style.opacity = 0f; }
+            foreach (Label t in titleWords) t.style.scale = new Scale(new Vector3(1.6f, 1.6f, 1f));
+            foreach (Button b in menuItems) b.style.translate = new Translate(-40, 0);
+            blackout.style.transitionDuration = Seconds(0f);
+            blackout.style.opacity = 1f;
+
+            At(250, () =>
+            {
+                KardashevAscent.Presentation.Audio.GameAudio.Play(KardashevAscent.Presentation.Audio.Sfx.Whoosh);
+                blackout.style.transitionDuration = Seconds(1.3f);
+                blackout.style.transitionTimingFunction = Ease(EasingMode.EaseInCubic);
+                blackout.style.opacity = 0f;
+            });
+            At(1300, Boom);
+            At(1900, () =>
+            {
+                Reveal(menuKicker, 0.5f); Reveal(menuLine, 0.5f); Reveal(menuTag, 0.7f);
+            });
+            for (int i = 0; i < menuItems.Count; i++)
+            {
+                Button b = menuItems[i];
+                At(2200 + 90 * i, () =>
+                {
+                    b.style.transitionDuration = Seconds(0.45f);
+                    b.style.transitionTimingFunction = Ease(EasingMode.EaseOutCubic);
+                    b.style.opacity = 1f;
+                    b.style.translate = new Translate(0, 0);
+                    KardashevAscent.Presentation.Audio.GameAudio.Play(KardashevAscent.Presentation.Audio.Sfx.Hover, 0.5f);
+                });
+            }
+            At(2200 + 90 * menuItems.Count + 300, () => { Reveal(menuFooter, 0.8f); introRunning = false; });
+        }
+
+        void Boom()
+        {
+            if (!introRunning) return;
+            KardashevAscent.Presentation.Audio.GameAudio.Play(KardashevAscent.Presentation.Audio.Sfx.Boom);
+            foreach (Label t in titleWords)
+            {
+                t.style.transitionDuration = Seconds(0.28f);
+                t.style.transitionTimingFunction = Ease(EasingMode.EaseOutBack);
+                t.style.opacity = 1f;
+                t.style.scale = new Scale(Vector3.one);
+            }
+            flash.style.transitionDuration = Seconds(0f);
+            flash.style.opacity = 0.65f;
+            flash.schedule.Execute(() =>
+            {
+                flash.style.transitionDuration = Seconds(0.9f);
+                flash.style.transitionTimingFunction = Ease(EasingMode.EaseOutCubic);
+                flash.style.opacity = 0f;
+            }).StartingIn(40);
+            shakeUntil = Time.unscaledTime + 0.45f;
+            ringStart = Time.unscaledTime;
+        }
+
+        IEnumerable<VisualElement> IntroParts()
+        {
+            yield return menuKicker; yield return menuLine; yield return menuTag; yield return menuFooter;
+            foreach (Label t in titleWords) yield return t;
+            foreach (Button b in menuItems) yield return b;
+        }
+
+        static void Reveal(VisualElement e, float seconds)
+        {
+            e.style.transitionDuration = Seconds(seconds);
+            e.style.transitionTimingFunction = Ease(EasingMode.EaseOutCubic);
+            e.style.opacity = 1f;
+        }
+
+        /// <summary>Run a step of the intro after <paramref name="ms"/>, unless the intro was skipped.</summary>
+        void At(long ms, System.Action a) => mainMenu.schedule.Execute(() => { if (introRunning) a(); }).StartingIn(ms);
+
+        /// <summary>Jump to the end of the intro (a click, or every later visit to the menu).</summary>
+        void FinishIntro()
+        {
+            introRunning = false;
+            foreach (VisualElement e in IntroParts()) { e.style.transitionDuration = Seconds(0.25f); e.style.opacity = 1f; }
+            foreach (Label t in titleWords) t.style.scale = new Scale(Vector3.one);
+            foreach (Button b in menuItems) b.style.translate = new Translate(0, 0);
+            blackout.style.transitionDuration = Seconds(0.3f);
+            blackout.style.opacity = 0f;
+            flash.style.opacity = 0f;
+        }
+
+        /// <summary>Per frame: the 3D planet's camera, the title shake and the shock ring.</summary>
+        void AnimateMenu()
+        {
+            bool menuOn = Phase == GamePhase.MainMenu;
+            menuPlanet?.SetActive(menuOn);
+            if (!menuOn) return;
+            menuPlanet?.Update(Time.unscaledDeltaTime);
+            float now = Time.unscaledTime;
+            menuHome.style.translate = now < shakeUntil
+                ? new Translate(Random.Range(-7f, 7f) * (shakeUntil - now) / 0.45f, Random.Range(-5f, 5f) * (shakeUntil - now) / 0.45f)
+                : new Translate(0, 0);
+            float age = now - ringStart;
+            if (age >= 0f && age < 1.2f && titleWords.Count > 0)
+            {
+                Rect t = titleWords[0].worldBound;
+                Vector2 at = mainMenu.WorldToLocal(new Vector2(t.xMin + t.width * 0.45f, t.yMax + 4f));
+                float d = Mathf.Lerp(40f, 1900f, 1f - Mathf.Pow(1f - age / 1.2f, 3f));
+                shockRing.style.display = DisplayStyle.Flex;
+                shockRing.style.left = at.x - d * 0.5f; shockRing.style.top = at.y - d * 0.5f;
+                shockRing.style.width = d; shockRing.style.height = d;
+                float r = d * 0.5f;
+                shockRing.style.borderTopLeftRadius = shockRing.style.borderTopRightRadius = r;
+                shockRing.style.borderBottomLeftRadius = shockRing.style.borderBottomRightRadius = r;
+                Color c = new Color(1f, 0.82f, 0.5f, 0.75f * (1f - age / 1.2f));
+                shockRing.style.borderTopColor = shockRing.style.borderBottomColor = shockRing.style.borderLeftColor = shockRing.style.borderRightColor = c;
+            }
+            else
+                shockRing.style.display = DisplayStyle.None;
+        }
+
+        /// <summary>New mission: a whoosh and a quick fade to black, then the planet chooser.</summary>
+        void NewMission()
+        {
+            KardashevAscent.Presentation.Audio.GameAudio.Play(KardashevAscent.Presentation.Audio.Sfx.Whoosh, 0.8f);
+            blackout.style.transitionDuration = Seconds(0.45f);
+            blackout.style.transitionTimingFunction = Ease(EasingMode.EaseInCubic);
+            blackout.style.opacity = 1f;
+            mainMenu.schedule.Execute(() =>
+            {
+                SetPhase(GamePhase.ChoosingPlanet);
+                blackout.style.transitionDuration = Seconds(0f);
+                blackout.style.opacity = 0f;
+            }).StartingIn(480);
+        }
+
+        /// <summary>A menu button: just text on space, no box (director 2026-11-15). Hover: it glows amber, slides right,
+        /// grows a little, an amber bar sweeps out under it, and it ticks.</summary>
         static Button SpaceButton(string text, System.Action onClick, bool primary = false)
         {
-            var b = new Button(() => { KardashevAscent.Presentation.Audio.GameAudio.Play(KardashevAscent.Presentation.Audio.Sfx.Click); onClick(); }) { text = text };
-            b.style.height = 46;
-            b.style.marginTop = 5; b.style.marginBottom = 5;
-            b.style.fontSize = 19;
-            b.style.letterSpacing = 3;
+            var b = new Button(onClick) { text = text };
+            b.style.height = 44;
+            b.style.marginTop = 2; b.style.marginBottom = 2;
+            b.style.fontSize = primary ? 24 : 20;
+            b.style.letterSpacing = 6;
+            b.style.unityFontStyleAndWeight = primary ? FontStyle.Bold : FontStyle.Normal;
             b.style.unityTextAlign = TextAnchor.MiddleLeft;
-            b.style.paddingLeft = 22;
-            b.style.borderTopWidth = b.style.borderRightWidth = b.style.borderBottomWidth = 0;
-            b.style.borderLeftWidth = 3;
-            Color idleBg = primary ? UiPalette.Accent : new Color(1f, 1f, 1f, 0.04f);
-            Color idleText = primary ? UiPalette.OnAccent : new Color(0.9f, 0.93f, 0.97f);
-            Color idleEdge = primary ? UiPalette.Accent : new Color(1f, 1f, 1f, 0.15f);
-            void Idle()
-            {
-                b.style.backgroundColor = idleBg; b.style.color = idleText; b.style.borderLeftColor = idleEdge;
-                b.style.translate = new Translate(0, 0);
-            }
-            Idle();
-            b.style.transitionDuration = new System.Collections.Generic.List<TimeValue> { new TimeValue(0.15f, TimeUnit.Second) };
+            b.style.paddingLeft = 18;
+            b.style.backgroundColor = Color.clear;
+            b.style.borderTopWidth = b.style.borderRightWidth = b.style.borderBottomWidth = b.style.borderLeftWidth = 0;
+            b.style.transformOrigin = new TransformOrigin(Length.Percent(0), Length.Percent(50));
+            Color idle = primary ? UiPalette.Accent : new Color(0.86f, 0.9f, 0.96f, 0.85f);
+            b.style.color = idle;
+            var bar = new VisualElement { pickingMode = PickingMode.Ignore };
+            bar.style.position = Position.Absolute;
+            bar.style.left = 18; bar.style.bottom = 4;
+            bar.style.height = 2; bar.style.width = 0;
+            bar.style.backgroundColor = UiPalette.Accent;
+            bar.style.transitionDuration = Seconds(0.25f);
+            bar.style.transitionTimingFunction = Ease(EasingMode.EaseOutCubic);
+            b.Add(bar);
+            var chevron = new Label("›") { pickingMode = PickingMode.Ignore };
+            chevron.style.position = Position.Absolute;
+            chevron.style.left = 0; chevron.style.top = 4;
+            chevron.style.fontSize = 26; chevron.style.color = UiPalette.Accent;
+            chevron.style.opacity = 0f;
+            chevron.style.transitionDuration = Seconds(0.2f);
+            b.Add(chevron);
             b.RegisterCallback<PointerEnterEvent>(_ =>
             {
                 if (!b.enabledSelf) return;
-                b.style.backgroundColor = primary ? new Color(1f, 0.85f, 0.5f) : new Color(1f, 0.78f, 0.36f, 0.16f);
-                b.style.borderLeftColor = UiPalette.Accent;
-                b.style.color = primary ? UiPalette.OnAccent : Color.white;
-                b.style.translate = new Translate(6, 0);
+                KardashevAscent.Presentation.Audio.GameAudio.Play(KardashevAscent.Presentation.Audio.Sfx.Hover);
+                b.style.transitionDuration = Seconds(0.18f);
+                b.style.transitionTimingFunction = Ease(EasingMode.EaseOutCubic);
+                b.style.color = primary ? new Color(1f, 0.9f, 0.62f) : Color.white;
+                b.style.textShadow = new TextShadow { offset = Vector2.zero, blurRadius = 14, color = new Color(1f, 0.75f, 0.3f, 0.9f) };
+                b.style.translate = new Translate(14, 0);
+                b.style.scale = new Scale(new Vector3(1.06f, 1.06f, 1f));
+                bar.style.width = 180;
+                chevron.style.opacity = 1f;
             });
-            b.RegisterCallback<PointerLeaveEvent>(_ => Idle());
+            b.RegisterCallback<PointerLeaveEvent>(_ =>
+            {
+                b.style.color = idle;
+                b.style.textShadow = new TextShadow { offset = Vector2.zero, blurRadius = 0, color = Color.clear };
+                b.style.translate = new Translate(0, 0);
+                b.style.scale = new Scale(Vector3.one);
+                bar.style.width = 0;
+                chevron.style.opacity = 0f;
+            });
             return b;
         }
 
@@ -662,7 +899,7 @@ namespace KardashevAscent.Presentation.Game
         }
 
         /// <summary>The team, shown in the credits (one line each; empty hides the section). Fill in your names.</summary>
-        static readonly string[] TeamMembers = { };
+        static readonly string[] TeamMembers = { "Team GIE", "Kiattiyot Sinprasom", "Puwanantorn Lertpoonsawat", "Methapat Khamkanya" };
 
         void ShowSettings(bool show) { Show(settingsScreen, show); if (show) FadeIn(settingsScreen); }
 

@@ -466,7 +466,7 @@ All formulas and checks are in `docs/physics/physics-verification.md`.
 
 ## 14. Team rules and workflow
 
-- **Team:** 3 people. They use many AI coding-assistant sessions (locally and in the cloud), coordinated through
+- **Team:** GIE, 3 people: Kiattiyot Sinprasom, Puwanantorn Lertpoonsawat, Methapat Khamkanya. They use many AI coding-assistant sessions (locally and in the cloud), coordinated through
   GitHub issues, pull requests and `docs/`.
 - **Pull requests:** never push to `main`; everything goes through a pull request.
 - **Workflow:**
