@@ -35,6 +35,8 @@ namespace KardashevAscent.Presentation.Audio
         static void Boot()
         {
             if (instance != null) return;
+            // Only in the game's scene: an empty scene playing sound looks like the game with no planet.
+            if (FindAnyObjectByType<SimulationRunner>() == null) return;
             var go = new GameObject("Game Audio");
             DontDestroyOnLoad(go);
             go.AddComponent<GameAudio>();
