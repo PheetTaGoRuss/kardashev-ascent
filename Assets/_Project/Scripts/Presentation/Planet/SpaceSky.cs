@@ -7,12 +7,12 @@ namespace KardashevAscent.Presentation.Planet
     /// <summary>
     /// The sky behind the planet (director 2026-11-15: a galaxy and stars instead of a flat black): a panorama made
     /// once at start, with a Milky Way band (brighter, warmer bulge and a dark dust lane), faint nebulae and about
-    /// fourteen thousand stars, more of them along the band, in star colours. Shown as the main camera's skybox through
+    /// sixteen thousand stars, more of them along the band, in star colours. Shown as the main camera's skybox through
     /// Resources/SpaceSky.mat (Skybox/Panoramic). Looks only: it is not a real sky for any planet.
     /// </summary>
     public sealed class SpaceSky : MonoBehaviour
     {
-        const int Width = 2048, Height = 1024;
+        const int Width = 4096, Height = 2048;
         /// <summary>The diffuse light (band, nebulae) is worked out on a coarser grid and blended up.</summary>
         const int CoarseW = 512, CoarseH = 256;
         const int Seed = 1977;
@@ -71,10 +71,10 @@ namespace KardashevAscent.Presentation.Planet
                     float dust = 1f - 0.75f * Mathf.Exp(-Sq((b - 0.01f) / 0.045f)) * (float)Math.Pow(n2, 1.4) * (0.4f + bulge);
                     float glow = (band + bulge) * Mathf.Clamp01(dust);
                     Color warm = new Color(1f, 0.86f, 0.68f), cool = new Color(0.66f, 0.76f, 1f);
-                    Color c = Color.Lerp(cool, warm, Mathf.Clamp01(bulge * 1.2f)) * glow * 0.20f;
+                    Color c = Color.Lerp(cool, warm, Mathf.Clamp01(bulge * 1.2f)) * glow * 0.30f;
                     // Nebulae: faint magenta and teal clouds, mostly near the band.
                     float neb = Mathf.Clamp01((float)(n3 - 0.55) * 3f) * (0.35f + 0.65f * Mathf.Exp(-Sq(b / 0.5f)));
-                    c += Color.Lerp(new Color(0.55f, 0.18f, 0.5f), new Color(0.12f, 0.42f, 0.5f), (float)n2) * neb * 0.07f;
+                    c += Color.Lerp(new Color(0.55f, 0.18f, 0.5f), new Color(0.12f, 0.42f, 0.5f), (float)n2) * neb * 0.09f;
                     c += new Color(0.004f, 0.006f, 0.014f);
                     coarse[y * CoarseW + x] = c;
                 }
@@ -100,10 +100,10 @@ namespace KardashevAscent.Presentation.Planet
             }
 
             var rng = new System.Random(Seed);
-            for (int i = 0; i < 14000; i++)
+            for (int i = 0; i < 16000; i++)
             {
                 Vector3 v;
-                if (i < 5000)
+                if (i < 7000)
                 {
                     // Along the band: a gaussian spread in galactic latitude.
                     double bl = Gauss(rng) * 0.14, ll = rng.NextDouble() * Math.PI * 2.0;
@@ -114,11 +114,11 @@ namespace KardashevAscent.Presentation.Planet
                     double z = rng.NextDouble() * 2.0 - 1.0, a = rng.NextDouble() * Math.PI * 2.0, s = Math.Sqrt(1.0 - z * z);
                     v = new Vector3((float)(s * Math.Cos(a)), (float)z, (float)(s * Math.Sin(a)));
                 }
-                float bright = (float)Math.Pow(rng.NextDouble(), 7.0);
-                float lum = 0.18f + bright * 1.6f;
+                float bright = (float)Math.Pow(rng.NextDouble(), 9.0);
+                float lum = 0.06f + (float)rng.NextDouble() * 0.16f + bright * 1.5f;
                 double t = rng.NextDouble();
                 Color tint = t < 0.12 ? new Color(1f, 0.72f, 0.5f) : t < 0.3 ? new Color(1f, 0.9f, 0.75f) : t > 0.9 ? new Color(0.7f, 0.8f, 1f) : new Color(0.95f, 0.96f, 1f);
-                Stamp(pixels, v, tint * lum, bright > 0.35f ? 2 : bright > 0.08f ? 1 : 0);
+                Stamp(pixels, v, tint * lum, bright > 0.55f ? 2 : bright > 0.2f ? 1 : 0);
             }
 
             var tex = new Texture2D(Width, Height, TextureFormat.RGBA32, false)
