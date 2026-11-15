@@ -377,6 +377,9 @@ namespace KardashevAscent.Presentation.UI
             marginNote.AddToClassList("wrap");
             marginNote.style.marginTop = 2;
             Body.Add(marginNote);
+            InfoTip.After(marginNote, "Until a value is measured, buildings are designed for the cautious end of its range. " +
+                                      "Panels deliver 1 minus the combined spread of the unknown light values (never below half). " +
+                                      "Batteries charge only to 80 % until the surface temperature experiment says how hot or cold the cells get.");
 
             puzzleHead = Heading("PUZZLES");
             puzzles = new VisualElement();
@@ -433,10 +436,9 @@ namespace KardashevAscent.Presentation.UI
                 row.style.marginTop = 6;
                 var mid = new VisualElement();
                 mid.style.flexGrow = 1; mid.style.flexShrink = 1;
-                mid.Add(Label(KardashevAscent.Simulation.Planet.Experiments.Name(k), "robot-name"));
-                Label what = Label(KardashevAscent.Simulation.Planet.Experiments.What(k), "job-text");
-                what.AddToClassList("wrap");
-                mid.Add(what);
+                Label expName = Label(KardashevAscent.Simulation.Planet.Experiments.Name(k), "robot-name");
+                mid.Add(expName);
+                InfoTip.After(expName, KardashevAscent.Simulation.Planet.Experiments.What(k));   // details behind "i"
                 Label st = Label("", "job-text");
                 mid.Add(st);
                 Label result = Label("", "job-text");
@@ -662,11 +664,10 @@ namespace KardashevAscent.Presentation.UI
 
             // Where measuring happens, and what not knowing costs.
             stationNote.text = sim.HasResearchStation ? ""
-                : "No Research Station yet: measurements and experiments are done there. Build one from Stations in the build bar.";
+                : "No Research Station · build one (Stations)";
             stationNote.style.display = sim.HasResearchStation ? DisplayStyle.None : DisplayStyle.Flex;
             double design = sim.SolarDesignShare, battery = sim.BatteryUsableShare;
-            marginNote.text = (design < 0.999 ? $"Safety margin: panels run at {design * 100.0:0} % until these values are measured. " : "Panels run at full output: their values are known. ")
-                + (battery < 0.999 ? $"Batteries charge to {battery * 100.0:0} % until the surface temperature is known." : "");
+            marginNote.text = $"Margins · panels {design * 100.0:0} % · batteries {battery * 100.0:0} %";
 
             foreach (var kv in experimentRows)
             {
