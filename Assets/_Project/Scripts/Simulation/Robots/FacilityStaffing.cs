@@ -19,8 +19,8 @@ namespace KardashevAscent.Simulation.Robots
         public const int MineSiteCapacity = 3;
         public const double ExtraWorkerFactor = 0.6;
 
-        /// <summary>Robots that can work one construction site together (director 2026-11-15: more workers, sooner). TBD; 4 keeps a 300-robot step inside its budget.</summary>
-        public const int BuildCrewCapacity = 4;
+        /// <summary>Robots that can work one construction site together (director 2026-11-15: more workers, sooner). TBD.</summary>
+        public const int BuildCrewCapacity = 6;
 
         /// <summary>How many robots can work a task at once.</summary>
         public static int CapacityFor(TaskKind kind)
