@@ -68,22 +68,27 @@ namespace KardashevAscent.Presentation.UI
         public static InfoTip After(VisualElement row, string text)
         {
             var tip = new InfoTip(text);
-            VisualElement line = row;
             if (row is Label && row.parent != null)
             {
-                // Wrap the label in a row so the "i" sits on its line.
+                // One block holds the line (label + "i") and its box, so whatever shows or hides the line (a window's
+                // tabs) shows or hides them together and never opens the box by itself.
                 VisualElement parent = row.parent;
                 int at = parent.IndexOf(row);
-                line = new VisualElement();
+                var block = new VisualElement();
+                var line = new VisualElement();
                 line.style.flexDirection = FlexDirection.Row;
                 line.style.alignItems = Align.Center;
-                parent.Insert(at, line);
+                parent.Insert(at, block);
+                block.Add(line);
                 line.Add(row);
                 row.style.flexShrink = 1;
+                line.Add(tip.Button);
+                block.Add(tip.Detail);
+                return tip;
             }
-            line.Add(tip.Button);
-            if (line.parent != null)
-                line.parent.Insert(line.parent.IndexOf(line) + 1, tip.Detail);
+            row.Add(tip.Button);
+            if (row.parent != null)
+                row.parent.Insert(row.parent.IndexOf(row) + 1, tip.Detail);
             return tip;
         }
     }
