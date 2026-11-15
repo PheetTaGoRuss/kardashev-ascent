@@ -118,6 +118,70 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.AreEqual(sim.Deposits.At(t)[1].Grade, sim.Deposits.GradeOf(t, sim.Deposits.At(t)[1].Material), 1e-12);
         }
 
+        // Director 2026-11-15: a survey's materials can be worked out one at a time, now or later.
+        static SurveyPuzzle CoresAtBase(PlanetSimulation sim)
+        {
+            int t = sim.BaseTileId;
+            Assume.That(sim.Deposits.At(t).Count > 2, "the base tile has two materials besides rock");
+            Assert.IsTrue(sim.OrderSurvey(t));
+            for (int i = 0; i < 10 && sim.SurveyPuzzles.Count == 0; i++)
+                sim.Tick(1.0);
+            Assert.AreEqual(1, sim.SurveyPuzzles.Count);
+            return sim.SurveyPuzzles[0];
+        }
+
+        [Test]
+        public void Survey_MaterialsCanBeAnsweredOneAtATime()
+        {
+            var sim = Create();
+            int t = sim.BaseTileId;
+            SurveyPuzzle p = CoresAtBase(sim);
+            Assert.GreaterOrEqual(p.Materials.Count, 2);
+
+            sim.AnswerSurveyMaterial(t, 0, p.Answer(0) * 3.0, out LatitudePuzzle.Grade wrong);
+            Assert.AreEqual(LatitudePuzzle.Grade.Wrong, wrong);
+            Assert.IsFalse(p.IsSolved(0));
+
+            string first = sim.AnswerSurveyMaterial(t, 0, p.Answer(0), out LatitudePuzzle.Grade g0);
+            Assert.AreEqual(LatitudePuzzle.Grade.Precise, g0);
+            Assert.IsTrue(p.IsSolved(0), "kept: no need to do the rest at once");
+            StringAssert.Contains("more to go", first);
+            Assert.IsFalse(sim.Deposits.IsSurveyed(t), "not until every material is worked out");
+
+            for (int m = 1; m < p.Materials.Count; m++)
+                sim.AnswerSurveyMaterial(t, m, p.Answer(m) * (m == 1 ? 1.2 : 1.0), out _);
+            Assert.IsTrue(sim.Deposits.IsSurveyed(t));
+            Assert.IsTrue(sim.IsRoughSurvey(t), "one material was rough: the tile shows ±");
+            Assert.AreEqual(0, sim.SurveyPuzzles.Count);
+        }
+
+        [Test]
+        public void Survey_PartialAnswers_AreSaved_AndAVersion29SaveLoads()
+        {
+            var a = Create();
+            int t = a.BaseTileId;
+            SurveyPuzzle p = CoresAtBase(a);
+            a.AnswerSurveyMaterial(t, 0, p.Answer(0), out _);
+            SimulationState state = a.CaptureState();
+            Assert.AreEqual(30, state.Version);
+            var b = Create();
+            Assert.IsTrue(b.RestoreState(state));
+            Assert.IsTrue(b.SurveyPuzzles[0].IsSolved(0), "the worked-out material is kept");
+            Assert.IsFalse(b.SurveyPuzzles[0].IsSolved(1));
+
+            // A version-29 save has no Solved lists: its puzzle loads with nothing worked out yet.
+            state.Version = 29;
+            state.SurveyPuzzles[0].Solved = null;
+            state.SurveyPuzzles[0].RoughSolved = null;
+            var c = Create();
+            Assert.IsTrue(c.RestoreState(state));
+            Assert.IsFalse(c.SurveyPuzzles[0].IsSolved(0));
+            SurveyPuzzle old = c.SurveyPuzzles[0];
+            for (int m = 0; m < old.Materials.Count; m++)
+                c.AnswerSurveyMaterial(t, m, old.Answer(m), out _);
+            Assert.IsTrue(c.Deposits.IsSurveyed(t), "an old puzzle can still be finished one material at a time");
+        }
+
         [Test]
         public void Save_KeepsCoresAndRoughSurveys()
         {

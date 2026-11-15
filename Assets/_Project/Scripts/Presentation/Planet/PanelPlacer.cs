@@ -932,16 +932,37 @@ namespace KardashevAscent.Presentation.Planet
             size = (2f * reach + (float)site.Spacing) * planet.Radius * 0.95f;
         }
 
+        // A building's module on every slot it covers, each sized to sit inside its hex slot (director 2026-11-15: no
+        // overlap). 0.78 of the slot spacing keeps a module's corners inside the slot's inscribed circle.
+        const float ModuleShareOfSlot = 0.78f;
+
+        void SlotSpots(TileSite site, IReadOnlyList<int> slots, List<Vector3> directions, List<float> radii, out float size)
+        {
+            directions.Clear();
+            radii.Clear();
+            foreach (int s in slots)
+            {
+                System.Numerics.Vector3 d = site.SlotDirections[s];
+                var dir = new Vector3(d.X, d.Y, d.Z).normalized;
+                directions.Add(dir);
+                radii.Add(siteView.GroundRadius(site, dir));
+            }
+            size = (float)site.Spacing * planet.Radius * ModuleShareOfSlot;
+        }
+
+        readonly List<Vector3> spotDirections = new List<Vector3>();
+        readonly List<float> spotRadii = new List<float>();
+
         void ShowBattery(BatteryVisual visual, TileSite site, IReadOnlyList<int> slots)
         {
-            FootprintPlace(site, slots, out Vector3 direction, out float size);
-            visual.Show(direction, siteView.GroundRadius(site, direction), size);
+            SlotSpots(site, slots, spotDirections, spotRadii, out float size);
+            visual.Show(spotDirections, spotRadii, size);
         }
 
         void ShowOnSlot(SolarPanelVisual visual, TileSite site, IReadOnlyList<int> slots, double tilt, double azimuth)
         {
-            FootprintPlace(site, slots, out Vector3 direction, out float size);
-            visual.Show(direction, siteView.GroundRadius(site, direction), size, tilt, azimuth);
+            SlotSpots(site, slots, spotDirections, spotRadii, out float size);
+            visual.Show(spotDirections, spotRadii, size, tilt, azimuth);
         }
 
         /// <summary>Build in the selected slot: a panel at the current angles, or a battery yard.</summary>

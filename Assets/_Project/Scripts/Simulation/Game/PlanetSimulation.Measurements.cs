@@ -49,6 +49,48 @@ namespace KardashevAscent.Simulation.Game
         }
         public IReadOnlyList<ParameterPuzzle> ParameterPuzzles => parameterPuzzles;
 
+        /// <summary>
+        /// Answer one material of a survey puzzle (director 2026-11-15: no need to fill every row at once). A right
+        /// answer is kept; once every material is worked out the tile is surveyed (marked ± if any was rough).
+        /// </summary>
+        public string AnswerSurveyMaterial(int tileId, int materialIndex, double estimate, out LatitudePuzzle.Grade grade)
+        {
+            grade = LatitudePuzzle.Grade.Wrong;
+            SurveyPuzzle p = surveyPuzzles.Find(q => q.Tile == tileId);
+            if (p == null)
+                return "No core samples waiting for that tile.";
+            if (materialIndex < 0 || materialIndex >= p.Materials.Count)
+                return "No such material in these cores.";
+            string name = Resources.Materials.Name(p.Materials[materialIndex]);
+            if (p.IsSolved(materialIndex))
+            {
+                grade = p.RoughSolved.Contains(materialIndex) ? LatitudePuzzle.Grade.Rough : LatitudePuzzle.Grade.Precise;
+                return $"{name} is already worked out.";
+            }
+            grade = p.CheckOne(materialIndex, estimate);
+            if (grade == LatitudePuzzle.Grade.Wrong)
+            {
+                p.Attempts++;
+                return $"{estimate:0.###} doesn't fit the {name.ToLowerInvariant()} cores. Average every core, counting 'none' as 0.";
+            }
+            p.Solved.Add(materialIndex);
+            if (grade == LatitudePuzzle.Grade.Rough)
+                p.RoughSolved.Add(materialIndex);
+            int left = p.Materials.Count - p.Solved.Count;
+            if (left > 0)
+                return $"{name}: {(grade == LatitudePuzzle.Grade.Precise ? "right" : "close enough")}. {left} more to go (do them now or later).";
+            surveyPuzzles.Remove(p);
+            Deposits.MarkSurveyed(tileId);
+            if (p.RoughSolved.Count > 0)
+                roughSurveys.Add(tileId);
+            else
+                roughSurveys.Remove(tileId);
+            TileSurveyed?.Invoke(tileId);
+            return p.RoughSolved.Count > 0
+                ? $"Tile #{tileId} surveyed: some estimates were rough, so its grades show as ±."
+                : $"Tile #{tileId} surveyed: the assays match your estimates.";
+        }
+
         /// <summary>Parameters whose readings end in a puzzle (stages C and D); the rest are known when measured.</summary>
         static bool HasPuzzle(SolarParameter p) => p != SolarParameter.Latitude;
 
