@@ -28,6 +28,10 @@ namespace KardashevAscent.Presentation.Planet
             var colors = new List<Color32>(vertices.Capacity);
             var indices = new List<int>(tiles * maxCorners * 9);
             bool border = borderWidth > 0f;
+            // Walls reach down to the lowest tile top on the planet (a canyon floor sits below sea level), so no gap opens.
+            float floor = radius;
+            if (tileRadius != null)
+                for (int t = 0; t < tiles; t++) floor = Mathf.Min(floor, tileRadius[t]);
 
             for (int t = 0; t < tiles; t++)
             {
@@ -49,9 +53,9 @@ namespace KardashevAscent.Presentation.Planet
                     Add(vertices, normals, colors, Vector3.Lerp(corner, center, border ? borderWidth : 0f), n, fill);
                 }
 
-                // Cliff walls: from the tile's edge down to sea level. A lower neighbour shows the wall; a higher one
+                // Cliff walls: from the tile's edge down to the lowest floor (sea level, or a canyon's). A lower neighbour shows the wall; a higher one
                 // hides it. Darker than the top so slopes read as relief.
-                if (r > radius * 1.0001f)
+                if (r > floor * 1.0001f)
                 {
                     Color32 wall = Darken(fill, WallDarken);
                     for (int i = 0; i < k; i++)
@@ -61,8 +65,8 @@ namespace KardashevAscent.Presentation.Planet
                         int w = vertices.Count;
                         Add(vertices, normals, colors, a * r, outward, wall);
                         Add(vertices, normals, colors, b * r, outward, wall);
-                        Add(vertices, normals, colors, b * radius, outward, wall);
-                        Add(vertices, normals, colors, a * radius, outward, wall);
+                        Add(vertices, normals, colors, b * floor, outward, wall);
+                        Add(vertices, normals, colors, a * floor, outward, wall);
                         indices.Add(w); indices.Add(w + 2); indices.Add(w + 1);
                         indices.Add(w); indices.Add(w + 3); indices.Add(w + 2);
                         indices.Add(w); indices.Add(w + 1); indices.Add(w + 2);
