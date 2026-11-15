@@ -352,14 +352,14 @@ namespace KardashevAscent.Presentation.CameraControl
                            "Right-drag or A/D: turn · W/S: view angle\n" +
                            "Wheel or Q/E: zoom (zoom out to leave)\n" +
                            "V: sky over the selected panel · R: reset · Esc: clear selection, then back to planet\n" +
-                           "H: hide · C: colony · G: robots · L: planets · K: calculator · F: flashlight · F5/F9: save/load";
+                           "H: hide · C: colony · G: robots · L: planets · K: calculator · J: guide · F: flashlight · F5/F9: save/load";
                 string tiles = target != null && target.TryGetComponent(out PlanetView planet) && planet.Sphere != null
                     ? $"Tiles: {planet.Sphere.TileCount:N0} · click one to build there\n"
                     : "";
                 return tiles +
                        "Drag (mouse) or WASD/arrows: rotate\n" +
                        "Mouse wheel or Q/E: zoom · F: flashlight on/off\n" +
-                       "R: back to the colony · H: hide help · C: colony · G: robots · L: planets · K: calculator · F5/F9: save/load";
+                       "R: back to the colony · H: hide help · C: colony · G: robots · L: planets · K: calculator · J: guide · F5/F9: save/load";
             }
         }
     }
