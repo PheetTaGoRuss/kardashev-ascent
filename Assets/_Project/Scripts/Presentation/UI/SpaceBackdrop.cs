@@ -21,12 +21,31 @@ namespace KardashevAscent.Presentation.UI
 
         static readonly Color Space = new Color(0.012f, 0.016f, 0.035f);
 
-        public SpaceBackdrop()
+        /// <summary>Which part this element draws: the whole scene, or only what passes in front of a 3D planet.</summary>
+        public enum Layer { Back, Front }
+
+        readonly Layer layer;
+
+        /// <summary>
+        /// When true the planet body is a real 3D render on top (<see cref="MenuPlanet"/>): only its glow, the orbit and the
+        /// moon are drawn here.
+        /// </summary>
+        public bool PlanetIs3D { get; set; }
+
+        /// <summary>Where the planet sits in a backdrop of this size (its centre and radius).</summary>
+        public static void PlanetGeometry(Rect r, out Vector2 centre, out float radius)
         {
+            centre = new Vector2(r.width * 0.80f, r.height * 0.80f);
+            radius = Mathf.Min(r.width, r.height) * 0.56f;
+        }
+
+        public SpaceBackdrop(Layer layer = Layer.Back)
+        {
+            this.layer = layer;
             pickingMode = PickingMode.Ignore;
             style.position = Position.Absolute;
             style.left = 0; style.right = 0; style.top = 0; style.bottom = 0;
-            style.backgroundColor = Space;
+            if (layer == Layer.Back) style.backgroundColor = Space;
             var rng = new System.Random(2026);
             for (int i = 0; i < StarCount; i++)
             {
@@ -61,6 +80,12 @@ namespace KardashevAscent.Presentation.UI
             if (r.width < 10f || r.height < 10f) return;
             Painter2D p = ctx.painter2D;
             float w = r.width, h = r.height, unit = Mathf.Min(w, h);
+            PlanetGeometry(r, out Vector2 pc, out float pr);
+            if (layer == Layer.Front)
+            {
+                DrawOrbit(p, pc, pr, unit, front: true);
+                return;
+            }
 
             // Nebula: soft clouds made of many faint discs.
             Glow(p, new Vector2(w * 0.20f, h * 0.30f), unit * 0.55f, new Color(0.35f, 0.12f, 0.45f), 0.009f, 44);
@@ -97,13 +122,19 @@ namespace KardashevAscent.Presentation.UI
             p.BeginPath(); p.Arc(sun, unit * 0.012f, 0f, 360f); p.Fill();
 
             // The planet: right side, partly below the edge; lit from the sun's side.
-            Vector2 c0 = new Vector2(w * 0.80f, h * 0.80f);
-            float R = unit * 0.56f;
+            Vector2 c0 = pc;
+            float R = pr;
             // Atmosphere glow around the limb.
             for (int i = 36; i >= 1; i--)
             {
                 p.fillColor = new Color(0.30f, 0.65f, 1f, 0.008f);
                 p.BeginPath(); p.Arc(c0, R * (1f + 0.005f * i), 0f, 360f); p.Fill();
+            }
+            if (PlanetIs3D)
+            {
+                DrawOrbit(p, c0, R, unit, front: false);
+                DrawShootingStar(p, w, h, unit);
+                return;
             }
             // Body: ocean blue fading to deep blue towards the night side.
             p.fillColor = new Color(0.07f, 0.22f, 0.42f);
@@ -147,29 +178,40 @@ namespace KardashevAscent.Presentation.UI
             float rim = Mathf.Atan2(toSun.y, toSun.x) * Mathf.Rad2Deg;
             p.BeginPath(); p.Arc(c0, R, rim - 50f, rim + 50f); p.Stroke();
 
-            // An orbit and its moon.
+            DrawOrbit(p, c0, R, unit, front: false);
+            DrawOrbit(p, c0, R, unit, front: true);
+            DrawShootingStar(p, w, h, unit);
+        }
+
+        /// <summary>The moon's orbit and the moon: the far half (behind the planet) or the near half (in front).</summary>
+        void DrawOrbit(Painter2D p, Vector2 c0, float R, float unit, bool front)
+        {
             Vector2 axis = new Vector2(R * 1.55f, R * 0.32f);
-            p.strokeColor = new Color(1f, 0.78f, 0.36f, 0.18f);
+            p.strokeColor = new Color(1f, 0.78f, 0.36f, 0.20f);
             p.lineWidth = 1f;
             p.BeginPath();
+            bool open = false;
             for (int i = 0; i <= 96; i++)
             {
                 float a = i / 96f * 6.283f;
+                bool near = Mathf.Sin(a) > 0f;
                 Vector2 q = c0 + Rotate(new Vector2(Mathf.Cos(a) * axis.x, Mathf.Sin(a) * axis.y), -18f);
-                if (i == 0) p.MoveTo(q); else p.LineTo(q);
+                if (near != front) { open = false; continue; }
+                if (!open) { p.MoveTo(q); open = true; } else p.LineTo(q);
             }
             p.Stroke();
             float m = time * 0.12f;
+            if ((Mathf.Sin(m) > 0f) != front) return;
             Vector2 moon = c0 + Rotate(new Vector2(Mathf.Cos(m) * axis.x, Mathf.Sin(m) * axis.y), -18f);
-            bool behind = Mathf.Sin(m) < 0f && (moon - c0).magnitude < R;
-            if (!behind)
-            {
-                p.fillColor = new Color(0.82f, 0.80f, 0.76f);
-                p.BeginPath(); p.Arc(moon, unit * 0.014f, 0f, 360f); p.Fill();
-                Glow(p, moon, unit * 0.04f, new Color(1f, 0.95f, 0.85f), 0.03f, 5);
-            }
+            Glow(p, moon, unit * 0.05f, new Color(1f, 0.95f, 0.85f), 0.012f, 12);
+            p.fillColor = new Color(0.82f, 0.80f, 0.76f);
+            p.BeginPath(); p.Arc(moon, unit * 0.014f, 0f, 360f); p.Fill();
+            p.fillColor = new Color(0.25f, 0.24f, 0.26f, 0.8f);   // its night side
+            p.BeginPath(); p.Arc(moon + new Vector2(unit * 0.005f, unit * 0.004f), unit * 0.012f, 0f, 360f); p.Fill();
+        }
 
-            // Now and then, a shooting star.
+        void DrawShootingStar(Painter2D p, float w, float h, float unit)
+        {
             if (time > shootAt)
             {
                 shootStart = time;

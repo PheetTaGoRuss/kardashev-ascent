@@ -15,6 +15,12 @@ namespace KardashevAscent.Presentation.Audio
         Milestone,
         Discovery,
         Open,
+        /// <summary>A soft tick when the pointer moves onto a menu button.</summary>
+        Hover,
+        /// <summary>A rising rush of air (menu transitions, the intro).</summary>
+        Whoosh,
+        /// <summary>A deep cinematic impact with a brass-like swell ("braaam"): the title's entrance.</summary>
+        Boom,
     }
 
     /// <summary>
@@ -42,6 +48,9 @@ namespace KardashevAscent.Presentation.Audio
                 case Sfx.Beep: return Mix(Tone(0.08, 900.0, 0.003, 0.07, 0.25), Delay(Tone(0.1, 1300.0, 0.003, 0.09, 0.25), 0.1));
                 case Sfx.Alert: return Mix(Mix(Tone(0.22, 620.0, 0.01, 0.2, 0.3, harmonics: 0.4), Delay(Tone(0.22, 465.0, 0.01, 0.2, 0.3, harmonics: 0.4), 0.24)),
                                            Delay(Mix(Tone(0.22, 620.0, 0.01, 0.2, 0.3, harmonics: 0.4), Delay(Tone(0.22, 465.0, 0.01, 0.2, 0.3, harmonics: 0.4), 0.24)), 0.5));
+                case Sfx.Hover: return Mix(Tone(0.06, 1800.0, 0.003, 0.05, 0.10, harmonics: 0.1), Noise(0.05, 0.004, 0.04, 0.04, smooth: 0.6));
+                case Sfx.Whoosh: return Riser(1.1, 0.35);
+                case Sfx.Boom: return Braam();
                 case Sfx.Milestone: return Mix(Mix(Tone(1.6, C5, 0.25, 1.3, 0.22), Tone(1.6, E5, 0.3, 1.25, 0.2)),
                                                Mix(Tone(1.6, G5, 0.35, 1.2, 0.2), Delay(Arpeggio(new[] { C6, E6, G6 }, 0.12, 0.6, 0.18), 0.35)));
                 default: return Mix(Tone(0.5, A5, 0.01, 0.45, 0.22, vibrato: 6.0), Delay(Tone(0.6, E6, 0.01, 0.55, 0.2, vibrato: 6.0), 0.12));
@@ -87,6 +96,49 @@ namespace KardashevAscent.Presentation.Audio
                 outp[i] = (float)Math.Max(-1.0, Math.Min(1.0, v * 0.6));
             }
             return outp;
+        }
+
+        /// <summary>Filtered noise that swells and opens up, then cuts: a whoosh.</summary>
+        static float[] Riser(double seconds, double amp)
+        {
+            int n = (int)(seconds * Rate);
+            var s = new float[n];
+            var rng = new Random(11);
+            double y = 0.0;
+            for (int i = 0; i < n; i++)
+            {
+                double t = (double)i / n;
+                double smooth = 0.985 - 0.12 * t;   // brighter as it rises
+                y = y * smooth + (rng.NextDouble() * 2.0 - 1.0) * (1.0 - smooth);
+                double env = Math.Pow(t, 2.2) * (t > 0.92 ? (1.0 - t) / 0.08 : 1.0);
+                s[i] = (float)Math.Max(-1.0, Math.Min(1.0, amp * env * y * 6.0));
+            }
+            return s;
+        }
+
+        /// <summary>
+        /// The trailer impact: a sub-bass drop (70 to 28 Hz), a low noise blast, and a detuned brass-like chord on A1
+        /// (55 Hz with fifths and octaves, rich in harmonics) that swells and fades over a few seconds, with an echo.
+        /// </summary>
+        static float[] Braam()
+        {
+            float[] sub = Tone(2.8, 70.0, 0.004, 2.2, 0.75, sweepTo: 28.0, harmonics: 0.3);
+            float[] blast = Noise(1.6, 0.003, 0.9, 0.55, smooth: 0.975, seed: 21);
+            float[] brass = new float[0];
+            double[] notes = { 55.0, 55.6, 82.5, 110.0, 164.8 };
+            double[] amps = { 0.20, 0.16, 0.14, 0.12, 0.07 };
+            for (int k = 0; k < notes.Length; k++)
+                brass = Mix(brass, Tone(4.0, notes[k], 0.06, 3.2, amps[k], harmonics: 1.0, vibrato: 3.0));
+            float[] hit = Mix(Mix(sub, blast), brass);
+            float[] echo = Delay(Scale(hit, 0.28), 0.42);
+            return Mix(hit, echo);
+        }
+
+        static float[] Scale(float[] s, float k)
+        {
+            var o = new float[s.Length];
+            for (int i = 0; i < s.Length; i++) o[i] = s[i] * k;
+            return o;
         }
 
         // ---- building blocks ----
