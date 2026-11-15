@@ -151,10 +151,12 @@ namespace KardashevAscent.Presentation.UI
                 else if (!s.Real) s.At = centre + Direction(225.0) * RadiusOf(4.0);
                 else s.At = centre + Direction(s.L) * RadiusOf(s.DistancePc * Math.Cos(s.B * Math.PI / 180.0));
             }
-            // Name tags beside each star, nudged down where two would overlap.
+            // Name tags beside each star: the first of right, left, below or above that hits no other tag or star,
+            // nearest stars to the Sun first (they are the most crowded).
             var placed = new List<Rect>();
+            foreach (StarSystem o in systems) placed.Add(new Rect(o.At.x - 7f, o.At.y - 7f, 14f, 14f));
             var order = new List<StarSystem>(systems);
-            order.Sort((a, b) => a.At.y.CompareTo(b.At.y));
+            order.Sort((a, b) => (a.At - centre).sqrMagnitude.CompareTo((b.At - centre).sqrMagnitude));
             foreach (StarSystem s in order)
             {
                 if (s.Tag == null) continue;
@@ -162,17 +164,38 @@ namespace KardashevAscent.Presentation.UI
                     : $"{s.DistancePc:0.#} pc · {s.DistancePc * GalacticCoordinates.LightYearsPerParsec:N0} ly";
                 string worlds = s.Planets.Count > 1 ? $" · {s.Planets.Count} worlds" : "";
                 s.Tag.text = $"{s.Name.ToUpperInvariant()}\n<size=10>{detail}{worlds}</size>";
-                var box = new Rect(s.At.x + 14f, s.At.y - 15f, Mathf.Max(90f, s.Name.Length * 8.5f), 30f);
-                bool moved = true;
-                for (int guard = 0; moved && guard < 12; guard++)
+                float w = Mathf.Max(s.Name.Length * 8.5f, (detail.Length + worlds.Length) * 5.6f) + 4f, h = 30f;
+                var candidates = new[]
                 {
-                    moved = false;
+                    new Rect(s.At.x + 13f, s.At.y - h * 0.5f, w, h),
+                    new Rect(s.At.x - 13f - w, s.At.y - h * 0.5f, w, h),
+                    new Rect(s.At.x - w * 0.5f, s.At.y + 11f, w, h),
+                    new Rect(s.At.x - w * 0.5f, s.At.y - 11f - h, w, h),
+                    new Rect(s.At.x + 13f, s.At.y + 4f, w, h),
+                    new Rect(s.At.x - 13f - w, s.At.y - h - 4f, w, h),
+                };
+                Rect box = candidates[0];
+                bool found = false;
+                foreach (Rect c in candidates)
+                {
+                    bool clear = true;
                     foreach (Rect o in placed)
-                        if (o.Overlaps(box)) { box.y = o.yMax + 1f; moved = true; }
+                        if (o.Overlaps(c) && !(o.width < 15f && o.Contains(s.At))) { clear = false; break; }
+                    if (clear) { box = c; found = true; break; }
                 }
+                if (!found)
+                    for (int guard = 0; guard < 12; guard++)
+                    {
+                        bool moved = false;
+                        foreach (Rect o in placed)
+                            if (o.width > 15f && o.Overlaps(box)) { box.y = o.yMax + 1f; moved = true; }
+                        if (!moved) break;
+                    }
                 placed.Add(box);
                 s.Tag.style.left = box.x;
                 s.Tag.style.top = box.y;
+                s.Tag.style.width = w;
+                s.Tag.style.unityTextAlign = box.x + w < s.At.x ? TextAnchor.UpperRight : box.x > s.At.x ? TextAnchor.UpperLeft : TextAnchor.UpperCenter;
             }
             LayoutStaticTags();
             backdrop.MarkDirtyRepaint();

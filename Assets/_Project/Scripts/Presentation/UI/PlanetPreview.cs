@@ -29,6 +29,8 @@ namespace KardashevAscent.Presentation.UI
         readonly Dictionary<int, Mesh> meshes = new Dictionary<int, Mesh>();
         readonly List<Light> dimmed = new List<Light>();
         float spin, tilt;
+        bool locked;
+        static readonly Vector3 LightTravel = new Vector3(0.75f, -0.4f, 0.55f).normalized;
         bool active;
 
         public VisualElement Element => image;
@@ -65,17 +67,20 @@ namespace KardashevAscent.Presentation.UI
             var light = new GameObject("Planet Preview Star") { hideFlags = HideFlags.DontSave };
             sun = light.AddComponent<Light>();
             sun.type = LightType.Directional;
-            sun.intensity = 1.35f;
+            sun.intensity = 1.15f;
             sun.shadows = LightShadows.None;
             // From the upper left and a little in front, so a lit face and a terminator both show.
-            sun.transform.rotation = Quaternion.LookRotation(new Vector3(0.75f, -0.4f, 0.55f).normalized, Vector3.up);
+            sun.transform.rotation = Quaternion.LookRotation(LightTravel, Vector3.up);
             sun.enabled = false;
 
             image = new Image { image = texture, scaleMode = ScaleMode.ScaleToFit, pickingMode = PickingMode.Ignore };
         }
 
-        /// <summary>Show a world: its mesh is made once per key and kept.</summary>
-        public void Show(int key, Func<PlanetView, Mesh> build, Color starColour, float axialTiltDeg)
+        /// <summary>
+        /// Show a world: its mesh is made once per key and kept. A tidally locked world does not turn: the point under
+        /// its star (latitude 0, longitude 0, the +Z axis of the tiles) faces the light.
+        /// </summary>
+        public void Show(int key, Func<PlanetView, Mesh> build, Color starColour, float axialTiltDeg, bool tidallyLocked = false)
         {
             if (planet == null) return;
             if (!meshes.TryGetValue(key, out Mesh mesh))
@@ -85,6 +90,7 @@ namespace KardashevAscent.Presentation.UI
             }
             body.GetComponent<MeshFilter>().sharedMesh = mesh;
             tilt = Mathf.Clamp(axialTiltDeg, 0f, 60f);
+            locked = tidallyLocked;
             Turn();
             sun.color = Color.Lerp(Color.white, starColour, 0.55f);
         }
@@ -126,7 +132,9 @@ namespace KardashevAscent.Presentation.UI
             Turn();
         }
 
-        void Turn() => body.transform.rotation = Quaternion.Euler(0f, 0f, -tilt) * Quaternion.Euler(0f, spin, 0f);
+        void Turn() => body.transform.rotation = locked
+            ? Quaternion.FromToRotation(Vector3.forward, -LightTravel) * Quaternion.Euler(0f, Mathf.Sin(spin * 0.05f) * 12f, 0f)
+            : Quaternion.Euler(0f, 0f, -tilt) * Quaternion.Euler(0f, spin, 0f);
 
         public void Dispose()
         {

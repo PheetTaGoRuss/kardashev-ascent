@@ -388,7 +388,7 @@ namespace KardashevAscent.Presentation.UI
                                                look.IceAroundSubStellar, look.LiquidWater, look.AirTemperatureC, true);
                 bool gas = r.Surface == SurfaceKind.Gaseous;
                 preview.Show(selected, view => view.BuildPreview(rich, gas), previewColour,
-                             r.flags.tidallyLocked ? 0f : (float)r.solar.obliquityDeg);
+                             r.flags.tidallyLocked ? 0f : (float)r.solar.obliquityDeg, r.flags.tidallyLocked);
             }
         }
 
