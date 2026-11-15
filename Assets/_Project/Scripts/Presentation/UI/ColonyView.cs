@@ -28,6 +28,10 @@ namespace KardashevAscent.Presentation.UI
               kardashev, kardashevNotes;
         PowerHistoryChart chart;
         Label robotsText, resourcesText;
+        // Short lines; the full numbers and notes behind "i" (director 2026-11-15, after Oxygen Not Included).
+        InfoTip kardashevTip, energyTip, buildingsTip, robotsTip, resourcesTip;
+        VisualElement stockChips;
+        string stockShape;
         readonly Dictionary<string, List<VisualElement>> sections = new Dictionary<string, List<VisualElement>>();
         readonly Dictionary<string, Button> subTabs = new Dictionary<string, Button>();
         string section = "summary";
@@ -102,6 +106,17 @@ namespace KardashevAscent.Presentation.UI
                 content.Add(head);
                 content.Add(label);
             }
+            stockChips = new VisualElement();
+            content.Insert(content.IndexOf(resourcesText), stockChips);
+
+            // "i" boxes hold what used to fill the window; the lines themselves stay short.
+            if (kardashev != null) kardashevTip = InfoTip.After(kardashev, "");
+            if (energy != null) energyTip = InfoTip.After(energy, "");
+            if (buildings != null) buildingsTip = InfoTip.After(buildings, "");
+            robotsTip = InfoTip.After(robotsText, "");
+            resourcesTip = InfoTip.After(resourcesText, "");
+            if (kardashevNotes != null) kardashevNotes.style.display = DisplayStyle.None;
+            if (tiles != null) tiles.style.display = DisplayStyle.None;
 
             string current = "summary";
             foreach (VisualElement e in new List<VisualElement>(content.Children()))
@@ -187,7 +202,7 @@ namespace KardashevAscent.Presentation.UI
             else if (sim.HoursSinceBrownout < dayHours)
             {
                 growth.text = "Held back";
-                growthCaption.text = $"needs a full day with no brownout ({Math.Max(0.0, dayHours - sim.HoursSinceBrownout):0} h to go)";
+                growthCaption.text = $"1 day without brownout · {Math.Max(0.0, dayHours - sim.HoursSinceBrownout):0} h left";
             }
             else
             {
@@ -209,11 +224,14 @@ namespace KardashevAscent.Presentation.UI
             chartCaption.text = $"Last {spanHours / dayHours:0} days, one point per {FormatHours(h.SampleHours, dayHours)}";
 
             double curtailed = Math.Max(0.0, h.TotalGeneratedWh - h.TotalServedWh - h.TotalBuildWh);
-            energy.text =
-                $"Generated  {Format.Energy(h.TotalGeneratedWh)}\n" +
-                $"Used by the colony  {Format.Energy(h.TotalServedWh)}\n" +
-                $"Made into build parts  {Format.Energy(h.TotalBuildWh)}\n" +
-                $"Stored or lost in the battery  {Format.Energy(curtailed)}";
+            energy.text = $"Made {Format.Energy(h.TotalGeneratedWh)} · used {Format.Energy(h.TotalServedWh)}";
+            if (energyTip != null)
+                energyTip.Text =
+                    $"Generated  {Format.Energy(h.TotalGeneratedWh)}\n" +
+                    $"Used by the colony  {Format.Energy(h.TotalServedWh)}\n" +
+                    $"Made into build parts (old saves)  {Format.Energy(h.TotalBuildWh)}\n" +
+                    $"Stored or lost in the battery  {Format.Energy(curtailed)}\n" +
+                    "Since landing. Power the colony can't use or store is lost (curtailed).";
 
             UpdateBuildings(sim);
             UpdateKardashev(sim);
@@ -241,22 +259,24 @@ namespace KardashevAscent.Presentation.UI
                 return;
             double p = sim.KardashevPowerW, target = sim.TypeITargetW;
             double tenfolds = Kardashev.K(target) - sim.KardashevK;
-            kardashev.text =
+            string full =
                 $"Absolute K  {sim.KardashevK:0.00} · {Format.Power(p)} used\n" +
                 $"Planet K  {sim.PlanetK:0.00} · {Format.Percent(Kardashev.PlanetCompletion(p, target))} of this planet's target\n" +
                 $"Target  {Format.Power(target)} (absolute K {Kardashev.K(target):0.00})" +
                 (tenfolds > 0.0 ? $" · power must grow 10× about {tenfolds * 10.0:0} more times" : " · reached") + "\n" +
                 Milestones(sim);
+            int n = sim.MilestonesReached;
+            kardashev.text = $"K {sim.KardashevK:0.00} · planet K {sim.PlanetK:0.00} · milestone {n}/10";
 
-            if (kardashevNotes == null)
-                return;
             double intercepted = target / Kardashev.TypeIShareOfIntercepted;
-            kardashevNotes.text =
+            string notes =
                 $"K = (log₁₀ P − 6) / 10, so each +0.1 is ten times the power.\n" +
                 $"Humanity in 2024: K ≈ {Kardashev.K(Kardashev.Humanity2024W):0.00} (≈{Kardashev.Humanity2024W / 1e12:0} TW).\n" +
                 $"This planet intercepts {Format.Power(intercepted)} of starlight; its target is " +
                 $"{Kardashev.TypeIShareOfIntercepted * 100.0:0.#} % of that, as Sagan's Type I is of Earth's.\n" +
                 "The per-planet target is a game rule, not a scientific definition.";
+            if (kardashevTip != null)
+                kardashevTip.Text = full + "\n\n" + notes;
         }
 
         void UpdateBuildings(IPlanetSimulation sim)
@@ -283,7 +303,9 @@ namespace KardashevAscent.Presentation.UI
                 perTile[r.Tile] = n;
             }
 
-            buildings.text =
+            buildings.text = $"Panels {panels} · yards {yards} · {Format.Energy(sim.BatteryCapacityWh)} storage" +
+                             (sim.ConstructionQueueCount > 0 ? $" · {sim.ConstructionQueueCount} sites" : "");
+            string buildingsFull =
                 $"Solar panels  {panels}{Sites(panelSites)} · {PanelTiers.FormatArea(panelArea)} of ground\n" +
                 $"New panels are  {PanelTiers.All[sim.PanelTier].Name.ToLowerInvariant()}s ({PanelTiers.FormatArea(sim.NewPanelAreaM2(sim.BaseTileId))} per slot)" +
                 NextTier(sim) + "\n" +
@@ -292,7 +314,7 @@ namespace KardashevAscent.Presentation.UI
 
             if (perTile.Count == 0)
             {
-                tiles.text = "Nothing built yet. Click a tile to open its site.";
+                if (buildingsTip != null) buildingsTip.Text = buildingsFull + "\n\nNothing built yet. Click a tile to open its site.";
                 return;
             }
             var list = new List<KeyValuePair<int, (int Panels, int Yards)>>(perTile);
@@ -310,7 +332,7 @@ namespace KardashevAscent.Presentation.UI
             }
             if (list.Count > tilesListed)
                 lines.Add($"  … and {list.Count - tilesListed} more");
-            tiles.text = string.Join("\n", lines);
+            if (buildingsTip != null) buildingsTip.Text = buildingsFull + "\n\n" + string.Join("\n", lines);
         }
 
         static string NextTier(IPlanetSimulation sim)
@@ -338,18 +360,34 @@ namespace KardashevAscent.Presentation.UI
                 else if (r.State == KardashevAscent.Simulation.Robots.RobotState.Charging) charging++;
                 else if (r.State == KardashevAscent.Simulation.Robots.RobotState.Shutdown) down++;
             }
-            robotsText.text = $"{w.Robots.Count} robots in {w.Groups.Count} group{(w.Groups.Count == 1 ? "" : "s")} · {working} working · " +
-                              $"{charging} charging · {down} shut down\n{sim.ConstructionQueueCount} construction sites waiting.\n" +
-                              "Details and orders: Robots (G).";
+            robotsText.text = $"{w.Robots.Count} robots · {working} working · {charging} charging" + (down > 0 ? $" · {down} down" : "");
+            if (robotsTip != null)
+                robotsTip.Text = $"{w.Robots.Count} robots in {w.Groups.Count} group{(w.Groups.Count == 1 ? "" : "s")} · {working} working · " +
+                                 $"{charging} charging · {down} shut down. {sim.ConstructionQueueCount} construction sites waiting. " +
+                                 "Details and orders: Robots (G).";
             string stock = "";
             foreach (var m in KardashevAscent.Simulation.Resources.Materials.All)
                 if (sim.Materials[m] > 0.0)
                     stock += (stock.Length > 0 ? ", " : "") + $"{KardashevAscent.Simulation.Resources.Materials.Name(m).ToLowerInvariant()} {sim.Materials[m]:0} kg";
             int surveyed = 0;
             foreach (int _ in sim.Deposits.Surveyed) surveyed++;
-            resourcesText.text = $"Materials: {(stock.Length > 0 ? stock : "none yet")}\n" +
-                                 (sim.ConstructionShortfall.IsEmpty ? "" : $"Sites are short of {sim.ConstructionShortfall.Describe()}\n") +
-                                 $"{surveyed} tile{(surveyed == 1 ? "" : "s")} surveyed. Workshops and jobs: Manufacturing (U).";
+            // Materials as icons; a line for the surveys; the rest behind "i".
+            string shape = stock + "|" + sim.ConstructionShortfall.Describe();
+            if (stockChips != null && shape != stockShape)
+            {
+                stockShape = shape;
+                var shown = new List<KardashevAscent.Simulation.Resources.Material>();
+                foreach (var m in KardashevAscent.Simulation.Resources.Materials.All)
+                    if (sim.Materials[m] > 0.0) shown.Add(m);
+                MaterialChips.FillStock(stockChips, sim.Materials, shown.ToArray());
+            }
+            resourcesText.text = $"{surveyed} tile{(surveyed == 1 ? "" : "s")} surveyed" +
+                                 (sim.ConstructionShortfall.IsEmpty ? "" : " · sites short of materials");
+            resourcesText.style.color = sim.ConstructionShortfall.IsEmpty ? StyleKeyword.Null : UiPalette.Critical;
+            if (resourcesTip != null)
+                resourcesTip.Text = $"Materials: {(stock.Length > 0 ? stock : "none yet")}\n" +
+                                    (sim.ConstructionShortfall.IsEmpty ? "" : $"Sites are short of {sim.ConstructionShortfall.Describe()}\n") +
+                                    $"{surveyed} tile{(surveyed == 1 ? "" : "s")} surveyed. Workshops and jobs: Manufacturing (U).";
         }
     }
 
