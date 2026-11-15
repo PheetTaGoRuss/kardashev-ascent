@@ -222,7 +222,8 @@ namespace KardashevAscent.Presentation.UI
                 if (shape != stockShape)
                 {
                     stockShape = shape;
-                    MaterialChips.FillStock(stockChips, m, StockShown);
+                    MaterialChips.FillStock(stockChips, m, StockShown, 15f);
+                    stockChips.style.flexWrap = Wrap.NoWrap;   // one row: a taller bar would cover the windows below it
                 }
                 int sites = sim.ConstructionQueueCount;
                 bool shortOf = !sim.ConstructionShortfall.IsEmpty;
