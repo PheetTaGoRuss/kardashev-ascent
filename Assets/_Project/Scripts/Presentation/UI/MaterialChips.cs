@@ -23,6 +23,7 @@ namespace KardashevAscent.Presentation.UI
                 case Material.Aluminium: return new Color(0.86f, 0.88f, 0.90f);
                 case Material.Sodium: return new Color(0.95f, 0.85f, 0.40f);
                 case Material.Slag: return new Color(0.40f, 0.38f, 0.36f);
+                case Material.RareEarth: return new Color(0.55f, 0.85f, 0.62f);   // pale green, like bastnäsite and neodymium salts
                 default: return new Color(0.62f, 0.52f, 0.42f);   // rock
             }
         }
@@ -38,6 +39,7 @@ namespace KardashevAscent.Presentation.UI
                 case Material.Aluminium: return "Al";
                 case Material.Sodium: return "Na";
                 case Material.Slag: return "Sl";
+                case Material.RareEarth: return "Nd";
                 default: return "Rk";
             }
         }

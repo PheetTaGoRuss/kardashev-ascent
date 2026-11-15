@@ -300,6 +300,8 @@ namespace KardashevAscent.Presentation.Planet
         }
 
         /// <summary>Follow one simulation's "site finished" event (and stop following the last one).</summary>
+        void OnPassageOpened(int tile, KardashevAscent.Simulation.Resources.PassageKind kind) => padsDirty = true;
+
         void Listen(IPlanetSimulation sim)
         {
             if (listeningTo == sim)
@@ -307,12 +309,14 @@ namespace KardashevAscent.Presentation.Planet
             if (listeningTo != null)
             {
                 listeningTo.BuildingCompleted -= OnBuildingCompleted;
+                listeningTo.PassageOpened -= OnPassageOpened;
                 listeningTo.BuildingSalvaged -= RemoveVisual;
                 listeningTo.PanelAdjusted -= RefreshPanel;
             }
             listeningTo = sim;
             if (listeningTo != null)
             {
+                listeningTo.PassageOpened += OnPassageOpened;
                 listeningTo.BuildingCompleted += OnBuildingCompleted;
                 listeningTo.BuildingSalvaged += RemoveVisual;
                 listeningTo.PanelAdjusted += RefreshPanel;
@@ -756,6 +760,7 @@ namespace KardashevAscent.Presentation.Planet
                     share[kv.Key] = Mathf.Clamp01(kv.Value / (float)total);
             }
             planet.SetBuiltShare(share);
+            planet.SetPassages(simulation.OpenedPassages);
         }
 
         bool SlotHasPanel => placed.ContainsKey((tile, Anchor(tile, slot)));

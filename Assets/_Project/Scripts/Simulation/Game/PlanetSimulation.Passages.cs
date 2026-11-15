@@ -49,6 +49,10 @@ namespace KardashevAscent.Simulation.Game
 
         bool CaveAt(int tileId) => Deposits.HasCave(tileId) && Deposits.IsSurveyed(tileId);
 
+        public bool KnowsCave(int tileId) => tileId >= 0 && tileId < TileCount && CaveAt(tileId);
+
+        public IReadOnlyDictionary<int, PassageKind> OpenedPassages => passages;
+
         /// <summary>Materials it takes to open this tile this way (a known cave makes a tunnel cheaper).</summary>
         public MaterialBill PassageBill(int tileId, PassageKind kind) => Passages.Bill(kind, CaveAt(tileId));
 

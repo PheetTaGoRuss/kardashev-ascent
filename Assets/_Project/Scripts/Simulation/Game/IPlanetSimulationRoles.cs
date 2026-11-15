@@ -376,6 +376,31 @@ namespace KardashevAscent.Simulation.Game
     }
 
     /// <summary>Measuring the sky: solar parameters, their puzzles and what each one is worth.</summary>
+    /// <summary>
+    /// Barriers (director 2026-11-15): mountains and canyons block driving, building and mining until opened with a
+    /// tunnel, blasting or a bridge.
+    /// </summary>
+    public interface IPassageCommands
+    {
+        bool IsBarrier(int tileId);
+        /// <summary>No barrier, or one the colony has opened.</summary>
+        bool IsOpenGround(int tileId);
+        Resources.PassageKind PassageAt(int tileId);
+        Resources.PassageKind PassageOrdered(int tileId);
+        double PassageProgress(int tileId);
+        Resources.MaterialBill PassageBill(int tileId, Resources.PassageKind kind);
+        double PassageHours(int tileId, Resources.PassageKind kind);
+        string PassageBlocker(int tileId, Resources.PassageKind kind);
+        string OrderPassage(int tileId, Resources.PassageKind kind);
+        bool CancelPassage(int tileId);
+        string ClosedGroundReason(int tileId);
+        /// <summary>A cave the colony knows of (shown after a survey).</summary>
+        bool KnowsCave(int tileId);
+        /// <summary>Every opened barrier tile and how it was opened.</summary>
+        System.Collections.Generic.IReadOnlyDictionary<int, Resources.PassageKind> OpenedPassages { get; }
+        event Action<int, Resources.PassageKind> PassageOpened;
+    }
+
     public interface IResearchCommands
     {
         /// <summary>Planet-wide parameters measured so far (latitude is in <see cref="Notebook"/>).</summary>
@@ -398,6 +423,10 @@ namespace KardashevAscent.Simulation.Game
 
         bool HasResearchStation { get; }
         bool HasResearchStationOn(int tileId);
+        /// <summary>A tile with a finished Research Station (preferTile when it has one); -1 if none.</summary>
+        int FinishedStationTile(int preferTile);
+        /// <summary>A finished Research Station's tile that has been surveyed (experiments need one); -1 if none.</summary>
+        int SurveyedStationTile(int preferTile);
         bool IsExperimentKnown(Planet.ExperimentKind kind);
         bool IsExperimentOrdered(Planet.ExperimentKind kind);
         /// <summary>Why an experiment can't be ordered now (no station, a prerequisite, done), or null.</summary>
