@@ -1,6 +1,6 @@
 # Development workflow
 
-How a change goes from a request to `main`, for people and for AI developers. The Git basics for the team (installing, branching, resolving conflicts) are in [`../../CONTRIBUTING.md`](../../CONTRIBUTING.md) (Thai) and are not repeated here.
+How a change goes from a request to `main`, with shared steps for every contributor. The Git basics for the team (installing, branching, resolving conflicts) are in [`../../CONTRIBUTING.md`](../../CONTRIBUTING.md) (Thai) and are not repeated here.
 
 ## 1. The ten steps
 
@@ -70,17 +70,9 @@ A pull request description contains:
 
 A decision that another session needs goes into the repository or a GitHub issue. A decision left in a chat is lost.
 
-## 5. Who does what
+## 5. Review and escalation
 
-These are suggestions for assigning work, not limits on what a model may do.
-
-| Model | Suited to | Examples |
-| --- | --- | --- |
-| **Claude Fable** | Architecture and direction | Auditing the project; organising specifications; resolving structural inconsistencies; keeping these standards current |
-| **Claude Opus** | Complex engineering and design | Architecture migrations (the M steps); interactions across several systems; reviewing scientific models; hard bugs; reviewing large pull requests |
-| **Claude Sonnet** | Routine implementation | A defined feature from a specification; tests; bug fixes; documentation updates; work that follows an existing pattern |
-
-Hand a task to the next level up when it would change a rule in the architecture document, when two specifications disagree, or when a scientific source cannot be found.
+Assign work according to the task and contributors’ availability. Ask the project director to resolve game-design decisions. Escalate changes that conflict with architecture or specifications, and document scientific gaps when a reliable source cannot be found.
 
 ## 6. Starting a first task
 
@@ -95,6 +87,6 @@ Good first tasks, because they need no design decision: bringing `docs/simulatio
 ## 7. Working with the Unity editor
 
 - The project opens only in Unity `6000.6.8f1`.
-- The Unity MCP connection, when it is running, lets an AI developer run tests, read the console and enter Play mode. It is configured for the project folder; a session started elsewhere does not have it.
+- The Unity MCP connection, when it is running, lets a connected development session run tests, read the console and enter Play mode. It is configured for the project folder; a session started elsewhere does not have it.
 - After changing scripts outside the editor, let Unity recompile and check the console before running tests.
 - New scene objects are added to `MainSceneSetup` and created with **Kardashev Ascent ▸ Set Up Scene**.

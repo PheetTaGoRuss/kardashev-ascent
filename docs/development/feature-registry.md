@@ -9,14 +9,14 @@ The single record of what has been decided and what has been built. Design statu
 - Before starting work, find the feature here. If it is missing, add it as PROPOSED and ask the director.
 - When a pull request changes a feature's implementation status, it updates the row.
 - Only the game director moves a feature to CONFIRMED or REJECTED. Record the date and where the decision was made.
-- An AI developer may add PROPOSED rows and open questions at any time.
+- A contributor may add PROPOSED rows and open questions at any time.
 
 ### Design status
 
 | Status | Meaning |
 | --- | --- |
 | **CONFIRMED** | The director approved this design explicitly: in a specification marked approved, in a recorded decision, or by merging the pull request that built it |
-| **PROPOSED** | Recommended by a developer or an AI; not approved |
+| **PROPOSED** | Recommended by a contributor; not approved |
 | **REJECTED** | Deliberately excluded by the director |
 | **FUTURE** | Accepted as a direction; not in scope now and not designed |
 
@@ -38,7 +38,7 @@ The single record of what has been decided and what has been built. Design statu
 | Kind | Recorded in |
 | --- | --- |
 | Human-approved design decision | This registry (CONFIRMED rows, section 3) and the specification |
-| AI recommendation | This registry (PROPOSED rows) or a specification section marked as recommendation |
+| Contributor recommendation | This registry (PROPOSED rows) or a specification section marked as recommendation |
 | Technical implementation decision | [`technical-decisions.md`](technical-decisions.md) |
 | Scientific assumption | `docs/physics/physics-verification.md`; placeholders marked `TBD` in code |
 | Open question | Section 5 |
