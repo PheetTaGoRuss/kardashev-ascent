@@ -99,12 +99,12 @@ namespace KardashevAscent.Simulation.Game
         MaterialBill WithStandIns(MaterialBill bill, int tileId, int slot) => StandIns.Apply(bill, StandInsAt(tileId, slot));
 
         /// <summary>Start a construction site, choosing its stand-ins. True when it needs nothing (finished now).</summary>
-        bool StartSite(int tileId, int slot, MaterialBill bill)
+        bool StartSite(int tileId, int slot, MaterialBill bill, double workHours)
         {
             StandIn use = ChooseStandIns(bill, Build.Remaining);
             if (use != StandIn.None) standIns[(tileId, slot)] = use;
             else standIns.Remove((tileId, slot));
-            return Build.Start(tileId, slot, StandIns.Apply(bill, use));
+            return Build.Start(tileId, slot, StandIns.Apply(bill, use), workHours);
         }
     }
 }

@@ -41,7 +41,7 @@ namespace KardashevAscent.Simulation.Tests.Game
                     TerrainType ground = Wet.Terrain[t];
                     foreach (Deposit d in map.At(t))
                     {
-                        bool shoreWater = d.Material == Material.Water && Sphere.Neighbors[t].Any(n => Terrains.IsWater(Wet.Terrain[n]));
+                        bool shoreWater = (d.Material == Material.Water || d.Material == Material.Salt) && Sphere.Neighbors[t].Any(n => Terrains.IsWater(Wet.Terrain[n]));
                         if (shoreWater) continue;
                         Assert.Contains(ground, GuideBook.GroundsWith(d.Material), $"{d.Material} on {ground} (seed {seed}, tile {t})");
                     }
@@ -80,7 +80,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             GuidePage al = pages.First(p => p.Material == Material.Aluminium);
             Assert.IsTrue(al.Mentions("instead of copper"));
             Assert.IsTrue(al.Mentions("Solar panel"), "lists the buildings that take copper");
-            Assert.IsTrue(al.Mentions("from the start"));
+            Assert.IsTrue(al.Mentions("Hall"), "how it is made: Hall–Héroult electrolysis");
             GuidePage na = pages.First(p => p.Material == Material.Sodium);
             Assert.IsTrue(na.Mentions("Battery yard"));
             Assert.IsTrue(pages.Any(p => p.Mentions("Mars") && p.Mentions("aluminium")), "a page on starting a dry planet");

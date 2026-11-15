@@ -921,6 +921,9 @@ namespace KardashevAscent.Simulation.Robots
                 this.charge = charge; this.order = order; this.robot = robot;
             }
 
+            /// <summary>The same pair with the task's crew at <paramref name="n"/>.</summary>
+            public Score WithStaffed(int n) => new Score(priority, rank, n, suitability, hours, charge, order, robot);
+
             public int CompareTo(Score o)
             {
                 if (priority != o.priority) return priority.CompareTo(o.priority);
@@ -946,32 +949,37 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>Give free robots work, best pair first, until no free robot can take an open task.</summary>
         void HandOut(Dictionary<WorkTask, WorkTask> open, Staffing taken, HashSet<WorkTask> reservedTasks)
         {
+            // Every free robot's eligible tasks, scored once: only the crews change while pairs are handed out, so a
+            // pair's score is its base score with the task's crew now (the same order as scoring each round afresh).
+            var pairs = new List<(Robot R, WorkTask T, Score S)>();
+            foreach (Robot r in robots)
+            {
+                if (!IsFree(r) || EffectiveProgram(r) == OperatingProgram.TaskQueue)
+                    continue;
+                foreach (WorkTask t in open.Values)
+                    if (!reservedTasks.Contains(t) && Eligible(r, t))
+                        pairs.Add((r, t, ScoreOf(r, t, 0)));
+            }
             while (true)
             {
-                Robot bestR = null;
-                WorkTask bestT = default;
+                int bestI = -1;
                 Score best = default;
-                foreach (Robot r in robots)
+                for (int i = 0; i < pairs.Count; i++)
                 {
-                    if (!IsFree(r) || EffectiveProgram(r) == OperatingProgram.TaskQueue)
+                    var (r, t, baseScore) = pairs[i];
+                    if (r.Task.HasValue || taken.Contains(t))
                         continue;
-                    foreach (WorkTask t in open.Values)
+                    Score s = baseScore.WithStaffed(taken.Of(t));
+                    if (bestI < 0 || s.CompareTo(best) < 0)
                     {
-                        if (taken.Contains(t) || reservedTasks.Contains(t) || !Eligible(r, t))
-                            continue;
-                        Score s = ScoreOf(r, t, taken.Of(t));
-                        if (bestR == null || s.CompareTo(best) < 0)
-                        {
-                            bestR = r;
-                            bestT = t;
-                            best = s;
-                        }
+                        bestI = i;
+                        best = s;
                     }
                 }
-                if (bestR == null)
+                if (bestI < 0)
                     return;
-                bestR.Task = bestT;
-                taken.Add(bestT);
+                pairs[bestI].R.Task = pairs[bestI].T;
+                taken.Add(pairs[bestI].T);
             }
         }
 

@@ -155,7 +155,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             int m = ReachableBarrier(sim: a, ground: TerrainType.Mountain);
             a.OpenForTests(m, PassageKind.Blast);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(33, state.Version);
+            Assert.AreEqual(SimulationState.CurrentVersion, state.Version);
             var b = Create(Plain);
             Assert.IsTrue(b.RestoreState(state));
             Assert.AreEqual(PassageKind.Blast, b.PassageAt(m));

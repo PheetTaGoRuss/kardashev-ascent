@@ -108,6 +108,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         public void BuiltPanels_KeepTheirSize_AndSalvageWhatTheyCost()
         {
             var sim = Create(1e-5);
+            sim.ConstructionTimeEnabled = false;   // about sizes, not build time
             int t = sim.BaseTileId;
             Assert.IsTrue(sim.PlacePanel(t, 0, Tilt(sim), Math.PI));   // before any milestone: 1 ha
             sim.Tick(24.0);

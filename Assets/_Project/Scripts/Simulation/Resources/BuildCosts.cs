@@ -12,16 +12,6 @@ namespace KardashevAscent.Simulation.Resources
         /// <summary>Share of an installation's real material mass the colony supplies on site (game rule, TBD).</summary>
         public const double OnSiteShare = 0.01;
 
-        /// <summary>Robot work hours every building takes at least (game rule, TBD; director 2026-11-14: construction takes time).</summary>
-        public const double BaseBuildHours = 2.0;
-
-        /// <summary>Further work hours per square root of a tonne of materials (game rule, TBD): bigger builds take longer, less than in proportion.</summary>
-        public const double BuildHoursPerRootTonne = 4.0;
-
-        /// <summary>Robot work hours to put up a building with this bill (one General robot; a crew is faster).</summary>
-        public static double BuildHours(MaterialBill bill) =>
-            bill == null || bill.IsEmpty ? 0.0 : BaseBuildHours + BuildHoursPerRootTonne * System.Math.Sqrt(bill.TotalKg / 1000.0);
-
         /// <summary>Share of a finished building's materials that comes back when it is taken down (game rule).</summary>
         public const double SalvageShare = 0.5;
 
@@ -93,24 +83,20 @@ namespace KardashevAscent.Simulation.Resources
         public static readonly MaterialBill ResearchStation = new MaterialBill()
             .Add(Material.Iron, 200.0).Add(Material.Rock, 100.0).Add(Material.Copper, 25.0);
 
-        /// <summary>Base panel field (1 ha) and battery yard (20 MWh) the lander's cargo is sized for.</summary>
-        public const double StarterPanelM2 = 10_000.0, StarterBatteryWh = 20_000_000.0;
+        /// <summary>Alumina plant: a kiln, leaching tanks and a precipitator (game rule, TBD).</summary>
+        public static readonly MaterialBill AluminaPlant = new MaterialBill()
+            .Add(Material.Iron, 400.0).Add(Material.Rock, 200.0).Add(Material.Copper, 15.0);
+
+        /// <summary>Electrolysis cell: a steel shell with a refractory lining and heavy busbars (game rule, TBD).</summary>
+        public static readonly MaterialBill Electrolyser = new MaterialBill()
+            .Add(Material.Iron, 300.0).Add(Material.Rock, 150.0).Add(Material.Copper, 60.0);
 
         /// <summary>
-        /// What the lander brings (director 2026-11-15: only a solar panel, a charger and a battery yard; everything else
-        /// is mined). Plus the Workshop's copper, so a planet with no copper ore can still build the Workshop that refines
-        /// aluminium (director's choice). Each amount is rounded up to a whole kg. Game rule.
+        /// What the lander brings: about one solar panel, battery yard, charging station, Workshop and Research Station, with some to spare
+        /// (game rule, TBD).
         /// </summary>
-        public static readonly MaterialBill LanderCargo = RoundUp(Panel(StarterPanelM2).Plus(Battery(StarterBatteryWh)).Plus(ChargingStation)
-            .Add(Material.Copper, Workshop[Material.Copper]));
-
-        static MaterialBill RoundUp(MaterialBill bill)
-        {
-            var b = new MaterialBill();
-            foreach (var (m, kg) in bill.Items())
-                b = b.Add(m, System.Math.Ceiling(kg - 1e-9));
-            return b;
-        }
+        public static readonly MaterialBill LanderCargo = new MaterialBill()
+            .Add(Material.Rock, 2500.0).Add(Material.Iron, 1500.0).Add(Material.Copper, 100.0).Add(Material.Lithium, 25.0);
 
         // ---- Before save version 26: buildings cost "build parts" in Wh ----
 

@@ -170,7 +170,8 @@ namespace KardashevAscent.Simulation.Robots
                 case RobotModule.ThermalInsulation: return r.Add(Material.Rock, 30.0);
                 // Processors: copper wiring and silicon from rock (placeholder amounts, TBD).
                 case RobotModule.Processor: return r.Add(aluminium ? Material.Aluminium : Material.Copper, 5.0).Add(Material.Rock, 10.0);
-                case RobotModule.AdvancedProcessor: return r.Add(aluminium ? Material.Aluminium : Material.Copper, 10.0).Add(Material.Rock, 20.0);
+                // Chip wiring and bond wire are high-purity aluminium (99.99 % and better): game amount TBD.
+                case RobotModule.AdvancedProcessor: return r.Add(aluminium ? Material.Aluminium : Material.Copper, 10.0).Add(Material.Rock, 20.0).Add(Material.PureAluminium, 1.0);
                 // A steel hull with sealed floats and a small motor (placeholder amounts, TBD).
                 case RobotModule.Boat: return r.Add(Material.Iron, 60.0).Add(Material.Rock, 20.0).Add(aluminium ? Material.Aluminium : Material.Copper, 5.0);
                 default: return r;

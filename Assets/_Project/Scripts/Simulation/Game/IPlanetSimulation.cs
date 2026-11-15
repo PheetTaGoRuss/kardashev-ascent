@@ -37,6 +37,10 @@ namespace KardashevAscent.Simulation.Game
         FloatingSolar,
         /// <summary>Research Station (director 2026-11-14): where robots measure the planet's values and run experiments.</summary>
         ResearchStation,
+        /// <summary>Refinery module (director 2026-11-15): makes alumina, step 1 of aluminium. Next to a Workshop.</summary>
+        AluminaPlant,
+        /// <summary>Refinery module: electrolysis (aluminium, high-purity aluminium, sodium). Next to a Workshop.</summary>
+        Electrolyser,
     }
 
     /// <summary>Static facts about one tile.</summary>

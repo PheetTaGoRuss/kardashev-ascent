@@ -81,6 +81,7 @@
             <ui:VisualElement class="build-tabs">
                 <ui:Button name="cat-power" class="tab" text="Power" />
                 <ui:Button name="cat-stations" class="tab" text="Stations" />
+                <ui:Button name="cat-industry" class="tab" text="Industry" />
             </ui:VisualElement>
             <ui:VisualElement class="button-row build-row">
                 <ui:VisualElement name="item-panel" class="build-item"><ui:Button name="mode-panel" class="action-button mode" text="Solar panel" /><ui:Button name="info-panel" class="info-button" text="i" /></ui:VisualElement>
@@ -90,6 +91,8 @@
                 <ui:VisualElement name="item-station" class="build-item"><ui:Button name="mode-station" class="action-button mode" text="Charger" /><ui:Button name="info-station" class="info-button" text="i" /></ui:VisualElement>
                 <ui:VisualElement name="item-relay" class="build-item"><ui:Button name="mode-relay" class="action-button mode" text="Relay" /><ui:Button name="info-relay" class="info-button" text="i" /></ui:VisualElement>
                 <ui:VisualElement name="item-research" class="build-item"><ui:Button name="mode-research" class="action-button mode" text="Research Station" /><ui:Button name="info-research" class="info-button" text="i" /></ui:VisualElement>
+                <ui:VisualElement name="item-alumina" class="build-item"><ui:Button name="mode-alumina" class="action-button mode" text="Alumina plant" /><ui:Button name="info-alumina" class="info-button" text="i" /></ui:VisualElement>
+                <ui:VisualElement name="item-electrolyser" class="build-item"><ui:Button name="mode-electrolyser" class="action-button mode" text="Electrolysis cell" /><ui:Button name="info-electrolyser" class="info-button" text="i" /></ui:VisualElement>
             </ui:VisualElement>
             <ui:Label name="build-hint" class="caption" text="Drag a building onto the site · Tab: switch" />
         </ui:VisualElement>

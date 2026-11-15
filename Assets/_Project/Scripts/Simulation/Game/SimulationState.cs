@@ -8,8 +8,8 @@ namespace KardashevAscent.Simulation.Game
     [Serializable]
     public sealed class SimulationState
     {
-        /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished. 7 added robots; 8 their batteries and condition; 9 resources; 10 the Workshop; 11 programs (facility, ranking, queue); 12 movement; 13 critical damage (stage A); 14 reservations and tasks to go back to (stage B); 15 battery ageing by depth, maintenance rules (stage D); 16 building footprints. 23 industry reports. 29 experiments. 30 survey puzzles answered one material at a time. 31 stand-ins (aluminium, sodium) in building bills. 32 deposits run out (what was mined from each). 33 mountains and canyons opened (tunnel, blast, bridge).</summary>
-        public const int CurrentVersion = 33;
+        /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished. 7 added robots; 8 their batteries and condition; 9 resources; 10 the Workshop; 11 programs (facility, ranking, queue); 12 movement; 13 critical damage (stage A); 14 reservations and tasks to go back to (stage B); 15 battery ageing by depth, maintenance rules (stage D); 16 building footprints. 23 industry reports. 29 experiments. 30 survey puzzles answered one material at a time. 31 stand-ins (aluminium, sodium) in building bills. 32 deposits run out (what was mined from each). 33 mountains and canyons opened (tunnel, blast, bridge). 34 refinery modules, batches, queue and auto targets.</summary>
+        public const int CurrentVersion = 34;
 
         /// <summary>The version this state was saved with (<see cref="CurrentVersion"/> for a new one).</summary>
         public int Version = CurrentVersion;
@@ -74,6 +74,10 @@ namespace KardashevAscent.Simulation.Game
         public List<MinedRecord> Mined = new List<MinedRecord>();
         /// <summary>Barrier tiles opened or being opened (version 33; older saves: none).</summary>
         public List<PassageRecord> Passages = new List<PassageRecord>();
+        /// <summary>Refining (version 34): batches running in refinery modules, the order queue, auto targets.</summary>
+        public List<RefineBatchRecord> RefineBatches = new List<RefineBatchRecord>();
+        public List<RefineProcess> RefineQueue = new List<RefineProcess>();
+        public List<AutoRefineRecord> AutoRefine = new List<AutoRefineRecord>();
         public List<MaterialRecord> MaterialsKg = new List<MaterialRecord>();
         public List<FieldWorkRecord> FieldWork = new List<FieldWorkRecord>();
         /// <summary>Workshop jobs in order (version 10).</summary>
@@ -107,6 +111,22 @@ namespace KardashevAscent.Simulation.Game
     {
         public int Tile;
         public Resources.Material Material;
+    }
+
+    [Serializable]
+    public sealed class RefineBatchRecord
+    {
+        public int Tile;
+        public int Slot;
+        public RefineProcess Process;
+        public double DoneHours;
+    }
+
+    [Serializable]
+    public sealed class AutoRefineRecord
+    {
+        public RefineProcess Process;
+        public double KeepKg;
     }
 
     [Serializable]

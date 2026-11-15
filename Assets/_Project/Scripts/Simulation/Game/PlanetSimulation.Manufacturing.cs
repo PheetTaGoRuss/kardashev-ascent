@@ -35,7 +35,7 @@ namespace KardashevAscent.Simulation.Game
         {
             if (!CanPlace(BuildingType.Workshop, tileId, slot))
                 return false;
-            StartSite(tileId, slot, BuildBill(BuildingType.Workshop));
+            StartSite(tileId, slot, BuildBill(BuildingType.Workshop), BuildTimes.Hours(BuildingType.Workshop));
             workshops.Add((tileId, slot));
             Occupy(tileId, FootprintFor(BuildingType.Workshop, tileId, slot));
             Settle((tileId, slot));
@@ -106,27 +106,17 @@ namespace KardashevAscent.Simulation.Game
             return null;
         }
 
+        /// <summary>Queue a batch of the usual process for this material (refinery modules do it now: director 2026-11-15).</summary>
         public string OrderRefine(Material output)
         {
-            if (MilestonesReached < RobotTech.UnlockMilestone(output))
+            RefineProcess? p = Refining.For(output);
+            if (!p.HasValue)
             {
-                string locked = RobotTech.UnlockMilestone(output) == int.MaxValue
-                    ? $"{Resources.Materials.Name(output)} can't be refined."
-                    : $"Refining {Resources.Materials.Name(output).ToLowerInvariant()} unlocks at milestone {RobotTech.UnlockMilestone(output)}.";
-                ReportIndustry(IndustrialBlocker.EnvironmentUnavailable, locked);
-                return locked;
+                string no = $"{Resources.Materials.Name(output)} can't be refined.";
+                ReportIndustry(IndustrialBlocker.EnvironmentUnavailable, no);
+                return no;
             }
-            Recipe recipe = RobotTech.Refine(output);
-            string why = TakeInputs(recipe);
-            if (why != null)
-            {
-                ReportIndustry(IndustrialBlocker.MissingInput, why);
-                return why;
-            }
-            jobs.Add(new ManufacturingJob { Kind = JobKind.Refine, Output = output, OutputKg = RobotTech.RefineBatchKg(output), Recipe = recipe });
-            ReportIndustry(IndustrialBlocker.None, $"Queued {RobotTech.RefineBatchKg(output):0} kg {Resources.Materials.Name(output).ToLowerInvariant()} for refining.");
-            Settle(null);
-            return null;
+            return OrderRefine(p.Value);
         }
 
         public bool CancelJob(int index)
