@@ -287,7 +287,8 @@ namespace KardashevAscent.Presentation.UI
             if (ground == null || groundActions == null)
                 return;
             DepositMap map = sim.Deposits;
-            bool water = sim.GetTile(tile).IsWater;
+            TileInfo info = sim.GetTile(tile);
+            bool water = info.IsWater;
             bool surveyed = map.IsSurveyed(tile) || KardashevAscent.Presentation.Planet.GodMode.Active;   // god mode: view only
             string text;
             if (water)
@@ -302,19 +303,27 @@ namespace KardashevAscent.Presentation.UI
             {
                 text = "";
                 bool rough = sim.IsRoughSurvey(tile);
-                foreach (Deposit d in map.At(tile))
+                foreach (Deposit d in map.Known(tile))
                     text += $"{Materials.Name(d.Material)}: grade {(rough && d.Material != Material.Rock ? "±" : "")}{d.Grade:0.00}, {Left(map, tile, d.Material)}" +
                             $"{(sim.IsMiningOrdered(tile, d.Material) ? " · being mined" : "")}\n";
                 text += "Deposits run out: what robots mine comes out of the ground. Sea water from a shore never runs out.\n";
                 if (rough)
                     text += "± : surveyed from a rough estimate (the mine pays by the real grade).\n";
-                if (map.At(tile).Count <= 2)
+                if (map.Known(tile).Count <= 2)
                     text += "No water, copper or lithium here.\n";
+                if (sim.KnowsCave(tile))
+                    text += "A cave: it reaches deep rock (more rare earths), and a tunnel here takes half the work and steel.\n";
+                if (KardashevAscent.Simulation.Resources.DepositMap.IsDeepGround(info.Terrain) && !map.DeepScanned)
+                    text += "Deep ore (rare earths) can only be seen after a seismic survey (Research).\n";
                 text += $"Grade 1 = an ordinary deposit on Earth. This planet: metals ×{map.Chemistry.MetalFactor:0.00} " +
                         $"(star [Fe/H] {map.Chemistry.MetallicityDex:+0.00;-0.00}), iron ×{map.Chemistry.IronFactor:0.00}" +
                         (map.Chemistry.IronMeasured ? " (measured iron fraction)" : "") +
                         (map.Chemistry.WaterHistory ? "" : ". No seas: no copper or lithium ores");
             }
+            if (sim.IsBarrier(tile))
+                text += "\n" + (sim.IsOpenGround(tile)
+                    ? $"Opened: {KardashevAscent.Simulation.Resources.Passages.Name(sim.PassageAt(tile)).ToLowerInvariant()}. Robots can cross, build and mine here."
+                    : sim.ClosedGroundReason(tile) + " Until then robots can't cross it, build or mine on it; they can survey it from the edge.");
             text += $"\nOn hand: {Stock(sim)}";
             // Short line here; the whole story behind "i" (director 2026-11-15).
             if (groundTip != null)
@@ -324,7 +333,8 @@ namespace KardashevAscent.Presentation.UI
                                : CoresWaiting(sim, tile) ? "Cores waiting" : "Not surveyed · only rock known")
                 : sim.IsRoughSurvey(tile) ? "Surveyed (rough ±)" : "Surveyed";
 
-            string shape = $"{tile}|{water}|{surveyed}|{sim.IsSurveyOrdered(tile)}|{CoresWaiting(sim, tile)}";
+            string shape = $"{tile}|{water}|{surveyed}|{sim.IsSurveyOrdered(tile)}|{CoresWaiting(sim, tile)}|{map.DeepScanned}" +
+                           $"|{sim.PassageAt(tile)}|{sim.PassageOrdered(tile)}|{(int)(sim.PassageProgress(tile) * 100.0)}|{(int)(sim.Materials[Material.Iron] / 100.0)}";
             foreach (Material m in Materials.Mined)
                 shape += (sim.IsMiningOrdered(tile, m) ? "1" : "0") + (int)(map.RemainingShare(tile, m) * 100.0);
             if (shape == groundShape)
@@ -334,7 +344,7 @@ namespace KardashevAscent.Presentation.UI
             // Deposits as icons with their grade (1 = an ordinary deposit on Earth).
             groundChips.Clear();
             if (surveyed && !water)
-                foreach (Deposit d in map.At(tile))
+                foreach (Deposit d in map.Known(tile))
                 {
                     var chip = new VisualElement();
                     chip.style.flexDirection = FlexDirection.Row;
@@ -377,9 +387,43 @@ namespace KardashevAscent.Presentation.UI
                 AddGroundButton(ordered ? "Cancel survey" : "Survey (robot)", ordered,
                                 () => { if (sim.IsSurveyOrdered(tile)) sim.CancelSurvey(tile); else sim.OrderSurvey(tile); groundShape = null; });
             }
+            // A mountain or canyon: open it first (director 2026-11-15).
+            if (sim.IsBarrier(tile) && !sim.IsOpenGround(tile))
+            {
+                KardashevAscent.Simulation.Resources.PassageKind ordered = sim.PassageOrdered(tile);
+                if (ordered != KardashevAscent.Simulation.Resources.PassageKind.None)
+                {
+                    var o = ordered;
+                    AddGroundButton($"Cancel {KardashevAscent.Simulation.Resources.Passages.Name(o).ToLowerInvariant()} · {sim.PassageProgress(tile) * 100.0:0} %", true,
+                                    () => { sim.CancelPassage(tile); groundShape = null; });
+                }
+                else
+                    foreach (var k in KardashevAscent.Simulation.Resources.Passages.For(info.Terrain))
+                    {
+                        var kind = k;
+                        string why = sim.PassageBlocker(tile, kind);
+                        var bill = sim.PassageBill(tile, kind);
+                        var b = new Button(() => { sim.OrderPassage(tile, kind); groundShape = null; })
+                        { text = $"{KardashevAscent.Simulation.Resources.Passages.Name(kind)} · {sim.PassageHours(tile, kind):0} h" };
+                        b.AddToClassList("ground-button");
+                        b.tooltip = KardashevAscent.Simulation.Resources.Passages.What(kind) + "\nTakes " + bill.Describe() + (why != null ? "\n" + why : "");
+                        b.SetEnabled(why == null);
+                        // The button and what it takes on one line.
+                        var line = new VisualElement();
+                        line.style.flexDirection = FlexDirection.Row;
+                        line.style.alignItems = Align.Center;
+                        line.style.width = Length.Percent(100);
+                        line.Add(b);
+                        var cost = new VisualElement();
+                        MaterialChips.Fill(cost, bill, sim.Materials);
+                        cost.style.marginLeft = 6;
+                        line.Add(cost);
+                        groundActions.Add(line);
+                    }
+            }
             foreach (Material m in Materials.Mined)
             {
-                if (!map.IsKnown(tile, m) || map.GradeOf(tile, m) <= 0.0)
+                if (!map.IsKnown(tile, m) || map.GradeOf(tile, m) <= 0.0 || !sim.IsOpenGround(tile))
                     continue;
                 Material material = m;
                 bool on = sim.IsMiningOrdered(tile, m);

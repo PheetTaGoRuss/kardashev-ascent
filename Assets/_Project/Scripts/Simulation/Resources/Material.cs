@@ -12,12 +12,17 @@ namespace KardashevAscent.Simulation.Resources
         Rock, Iron, Water, Copper, Lithium, Aluminium, Sodium,
         /// <summary>What is left of the rock after refining (saved as an integer: add new materials after it, never before).</summary>
         Slag,
+        /// <summary>
+        /// Rare-earth elements (neodymium and its kin) for the strong NdFeB magnets in motors (director 2026-11-15).
+        /// Deep ore: only a seismic survey finds it, in mountains, canyons and caves.
+        /// </summary>
+        RareEarth,
     }
 
     public static class Materials
     {
         /// <summary>Materials found in the ground (the rest are made from them).</summary>
-        public static readonly Material[] Mined = { Material.Rock, Material.Iron, Material.Water, Material.Copper, Material.Lithium };
+        public static readonly Material[] Mined = { Material.Rock, Material.Iron, Material.Water, Material.Copper, Material.Lithium, Material.RareEarth };
 
         public static readonly Material[] All = (Material[])Enum.GetValues(typeof(Material));
 
@@ -33,6 +38,7 @@ namespace KardashevAscent.Simulation.Resources
                 case Material.Aluminium: return "Aluminium";
                 case Material.Sodium: return "Sodium";
                 case Material.Slag: return "Slag";
+                case Material.RareEarth: return "Rare earths";
                 default: return m.ToString();
             }
         }
@@ -50,6 +56,7 @@ namespace KardashevAscent.Simulation.Resources
                 case Material.Aluminium: return "made from rock in the Workshop; replaces copper in wiring (1.6× the resistance, 30 % of the weight)";
                 case Material.Sodium: return "made in the Workshop; Na-ion batteries replace lithium (~160 vs ~250 Wh/kg)";
                 case Material.Slag: return "the rock left over when a Workshop refines aluminium or sodium (mass is conserved: rock in = metal + slag)";
+                case Material.RareEarth: return "deep in mountains, canyons (rifts) and caves, in carbonatite and alkaline igneous rock; a seismic survey finds it";
                 default: return "";
             }
         }

@@ -16,13 +16,17 @@ namespace KardashevAscent.Presentation.Planet
         static readonly Color32 Snow = new Color32(232, 238, 244, 90);
         static readonly Color32 Canopy = new Color32(34, 78, 38, 20);
         static readonly Color32 Lava = new Color32(62, 50, 50, 30);
+        static readonly Color32 Portal = new Color32(20, 18, 18, 0);
+        static readonly Color32 Rubble = new Color32(160, 150, 138, 40);
+        static readonly Color32 Steel = new Color32(170, 178, 186, 60);
 
         /// <param name="tileRadius">The tile tops' distance from the centre (relief).</param>
         /// <param name="seaRadius">Sea level.</param>
         /// <param name="excludeTile">The tile shown close up (−1: none).</param>
         /// <param name="builtShare">Share of each tile's slots built on (missing: 0). Forest crowns thin out to match.</param>
         public static Mesh Build(HexSphere sphere, PlanetSurface surface, IReadOnlyList<float> tileRadius,
-                                 float seaRadius, int excludeTile, IReadOnlyDictionary<int, float> builtShare = null)
+                                 float seaRadius, int excludeTile, IReadOnlyDictionary<int, float> builtShare = null,
+                                 IReadOnlyDictionary<int, KardashevAscent.Simulation.Resources.PassageKind> passages = null)
         {
             var v = new List<Vector3>();
             var n = new List<Vector3>();
@@ -59,7 +63,35 @@ namespace KardashevAscent.Presentation.Planet
                     for (int i = 0; i < corners.Length; i++)
                         baseRing[i] = Vector3.Lerp(ToUnity(corners[i]) * r, up * r, 0.25f);
                     Color32 tip = surface.Elevation[t] > 0.7f ? Snow : Rock;
-                    Pyramid(v, n, c, tri, baseRing, up * (r + height), Rock, tip);
+                    var how = passages != null && passages.TryGetValue(t, out var p) ? p : KardashevAscent.Simulation.Resources.PassageKind.None;
+                    Vector3 east = Vector3.Cross(Vector3.up, up).sqrMagnitude > 1e-6f ? Vector3.Cross(Vector3.up, up).normalized : Vector3.right;
+                    Vector3 north = Vector3.Cross(up, east);
+                    if (how == KardashevAscent.Simulation.Resources.PassageKind.Blast)
+                    {
+                        // A blasted pass: two lower peaks either side of a notch, and the cut floor in pale rubble.
+                        foreach (float side in new[] { -1f, 1f })
+                            Cone(v, n, c, tri, up * r + east * side * span * 0.42f, up, span * 0.38f, height * 0.6f, Rock, 5);
+                        Slab(v, n, c, tri, up * r, up, north, span * 0.85f, span * 0.22f, span * 0.03f, Rubble);
+                    }
+                    else
+                    {
+                        Pyramid(v, n, c, tri, baseRing, up * (r + height), Rock, tip);
+                        if (how == KardashevAscent.Simulation.Resources.PassageKind.Tunnel)
+                            // A tunnel mouth at the foot of the peak, both sides.
+                            foreach (float side in new[] { -1f, 1f })
+                                Slab(v, n, c, tri, up * r + north * side * span * 0.62f, up, east, span * 0.2f, span * 0.06f, span * 0.16f, Portal);
+                    }
+                }
+                else if (type == TerrainType.Canyon && passages != null && passages.TryGetValue(t, out var bridge)
+                         && bridge == KardashevAscent.Simulation.Resources.PassageKind.Bridge)
+                {
+                    // A steel bridge across the gorge, at the height of the ground beside it.
+                    Vector3 east = Vector3.Cross(Vector3.up, up).sqrMagnitude > 1e-6f ? Vector3.Cross(Vector3.up, up).normalized : Vector3.right;
+                    Vector3 north = Vector3.Cross(up, east);
+                    float rim = r + span * 0.35f;
+                    Slab(v, n, c, tri, up * rim, up, east, span * 1.7f, span * 0.16f, span * 0.04f, Steel);
+                    foreach (float side in new[] { -0.5f, 0.5f })
+                        Slab(v, n, c, tri, up * (r + span * 0.17f) + east * side * span, up, east, span * 0.06f, span * 0.06f, span * 0.35f, Steel);
                 }
                 else if (type == TerrainType.Forest)
                 {
@@ -103,6 +135,34 @@ namespace KardashevAscent.Presentation.Planet
                 // Both windings: features are few, and this way no face goes missing whichever way is front.
                 tri.Add(s); tri.Add(s + 1); tri.Add(s + 2);
                 tri.Add(s); tri.Add(s + 2); tri.Add(s + 1);
+            }
+        }
+
+        /// <summary>
+        /// A box standing on <paramref name="baseCentre"/>: <paramref name="length"/> along <paramref name="along"/>,
+        /// <paramref name="width"/> across, <paramref name="height"/> up.
+        /// </summary>
+        static void Slab(List<Vector3> v, List<Vector3> n, List<Color32> c, List<int> tri, Vector3 baseCentre, Vector3 up, Vector3 along,
+                         float length, float width, float height, Color32 colour)
+        {
+            up = up.normalized;
+            along = (along - Vector3.Dot(along, up) * up).normalized;
+            Vector3 across = Vector3.Cross(up, along);
+            Vector3 hl = along * length * 0.5f, hw = across * width * 0.5f, h = up * height;
+            Vector3[] p =
+            {
+                baseCentre - hl - hw, baseCentre + hl - hw, baseCentre + hl + hw, baseCentre - hl + hw,
+                baseCentre - hl - hw + h, baseCentre + hl - hw + h, baseCentre + hl + hw + h, baseCentre - hl + hw + h,
+            };
+            int[][] faces = { new[] { 4, 5, 6, 7 }, new[] { 0, 1, 5, 4 }, new[] { 1, 2, 6, 5 }, new[] { 2, 3, 7, 6 }, new[] { 3, 0, 4, 7 } };
+            foreach (int[] f in faces)
+            {
+                Vector3 normal = Vector3.Cross(p[f[1]] - p[f[0]], p[f[2]] - p[f[0]]).normalized;
+                int s = v.Count;
+                for (int i = 0; i < 4; i++) { v.Add(p[f[i]]); n.Add(normal); c.Add(colour); }
+                // Both windings, as for the peaks.
+                tri.Add(s); tri.Add(s + 1); tri.Add(s + 2); tri.Add(s); tri.Add(s + 2); tri.Add(s + 3);
+                tri.Add(s); tri.Add(s + 2); tri.Add(s + 1); tri.Add(s); tri.Add(s + 3); tri.Add(s + 2);
             }
         }
 

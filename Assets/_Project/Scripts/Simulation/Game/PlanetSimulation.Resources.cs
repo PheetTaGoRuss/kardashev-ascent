@@ -71,7 +71,7 @@ namespace KardashevAscent.Simulation.Game
         public bool OrderMining(int tileId, Material material)
         {
             if (tileId < 0 || tileId >= TileCount || !Deposits.IsKnown(tileId, material) || Deposits.GradeOf(tileId, material) <= 0.0
-                || Deposits.IsExhausted(tileId, material) || miningOrders.Contains((tileId, material)))
+                || Deposits.IsExhausted(tileId, material) || miningOrders.Contains((tileId, material)) || !IsOpenGround(tileId))
                 return false;
             miningOrders.Add((tileId, material));
             Settle(null);
@@ -150,7 +150,8 @@ namespace KardashevAscent.Simulation.Game
                     Build.Work(t.Tile, t.Slot, dt * speed);
                     continue;
                 }
-                if (t.Kind != TaskKind.Survey && t.Kind != TaskKind.Mine && t.Kind != TaskKind.Measure && t.Kind != TaskKind.Experiment)
+                if (t.Kind != TaskKind.Survey && t.Kind != TaskKind.Mine && t.Kind != TaskKind.Measure && t.Kind != TaskKind.Experiment
+                    && t.Kind != TaskKind.Excavate)
                     continue;
                 fieldWork[t] = (fieldWork.TryGetValue(t, out double h) ? h : 0.0) + dt * speed;
             }
@@ -217,6 +218,7 @@ namespace KardashevAscent.Simulation.Game
                 ParameterMeasured?.Invoke(mo.Parameter);
             }
             AdvanceExperiments();
+            AdvancePassages();
             foreach (var order in miningOrders.ToArray())
             {
                 WorkTask t = MineTask(order.Tile, order.Material);

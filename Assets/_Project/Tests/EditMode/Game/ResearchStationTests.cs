@@ -20,7 +20,12 @@ namespace KardashevAscent.Simulation.Tests.Game
         static readonly HexSphere Sphere = HexSphere.Create(12);
         static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
 
-        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike) { ConstructionTimeEnabled = false, PuzzleChance = 0.0 };
+        static PlanetSimulation Create()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { ConstructionTimeEnabled = false, PuzzleChance = 0.0 };
+            sim.Deposits.MarkSurveyed(sim.BaseTileId);   // experiments need the station's tile surveyed (director 2026-11-15)
+            return sim;
+        }
 
         static int FreeSlot(PlanetSimulation sim, BuildingType type, int tile)
         {

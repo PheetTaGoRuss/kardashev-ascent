@@ -126,6 +126,9 @@ namespace KardashevAscent.Simulation.Robots
 
         // ---- Module effects (TBD) ----
 
+        /// <summary>Rare earths in a faster drive's magnets, kg (game rule, TBD).</summary>
+        public const double RareEarthPerDriveKg = 2.0;
+
         public const double BigBatteryFactor = 1.5;
         public const double FastDriveFactor = 1.5;
         public const double ShieldingFactor = 0.5;
@@ -161,7 +164,8 @@ namespace KardashevAscent.Simulation.Robots
             switch (module)
             {
                 case RobotModule.BigBattery: return r.Add(sodium ? Material.Sodium : Material.Lithium, sodium ? 3.0 : 1.0);
-                case RobotModule.FastDrive: return r.Add(aluminium ? Material.Aluminium : Material.Copper, 10.0).Add(Material.Iron, 20.0);
+                // Stronger motors need NdFeB permanent magnets (about 30 % neodymium by mass): rare earths (TBD amount).
+                case RobotModule.FastDrive: return r.Add(aluminium ? Material.Aluminium : Material.Copper, 10.0).Add(Material.Iron, 20.0).Add(Material.RareEarth, RareEarthPerDriveKg);
                 case RobotModule.Shielding: return r.Add(Material.Iron, 50.0).Add(Material.Water, 100.0);
                 case RobotModule.ThermalInsulation: return r.Add(Material.Rock, 30.0);
                 // Processors: copper wiring and silicon from rock (placeholder amounts, TBD).

@@ -38,6 +38,8 @@ namespace KardashevAscent.Simulation.Game
             // Saved colonies keep what they built, even on ground that is wetland now.
             else if (restoringState ? GetTile(tileId).IsWater : !GetTile(tileId).IsBuildableLand)
                 return new PanelPreview(false, "Land panels cannot go on water or wetland (floating solar can).", 0, 0, 0, 0);
+            if (!restoringState && !IsOpenGround(tileId))
+                return new PanelPreview(false, ClosedGroundReason(tileId), 0, 0, 0, 0);
             double area = NewPanelAreaM2(tileId);
             PanelParams panel = MakePanel(tileId, tilt, azimuth, 1.0, area);
             AnnualYieldResult year = AnnualYield.Calculate(PlanetAt(tileId), panel);

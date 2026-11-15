@@ -45,6 +45,7 @@ namespace KardashevAscent.Presentation.UI
                 case TerrainType.Forest: return new Color32(52, 107, 56, 255);
                 case TerrainType.Wetland: return new Color32(64, 118, 98, 255);
                 case TerrainType.Beach: return new Color32(222, 205, 150, 255);
+                case TerrainType.Canyon: return new Color32(132, 78, 52, 255);
                 default: return new Color32(80, 62, 60, 255);   // volcanic rock
             }
         }
@@ -90,7 +91,7 @@ namespace KardashevAscent.Presentation.UI
                     Color.Lerp(c, Color.white, 0.30f));
             Polygon(p, o, s, new[] { new Vector2(0.15f, -0.05f), new Vector2(0.80f, -0.45f), new Vector2(0.95f, 0.30f), new Vector2(0.35f, 0.85f) },
                     c * 0.55f);
-            if (m == Material.Copper || m == Material.Iron || m == Material.Aluminium || m == Material.Lithium)
+            if (m == Material.Copper || m == Material.Iron || m == Material.Aluminium || m == Material.Lithium || m == Material.RareEarth)
             {
                 // A metallic glint.
                 p.fillColor = new Color(1f, 1f, 1f, 0.7f);
@@ -136,6 +137,19 @@ namespace KardashevAscent.Presentation.UI
                         Triangle(p, o + at * s, s * 0.22f, s * 0.15f, new Color32(62, 50, 50, 255));
                     p.fillColor = new Color(1f, 0.45f, 0.15f, 0.9f);   // a glowing crack
                     p.BeginPath(); p.Arc(o + new Vector2(-0.05f, 0.2f) * s, s * 0.05f, 0f, 360f); p.Fill();
+                    break;
+                case TerrainType.Canyon:
+                    // A gorge: a dark winding cut across the tile, with layered walls.
+                    p.strokeColor = new Color32(52, 28, 20, 255); p.lineWidth = s * 0.28f;
+                    p.BeginPath();
+                    p.MoveTo(o + new Vector2(-0.75f, -0.1f) * s);
+                    p.BezierCurveTo(o + new Vector2(-0.3f, 0.25f) * s, o + new Vector2(0.2f, -0.3f) * s, o + new Vector2(0.75f, 0.1f) * s);
+                    p.Stroke();
+                    p.strokeColor = new Color32(176, 110, 72, 255); p.lineWidth = 1.5f;
+                    p.BeginPath();
+                    p.MoveTo(o + new Vector2(-0.7f, -0.28f) * s);
+                    p.BezierCurveTo(o + new Vector2(-0.3f, 0.05f) * s, o + new Vector2(0.2f, -0.48f) * s, o + new Vector2(0.7f, -0.08f) * s);
+                    p.Stroke();
                     break;
                 case TerrainType.Desert:
                 case TerrainType.DryBasin:
