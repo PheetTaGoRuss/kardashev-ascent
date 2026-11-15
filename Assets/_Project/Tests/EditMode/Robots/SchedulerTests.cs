@@ -1,3 +1,4 @@
+using static KardashevAscent.Simulation.Tests.TestColony;
 using System;
 using System.Collections.Generic;
 using KardashevAscent.Simulation.Game;
@@ -142,7 +143,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
 
         // ---- Temporary unavailability ----
 
-        static readonly List<RobotFacility> Lander = new List<RobotFacility> { new RobotFacility(0, -1, ChargingCapability.Lander) };
+        static readonly List<RobotFacility> Lander = new List<RobotFacility> { new RobotFacility(0, -1, TestDock) };
 
         [Test]
         public void LeavingToCharge_AStandInTakesOver_TheOriginalComesBack()

@@ -123,6 +123,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         public void FarSea_BoatRobot_ChargesFully_ThenBuildsIt()
         {
             PlanetSimulation sim = Create();
+            KardashevAscent.Simulation.Tests.TestColony.AddCharger(sim);
             foreach (var m in KardashevAscent.Simulation.Resources.Materials.All) sim.Materials.Add(m, 1e5);
             // A shallow sea 15-19 h away by boat: the round trip needs more than the usual 80 % charge (2.4 kWh at
             // 50 W keeping 20 %: 80 % covers 28.9 h), but a full battery covers it (38.5 h).

@@ -137,10 +137,10 @@ namespace KardashevAscent.Simulation.Tests.Game
         static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
 
         [Test]
-        public void BuildHours_AreRealWorldDaysToWeeks()
+        public void BuildHours_AreDaysToWeeks()
         {
-            // Director 2026-11-15: as in real life. A 1 ha field about 1 000 robot hours (~1.6 person-hours per kW);
-            // bigger fields take less per hectare; a mast a couple of days, a workshop hall weeks.
+            // Director 2026-11-15: as in real life, then faster (robots at about four times a worker's pace). A 1 ha
+            // field a couple of hundred robot hours; bigger fields take less per hectare; a charger half a day.
             Assert.AreEqual(BuildTimes.PanelHoursPerHa, BuildTimes.Hours(BuildingType.SolarPanel, 10_000.0), 1e-9);
             double hundred = BuildTimes.Hours(BuildingType.SolarPanel, 1_000_000.0);
             Assert.Less(hundred, 100.0 * BuildTimes.PanelHoursPerHa);
@@ -148,7 +148,10 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.Greater(BuildTimes.Hours(BuildingType.FloatingSolar, 10_000.0), BuildTimes.PanelHoursPerHa);
             foreach (BuildingType b in new[] { BuildingType.Battery, BuildingType.Workshop, BuildingType.ChargingStation, BuildingType.Relay,
                                                BuildingType.ResearchStation, BuildingType.AluminaPlant, BuildingType.Electrolyser })
-                Assert.That(BuildTimes.Hours(b), Is.InRange(24.0, 24.0 * 60.0), b + ": a day to two months for one robot");
+                Assert.That(BuildTimes.Hours(b), Is.InRange(8.0, 24.0 * 30.0), b + ": hours to a month for one robot");
+            // The first robots must be able to build a charger on what is in their batteries (no charger, no recharging).
+            Assert.Less(BuildTimes.Hours(BuildingType.ChargingStation) * KardashevAscent.Simulation.Robots.RobotSpecs.BuildPowerW,
+                        3 * 0.8 * KardashevAscent.Simulation.Robots.RobotSpecs.BatteryCapacityWh);
             Assert.Less(BuildTimes.Hours(BuildingType.Relay), BuildTimes.Hours(BuildingType.Workshop));
         }
 
@@ -185,6 +188,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         {
             var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
             sim.Workforce.Reset(sim.BaseTileId, 1);
+            KardashevAscent.Simulation.Tests.TestColony.AddCharger(sim);
             int t = sim.BaseTileId;
             Assert.IsTrue(sim.PlacePanel(t, 0, 0.3, Math.PI));
             Assert.IsTrue(sim.IsUnderConstruction(t, 0), "not at once any more");
@@ -197,7 +201,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             while (sim.IsUnderConstruction(t, 0) && elapsed < 4.0 * hours) { sim.Tick(1.0); elapsed += 1.0; }
             Assert.IsFalse(sim.IsUnderConstruction(t, 0));
             Assert.GreaterOrEqual(elapsed, hours - 1.0, "about its work hours (a robot may stop to charge)");
-            Assert.Greater(elapsed, 24.0 * 7.0, "a 1 ha field takes one robot weeks (director 2026-11-15)");
+            Assert.Greater(elapsed, 24.0 * 7.0, "a 1 ha field takes one robot more than a week");
         }
 
         [Test]

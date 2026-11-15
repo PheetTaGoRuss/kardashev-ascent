@@ -1,3 +1,4 @@
+using static KardashevAscent.Simulation.Tests.TestColony;
 using System;
 using System.Collections.Generic;
 using KardashevAscent.Simulation.Robots;
@@ -134,7 +135,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             Assert.AreEqual(RobotState.Shutdown, r.State);
         }
 
-        static readonly List<RobotFacility> Lander = new List<RobotFacility> { new RobotFacility(0, -1, ChargingCapability.Lander) };
+        static readonly List<RobotFacility> Lander = new List<RobotFacility> { new RobotFacility(0, -1, TestDock) };
 
         static KardashevAscent.Simulation.Resources.MaterialStock Plenty()
         {

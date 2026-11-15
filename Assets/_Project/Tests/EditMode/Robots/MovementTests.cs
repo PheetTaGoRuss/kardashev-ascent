@@ -120,6 +120,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         public void LowBattery_FarFromTheLander_DrivesBackToCharge()
         {
             var sim = Create();
+            KardashevAscent.Simulation.Tests.TestColony.AddCharger(sim);
             Robot r = sim.Workforce.Robots[0];
             int n = LandNeighbour(sim, sim.BaseTileId);
             sim.SendRobot(r.Id, n);
