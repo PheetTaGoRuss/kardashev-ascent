@@ -68,7 +68,7 @@ namespace KardashevAscent.Presentation.UI
                     what = $"Network +{ColonyNetwork.RangeTiles} tiles. Uses {Format.Power(ColonyNetwork.RelayPowerW)}; off in a brownout.";
                     break;
             }
-            what += $"\nTakes {placer.BuildHoursOf(m) / 24.0:0.#} robot-days to build (a crew is faster).";
+            what += $"\nTakes about {placer.BuildHoursOf(m):0} robot-hours to build (a crew is faster).";
             int slots = placer.FootprintOf(m);
             return what + $"\n{slots} slot{(slots == 1 ? "" : "s")} · drag it onto the site · cost (red = short):";
         }
