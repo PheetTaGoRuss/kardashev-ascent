@@ -50,6 +50,13 @@ namespace KardashevAscent.Presentation.Planet
             }
             if (sim == null || planet == null || planet.Sphere == null || siteView == null || bodyMaterial == null)
                 return;
+            // No robots on the planet before the colony lands (director 2026-11-15): they arrive with the lander.
+            if (GameFlow.Active && !GameFlow.IsPlaying)
+            {
+                foreach (RoverVisual v in rovers.Values)
+                    v.Hide();
+                return;
+            }
 
             var seen = new HashSet<int>();
             var onTile = new Dictionary<int, int>();

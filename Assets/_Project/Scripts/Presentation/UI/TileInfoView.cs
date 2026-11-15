@@ -159,9 +159,16 @@ namespace KardashevAscent.Presentation.UI
                         return;
                     }
                     GameFlow.Landed(tile);
-                }) { text = "Land here" };
-                b.AddToClassList("ground-button");
-                b.AddToClassList("on");
+                }) { text = "LAND HERE" };
+                // Big and bright so it can't be missed (director 2026-11-15).
+                b.AddToClassList("primary-button");
+                b.AddToClassList("land-here");
+                b.style.flexGrow = 1;
+                b.style.height = 48;
+                b.style.fontSize = 20;
+                b.style.marginTop = 6;
+                b.style.unityFontStyleAndWeight = FontStyle.Bold;
+                b.style.letterSpacing = 2;
                 landingActions.Add(b);
             }
             else if (here)

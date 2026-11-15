@@ -215,7 +215,7 @@ namespace KardashevAscent.Presentation.Game
             }
             var e = Essentials[next];
             setupNow.text = $"Step {next + 1} of {Essentials.Length}: open {e.Category} in the build bar at the bottom and drag a {e.Name} onto a free slot of the site. " +
-                            "Time starts when all four are placed; your three robots then build them from the lander's cargo.";
+                            $"Time starts when all {Essentials.Length} are placed; your three robots then build them from the lander's cargo.";
         }
 
         void SkipSetup()
