@@ -41,7 +41,7 @@ namespace KardashevAscent.Simulation.Game
         {
             if (!CanPlace(BuildingType.ResearchStation, tileId, slot))
                 return false;
-            StartSite(tileId, slot, BuildBill(BuildingType.ResearchStation));
+            StartSite(tileId, slot, BuildBill(BuildingType.ResearchStation), Resources.BuildCosts.BuildHours(BuildingType.ResearchStation));
             researchStations.Add((tileId, slot));
             Occupy(tileId, FootprintFor(BuildingType.ResearchStation, tileId, slot));
             Settle((tileId, slot));

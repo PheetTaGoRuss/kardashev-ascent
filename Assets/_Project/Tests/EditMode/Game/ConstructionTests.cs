@@ -137,21 +137,36 @@ namespace KardashevAscent.Simulation.Tests.Game
         static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
 
         [Test]
-        public void BuildHours_GrowWithTheRootOfTheMass()
+        public void BuildHours_AreRealWorldDaysToWeeks()
         {
-            // 2 h + 4 h per root tonne (game rule, TBD): a 1 150 kg panel field 6.29 h; 100 times the mass, 10 times the extra.
-            MaterialBill panel = BuildCosts.Panel(10_000.0);
-            Assert.AreEqual(2.0 + 4.0 * Math.Sqrt(1.15), BuildCosts.BuildHours(panel), 1e-9);
-            Assert.AreEqual(2.0 + 40.0 * Math.Sqrt(1.15), BuildCosts.BuildHours(panel.Times(100.0)), 1e-9);
-            Assert.AreEqual(0.0, BuildCosts.BuildHours(new MaterialBill()));
+            // Director 2026-11-15: as in real life. A 1 ha field about 1 000 robot hours (~1.6 person-hours per kW);
+            // bigger fields take less per hectare; a mast a couple of days, a workshop hall weeks.
+            Assert.AreEqual(BuildCosts.PanelHoursPerHa, BuildCosts.BuildHours(BuildingType.SolarPanel, 10_000.0), 1e-9);
+            double hundred = BuildCosts.BuildHours(BuildingType.SolarPanel, 1_000_000.0);
+            Assert.Less(hundred, 100.0 * BuildCosts.PanelHoursPerHa);
+            Assert.Greater(hundred, 50.0 * BuildCosts.PanelHoursPerHa);
+            Assert.Greater(BuildCosts.BuildHours(BuildingType.FloatingSolar, 10_000.0), BuildCosts.PanelHoursPerHa);
+            foreach (BuildingType b in new[] { BuildingType.Battery, BuildingType.Workshop, BuildingType.ChargingStation, BuildingType.Relay,
+                                               BuildingType.ResearchStation, BuildingType.AluminaPlant, BuildingType.Electrolyser })
+                Assert.That(BuildCosts.BuildHours(b), Is.InRange(24.0, 24.0 * 60.0), b + ": a day to two months for one robot");
+            Assert.Less(BuildCosts.BuildHours(BuildingType.Relay), BuildCosts.BuildHours(BuildingType.Workshop));
+        }
+
+        [Test]
+        public void ACrew_BuildsFasterThanOneRobot()
+        {
+            Assert.Greater(KardashevAscent.Simulation.Robots.FacilityStaffing.CapacityFor(KardashevAscent.Simulation.Robots.TaskKind.Build), 1);
+            double one = KardashevAscent.Simulation.Robots.FacilityStaffing.Rate(new[] { 1.0 });
+            double three = KardashevAscent.Simulation.Robots.FacilityStaffing.Rate(new[] { 1.0, 1.0, 1.0 });
+            Assert.Greater(three, 1.5 * one);
         }
 
         [Test]
         public void Work_CannotRunAheadOfTheMaterials_AndBothFinishTheSite()
         {
             var c = new Construction();
-            MaterialBill bill = new MaterialBill().Add(Material.Iron, 1000.0);   // 6 h of work
-            c.Start(0, 0, bill);
+            MaterialBill bill = new MaterialBill().Add(Material.Iron, 1000.0);
+            c.Start(0, 0, bill, 6.0);   // 6 h of work
             var stock = new MaterialStock();
             stock.Add(Material.Iron, 500.0);
             c.Pay(stock, null);
@@ -174,14 +189,15 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.IsTrue(sim.PlacePanel(t, 0, 0.3, Math.PI));
             Assert.IsTrue(sim.IsUnderConstruction(t, 0), "not at once any more");
             double hours = sim.ConstructionWork(t, 0).Total;
-            Assert.AreEqual(BuildCosts.BuildHours(sim.BuildBill(BuildingType.SolarPanel)), hours, 1e-9);
+            Assert.AreEqual(BuildCosts.BuildHours(BuildingType.SolarPanel, sim.PanelAreaAt(t, 0)), hours, 1e-9);
             sim.Tick(1.0);
             Assert.IsTrue(sim.IsBeingBuilt(t, 0));
             Assert.Greater(sim.ConstructionProgress(t, 0), 0.0);
             double elapsed = 1.0;
-            while (sim.IsUnderConstruction(t, 0) && elapsed < 48.0) { sim.Tick(0.25); elapsed += 0.25; }
+            while (sim.IsUnderConstruction(t, 0) && elapsed < 4.0 * hours) { sim.Tick(1.0); elapsed += 1.0; }
             Assert.IsFalse(sim.IsUnderConstruction(t, 0));
-            Assert.GreaterOrEqual(elapsed, hours - 0.25, "about its work hours (a robot may stop to charge)");
+            Assert.GreaterOrEqual(elapsed, hours - 1.0, "about its work hours (a robot may stop to charge)");
+            Assert.Greater(elapsed, 24.0 * 7.0, "a 1 ha field takes one robot weeks (director 2026-11-15)");
         }
 
         [Test]

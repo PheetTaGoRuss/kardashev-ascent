@@ -1,3 +1,6 @@
+using System;
+using KardashevAscent.Simulation.Game;
+
 namespace KardashevAscent.Simulation.Resources
 {
     /// <summary>
@@ -12,15 +15,35 @@ namespace KardashevAscent.Simulation.Resources
         /// <summary>Share of an installation's real material mass the colony supplies on site (game rule, TBD).</summary>
         public const double OnSiteShare = 0.01;
 
-        /// <summary>Robot work hours every building takes at least (game rule, TBD; director 2026-11-14: construction takes time).</summary>
-        public const double BaseBuildHours = 2.0;
+        /// <summary>
+        /// Robot work hours to put up a building, for one General robot working round the clock (director 2026-11-15:
+        /// construction times as in real life, days to weeks; time can be sped up, and a crew is faster). Calibrated to
+        /// real installations, rounded, TBD: a utility solar farm takes about 1–2 person-hours per kW installed (NREL
+        /// cost benchmarks), so a 1 ha field (about 0.6 MW) about 1 000 h; a containerised battery of 20 MWh a few
+        /// weeks for a small crew; a steel-frame workshop hall about a month for a crew; a lab somewhat less; a charger
+        /// or mast a few days. Robots work like one skilled worker each.
+        /// </summary>
+        public static double BuildHours(BuildingType type, double areaM2 = 0.0)
+        {
+            switch (type)
+            {
+                case BuildingType.SolarPanel: return PanelHoursPerHa * Math.Pow(Math.Max(areaM2, 1.0) / 10_000.0, 0.9);
+                case BuildingType.FloatingSolar: return FloatingHoursFactor * PanelHoursPerHa * Math.Pow(Math.Max(areaM2, 1.0) / 10_000.0, 0.9);
+                case BuildingType.Battery: return 400.0;
+                case BuildingType.Workshop: return 1200.0;
+                case BuildingType.ResearchStation: return 600.0;
+                case BuildingType.AluminaPlant:
+                case BuildingType.Electrolyser: return 500.0;
+                case BuildingType.ChargingStation: return 80.0;
+                case BuildingType.Relay: return 48.0;
+                default: return 0.0;
+            }
+        }
 
-        /// <summary>Further work hours per square root of a tonne of materials (game rule, TBD): bigger builds take longer, less than in proportion.</summary>
-        public const double BuildHoursPerRootTonne = 4.0;
-
-        /// <summary>Robot work hours to put up a building with this bill (one General robot; a crew is faster).</summary>
-        public static double BuildHours(MaterialBill bill) =>
-            bill == null || bill.IsEmpty ? 0.0 : BaseBuildHours + BuildHoursPerRootTonne * System.Math.Sqrt(bill.TotalKg / 1000.0);
+        /// <summary>A 1 ha base solar field, robot hours (about 0.6 MW at about 1.6 person-hours per kW; TBD).</summary>
+        public const double PanelHoursPerHa = 1000.0;
+        /// <summary>Floating panels take longer (pontoons, anchoring; TBD).</summary>
+        public const double FloatingHoursFactor = 1.3;
 
         /// <summary>Share of a finished building's materials that comes back when it is taken down (game rule).</summary>
         public const double SalvageShare = 0.5;

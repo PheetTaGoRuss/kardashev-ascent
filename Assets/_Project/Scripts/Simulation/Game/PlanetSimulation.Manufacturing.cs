@@ -35,7 +35,7 @@ namespace KardashevAscent.Simulation.Game
         {
             if (!CanPlace(BuildingType.Workshop, tileId, slot))
                 return false;
-            StartSite(tileId, slot, BuildBill(BuildingType.Workshop));
+            StartSite(tileId, slot, BuildBill(BuildingType.Workshop), BuildCosts.BuildHours(BuildingType.Workshop));
             workshops.Add((tileId, slot));
             Occupy(tileId, FootprintFor(BuildingType.Workshop, tileId, slot));
             Settle((tileId, slot));
