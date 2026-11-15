@@ -408,12 +408,17 @@ namespace KardashevAscent.Presentation.UI
                         b.AddToClassList("ground-button");
                         b.tooltip = KardashevAscent.Simulation.Resources.Passages.What(kind) + "\nTakes " + bill.Describe() + (why != null ? "\n" + why : "");
                         b.SetEnabled(why == null);
-                        groundActions.Add(b);
+                        // The button and what it takes on one line.
+                        var line = new VisualElement();
+                        line.style.flexDirection = FlexDirection.Row;
+                        line.style.alignItems = Align.Center;
+                        line.style.width = Length.Percent(100);
+                        line.Add(b);
                         var cost = new VisualElement();
-                        cost.style.flexDirection = FlexDirection.Row;
-                        cost.style.marginBottom = 2;
                         MaterialChips.Fill(cost, bill, sim.Materials);
-                        groundActions.Add(cost);
+                        cost.style.marginLeft = 6;
+                        line.Add(cost);
+                        groundActions.Add(line);
                     }
             }
             foreach (Material m in Materials.Mined)
