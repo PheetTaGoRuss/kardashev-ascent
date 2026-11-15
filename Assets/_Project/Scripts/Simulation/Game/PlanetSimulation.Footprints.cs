@@ -37,6 +37,8 @@ namespace KardashevAscent.Simulation.Game
             TerrainType ground = GetTile(tileId).Terrain;
             if (type == BuildingType.FloatingSolar ? !Terrains.AllowsFloating(ground) : !Terrains.IsBuildableLand(ground))
                 return false;
+            if (!restoringState && !IsOpenGround(tileId))
+                return false;   // a mountain or canyon must be opened first (director 2026-11-15)
             if (KnowledgeBlocker(type) != null)
                 return false;   // the colony doesn't know enough yet (director 2026-11-14)
             foreach (int s in FootprintFor(type, tileId, slot))

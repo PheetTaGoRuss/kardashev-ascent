@@ -48,7 +48,7 @@ namespace KardashevAscent.Simulation.Resources
         {
             var p = new SurveyPuzzle { Tile = tile };
             foreach (Deposit d in ground)
-                if (d.Material != Material.Rock)   // rock is everywhere and always known
+                if (d.Material != Material.Rock && !DepositMap.IsDeep(d.Material))   // rock is always known; deep ore needs a seismic survey
                     p.Materials.Add(d.Material);
             for (int i = 0; i < Cores; i++)
             {

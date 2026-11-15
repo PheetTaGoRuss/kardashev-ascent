@@ -84,6 +84,7 @@ namespace KardashevAscent.Simulation.Game
             foreach (BuildingRecord r in state.Buildings)
                 r.StandIns = StandInsAt(r.Tile, r.Slot);
             CaptureResearch(state);
+            CapturePassages(state);
             foreach (ManufacturingJob j in jobs)
                 state.Jobs.Add(new JobRecord
                 {
@@ -239,6 +240,7 @@ namespace KardashevAscent.Simulation.Game
                     if (p != null && p.Tile >= 0 && p.Tile < TileCount)
                         latitudePuzzles.Add(p);
             RestoreResearch(state);
+            RestorePassages(state);
             measureOrders.Clear();
             if (state.MeasureOrders != null)
                 foreach (MeasureOrderRecord mo in state.MeasureOrders)
