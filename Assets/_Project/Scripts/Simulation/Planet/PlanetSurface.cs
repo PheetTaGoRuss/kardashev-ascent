@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Numerics;
 
 namespace KardashevAscent.Simulation.Planet
 {
@@ -28,6 +30,11 @@ namespace KardashevAscent.Simulation.Planet
         Beach,
         /// <summary>Dark volcanic rock on high ground.</summary>
         VolcanicRock,
+        /// <summary>
+        /// A canyon or rift valley: a deep gorge with walls far too steep to drive down (appended 2026-11-15). Crossing
+        /// or using it needs a bridge.
+        /// </summary>
+        Canyon,
     }
 
     /// <summary>Names and properties of terrain types, in one place for the simulation and the UI.</summary>
@@ -38,6 +45,12 @@ namespace KardashevAscent.Simulation.Planet
 
         /// <summary>Ground a normal building can stand on: land that is not open water and not a wetland.</summary>
         public static bool IsBuildableLand(TerrainType t) => !IsWater(t) && t != TerrainType.Wetland;
+
+        /// <summary>
+        /// Ground robots can't drive across until the colony opens it (director 2026-11-15): mountains need a tunnel or
+        /// blasting, canyons a bridge. Robots can still go to the edge of one to work on it.
+        /// </summary>
+        public static bool IsBarrier(TerrainType t) => t == TerrainType.Mountain || t == TerrainType.Canyon;
 
         /// <summary>Where floating solar can be built: shallow sea and wetland.</summary>
         public static bool AllowsFloating(TerrainType t) => t == TerrainType.ShallowOcean || t == TerrainType.Wetland;
@@ -83,6 +96,7 @@ namespace KardashevAscent.Simulation.Planet
                 case TerrainType.Forest: return 0.13;
                 case TerrainType.Wetland: return 0.12;
                 case TerrainType.VolcanicRock: return 0.10;
+                case TerrainType.Canyon: return 0.15;   // a shaded gorge
                 default: return 0.2;
             }
         }
@@ -105,6 +119,7 @@ namespace KardashevAscent.Simulation.Planet
                 case TerrainType.Wetland: return "Wetland";
                 case TerrainType.Beach: return "Beach";
                 case TerrainType.VolcanicRock: return "Volcanic rock";
+                case TerrainType.Canyon: return "Canyon";
                 default: return t.ToString();
             }
         }
@@ -236,9 +251,76 @@ namespace KardashevAscent.Simulation.Planet
             }
 
             if (settings.RichTerrain)
+            {
                 Refine(sphere, settings, elevation, terrain);
+                CarveCanyons(sphere, settings, elevation, terrain);
+            }
             return new PlanetSurface(elevation, terrain);
         }
+
+        /// <summary>Canyon tiles per thousand tiles of the planet, roughly (game rule, TBD).</summary>
+        public const double CanyonTilesPerThousand = 12.0;
+        /// <summary>Length of one rift, tiles (game rule, TBD).</summary>
+        public const int CanyonMinLength = 6, CanyonMaxLength = 14;
+        /// <summary>How far a canyon floor sits below the ground around it (in elevation units; game rule, for the look).</summary>
+        public const float CanyonDepth = 0.35f;
+
+        /// <summary>
+        /// Rifts: long, nearly straight gorges across dry land, like Valles Marineris on Mars (a tectonic rift) or a river
+        /// canyon. Game rule, TBD: the map has no tectonics, so a rift is a walk across the sphere in a near-steady
+        /// direction. Never on water, ice or beach; the floor is lowered for the look, but stays land.
+        /// </summary>
+        static void CarveCanyons(HexSphere sphere, in SurfaceSettings s, float[] elevation, TerrainType[] terrain)
+        {
+            int n = sphere.TileCount;
+            int target = (int)Math.Round(n * CanyonTilesPerThousand / 1000.0);
+            var rng = new Random(s.Seed * 7919 + 4243);
+            int carved = 0;
+            for (int attempt = 0; attempt < 200 && carved < target; attempt++)
+            {
+                int t = rng.Next(n);
+                if (!CanCarve(terrain[t])) continue;
+                // A random heading along the surface at the start.
+                Vector3 c = sphere.Centers[t];
+                var r = new Vector3((float)(rng.NextDouble() - 0.5), (float)(rng.NextDouble() - 0.5), (float)(rng.NextDouble() - 0.5));
+                Vector3 heading = r - Vector3.Dot(r, c) * c;
+                if (heading.LengthSquared() < 1e-6f) continue;
+                heading = Vector3.Normalize(heading);
+                int length = rng.Next(CanyonMinLength, CanyonMaxLength + 1);
+                var visited = new HashSet<int>();
+                for (int k = 0; k < length && carved < target; k++)
+                {
+                    if (!CanCarve(terrain[t])) break;
+                    if (terrain[t] != TerrainType.Canyon)
+                    {
+                        terrain[t] = TerrainType.Canyon;
+                        elevation[t] = Math.Max(0.02f, elevation[t] - CanyonDepth);
+                        carved++;
+                    }
+                    visited.Add(t);
+                    int next = -1;
+                    float best = float.NegativeInfinity;
+                    foreach (int nb in sphere.Neighbors[t])
+                    {
+                        if (visited.Contains(nb)) continue;
+                        float d = Vector3.Dot(Vector3.Normalize(sphere.Centers[nb] - sphere.Centers[t]), heading);
+                        if (d > best) { best = d; next = nb; }
+                    }
+                    if (next < 0) break;
+                    Vector3 step = sphere.Centers[next] - sphere.Centers[t];
+                    // Keep the heading on the surface and let it wander a little.
+                    Vector3 cn = sphere.Centers[next];
+                    Vector3 h = heading + 0.15f * new Vector3((float)(rng.NextDouble() - 0.5), (float)(rng.NextDouble() - 0.5), (float)(rng.NextDouble() - 0.5));
+                    h -= Vector3.Dot(h, cn) * cn;
+                    heading = h.LengthSquared() > 1e-6f ? Vector3.Normalize(h) : Vector3.Normalize(step);
+                    t = next;
+                }
+            }
+        }
+
+        static bool CanCarve(TerrainType t) =>
+            t == TerrainType.Lowland || t == TerrainType.Desert || t == TerrainType.DryBasin || t == TerrainType.Highland
+            || t == TerrainType.Tundra || t == TerrainType.Forest || t == TerrainType.Canyon;
 
         /// <summary>
         /// Second pass (game rules, not geology): shores become beach, low ground behind them wetland, humid land forest,

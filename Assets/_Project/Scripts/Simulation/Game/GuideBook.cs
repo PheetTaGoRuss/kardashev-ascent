@@ -86,7 +86,8 @@ namespace KardashevAscent.Simulation.Game
                 bool here = m == Material.Rock || m == Material.Iron
                             || (m == Material.Water && DepositMap.IsIceGround(t))
                             || (m == Material.Copper && DepositMap.IsCopperGround(t))
-                            || (m == Material.Lithium && DepositMap.IsLithiumGround(t));
+                            || (m == Material.Lithium && DepositMap.IsLithiumGround(t))
+                            || (m == Material.RareEarth && DepositMap.IsDeepGround(t));
                 if (here) list.Add(t);
             }
             return list;

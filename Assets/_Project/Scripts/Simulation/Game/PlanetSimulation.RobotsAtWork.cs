@@ -41,6 +41,7 @@ namespace KardashevAscent.Simulation.Game
                 tasks.Add(new WorkTask(TaskKind.Experiment, experimentOrders[k].Tile, (int)experimentOrders[k].Kind, k));
             for (int k = 0; k < miningOrders.Count; k++)
                 tasks.Add(new WorkTask(TaskKind.Mine, miningOrders[k].Tile, (int)miningOrders[k].Material, k));
+            AddPassageTasks(tasks);
             List<(int Tile, int Slot)> shops = FinishedWorkshops();
             for (int k = 0; k < Math.Min(jobs.Count, shops.Count); k++)
                 tasks.Add(new WorkTask(TaskKind.Manufacture, shops[k].Tile, shops[k].Slot, k));
