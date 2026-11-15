@@ -8,7 +8,7 @@
     padding: 10px 12px;
 }
 /* Nearly opaque: the overview sits over the tile and side panels, which would show through the usual panel tint. */
-.colony.panel { background-color: rgb(22, 22, 26); }
+.colony.panel { background-color: rgba(9, 13, 24, 0.95); }
 
 .title-row { flex-direction: row; align-items: flex-start; }
 .title-text { flex-grow: 1; }

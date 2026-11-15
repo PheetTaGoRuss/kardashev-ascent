@@ -8,7 +8,7 @@
     padding: 10px 12px;
 }
 /* Nearly opaque, like the colony overview: it sits over the tile and side panels. */
-.workforce.panel { background-color: rgb(22, 22, 26); }
+.workforce.panel { background-color: rgba(9, 13, 24, 0.95); }
 
 .title-row { flex-direction: row; align-items: flex-start; }
 .title-text { flex-grow: 1; }

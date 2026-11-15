@@ -129,7 +129,7 @@ namespace KardashevAscent.Presentation.UI
             card.style.marginBottom = 6;
             card.style.paddingLeft = card.style.paddingRight = 8;
             card.style.paddingTop = card.style.paddingBottom = 6;
-            card.style.backgroundColor = new Color(0.14f, 0.14f, 0.16f, 0.95f);
+            card.style.backgroundColor = new Color(0.05f, 0.08f, 0.15f, 0.92f);
             card.style.borderLeftWidth = 3;
             card.style.borderLeftColor = blocker == null ? UiPalette.Accent : UiPalette.Border;
             if (picture != null)

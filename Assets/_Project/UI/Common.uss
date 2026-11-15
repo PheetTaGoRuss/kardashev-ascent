@@ -1,39 +1,44 @@
-/* Shared look for every UI Toolkit screen (director 2026-11-14): flat, square, nearly opaque dark-grey panels
-   with an amber accent, in the spirit of factory games such as Mindustry (inspired by, not copied).
-   The same colours for code-built UI are in Scripts/Presentation/UI/UiPalette.cs. */
+/* Shared look for every UI Toolkit screen. Director 2026-11-15: epic and its own, not default UI.
+   A sci-fi mission-control look: deep navy glass panels with a thin cool-blue frame and an amber command strip,
+   spaced capital headings, buttons that light up amber with a soft transition, and themed controls (toggles,
+   sliders, drop-downs and their pop-up lists, scroll bars). The same colours for code-built UI are in
+   Scripts/Presentation/UI/UiPalette.cs. This sheet is also applied to each panel's top level, so pop-up lists match. */
 :root {
-    --panel-bg: rgba(22, 22, 26, 0.97);
-    --panel-border: rgb(69, 69, 77);
-    --text: rgb(242, 242, 242);
-    --text-muted: rgb(166, 166, 171);
-    --good: rgb(110, 220, 130);
+    --panel-bg: rgba(9, 13, 24, 0.94);
+    --panel-border: rgba(92, 150, 220, 0.38);
+    --panel-edge: rgba(150, 200, 255, 0.10);
+    --text: rgb(232, 238, 248);
+    --text-muted: rgb(150, 162, 182);
+    --good: rgb(110, 220, 150);
     --warning: rgb(242, 190, 80);
     --critical: rgb(255, 120, 105);
     --accent: rgb(255, 199, 92);
     --accent-dark: rgb(120, 92, 40);
-    --button: rgb(40, 40, 46);
-    --button-hover: rgb(54, 54, 61);
+    --accent-soft: rgba(255, 199, 92, 0.14);
+    --cool: rgb(120, 190, 255);
+    --button: rgba(24, 34, 56, 0.85);
+    --button-hover: rgba(40, 56, 88, 0.95);
     --on-accent: rgb(26, 20, 10);
     --track: rgba(255, 255, 255, 0.10);
     -unity-font-style: normal;
     color: var(--text);
 }
 
-/* Panels: square blocks with a grey frame and an amber strip along the top. */
+/* Panels: navy glass with a thin cool frame and an amber command strip along the top. */
 .panel {
     background-color: var(--panel-bg);
     border-color: var(--panel-border);
-    border-width: 2px;
-    border-top-width: 3px;
+    border-width: 1px;
+    border-top-width: 2px;
     border-top-color: var(--accent);
-    border-radius: 0;
+    border-radius: 2px;
 }
 
 .heading {
     font-size: 10px;
     color: var(--accent);
     -unity-font-style: bold;
-    letter-spacing: 1px;
+    letter-spacing: 3px;
     padding: 0;
     margin: 0;
 }
@@ -52,11 +57,11 @@
     margin: 0;
 }
 
-/* Meters: square bars in a dark trough. */
+/* Meters: thin glowing bars in a dark trough. */
 .meter {
     height: 8px;
-    border-radius: 0;
-    background-color: rgb(12, 12, 14);
+    border-radius: 1px;
+    background-color: rgba(4, 7, 14, 0.9);
     border-width: 1px;
     border-color: var(--panel-border);
     margin: 3px 0;
@@ -74,54 +79,115 @@
     display: none;
 }
 
-/* Every button: a dark grey block with a frame that lights up amber under the mouse. */
+/* Every button: dark glass with a cool frame; under the mouse it lights up amber. */
 .unity-button {
     color: var(--text);
     background-color: var(--button);
     border-color: var(--panel-border);
-    border-width: 2px;
-    border-radius: 0;
+    border-width: 1px;
+    border-radius: 2px;
+    letter-spacing: 1px;
+    transition-property: background-color, border-color, color, scale;
+    transition-duration: 0.15s;
 }
-.unity-button:hover { background-color: var(--button-hover); border-color: var(--accent); }
+.unity-button:hover { background-color: var(--button-hover); border-color: var(--accent); color: rgb(255, 236, 200); }
 .unity-button:active,
-.unity-button:hover:active { background-color: var(--accent-dark); color: var(--text); }
+.unity-button:hover:active { background-color: var(--accent-dark); color: var(--text); scale: 0.97 0.97; }
 .unity-button:focus { background-color: var(--button); }
 .unity-button:focus:hover { background-color: var(--button-hover); }
 .unity-button:disabled { opacity: 0.4; }
-/* The main action on a panel: a solid amber block. */
-.primary-button { color: var(--on-accent); background-color: var(--accent); border-color: var(--accent); -unity-font-style: bold; }
-.primary-button:hover { background-color: rgb(255, 220, 140); }
+/* The main action on a panel: solid amber. */
+.primary-button { color: var(--on-accent); background-color: var(--accent); border-color: rgb(255, 225, 160); -unity-font-style: bold; letter-spacing: 2px; }
+.primary-button:hover { background-color: rgb(255, 222, 150); color: var(--on-accent); }
 
-/* Tabs: the system tab bar and sub-categories inside a window. Selected = amber frame and text. */
+/* Tabs: text with a glowing underline when selected, like a mission-control console. */
 .tab {
-    height: 24px;
-    margin: 0 3px 0 0;
-    padding: 0 8px;
+    height: 26px;
+    margin: 0 2px 0 0;
+    padding: 0 10px;
     font-size: 11px;
-    color: var(--text);
-    background-color: var(--button);
-    border-width: 2px;
-    border-color: var(--panel-border);
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    border-bottom-width: 2px;
+    border-color: rgba(0, 0, 0, 0);
     border-radius: 0;
 }
-.tab:hover { background-color: var(--button-hover); border-color: var(--accent); }
-.tab.selected { color: var(--accent); background-color: rgba(255, 199, 92, 0.16); border-color: var(--accent); -unity-font-style: bold; }
-.tab.locked { color: var(--text-muted); background-color: rgba(255, 255, 255, 0.04); }
+.tab:hover { color: var(--text); background-color: rgba(120, 190, 255, 0.08); border-bottom-color: var(--cool); }
+.tab.selected { color: var(--accent); background-color: var(--accent-soft); border-bottom-color: var(--accent); -unity-font-style: bold; }
+.tab.locked { color: rgba(150, 162, 182, 0.5); }
 
 /* Text boxes (answers, names, the calculator). */
 .unity-base-text-field__input {
-    background-color: rgb(30, 30, 34);
+    background-color: rgba(6, 10, 20, 0.95);
     color: var(--text);
-    border-color: rgb(84, 84, 92);
-    border-width: 2px;
-    border-radius: 0;
+    border-color: var(--panel-border);
+    border-width: 1px;
+    border-radius: 2px;
 }
 .unity-base-text-field:focus .unity-base-text-field__input { border-color: var(--accent); }
 .puzzle-field { height: 26px; margin: 0; }
 .puzzle-field .unity-base-text-field__input { padding: 0 4px; }
 
-/* Scroll bars: thin square grey. */
-.unity-scroller--vertical { width: 10px; }
-.unity-scroller .unity-base-slider__tracker { background-color: rgb(16, 16, 18); border-width: 0; border-radius: 0; }
-.unity-scroller .unity-base-slider__dragger { background-color: rgb(84, 84, 92); border-width: 0; border-radius: 0; }
+/* Toggles: a dark square that fills amber when on. */
+.unity-toggle__checkmark {
+    background-color: rgba(6, 10, 20, 0.95);
+    border-color: var(--panel-border);
+    border-width: 1px;
+    border-radius: 2px;
+    -unity-background-image-tint-color: var(--on-accent);
+}
+.unity-toggle:hover .unity-toggle__checkmark { border-color: var(--accent); }
+.unity-toggle:checked .unity-toggle__checkmark { background-color: var(--accent); border-color: var(--accent); }
+.unity-toggle .unity-label { color: var(--text); }
+
+/* Sliders: a thin cool track with an amber handle. */
+.unity-base-slider__tracker { background-color: rgba(120, 190, 255, 0.18); border-width: 0; border-radius: 1px; height: 3px; margin-top: -1px; }
+.unity-base-slider__dragger { background-color: var(--accent); border-color: rgb(255, 230, 175); border-width: 1px; border-radius: 2px; }
+.unity-base-slider:hover .unity-base-slider__dragger { background-color: rgb(255, 222, 150); }
+
+/* Drop-downs: a dark field with light text, and a dark pop-up list (it was white on blue and hard to read). */
+.unity-base-popup-field__input,
+.unity-base-dropdown__input,
+.unity-popup-field__input {
+    background-color: rgba(6, 10, 20, 0.95);
+    color: var(--text);
+    border-color: var(--panel-border);
+    border-width: 1px;
+    border-radius: 2px;
+}
+.unity-base-popup-field:hover .unity-base-popup-field__input { border-color: var(--accent); }
+.unity-base-popup-field__input:hover,
+.unity-base-popup-field__input:active,
+.unity-base-popup-field__input:focus,
+.unity-base-popup-field:focus .unity-base-popup-field__input { background-color: rgba(14, 22, 40, 0.98); color: var(--text); border-color: var(--accent); }
+/* Field labels stay readable when the field has focus (Unity turns them dark blue). */
+.unity-base-field:focus > .unity-base-field__label,
+.unity-base-field:hover > .unity-base-field__label { color: var(--accent); }
+.unity-base-popup-field__text { color: var(--text); }
+.unity-base-popup-field__arrow { -unity-background-image-tint-color: var(--accent); }
+.unity-base-dropdown__container-outer {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+}
+.unity-base-dropdown__container-inner {
+    background-color: rgb(10, 15, 28);
+    border-color: var(--accent);
+    border-width: 1px;
+    border-radius: 2px;
+}
+.unity-base-dropdown__item { background-color: rgb(10, 15, 28); }
+.unity-base-dropdown__label { color: var(--text); font-size: 14px; padding: 4px 8px; }
+.unity-base-dropdown__item:hover { background-color: rgba(255, 199, 92, 0.22); }
+.unity-base-dropdown__item:hover .unity-base-dropdown__label { color: rgb(255, 236, 200); }
+.unity-base-dropdown__item:checked .unity-base-dropdown__label { color: var(--accent); -unity-font-style: bold; }
+.unity-base-dropdown__checkmark { -unity-background-image-tint-color: var(--accent); }
+.unity-base-dropdown__separator-container { background-color: rgb(10, 15, 28); }
+
+/* Scroll bars: thin cool lines. */
+.unity-scroller--vertical { width: 8px; }
+.unity-scroller .unity-base-slider__tracker { background-color: rgba(4, 7, 14, 0.8); border-width: 0; border-radius: 0; height: auto; margin-top: 0; }
+.unity-scroller .unity-base-slider__dragger { background-color: rgba(120, 190, 255, 0.35); border-width: 0; border-radius: 2px; }
+.unity-scroller .unity-base-slider__dragger:hover { background-color: var(--accent); }
 .unity-scroller .unity-repeat-button { display: none; }
