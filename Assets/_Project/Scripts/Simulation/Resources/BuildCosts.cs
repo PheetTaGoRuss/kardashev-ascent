@@ -93,24 +93,12 @@ namespace KardashevAscent.Simulation.Resources
         public static readonly MaterialBill ResearchStation = new MaterialBill()
             .Add(Material.Iron, 200.0).Add(Material.Rock, 100.0).Add(Material.Copper, 25.0);
 
-        /// <summary>Base panel field (1 ha) and battery yard (20 MWh) the lander's cargo is sized for.</summary>
-        public const double StarterPanelM2 = 10_000.0, StarterBatteryWh = 20_000_000.0;
-
         /// <summary>
-        /// What the lander brings (director 2026-11-15: only a solar panel, a charger and a battery yard; everything else
-        /// is mined). Plus the Workshop's copper, so a planet with no copper ore can still build the Workshop that refines
-        /// aluminium (director's choice). Each amount is rounded up to a whole kg. Game rule.
+        /// What the lander brings: about one solar panel, battery yard, charging station, Workshop and Research Station, with some to spare
+        /// (game rule, TBD).
         /// </summary>
-        public static readonly MaterialBill LanderCargo = RoundUp(Panel(StarterPanelM2).Plus(Battery(StarterBatteryWh)).Plus(ChargingStation)
-            .Add(Material.Copper, Workshop[Material.Copper]));
-
-        static MaterialBill RoundUp(MaterialBill bill)
-        {
-            var b = new MaterialBill();
-            foreach (var (m, kg) in bill.Items())
-                b = b.Add(m, System.Math.Ceiling(kg - 1e-9));
-            return b;
-        }
+        public static readonly MaterialBill LanderCargo = new MaterialBill()
+            .Add(Material.Rock, 2500.0).Add(Material.Iron, 1500.0).Add(Material.Copper, 100.0).Add(Material.Lithium, 25.0);
 
         // ---- Before save version 26: buildings cost "build parts" in Wh ----
 
