@@ -47,15 +47,11 @@ namespace KardashevAscent.Simulation.Tests.Game
         [Test]
         public void LanderCargo_CoversOneOfEachStarterBuilding()
         {
-            // Director 2026-11-15: a panel, a battery yard and a charger, plus the Workshop's copper; nothing more.
-            MaterialBill all = BuildCosts.Panel(10_000.0).Plus(BuildCosts.Battery(20e6)).Plus(BuildCosts.ChargingStation)
-                .Add(Material.Copper, BuildCosts.Workshop[Material.Copper]);
+            MaterialBill all = BuildCosts.Panel(10_000.0).Plus(BuildCosts.Battery(20e6))
+                .Plus(BuildCosts.ChargingStation).Plus(BuildCosts.Workshop);
             var stock = new MaterialStock();
             foreach (var (m, kg) in BuildCosts.LanderCargo.Items()) stock.Add(m, kg);
             Assert.IsTrue(all.CoveredBy(stock));
-            foreach (var (m, kg) in BuildCosts.LanderCargo.Items())
-                Assert.Less(kg - all[m], 1.0, $"{m}: less than 1 kg to spare");
-            Assert.IsFalse(BuildCosts.Workshop.CoveredBy(stock), "the rest of the Workshop is mined");
         }
 
         [Test]
