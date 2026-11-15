@@ -283,7 +283,7 @@ namespace KardashevAscent.Simulation.Game
                 { "Robot workshop", "Builds robots and upgrades. Refinery modules attach to it." },
                 { "Alumina plant", "Refinery module next to a Workshop: rock or anorthosite to alumina (3–4 days a batch)." },
                 { "Electrolysis cell", "Refinery module next to a Workshop: alumina to aluminium, salt to sodium (days to a week a batch)." },
-                { "Charging station", "Charges several robots at once from the grid." },
+                { "Charging station", "Robots can only recharge at a charger (or a battery yard): build one first. On the landing tile the lander's RTG feeds it." },
                 { "Relay", "Extends the colony network; needs grid power." },
                 { "Research station", "Where robots measure the planet and run experiments." },
             };

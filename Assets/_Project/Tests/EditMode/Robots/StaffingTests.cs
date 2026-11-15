@@ -1,3 +1,4 @@
+using static KardashevAscent.Simulation.Tests.TestColony;
 using System;
 using System.Collections.Generic;
 using KardashevAscent.Simulation.Game;
@@ -85,7 +86,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             Assert.IsTrue(told);
         }
 
-        static readonly List<RobotFacility> Lander = new List<RobotFacility> { new RobotFacility(0, -1, ChargingCapability.Lander) };
+        static readonly List<RobotFacility> Lander = new List<RobotFacility> { new RobotFacility(0, -1, TestDock) };
 
         [Test]
         public void OriginalWorker_ComesBack_IntoAFullFacility_AStandInLeaves()
@@ -166,6 +167,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
                 for (int i = 1; i < robots; i++) sim.Workforce.AddRobot(RobotKind.General, sim.BaseTileId);
                 sim.PlaceWorkshop(sim.BaseTileId, 5);
                 foreach (Material m in Materials.All) sim.Materials.Add(m, 1000.0);
+                KardashevAscent.Simulation.Tests.TestColony.AddCharger(sim);
                 Assert.IsNull(sim.OrderRobot(RobotKind.General));
                 double h = 0.0;
                 while (sim.Jobs.Count > 0 && h < 100.0) { sim.Tick(0.25); h += 0.25; }

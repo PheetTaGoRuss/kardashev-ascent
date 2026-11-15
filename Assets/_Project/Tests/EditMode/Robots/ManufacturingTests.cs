@@ -1,3 +1,4 @@
+using static KardashevAscent.Simulation.Tests.TestColony;
 using KardashevAscent.Simulation.Energy;
 using System;
 using KardashevAscent.Simulation.Game;
@@ -23,6 +24,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { ConstructionTimeEnabled = false };
             sim.Workforce.Reset(sim.BaseTileId, 1);   // these tests follow one robot
             Assert.IsTrue(sim.PlaceWorkshop(sim.BaseTileId, 5));
+            KardashevAscent.Simulation.Tests.TestColony.AddCharger(sim);
             RunUntil(sim, () => sim.WorkshopCount == 1);
             Assert.AreEqual(1, sim.WorkshopCount, "a starter robot builds it from the lander's cargo");
             sim.Materials.Clear();   // tests stock exactly what they need
@@ -220,7 +222,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             hurt.Condition = 0.0;
             w.AddRobot(RobotKind.Maintenance, 0);
             var up = new RobotUpkeep();
-            var lander = new System.Collections.Generic.List<RobotFacility> { new RobotFacility(0, -1, ChargingCapability.Lander) };
+            var lander = new System.Collections.Generic.List<RobotFacility> { new RobotFacility(0, -1, TestDock) };
             up.Plan(w, lander, 1.0);
             up.Apply(w, 1.0, 0.0, 0.0, 0.0, false, null, Plenty());
             Assert.AreEqual(RobotSpecs.RepairPerHour * RobotSpecs.SpecialistSpeed, hurt.Condition, 1e-12);

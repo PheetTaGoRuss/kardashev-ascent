@@ -124,7 +124,7 @@ namespace KardashevAscent.Presentation.UI
                 "Robots drive tile to tile (never across the sea), slower over highland, mountains and ice; driving uses " +
                 "battery, more on high-gravity planets. They only take work they can reach and still drive back to a " +
                 "charger from with 20 % left. Select a tile and press Send to move a robot yourself.\n" +
-                "Robots run on their own battery: below 20 % they charge at the lander or a battery yard until 80 %, or go " +
+                "Robots run on their own battery and can only recharge at a charging station or a battery yard (the lander only repairs): below 20 % they charge until 80 %, or go " +
                 "back to work sooner if no spare power reaches a battery yard. Work " +
                 "wears them; below 30 % condition they are repaired at the lander with build parts, and a worn-out battery " +
                 "is replaced there. At 0 % condition a robot shuts down until it is repaired.\n" +
@@ -602,7 +602,9 @@ namespace KardashevAscent.Presentation.UI
         static string DoingText(IPlanetSimulation sim, Robot r)
         {
             string at = !r.Facility.HasValue ? ""
-                : r.Facility.Value.Slot < 0 ? "at the lander" : $"at the battery yard in slot {r.Facility.Value.Slot}";
+                : r.Facility.Value.Slot < 0 ? "at the lander"
+                : sim.GetBuilding(r.Facility.Value.Tile, r.Facility.Value.Slot) == BuildingType.ChargingStation
+                    ? $"at the charging station in slot {r.Facility.Value.Slot}" : $"at the battery yard in slot {r.Facility.Value.Slot}";
             switch (r.Shutdown)
             {
                 case ShutdownKind.Mechanical: return "Mechanical shutdown (condition 0 %): waiting for a place at the lander to be repaired";

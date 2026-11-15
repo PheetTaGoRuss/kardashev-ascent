@@ -1,3 +1,4 @@
+using static KardashevAscent.Simulation.Tests.TestColony;
 using System;
 using System.Collections.Generic;
 using KardashevAscent.Simulation.Energy;
@@ -92,7 +93,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             return w;
         }
 
-        static readonly List<RobotFacility> LanderOnly = new List<RobotFacility> { new RobotFacility(0, -1, ChargingCapability.Lander) };
+        static readonly List<RobotFacility> LanderOnly = new List<RobotFacility> { new RobotFacility(0, -1, TestDock) };
 
         [Test]
         public void Below20_GoesToCharge_StaysUntil80_ThenWorks()
@@ -135,8 +136,8 @@ namespace KardashevAscent.Simulation.Tests.Robots
             up.Plan(w, LanderOnly, 0.25);
             int charging = 0;
             foreach (Robot r in w.Robots) if (r.Activity == RobotActivity.Charging) charging++;
-            Assert.AreEqual(ChargingCapability.Lander.Slots, charging);
-            Assert.AreEqual(ChargingCapability.Lander.Slots * ChargingCapability.Lander.PowerW, up.DockRequestW, 1e-6);
+            Assert.AreEqual(TestDock.Slots, charging);
+            Assert.AreEqual(TestDock.Slots * TestDock.PowerW, up.DockRequestW, 1e-6);
             Assert.IsTrue(w.Robots[2].NeedsCharge, "the third waits for a free charger");
         }
 

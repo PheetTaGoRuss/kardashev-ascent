@@ -194,9 +194,10 @@ namespace KardashevAscent.Presentation.Game
         /// <summary>The essential buildings, in the order the tutorial asks for them.</summary>
         static readonly (BuildMode Mode, BuildingType Type, string Name, string Category, string Why)[] Essentials =
         {
+            // The charger first (director 2026-11-15: robots can't recharge without one).
+            (BuildMode.ChargingStation, BuildingType.ChargingStation, "Charging station", "Stations", "robots can only recharge at a charger: build it first"),
             (BuildMode.SolarPanel, BuildingType.SolarPanel, "Solar panel", "Power", "makes the colony's power by day"),
-            (BuildMode.Battery, BuildingType.Battery, "Battery yard", "Power", "carries the colony through the night"),
-            (BuildMode.ChargingStation, BuildingType.ChargingStation, "Charging station", "Stations", "robots charge here between jobs"),
+            (BuildMode.Battery, BuildingType.Battery, "Battery yard", "Power", "carries the colony through the night (robots can charge here too)"),
             (BuildMode.Workshop, BuildingType.Workshop, "Robot Workshop", "Stations", "makes robots, upgrades (a boat hull for work on water) and refines metals"),
             (BuildMode.ResearchStation, BuildingType.ResearchStation, "Research Station", "Stations", "robots measure the planet and run experiments here"),
         };

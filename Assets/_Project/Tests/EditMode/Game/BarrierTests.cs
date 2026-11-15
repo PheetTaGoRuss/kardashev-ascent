@@ -32,6 +32,7 @@ namespace KardashevAscent.Simulation.Tests.Game
                 if (Terrains.LandingProblem(surface.Terrain[t]) == null && Sphere.Neighbors[t].Any(n => surface.Terrain[n] == nextTo))
                     landing = t;
             var sim = new PlanetSimulation(Sphere, surface, Earthlike, baseTileId: landing) { ConstructionTimeEnabled = false, PuzzleChance = 0.0 };
+            KardashevAscent.Simulation.Tests.TestColony.AddCharger(sim);
             sim.Workforce.Reset(sim.BaseTileId, 1);
             return sim;
         }
