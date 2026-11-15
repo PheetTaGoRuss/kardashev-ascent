@@ -36,6 +36,10 @@ namespace KardashevAscent.Presentation.UI
         Label hoverText, siteTitle, siteText, plannerTitle, tiltLabel, facingLabel, plannerNumbers, plannerBest,
               plannerReason, placedTitle, placedAngles, placedNumbers, placedBonus, totals, mapHint, help,
               legendMin, legendMax, legendTile, multiText, batteryText, plannerCost;
+        // Icons instead of sentences (director 2026-11-15): the cost and what a site still needs as material chips.
+        VisualElement plannerCostRow, siteRow, siteBar, siteFill, siteNeeds, buildInfoCost;
+        Label siteProgress;
+        string plannerCostShape, siteNeedsShape, buildInfoShape;
         Slider tilt, facing;
         Button bestButton, placeButton, removeAllButton, reangleButton, modePanel, modeBattery, modeWorkshop, modeStation, modeRelay, modeFloating, modeResearch;
         // Build bar categories and the (i) descriptions.
@@ -107,6 +111,10 @@ namespace KardashevAscent.Presentation.UI
             PanelDrag.AddGrip(buildInfo);
             buildInfoTitle = root.Q<Label>("build-info-title");
             buildInfoText = root.Q<Label>("build-info-text");
+            buildInfoCost = new VisualElement();
+            buildInfoCost.style.marginTop = 6;
+            if (buildInfoText != null)
+                buildInfoText.parent.Add(buildInfoCost);
             Button infoClose = root.Q<Button>("build-info-close");
             if (infoClose != null) infoClose.clicked += () => infoShown = null;
             foreach (var (mode, key) in new[] { (BuildMode.SolarPanel, "panel"), (BuildMode.FloatingSolar, "floating"), (BuildMode.Battery, "battery"),
@@ -136,9 +144,31 @@ namespace KardashevAscent.Presentation.UI
             plannerBest = root.Q<Label>("planner-best");
             plannerReason = root.Q<Label>("planner-reason");
             plannerCost = root.Q<Label>("planner-cost");
+            plannerCostRow = new VisualElement();
+            plannerCostRow.style.marginTop = 4;
+            if (plannerCost != null)
+            {
+                plannerCost.parent.Insert(plannerCost.parent.IndexOf(plannerCost) + 1, plannerCostRow);
+                plannerCost.style.display = DisplayStyle.None;
+            }
             placedTitle = root.Q<Label>("placed-title");
             placedAngles = root.Q<Label>("placed-angles");
             placedNumbers = root.Q<Label>("placed-numbers");
+            siteRow = new VisualElement();
+            siteRow.style.marginTop = 4;
+            siteProgress = new Label("");
+            siteProgress.AddToClassList("body");
+            siteRow.Add(siteProgress);
+            siteBar = new VisualElement();
+            siteBar.AddToClassList("meter");
+            siteFill = new VisualElement();
+            siteFill.AddToClassList("meter-fill");
+            siteBar.Add(siteFill);
+            siteRow.Add(siteBar);
+            siteNeeds = new VisualElement();
+            siteRow.Add(siteNeeds);
+            if (placedNumbers != null)
+                placedNumbers.parent.Insert(placedNumbers.parent.IndexOf(placedNumbers), siteRow);
             placedBonus = root.Q<Label>("placed-bonus");
             adjustBox = root.Q("adjust-box");
             adjustTilt = root.Q<Slider>("adjust-tilt");
@@ -250,6 +280,13 @@ namespace KardashevAscent.Presentation.UI
                 {
                     buildInfoTitle.text = BuildInfo.Title(infoShown.Value);
                     buildInfoText.text = BuildInfo.Describe(infoShown.Value, placer);
+                    KardashevAscent.Simulation.Resources.MaterialBill infoBill = placer.CostOf(infoShown.Value);
+                    string shape = infoShown.Value + "|" + infoBill.Describe() + "|" + infoBill.Minus(placer.Stock).Describe();
+                    if (shape != buildInfoShape)
+                    {
+                        buildInfoShape = shape;
+                        MaterialChips.Fill(buildInfoCost, infoBill, placer.Stock, 20f);
+                    }
                 }
                 NameButton(modePanel, "Solar panel", BuildMode.SolarPanel);
                 NameButton(modeBattery, "Battery yard", BuildMode.Battery);
@@ -324,51 +361,55 @@ namespace KardashevAscent.Presentation.UI
 
             bool isSite = hasPanel && placer.SelectedIsSite;
             string siteLine = "";
+            Show(siteRow, isSite);
             if (isSite)
             {
                 placer.SelectedSiteProgress(out double progress, out KardashevAscent.Simulation.Resources.MaterialBill remaining);
                 KardashevAscent.Simulation.Resources.MaterialBill short_ = remaining.Minus(placer.Stock);
-                string boat = placer.SelectedBuilding == BuildingType.FloatingSolar ? " Needs a robot with a boat hull (Workshop upgrade)." : "";
                 var (workDone, workTotal) = placer.SelectedSiteWork;
-                string materials = remaining.IsEmpty ? "materials all in" : $"still needs {remaining.Describe()}";
-                siteLine = $"Under construction: {progress * 100.0:0} % built · {workDone:0.#} of {workTotal:0.#} h of robot work · {materials}" +
-                           (short_.IsEmpty ? " · materials in stock: waiting to be built (yellow)" : $"; short of {short_.Describe()}: mine or refine it (red until it is in stock)") + $". Works once finished.{boat}\n";
+                siteProgress.text = $"Building {progress * 100.0:0} % · {workDone:0.#}/{workTotal:0.#} h" +
+                                    (remaining.IsEmpty ? "" : short_.IsEmpty ? " · needs:" : " · needs (red = short):");
+                siteFill.style.width = Length.Percent((float)(progress * 100.0));
+                string shape = remaining.Describe() + "|" + short_.Describe();
+                if (shape != siteNeedsShape)
+                {
+                    siteNeedsShape = shape;
+                    MaterialChips.Fill(siteNeeds, remaining, placer.Stock);
+                }
+                if (placer.SelectedBuilding == BuildingType.FloatingSolar)
+                    siteLine = "Needs a boat robot.\n";
             }
             if (hasPanel && placer.SelectedSalvageOrdered)
-                siteLine = "Salvage ordered: it works until a robot takes it down (Del again to cancel).\n" + siteLine;
+                siteLine = "Salvage ordered (Del: cancel).\n" + siteLine;
             if (hasPanel && placer.SelectedBuilding == BuildingType.ResearchStation)
             {
                 placedTitle.text = isSite ? $"Research Station site · slot {slot}" : $"Research Station · slot {slot}";
-                placedAngles.text = "Measures the planet and runs experiments";
-                placedNumbers.text = siteLine + "Robots measure the solar values and run experiments here (Research, T). " +
-                                     "What they find unlocks buildings and lifts the safety margins on panels and batteries.";
+                placedAngles.text = "Measures & experiments · Research (T)";
+                placedNumbers.text = siteLine.TrimEnd('\n');
                 Show(placedBonus, false);
                 return;
             }
             if (hasPanel && placer.SelectedBuilding == BuildingType.Relay)
             {
                 placedTitle.text = isSite ? $"Network relay site · slot {slot}" : $"Network relay · slot {slot}";
-                placedAngles.text = $"Extends the colony network {KardashevAscent.Simulation.Robots.ColonyNetwork.RangeTiles} tiles around it";
-                placedNumbers.text = siteLine + "Robots within range of the lander or a powered relay stay connected: they hear new " +
-                                     "orders and the colony's needs. Relays need grid power; in a brownout the whole network is down.";
+                placedAngles.text = $"Network +{KardashevAscent.Simulation.Robots.ColonyNetwork.RangeTiles} tiles · needs grid power";
+                placedNumbers.text = siteLine.TrimEnd('\n');
                 Show(placedBonus, false);
                 return;
             }
             if (hasPanel && placer.SelectedBuilding == BuildingType.ChargingStation)
             {
                 placedTitle.text = isSite ? $"Charging station site · slot {slot}" : $"Charging station · slot {slot}";
-                placedAngles.text = "Charges robots from the grid";
-                placedNumbers.text = siteLine + "Robots below 20 % come here to charge. Faster than a battery yard, " +
-                                     "and more robots at once (placeholder values).";
+                placedAngles.text = "Charges robots below 20 %";
+                placedNumbers.text = siteLine.TrimEnd('\n');
                 Show(placedBonus, false);
                 return;
             }
             if (hasPanel && placer.SelectedBuilding == BuildingType.Workshop)
             {
                 placedTitle.text = isSite ? $"Robot Workshop site · slot {slot}" : $"Robot Workshop · slot {slot}";
-                placedAngles.text = "Makes robots, upgrades and refined materials";
-                placedNumbers.text = siteLine + "Order jobs in the Robots panel (G). Each Workshop works one job at a time, " +
-                                     "and a robot has to work there.";
+                placedAngles.text = "Robots, upgrades, refining · Manufacturing (U)";
+                placedNumbers.text = siteLine.TrimEnd('\n');
                 Show(placedBonus, false);
                 return;
             }
@@ -376,7 +417,7 @@ namespace KardashevAscent.Presentation.UI
             {
                 placedTitle.text = isSite ? $"Battery yard site · slot {slot}" : $"Battery yard · slot {slot}";
                 placedAngles.text = $"Stores {Format.Energy(placer.BatteryUnitWh)}";
-                placedNumbers.text = siteLine + "Charges from surplus by day and carries the colony through the night.";
+                placedNumbers.text = siteLine.TrimEnd('\n');
                 Show(placedBonus, false);
                 return;
             }
@@ -424,21 +465,11 @@ namespace KardashevAscent.Presentation.UI
                 plannerTitle.text = (panelMode ? $"Plan a {placer.NewPanelName} · slot {slot}" : $"Plan a {thing} · slot {slot}") + covers;
                 placeButton.text = $"Place {thing} (P)";
             }
-            batteryText.text = researchMode
-                ? $"Takes {placer.BuildBill.Describe()}. Robots measure the planet's solar values and run experiments here " +
-                  "(air pressure, water's boiling point, surface temperature, gravity). Open Research (T) to order them."
-                : relayMode
-                ? $"Takes {placer.BuildBill.Describe()}. Extends the colony network " +
-                  $"{KardashevAscent.Simulation.Robots.ColonyNetwork.RangeTiles} tiles around it, so robots working out there stay connected. " +
-                  "Draws a little grid power; the Network window (N) shows the coverage."
-                : stationMode
-                ? $"Takes {placer.BuildBill.Describe()}. Charges robots from the grid, faster than a " +
-                  "battery yard and more at once. Build one near where robots work: they drive to the nearest charger."
-                : workshopMode
-                ? $"Takes {placer.BuildBill.Describe()}. Makes new robots, upgrades, and aluminium " +
-                  "or sodium from rock. Order jobs in the Robots panel (G)."
-                : $"Stores {Format.Energy(placer.BatteryUnitWh)}: charges from surplus by day, " +
-                  "carries the colony through the night so it can keep growing.";
+            batteryText.text = researchMode ? "Measures & experiments · Research (T)"
+                : relayMode ? $"Network +{KardashevAscent.Simulation.Robots.ColonyNetwork.RangeTiles} tiles · needs grid power"
+                : stationMode ? "Charges robots · build it near their work"
+                : workshopMode ? "Robots, upgrades, refining · Manufacturing (U)"
+                : $"Stores {Format.Energy(placer.BatteryUnitWh)} for the night";
             tiltLabel.text = $"Tilt β  {placer.TiltDeg:0}°  (0° flat, 90° upright)";
             facingLabel.text = $"Facing γ  {placer.AzimuthDeg:0}° {Compass(placer.AzimuthDeg)}";
 
@@ -453,8 +484,7 @@ namespace KardashevAscent.Presentation.UI
             if (!placer.BestAngleUnlocked)
             {
                 // Measuring matters: no angle advice until the colony knows where on the planet it is.
-                plannerBest.text = "Best angle: unknown until you know this place's latitude φ.\n" +
-                                   "Press V for the sky view and measure the noon sun (or the celestial pole at night).";
+                plannerBest.text = "Best angle: ? · measure your latitude (V)";
                 bestButton.SetEnabled(true);
             }
             else if (placer.TryGetBest(out PanelAngles best))
@@ -479,10 +509,13 @@ namespace KardashevAscent.Presentation.UI
             int count = multi ? empty : 1;
             KardashevAscent.Simulation.Resources.MaterialBill cost = placer.BuildBill.Times(count);
             KardashevAscent.Simulation.Resources.MaterialBill missing = cost.Minus(placer.Stock);
-            Show(plannerCost, count > 0 && !blocked);
-            plannerCost.text = missing.IsEmpty
-                ? $"Takes {cost.Describe()} · in stock; a robot brings it"
-                : $"Takes {cost.Describe()} · short of {missing.Describe()}: the site waits until it is mined or refined";
+            Show(plannerCostRow, count > 0 && !blocked);
+            string costShape = cost.Describe() + "|" + missing.Describe();
+            if (costShape != plannerCostShape)
+            {
+                plannerCostShape = costShape;
+                MaterialChips.Fill(plannerCostRow, cost, placer.Stock);
+            }
         }
 
         void UpdateLegend()
