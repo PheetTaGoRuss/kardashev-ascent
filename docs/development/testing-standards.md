@@ -18,7 +18,7 @@ What gets tested, how, and what "done" means for a change. Sections 1–2 descri
 
 ## 2. Running the tests
 
-**In Unity (authoritative):** Window → General → Test Runner → EditMode → Run All. An AI developer with the Unity MCP connection runs the same tests through it.
+**In Unity (authoritative):** Window → General → Test Runner → EditMode → Run All. The Unity MCP connection can run the same tests through it when available.
 
 **Inside Unity from a script:** the editor driver (`Assets/_Project/Scripts/Editor/DevDriver.cs`) runs every EditMode test when sent `tests`, and writes `TESTS passed=… failed=…` to `Temp/dev-driver.log` (803 pass on 2026-11-13).
 
