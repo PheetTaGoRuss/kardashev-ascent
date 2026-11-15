@@ -27,15 +27,39 @@ namespace KardashevAscent.Simulation.Robots
         readonly HexSphere sphere;
         readonly PlanetSurface surface;
         readonly Dictionary<int, (double[] Hours, int[] Previous)> cache = new Dictionary<int, (double[], int[])>();
+        /// <summary>Barrier tiles the colony has opened (tunnel, blasting, bridge); shared with <see cref="Amphibious"/>.</summary>
+        readonly HashSet<int> opened;
 
         /// <param name="onWater">Routes for a robot with a boat module: open water can be crossed too.</param>
         public RouteFinder(HexSphere sphere, PlanetSurface surface, double gravityMs2 = EarthGravity, bool onWater = false)
+            : this(sphere, surface, gravityMs2, onWater, new HashSet<int>()) { }
+
+        RouteFinder(HexSphere sphere, PlanetSurface surface, double gravityMs2, bool onWater, HashSet<int> opened)
         {
             this.sphere = sphere ?? throw new ArgumentNullException(nameof(sphere));
             this.surface = surface ?? throw new ArgumentNullException(nameof(surface));
             GravityMs2 = gravityMs2 > 0.0 ? gravityMs2 : EarthGravity;
             OnWater = onWater;
+            this.opened = opened;
         }
+
+        /// <summary>
+        /// True when robots can drive across this tile. A barrier (mountain, canyon: <see cref="Terrains.IsBarrier"/>)
+        /// only once it is opened; robots can still drive up to one, onto its edge, to work there.
+        /// </summary>
+        public bool IsPassable(int tile) => !Terrains.IsBarrier(surface.Terrain[tile]) || opened.Contains(tile);
+
+        /// <summary>Open (or close) a barrier tile for driving across it. Routes are worked out again.</summary>
+        public void SetOpened(int tile, bool open)
+        {
+            bool changed = open ? opened.Add(tile) : opened.Remove(tile);
+            if (!changed) return;
+            cache.Clear();
+            amphibious?.cache.Clear();
+        }
+
+        public bool IsOpened(int tile) => opened.Contains(tile);
+        public IEnumerable<int> Opened => opened;
 
         public double GravityMs2 { get; }
 
@@ -46,7 +70,7 @@ namespace KardashevAscent.Simulation.Robots
 
         /// <summary>The same planet's routes for a robot that can go on water (made once, then kept).</summary>
         public RouteFinder Amphibious() =>
-            OnWater ? this : amphibious ?? (amphibious = new RouteFinder(sphere, surface, GravityMs2, true));
+            OnWater ? this : amphibious ?? (amphibious = new RouteFinder(sphere, surface, GravityMs2, true, opened));
 
         /// <summary>
         /// Hours to cross a tile of open water with a boat module (game rule, TBD): shallow sea 1.5 flat tiles, deep
@@ -74,7 +98,8 @@ namespace KardashevAscent.Simulation.Robots
                 case TerrainType.DeepOcean:
                 case TerrainType.ShallowOcean: return double.PositiveInfinity;
                 case TerrainType.Highland: return FlatHopHours * 1.5;
-                case TerrainType.Mountain: return FlatHopHours * 2.5;
+                case TerrainType.Mountain: return FlatHopHours * 2.5;   // through a tunnel or a blasted pass
+                case TerrainType.Canyon: return FlatHopHours * 1.5;     // across its bridge
                 case TerrainType.Wetland: return FlatHopHours * 2.0;
                 case TerrainType.Forest: return FlatHopHours * 1.4;
                 case TerrainType.VolcanicRock: return FlatHopHours * 1.8;
@@ -141,6 +166,9 @@ namespace KardashevAscent.Simulation.Robots
                 var (h, t) = heap.Min;
                 heap.Remove(heap.Min);
                 if (h > hours[t]) continue;
+                // A closed barrier is a dead end: robots reach its edge but don't drive on across it (a start is fine:
+                // a robot working there drives back out).
+                if (h > 0.0 && !IsPassable(t)) continue;
                 foreach (int nb in sphere.Neighbors[t])
                 {
                     double step = Hop(surface.Terrain[nb]);

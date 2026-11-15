@@ -311,8 +311,10 @@ namespace KardashevAscent.Presentation.UI
 
             // Panel-only controls hide while building batteries.
             bool panelMode = !siteOpen || PanelPlacer.IsPanel(placer.Mode);
-            foreach (VisualElement e in new VisualElement[] { tiltLabel, tilt, facingLabel, facing, plannerBest, bestButton })
+            foreach (VisualElement e in new VisualElement[] { tiltLabel, tilt, facingLabel, facing, bestButton })
                 Show(e, panelMode);
+            // One place decides the best-angle line (it blinked when two did: director 2026-11-15).
+            Show(plannerBest, panelMode && !plannerBlocked);
             Show(batteryText, !panelMode);
             Show(reangleButton, panelMode);
             modePanel.EnableInClassList("selected", panelMode && (!siteOpen || placer.Mode == BuildMode.SolarPanel));
@@ -351,6 +353,9 @@ namespace KardashevAscent.Presentation.UI
             if (mapOn)
                 UpdateLegend();
         }
+
+        /// <summary>The planned building can't go where it is planned (the last finished preview said so).</summary>
+        bool plannerBlocked;
 
         void UpdateSite(int slot, bool hasPanel, bool multi)
         {
@@ -479,10 +484,12 @@ namespace KardashevAscent.Presentation.UI
             facingLabel.text = $"Facing γ  {placer.AzimuthDeg:0}° {Compass(placer.AzimuthDeg)}";
 
             PanelPreview preview = placer.Preview;
-            bool blocked = !preview.CanPlace && !placer.PreviewPending;
+            // While a new preview is being worked out, keep what was shown (no blink between "can't" and the numbers).
+            if (!placer.PreviewPending)
+                plannerBlocked = !preview.CanPlace;
+            bool blocked = plannerBlocked;
             Show(plannerReason, blocked);
             Show(plannerNumbers, !blocked && panelMode);
-            Show(plannerBest, !blocked && panelMode);
             plannerReason.text = blocked ? $"Can't build here: {preview.Reason}" : "";
             plannerNumbers.text = Numbers(preview);
 

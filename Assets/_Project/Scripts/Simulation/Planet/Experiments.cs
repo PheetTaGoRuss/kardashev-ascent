@@ -6,7 +6,7 @@ namespace KardashevAscent.Simulation.Planet
     /// The experiments a Research Station runs to learn what is safe and doable on this planet (director 2026-11-14).
     /// Saved as integers: append new members at the end only.
     /// </summary>
-    public enum ExperimentKind { AirPressure, BoilingPoint, SurfaceTemperature, Gravity }
+    public enum ExperimentKind { AirPressure, BoilingPoint, SurfaceTemperature, Gravity, SeismicSurvey }
 
     /// <summary>
     /// The physics behind each experiment, and what each one needs. Sources are in
@@ -15,7 +15,7 @@ namespace KardashevAscent.Simulation.Planet
     public static class Experiments
     {
         public static readonly ExperimentKind[] All =
-            { ExperimentKind.AirPressure, ExperimentKind.BoilingPoint, ExperimentKind.SurfaceTemperature, ExperimentKind.Gravity };
+            { ExperimentKind.AirPressure, ExperimentKind.BoilingPoint, ExperimentKind.SurfaceTemperature, ExperimentKind.Gravity, ExperimentKind.SeismicSurvey };
 
         /// <summary>Standard atmosphere at sea level, Pa (ISO 2533 / US Standard Atmosphere 1976).</summary>
         public const double StandardPressurePa = 101_325.0;
@@ -39,6 +39,7 @@ namespace KardashevAscent.Simulation.Planet
                 case ExperimentKind.AirPressure: return "Air pressure";
                 case ExperimentKind.BoilingPoint: return "Water boiling point";
                 case ExperimentKind.SurfaceTemperature: return "Surface temperature";
+                case ExperimentKind.SeismicSurvey: return "Seismic survey";
                 default: return "Gravity";
             }
         }
@@ -51,6 +52,7 @@ namespace KardashevAscent.Simulation.Planet
                 case ExperimentKind.AirPressure: return "A barometer reading of the air's weight. Needed before water can be boiled.";
                 case ExperimentKind.BoilingPoint: return "Heat water in the lab at this air pressure. Says whether water stays liquid here: floating builds, cooling, steam.";
                 case ExperimentKind.SurfaceTemperature: return "Log the ground's coldest and warmest months. Says whether batteries and machines are safe here.";
+                case ExperimentKind.SeismicSurvey: return "Thump the ground and time the echoes from deep rock layers (a reflection survey, as oil and mining geologists do). Finds deep ore: rare earths in mountains, canyons and caves.";
                 default: return "Time a 1 m pendulum's swing. Gravity sets how hard robots work to drive and how tall things can stand.";
             }
         }
@@ -63,12 +65,26 @@ namespace KardashevAscent.Simulation.Planet
                 case ExperimentKind.AirPressure: return 4.0;
                 case ExperimentKind.BoilingPoint: return 8.0;
                 case ExperimentKind.SurfaceTemperature: return 24.0;
+                case ExperimentKind.SeismicSurvey: return 16.0;
                 default: return 4.0;
             }
         }
 
         /// <summary>The experiment that has to be done first, or null.</summary>
-        public static ExperimentKind? Needs(ExperimentKind k) => k == ExperimentKind.BoilingPoint ? ExperimentKind.AirPressure : (ExperimentKind?)null;
+        /// <remarks>
+        /// The seismic survey needs gravity first: rock density from the echoes and the planet's g together say what lies
+        /// below (gravity and seismic surveys are read together in exploration geophysics). Game rule.
+        /// </remarks>
+        public static ExperimentKind? Needs(ExperimentKind k) =>
+            k == ExperimentKind.BoilingPoint ? ExperimentKind.AirPressure
+            : k == ExperimentKind.SeismicSurvey ? ExperimentKind.Gravity
+            : (ExperimentKind?)null;
+
+        /// <summary>
+        /// Every experiment needs the Research Station's tile surveyed first (director 2026-11-15): the lab's instruments
+        /// stand on bedrock the survey has cored, and the seismic survey starts from those cores. Game rule.
+        /// </summary>
+        public const bool NeedsSurveyedStation = true;
 
         // ---- physics ----
 

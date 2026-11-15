@@ -79,6 +79,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             for (int t = 0; t < hours.Length; t++)
                 if (Surface.Terrain[t] == TerrainType.ShallowOcean && (sea < 0 || hours[t] < hours[sea])) sea = t;
             Assert.IsTrue(double.IsInfinity(sim.Routes.HoursFrom(sim.BaseTileId)[sea]), "no land route onto the sea");
+            foreach (var (m, kg) in sim.BuildBill(BuildingType.FloatingSolar).Items()) sim.Materials.Add(m, kg);
             Assert.IsTrue(sim.PlaceFloatingPanel(sea, 0, 0.3, Math.PI));
             for (int i = 0; i < 100; i++) sim.Tick(0.5);
             Assert.IsTrue(sim.IsUnderConstruction(sea, 0), "robots without a boat can't reach the sea");

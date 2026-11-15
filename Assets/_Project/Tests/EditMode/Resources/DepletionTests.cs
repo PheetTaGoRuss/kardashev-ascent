@@ -36,7 +36,11 @@ namespace KardashevAscent.Simulation.Tests.Resources
             for (int t = 0; t < map.TileCount; t++)
                 foreach (Deposit d in map.At(t))
                     if (!map.IsEndless(t, d.Material))
-                        Assert.AreEqual(d.Grade * DepositMap.ReserveKgAtGrade1(d.Material), map.ReserveKg(t, d.Material), 1e-6);
+                    {
+                        // Ore deep in a mountain or canyon holds more (director 2026-11-15).
+                        double deep = DepositMap.IsDeepGround(Wet.Terrain[t]) && d.Material != Material.Rock ? DepositMap.DeepReserveFactor : 1.0;
+                        Assert.AreEqual(d.Grade * DepositMap.ReserveKgAtGrade1(d.Material) * deep, map.ReserveKg(t, d.Material), 1e-6);
+                    }
             Assert.Greater(DepositMap.ReserveKgAtGrade1(Material.Rock), DepositMap.ReserveKgAtGrade1(Material.Iron));
             Assert.Greater(DepositMap.ReserveKgAtGrade1(Material.Iron), DepositMap.ReserveKgAtGrade1(Material.Copper));
             Assert.Greater(DepositMap.ReserveKgAtGrade1(Material.Copper), DepositMap.ReserveKgAtGrade1(Material.Lithium));
@@ -116,7 +120,7 @@ namespace KardashevAscent.Simulation.Tests.Resources
             double mined = a.Deposits.MinedKg(t, Material.Rock);
             Assert.Greater(mined, 0.0);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(32, state.Version);
+            Assert.AreEqual(SimulationState.CurrentVersion, state.Version);
 
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));

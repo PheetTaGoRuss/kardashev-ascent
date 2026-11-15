@@ -51,6 +51,20 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>True once at least one Research Station is finished.</summary>
         public bool HasResearchStation => FinishedStationTile(-1) >= 0;
 
+        /// <summary>A tile with a finished Research Station that has been surveyed (experiments run there); -1 if none.</summary>
+        public int SurveyedStationTile(int preferTile)
+        {
+            int any = -1;
+            foreach (var s in researchStations)
+            {
+                if (Build.QueueCount > 0 && Build.IsQueued(s.Tile, s.Slot)) continue;
+                if (!Deposits.IsSurveyed(s.Tile)) continue;
+                if (s.Tile == preferTile) return s.Tile;
+                if (any < 0 || s.Tile < any) any = s.Tile;
+            }
+            return any;
+        }
+
         /// <summary>A tile with a finished Research Station: <paramref name="preferTile"/> when it has one, else the first; -1 when none.</summary>
         public int FinishedStationTile(int preferTile)
         {
@@ -96,6 +110,8 @@ namespace KardashevAscent.Simulation.Game
                 return "Done.";
             if (!HasResearchStation)
                 return "Build a Research Station first.";
+            if (SurveyedStationTile(-1) < 0)
+                return "Survey the Research Station's tile first.";
             ExperimentKind? first = Experiments.Needs(kind);
             if (first.HasValue && !IsExperimentKnown(first.Value))
                 return $"Needs {Experiments.Name(first.Value).ToLowerInvariant()} first.";
@@ -106,7 +122,7 @@ namespace KardashevAscent.Simulation.Game
         {
             if (ExperimentBlocker(kind) != null || IsExperimentOrdered(kind))
                 return false;
-            experimentOrders.Add((kind, FinishedStationTile(preferTile < 0 ? BaseTileId : preferTile)));
+            experimentOrders.Add((kind, SurveyedStationTile(preferTile < 0 ? BaseTileId : preferTile)));
             Settle(null);
             return true;
         }
@@ -153,6 +169,7 @@ namespace KardashevAscent.Simulation.Game
                 experimentOrders.Remove(o);
                 Workforce.Release(t);
                 knownExperiments.Add(o.Kind);
+                if (o.Kind == ExperimentKind.SeismicSurvey) Deposits.DeepScanned = true;
                 ExperimentDone?.Invoke(o.Kind);
             }
         }
@@ -199,6 +216,14 @@ namespace KardashevAscent.Simulation.Game
                     return double.IsNaN(boil)
                         ? "Water can't be liquid here: the air is below water's triple point (0.61 kPa), so ice turns straight to vapour."
                         : $"Water boils at {boil:0.#} °C here.";
+                }
+                case ExperimentKind.SeismicSurvey:
+                {
+                    int deep = 0;
+                    foreach (int t in Deposits.Surveyed)
+                        if (Deposits.GradeOf(t, Resources.Material.RareEarth) > 0.0) deep++;
+                    return deep > 0 ? $"Deep ore shows on surveyed tiles: rare earths on {deep} so far. Survey mountains, canyons and caves for more."
+                                    : "Deep ore now shows on surveyed tiles. None yet: survey mountains, canyons and caves.";
                 }
                 case ExperimentKind.SurfaceTemperature:
                 {
@@ -305,7 +330,11 @@ namespace KardashevAscent.Simulation.Game
             }
         }
 
-        internal void LearnExperimentForTests(ExperimentKind kind) => knownExperiments.Add(kind);
+        internal void LearnExperimentForTests(ExperimentKind kind)
+        {
+            knownExperiments.Add(kind);
+            if (kind == ExperimentKind.SeismicSurvey) Deposits.DeepScanned = true;
+        }
 
         // ---- save ----
 
@@ -330,6 +359,7 @@ namespace KardashevAscent.Simulation.Game
                 foreach (ExperimentOrderRecord o in state.ExperimentOrders)
                     if (o.Tile >= 0 && o.Tile < TileCount && !knownExperiments.Contains(o.Kind) && !IsExperimentOrdered(o.Kind))
                         experimentOrders.Add((o.Kind, o.Tile));
+            Deposits.DeepScanned = knownExperiments.Contains(ExperimentKind.SeismicSurvey);
         }
     }
 }

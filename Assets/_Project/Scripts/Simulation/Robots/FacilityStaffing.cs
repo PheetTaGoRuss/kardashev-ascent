@@ -26,6 +26,7 @@ namespace KardashevAscent.Simulation.Robots
             {
                 case TaskKind.Manufacture: return WorkshopCapacity;
                 case TaskKind.Mine: return MineSiteCapacity;
+                case TaskKind.Excavate: return Resources.Passages.CrewCapacity;
                 default: return 1;
             }
         }

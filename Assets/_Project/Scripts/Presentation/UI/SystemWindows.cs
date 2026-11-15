@@ -321,7 +321,7 @@ namespace KardashevAscent.Presentation.UI
     public sealed class ResearchWindow : SystemWindow
     {
         // Wide enough for the puzzle cards' bigger text, steps and worked examples (director 2026-11-14).
-        protected override float Width => 640f;
+        protected override float Width => 680f;   // the research tree: three columns of nodes
         public override string Id => "research";
         public override string Title => "Research";
         public override KeyCode Key => KeyCode.T;
@@ -330,8 +330,6 @@ namespace KardashevAscent.Presentation.UI
         const string TutorialSeenKey = "kardashev.tutorial.measuring";
 
         Label where, total, puzzleHead, solvedText, totalKnown, stationNote, marginNote;
-        readonly Dictionary<KardashevAscent.Simulation.Planet.ExperimentKind, (Label Status, Label Result, Button Go)> experimentRows =
-            new Dictionary<KardashevAscent.Simulation.Planet.ExperimentKind, (Label, Label, Button)>();
         VisualElement totalFill;
         VisualElement puzzles, tutorial;
         Label tutorialStep, tutorialText, tutorialCount;
@@ -434,34 +432,22 @@ namespace KardashevAscent.Presentation.UI
                 buttons[p] = b;
             }
 
-            // Experiments: what is safe and doable on this planet.
+            // Experiments as a research tree (director 2026-11-15): survey the station's tile, then each experiment
+            // after the one it needs.
             Heading("EXPERIMENTS · WHAT'S SAFE HERE");
-            foreach (var k in KardashevAscent.Simulation.Planet.Experiments.All)
-            {
-                var kind = k;
-                var row = new VisualElement();
-                row.style.flexDirection = FlexDirection.Row;
-                row.style.alignItems = Align.Center;
-                row.style.marginTop = 6;
-                var mid = new VisualElement();
-                mid.style.flexGrow = 1; mid.style.flexShrink = 1;
-                Label expName = Label(KardashevAscent.Simulation.Planet.Experiments.Name(k), "robot-name");
-                mid.Add(expName);
-                InfoTip.After(expName, KardashevAscent.Simulation.Planet.Experiments.What(k));   // details behind "i"
-                Label st = Label("", "job-text");
-                mid.Add(st);
-                Label result = Label("", "job-text");
-                result.AddToClassList("wrap");
-                result.style.color = UiPalette.Good;
-                mid.Add(result);
-                row.Add(mid);
-                Button go = MakeButton("►", () => ToggleExperiment(kind));
-                go.style.width = 34;
-                go.style.marginLeft = 8;
-                row.Add(go);
-                Body.Add(row);
-                experimentRows[k] = (st, result, go);
-            }
+            tree = new ResearchTreeView(ToggleExperiment, ToggleStationSurvey);
+            Body.Add(tree);
+        }
+
+        ResearchTreeView tree;
+
+        void ToggleStationSurvey()
+        {
+            if (lastSim == null) return;
+            int station = lastSim.FinishedStationTile(Tile(lastSim));
+            if (station < 0) return;
+            if (lastSim.IsSurveyOrdered(station)) lastSim.CancelSurvey(station);
+            else lastSim.OrderSurvey(station);
         }
 
         void ToggleExperiment(KardashevAscent.Simulation.Planet.ExperimentKind k)
@@ -678,22 +664,7 @@ namespace KardashevAscent.Presentation.UI
             double design = sim.SolarDesignShare, battery = sim.BatteryUsableShare;
             marginNote.text = $"Margins · panels {design * 100.0:0} % · batteries {battery * 100.0:0} %";
 
-            foreach (var kv in experimentRows)
-            {
-                var k = kv.Key;
-                bool knownK = sim.IsExperimentKnown(k), orderedK = sim.IsExperimentOrdered(k);
-                string blockerK = knownK || orderedK ? null : sim.ExperimentBlocker(k);
-                kv.Value.Status.text = knownK ? "● done"
-                    : orderedK ? $"● running {sim.ExperimentProgress(k) * 100.0:0} % · {KardashevAscent.Simulation.Planet.Experiments.WorkHours(k):0} h of robot work"
-                    : blockerK != null ? "○ " + blockerK
-                    : $"○ not done · {KardashevAscent.Simulation.Planet.Experiments.WorkHours(k):0} h of robot work";
-                kv.Value.Status.style.color = knownK ? UiPalette.Good : orderedK ? UiPalette.Accent : UiPalette.Muted;
-                kv.Value.Result.text = sim.ExperimentResult(k) ?? "";
-                kv.Value.Result.style.display = knownK ? DisplayStyle.Flex : DisplayStyle.None;
-                kv.Value.Go.text = orderedK ? "■" : "►";
-                kv.Value.Go.tooltip = orderedK ? "Stop the experiment" : blockerK ?? "Send a robot to run it at the Research Station";
-                kv.Value.Go.SetEnabled(!knownK && (orderedK || blockerK == null));
-            }
+            tree?.Refresh(sim);
         }
     }
 

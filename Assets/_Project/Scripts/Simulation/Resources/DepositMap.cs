@@ -47,6 +47,41 @@ namespace KardashevAscent.Simulation.Resources
         /// <summary>Tiles whose water is pumped from the sea next to them (no ice): it does not run out.</summary>
         readonly bool[] seaWater;
         readonly Dictionary<(int Tile, Material Material), double> mined = new Dictionary<(int, Material), double>();
+        readonly bool[] caves;
+
+        /// <summary>Share of mountain, canyon and volcanic tiles with a cave (karst or a lava tube). Game rule, TBD.</summary>
+        public const double CaveShare = 0.2;
+
+        /// <summary>
+        /// Ore in a mountain or a canyon is reached deep in the rock (tunnel walls, canyon walls cut through the layers),
+        /// so its deposits hold this many times as much (director 2026-11-15: "good amount of ore"). Game rule, TBD.
+        /// </summary>
+        public const double DeepReserveFactor = 3.0;
+
+        /// <summary>
+        /// Rare earths: carbonatites and alkaline intrusions form in continental rifts (the East African Rift has many) and
+        /// sit deep in old igneous mountains (Mountain Pass, California; Bayan Obo, China). Stand-in: canyons (rifts),
+        /// mountains, volcanic rock; a cave doubles the chance (it reaches deeper rock). Shares are game rules, TBD.
+        /// </summary>
+        public const double RareEarthCanyonShare = 0.4, RareEarthMountainShare = 0.15, RareEarthVolcanicShare = 0.1;
+
+        /// <summary>True once the colony has a seismic survey: deep ore (rare earths) shows on surveyed tiles.</summary>
+        public bool DeepScanned { get; set; }
+
+        /// <summary>A cave on this tile (whether or not the colony knows it: it shows after a survey).</summary>
+        public bool HasCave(int tile) => caves[tile];
+
+        /// <summary>Deep ore: hidden until a seismic survey.</summary>
+        public static bool IsDeep(Material m) => m == Material.RareEarth;
+
+        /// <summary>The deposits the colony can see on a tile: rock always, the rest once surveyed, deep ore after a seismic survey too.</summary>
+        public List<Deposit> Known(int tile)
+        {
+            var list = new List<Deposit>();
+            foreach (Deposit d in deposits[tile])
+                if (IsKnown(tile, d.Material)) list.Add(d);
+            return list;
+        }
 
         /// <summary>
         /// What a grade-1 deposit holds within reach of the colony's robots on one tile, kg (director 2026-11-15:
@@ -63,6 +98,7 @@ namespace KardashevAscent.Simulation.Resources
                 case Material.Water: return 50_000.0;
                 case Material.Copper: return 3_000.0;
                 case Material.Lithium: return 500.0;
+                case Material.RareEarth: return 200.0;
                 default: return 0.0;
             }
         }
@@ -74,10 +110,14 @@ namespace KardashevAscent.Simulation.Resources
             Chemistry = chemistry;
             deposits = new List<Deposit>[sphere.TileCount];
             seaWater = new bool[sphere.TileCount];
+            caves = new bool[sphere.TileCount];
+            for (int t = 0; t < sphere.TileCount; t++)
+                caves[t] = IsDeepGround(surface.Terrain[t]) && Hash01(seed, t, 11) < CaveShare;
+            terrainOf = surface.Terrain;
             int[] toSea = SeaDistance(sphere, surface);
             for (int t = 0; t < sphere.TileCount; t++)
             {
-                deposits[t] = Generate(sphere, surface, chemistry, seed, t, toSea[t]);
+                deposits[t] = Generate(sphere, surface, chemistry, seed, t, toSea[t], caves[t]);
                 TerrainType here = surface.Terrain[t];
                 seaWater[t] = !Terrains.IsWater(here) && !IsIceGround(here) && GradeOf(t, Material.Water) > 0.0;
             }
@@ -91,7 +131,8 @@ namespace KardashevAscent.Simulation.Resources
         {
             double grade = GradeOf(tile, m);
             if (grade <= 0.0) return 0.0;
-            return IsEndless(tile, m) ? double.PositiveInfinity : grade * ReserveKgAtGrade1(m);
+            if (IsEndless(tile, m)) return double.PositiveInfinity;
+            return grade * ReserveKgAtGrade1(m) * (IsDeepGround(terrainOf[tile]) && m != Material.Rock ? DeepReserveFactor : 1.0);
         }
 
         /// <summary>Mined from this tile so far, kg.</summary>
@@ -165,7 +206,12 @@ namespace KardashevAscent.Simulation.Resources
         }
 
         /// <summary>True if the player can see this material on this tile: rock always, the rest once surveyed.</summary>
-        public bool IsKnown(int tile, Material m) => m == Material.Rock || IsSurveyed(tile);
+        public bool IsKnown(int tile, Material m) => m == Material.Rock || (IsSurveyed(tile) && (!IsDeep(m) || DeepScanned));
+
+        readonly TerrainType[] terrainOf;
+
+        /// <summary>Ground whose ore lies deep: mountains, canyons, volcanic rock (rare earths, caves, bigger deposits).</summary>
+        public static bool IsDeepGround(TerrainType t) => t == TerrainType.Mountain || t == TerrainType.Canyon || t == TerrainType.VolcanicRock;
 
         /// <summary>Tiles from each tile to the nearest sea (open or frozen); int.MaxValue on a planet without seas.</summary>
         static int[] SeaDistance(HexSphere sphere, PlanetSurface surface)
@@ -207,7 +253,7 @@ namespace KardashevAscent.Simulation.Resources
         /// <summary>Ground counted as "high" next to a lithium basin.</summary>
         public static bool IsHighNeighbour(TerrainType t) => IsCopperGround(t);
 
-        static List<Deposit> Generate(HexSphere sphere, PlanetSurface surface, PlanetChemistry chem, int seed, int t, int tilesToSea)
+        static List<Deposit> Generate(HexSphere sphere, PlanetSurface surface, PlanetChemistry chem, int seed, int t, int tilesToSea, bool cave)
         {
             var list = new List<Deposit>();
             TerrainType here = surface.Terrain[t];
@@ -246,6 +292,13 @@ namespace KardashevAscent.Simulation.Resources
             bool low = IsLithiumGround(here);
             if (chem.WaterHistory && low && !waterNeighbour && highNeighbour && Hash01(seed, t, 5) < LithiumShare)
                 list.Add(new Deposit(Material.Lithium, chem.MetalFactor * Vary(seed, t, 6)));
+
+            // Rare earths: deep in rifts, old igneous mountains and alkaline volcanic rock; a cave reaches deeper.
+            double ree = here == TerrainType.Canyon ? RareEarthCanyonShare
+                       : here == TerrainType.Mountain ? RareEarthMountainShare
+                       : here == TerrainType.VolcanicRock ? RareEarthVolcanicShare : 0.0;
+            if (ree > 0.0 && Hash01(seed, t, 9) < ree * (cave ? 2.0 : 1.0))
+                list.Add(new Deposit(Material.RareEarth, chem.MetalFactor * Vary(seed, t, 10)));
             return list;
         }
 

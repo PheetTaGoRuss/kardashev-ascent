@@ -79,7 +79,13 @@ namespace KardashevAscent.Presentation.Planet
         public BuildMode Mode
         {
             get => mode;
-            set => mode = value;
+            set
+            {
+                if (value == mode) return;
+                mode = value;
+                previewDirty = true;   // land and floating panels are checked differently
+                lastPreviewTime = float.NegativeInfinity;
+            }
         }
 
         bool dragging;
@@ -294,6 +300,8 @@ namespace KardashevAscent.Presentation.Planet
         }
 
         /// <summary>Follow one simulation's "site finished" event (and stop following the last one).</summary>
+        void OnPassageOpened(int tile, KardashevAscent.Simulation.Resources.PassageKind kind) => padsDirty = true;
+
         void Listen(IPlanetSimulation sim)
         {
             if (listeningTo == sim)
@@ -301,12 +309,14 @@ namespace KardashevAscent.Presentation.Planet
             if (listeningTo != null)
             {
                 listeningTo.BuildingCompleted -= OnBuildingCompleted;
+                listeningTo.PassageOpened -= OnPassageOpened;
                 listeningTo.BuildingSalvaged -= RemoveVisual;
                 listeningTo.PanelAdjusted -= RefreshPanel;
             }
             listeningTo = sim;
             if (listeningTo != null)
             {
+                listeningTo.PassageOpened += OnPassageOpened;
                 listeningTo.BuildingCompleted += OnBuildingCompleted;
                 listeningTo.BuildingSalvaged += RemoveVisual;
                 listeningTo.PanelAdjusted += RefreshPanel;
@@ -680,7 +690,7 @@ namespace KardashevAscent.Presentation.Planet
             }
 
             if (tile >= 0 && ScreenInput.KeyDown(KeyCode.Tab))
-                mode = mode == BuildMode.SolarPanel ? BuildMode.Battery : mode == BuildMode.Battery ? BuildMode.Workshop
+                Mode = mode == BuildMode.SolarPanel ? BuildMode.Battery : mode == BuildMode.Battery ? BuildMode.Workshop
                      : mode == BuildMode.Workshop ? BuildMode.ChargingStation
                      : mode == BuildMode.ChargingStation ? BuildMode.Relay
                      : mode == BuildMode.Relay ? BuildMode.ResearchStation
@@ -750,6 +760,7 @@ namespace KardashevAscent.Presentation.Planet
                     share[kv.Key] = Mathf.Clamp01(kv.Value / (float)total);
             }
             planet.SetBuiltShare(share);
+            planet.SetPassages(simulation.OpenedPassages);
         }
 
         bool SlotHasPanel => placed.ContainsKey((tile, Anchor(tile, slot)));
