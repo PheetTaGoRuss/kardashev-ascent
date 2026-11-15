@@ -24,7 +24,7 @@ Speakers A, B and C are placeholders: share the parts so each member speaks at l
 
 ### 0:00–0:40 · Speaker A · Slide 1 (title), faces on camera
 
-"Hello! We are team [TEAM NAME] from Bangkok: I'm [A], with [B] and [C]. Our project for the NASA Space Apps
+"Hello! We are team GIE from Bangkok: I'm [A], with [B] and [C]. Our project for the NASA Space Apps
 Challenge 2026 is **Kardashev Ascent**, for the challenge *Space Mission Design Game*. It's a game where you run a
 robotic mission on a real exoplanet, with real physics and real NASA data."
 
@@ -101,8 +101,8 @@ The screenshots in `docs/submission/images/` can be used directly.
 
 ```
 Project name: Kardashev Ascent
-Team name: [TEAM NAME]
-Team members: [Full name 1], [Full name 2], [Full name 3]
+Team name: GIE
+Team members: Kiattiyot Sinprasom, Puwanantorn Lertpoonsawat, Methapat Khamkanya
 Challenge: Space Mission Design Game
 Presentation video: [public YouTube/Drive link]
 Photos and videos: [public Drive folder link]

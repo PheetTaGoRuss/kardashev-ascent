@@ -16,8 +16,8 @@ ACCENT = HexColor("#ffc75c")
 TEXT = HexColor("#ececee")
 MUTED = HexColor("#a6a6ab")
 
-TEAM = "[TEAM NAME]"
-MEMBERS = "[Member 1] · [Member 2] · [Member 3]"
+TEAM = "GIE"
+MEMBERS = "Kiattiyot Sinprasom · Puwanantorn Lertpoonsawat · Methapat Khamkanya"
 
 c = canvas.Canvas(OUT, pagesize=(W, H))
 c.setTitle("Kardashev Ascent - NASA Space Apps 2026 demo")
