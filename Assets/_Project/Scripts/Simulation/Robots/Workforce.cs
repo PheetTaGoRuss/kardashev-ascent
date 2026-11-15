@@ -248,6 +248,9 @@ namespace KardashevAscent.Simulation.Robots
                 return true;
             double speed = r.Attribute(RobotAttribute.Speed);
             double go = Movement.RoutesFor(r).HoursBetween(r.Tile, t.Tile) / speed;
+            if (!Movement.HasCharger)
+                // No charger anywhere: nothing to keep charge for; it goes while it has charge to get there.
+                return !double.IsInfinity(go) && Movement.EnergyWh(go) <= r.Battery.UsableWh + 1e-9;
             double back = Movement.HoursToChargerFor(r)[t.Tile] / speed;
             if (double.IsInfinity(go) || double.IsInfinity(back))
                 return false;
@@ -1081,7 +1084,7 @@ namespace KardashevAscent.Simulation.Robots
         /// </summary>
         double TripChargeFor(Robot r, WorkTask t)
         {
-            if (Movement == null)
+            if (Movement == null || !Movement.HasCharger)
                 return 0.0;
             double speed = r.Attribute(RobotAttribute.Speed);
             double go = Movement.RoutesFor(r).HoursBetween(r.Tile, t.Tile) / speed;

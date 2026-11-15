@@ -28,8 +28,9 @@ namespace KardashevAscent.Simulation.Game
                 return null;
             List<RobotFacility> facilities = RobotFacilities();
             var tiles = new List<int>();
+            // Only places that charge count for the way back (the lander repairs but doesn't charge).
             foreach (RobotFacility f in facilities)
-                if (!tiles.Contains(f.Tile)) tiles.Add(f.Tile);
+                if (f.Capability.Charges && !tiles.Contains(f.Tile)) tiles.Add(f.Tile);
             tiles.Sort();
             string key = string.Join(",", tiles);
             if (movement == null || key != chargerKey)

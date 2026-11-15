@@ -23,7 +23,7 @@ namespace KardashevAscent.Simulation.Robots
         readonly Dictionary<int, double> criticalRequest = new Dictionary<int, double>();
         readonly Dictionary<int, double> topUpRequest = new Dictionary<int, double>();
 
-        /// <summary>Charging asked for at the lander: its RTGs serve it first, so a robot can always recover (D10).</summary>
+        /// <summary>Charging asked for at a charger on the landing tile: the lander's RTGs serve it first (D10).</summary>
         public double DockRequestW { get; private set; }
         /// <summary>Charging asked for elsewhere by robots below 20 %: served right after the colony (D6).</summary>
         public double CriticalRequestW { get; private set; }
@@ -48,10 +48,15 @@ namespace KardashevAscent.Simulation.Robots
                 r.ReserveFraction = movement != null && r.Battery.CapacityWh > 0.0 && !double.IsInfinity(toCharger)
                     ? movement.EnergyWh(toCharger) / r.Battery.CapacityWh : 0.0;
                 r.IsStranded = movement != null && r.Battery.UsableWh <= 1e-6 && toCharger > 1e-9;
+                r.ChargerExists = movement == null ? HasChargingFacility(facilities) : movement.HasCharger;
             }
             var byKey = new Dictionary<(int, int), RobotFacility>();
+            int landerTile = -1;
             foreach (RobotFacility f in facilities)
+            {
                 byKey[(f.Tile, f.Slot)] = f;
+                if (f.Slot < 0) landerTile = f.Tile;
+            }
             var used = new Dictionary<(int, int), int>();
 
             foreach (Robot r in workforce.Robots)
@@ -112,7 +117,9 @@ namespace KardashevAscent.Simulation.Robots
                 if (r.Activity != RobotActivity.Charging || r.IsTravelling || (movement != null && r.Tile != r.Facility.Value.Tile))
                     continue;
                 double req = r.Battery.ChargeRequestW(byKey[r.Facility.Value].Capability.PowerW, hours);
-                if (r.Facility.Value.Slot < 0)
+                // A charger on the landing tile is wired to the lander: its RTGs serve it first, so robots can always
+                // recover there (D10; the lander itself no longer charges: director 2026-11-15).
+                if (r.Facility.Value.Slot < 0 || r.Facility.Value.Tile == landerTile)
                 {
                     dockRequest[r.Id] = req;
                     DockRequestW += req;
@@ -273,13 +280,20 @@ namespace KardashevAscent.Simulation.Robots
         /// A facility with a free place: one that repairs, or a charger. With movement, the nearest one it can reach
         /// (then the most powerful); without, the most powerful.
         /// </summary>
+        static bool HasChargingFacility(IReadOnlyList<RobotFacility> facilities)
+        {
+            foreach (RobotFacility f in facilities)
+                if (f.Capability.Charges) return true;
+            return false;
+        }
+
         static RobotFacility? Free(Robot r, IReadOnlyList<RobotFacility> facilities, Dictionary<(int, int), int> used, bool repair, Movement movement)
         {
             RobotFacility? best = null;
             double bestHours = double.PositiveInfinity;
             foreach (RobotFacility f in facilities)
             {
-                if ((repair && !f.Capability.Repairs) || !f.Capability.Allows(r.Kind))
+                if ((repair && !f.Capability.Repairs) || (!repair && !f.Capability.Charges) || !f.Capability.Allows(r.Kind))
                     continue;
                 if (Used(used, (f.Tile, f.Slot)) >= f.Capability.Slots)
                     continue;

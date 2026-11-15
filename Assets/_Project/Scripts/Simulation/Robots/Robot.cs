@@ -125,7 +125,13 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>
         /// Below the charge threshold (20 %, plus what it needs to drive back to a charger) and not yet charging.
         /// </summary>
-        public bool NeedsCharge => Activity == RobotActivity.None
+        /// <summary>
+        /// False while the colony has no charger anywhere (director 2026-11-15: no charger, no recharging): there is
+        /// nothing to keep charge for, so the robot works on until its battery is empty.
+        /// </summary>
+        public bool ChargerExists { get; set; } = true;
+
+        public bool NeedsCharge => Activity == RobotActivity.None && ChargerExists
                                    && (Battery.StateOfCharge < RobotSpecs.ReturnToChargeFraction + ReserveFraction
                                        || (TripCharge > 0.0 && Battery.StateOfCharge < TripCharge - 1e-6));
 
