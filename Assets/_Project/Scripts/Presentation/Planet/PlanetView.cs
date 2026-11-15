@@ -31,6 +31,8 @@ namespace KardashevAscent.Presentation.Planet
         [Tooltip("Height of the highest land above sea level, as a share of the radius. About 10x true scale so " +
                  "mountains read from orbit (Earth's highest peak is 0.14 % of its radius).")]
         [Range(0f, 0.05f)] [SerializeField] float reliefScale = 0.015f;
+        /// <summary>How far a canyon floor sits below the rim, share of the radius (twice the largest normal relief).</summary>
+        [Range(0f, 0.1f)] [SerializeField] float canyonDepth = 0.03f;
         [Tooltip("Peaks and tree crowns drawn over the tiles.")]
         [SerializeField] bool showFeatures = true;
 
@@ -148,6 +150,16 @@ namespace KardashevAscent.Presentation.Planet
             {
                 bool sea = Terrains.IsWater(Surface.Terrain[t]) || Surface.Terrain[t] == TerrainType.FrozenSea;
                 tileRadius[t] = radius * (1f + (sea ? 0f : reliefScale * Mathf.Max(0f, Surface.Elevation[t])));
+            }
+            // Canyons go deep (director 2026-11-15): the floor sits far below the ground on either side, deeper than
+            // any normal step between tiles, so the walls read as a gorge.
+            for (int t = 0; t < tileRadius.Length; t++)
+            {
+                if (Surface.Terrain[t] != TerrainType.Canyon) continue;
+                float rim = 0f;
+                foreach (int n in Sphere.Neighbors[t])
+                    if (Surface.Terrain[n] != TerrainType.Canyon) rim = Mathf.Max(rim, Mathf.Max(0f, Surface.Elevation[n]));
+                tileRadius[t] = radius * (1f + reliefScale * rim - canyonDepth);
             }
             detailTile = -1;
 

@@ -24,6 +24,10 @@ namespace KardashevAscent.Presentation.UI
                 case Material.Sodium: return new Color(0.95f, 0.85f, 0.40f);
                 case Material.Slag: return new Color(0.40f, 0.38f, 0.36f);
                 case Material.RareEarth: return new Color(0.55f, 0.85f, 0.62f);   // pale green, like bastnäsite and neodymium salts
+                case Material.Anorthosite: return new Color(0.86f, 0.84f, 0.78f);   // the Moon's pale highlands
+                case Material.Salt: return new Color(0.96f, 0.95f, 0.92f);
+                case Material.Alumina: return new Color(0.98f, 0.98f, 1.00f);       // white powder
+                case Material.PureAluminium: return new Color(0.80f, 0.90f, 1.00f);
                 default: return new Color(0.62f, 0.52f, 0.42f);   // rock
             }
         }
@@ -40,6 +44,10 @@ namespace KardashevAscent.Presentation.UI
                 case Material.Sodium: return "Na";
                 case Material.Slag: return "Sl";
                 case Material.RareEarth: return "Nd";
+                case Material.Anorthosite: return "An";
+                case Material.Salt: return "NaCl";
+                case Material.Alumina: return "Al₂O₃";
+                case Material.PureAluminium: return "Al+";
                 default: return "Rk";
             }
         }

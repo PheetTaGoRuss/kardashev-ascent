@@ -91,7 +91,8 @@ namespace KardashevAscent.Presentation.UI
                     Color.Lerp(c, Color.white, 0.30f));
             Polygon(p, o, s, new[] { new Vector2(0.15f, -0.05f), new Vector2(0.80f, -0.45f), new Vector2(0.95f, 0.30f), new Vector2(0.35f, 0.85f) },
                     c * 0.55f);
-            if (m == Material.Copper || m == Material.Iron || m == Material.Aluminium || m == Material.Lithium || m == Material.RareEarth)
+            if (m == Material.Copper || m == Material.Iron || m == Material.Aluminium || m == Material.Lithium || m == Material.RareEarth
+                || m == Material.PureAluminium)
             {
                 // A metallic glint.
                 p.fillColor = new Color(1f, 1f, 1f, 0.7f);
