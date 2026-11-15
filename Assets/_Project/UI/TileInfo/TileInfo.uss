@@ -1,6 +1,6 @@
 .tile-info {
     position: absolute;
-    top: 80px;
+    top: 88px;
     right: 12px;
     width: 430px;
     max-height: 82%;
