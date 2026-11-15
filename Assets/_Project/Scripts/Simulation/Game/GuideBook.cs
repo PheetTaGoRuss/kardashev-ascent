@@ -157,6 +157,9 @@ namespace KardashevAscent.Simulation.Game
             }
             if (grounds.Count > 0 && m != Material.Rock)
                 page.Add("How to get it", "Survey the tile (tile panel ► Survey) to see its grade, then ► Mine. Grade 1 = an ordinary deposit on Earth.");
+            if (DepositMap.ReserveKgAtGrade1(m) > 0.0)
+                page.Add("How much", $"A grade-1 deposit holds {Kg(DepositMap.ReserveKgAtGrade1(m))} within the robots' reach; grade 2 holds twice that.",
+                         m == Material.Water ? "Ice runs out; sea water pumped from a shore never does." : "It runs out: mining stops when it is empty, so survey further out.");
             else if (m == Material.Rock)
                 page.Add("How to get it", "► Mine rock on any land tile.");
             List<string> uses = BuildingsUsing(m);

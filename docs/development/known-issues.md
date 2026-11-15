@@ -31,7 +31,7 @@ Bugs that need tracking by several people also get a GitHub issue; link it here.
 
 | # | Issue | Effect | Plan |
 | --- | --- | --- | --- |
-| KI-12 | Deposits never run out | Mass is not conserved; no reason to explore further | Roadmap phase 2 (RS-07) |
+| KI-12 | Fixed 2026-11-15: deposits hold grade × a size per material and run out as they are mined (sea water from a shore never does). The sizes are game rules (TBD) | Sizes are placeholders | Balance with OQ-12 |
 | KI-13 | Manufacturing recipes (robots, upgrades) still use materials without a mass balance. Refining is fixed: leftover rock becomes slag | Mass is not conserved in manufacturing | Roadmap phase 2 (RS-09) |
 | KI-14 | Robot, recipe, deposit and movement numbers are placeholders (`TBD` on 60 lines in Simulation) | Balance is arbitrary | Open question OQ-12 |
 | KI-15 | Battery ageing uses an unsourced depth exponent and 0 % damage | A model presented with numbers that have no source | Source them in `physics-verification.md` |
