@@ -93,6 +93,14 @@ namespace KardashevAscent.Simulation.Resources
         public static readonly MaterialBill ResearchStation = new MaterialBill()
             .Add(Material.Iron, 200.0).Add(Material.Rock, 100.0).Add(Material.Copper, 25.0);
 
+        /// <summary>Alumina plant: a kiln, leaching tanks and a precipitator (game rule, TBD).</summary>
+        public static readonly MaterialBill AluminaPlant = new MaterialBill()
+            .Add(Material.Iron, 400.0).Add(Material.Rock, 200.0).Add(Material.Copper, 15.0);
+
+        /// <summary>Electrolysis cell: a steel shell with a refractory lining and heavy busbars (game rule, TBD).</summary>
+        public static readonly MaterialBill Electrolyser = new MaterialBill()
+            .Add(Material.Iron, 300.0).Add(Material.Rock, 150.0).Add(Material.Copper, 60.0);
+
         /// <summary>
         /// What the lander brings: about one solar panel, battery yard, charging station, Workshop and Research Station, with some to spare
         /// (game rule, TBD).

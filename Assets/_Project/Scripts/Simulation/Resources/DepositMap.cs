@@ -48,6 +48,22 @@ namespace KardashevAscent.Simulation.Resources
         readonly bool[] seaWater;
         readonly Dictionary<(int Tile, Material Material), double> mined = new Dictionary<(int, Material), double>();
         readonly bool[] caves;
+        readonly bool[] evaporite;
+
+        /// <summary>
+        /// Anorthosite: the ancient light crust of highlands (the Moon's highlands are almost all anorthosite; on Earth
+        /// massif anorthosites stand in old mountain belts). Share of highland and mountain tiles, TBD.
+        /// </summary>
+        public const double AnorthositeShare = 0.5;
+        /// <summary>
+        /// Salt: evaporites form where salty water dried up (Death Valley, the Atacama; Mars's chloride deposits, Osterloo
+        /// et al. 2008). Share of dry basins and deserts on planets that had water, TBD. Every shore of a liquid sea gives
+        /// sea salt (about 2.7 % NaCl in sea water) by evaporation, without end.
+        /// </summary>
+        public const double SaltFlatShare = 0.5;
+
+        /// <summary>Low dry ground where salt flats form.</summary>
+        public static bool IsSaltFlat(TerrainType t) => t == TerrainType.DryBasin || t == TerrainType.Desert;
 
         /// <summary>Share of mountain, canyon and volcanic tiles with a cave (karst or a lava tube). Game rule, TBD.</summary>
         public const double CaveShare = 0.2;
@@ -99,6 +115,8 @@ namespace KardashevAscent.Simulation.Resources
                 case Material.Copper: return 3_000.0;
                 case Material.Lithium: return 500.0;
                 case Material.RareEarth: return 200.0;
+                case Material.Anorthosite: return 200_000.0;
+                case Material.Salt: return 50_000.0;
                 default: return 0.0;
             }
         }
@@ -111,6 +129,7 @@ namespace KardashevAscent.Simulation.Resources
             deposits = new List<Deposit>[sphere.TileCount];
             seaWater = new bool[sphere.TileCount];
             caves = new bool[sphere.TileCount];
+            evaporite = new bool[sphere.TileCount];
             for (int t = 0; t < sphere.TileCount; t++)
                 caves[t] = IsDeepGround(surface.Terrain[t]) && Hash01(seed, t, 11) < CaveShare;
             terrainOf = surface.Terrain;
@@ -120,11 +139,12 @@ namespace KardashevAscent.Simulation.Resources
                 deposits[t] = Generate(sphere, surface, chemistry, seed, t, toSea[t], caves[t]);
                 TerrainType here = surface.Terrain[t];
                 seaWater[t] = !Terrains.IsWater(here) && !IsIceGround(here) && GradeOf(t, Material.Water) > 0.0;
+                evaporite[t] = IsSaltFlat(here) && GradeOf(t, Material.Salt) > 0.0 && !seaWater[t];
             }
         }
 
         /// <summary>True when this material never runs out here (sea water pumped from a shore).</summary>
-        public bool IsEndless(int tile, Material m) => m == Material.Water && seaWater[tile];
+        public bool IsEndless(int tile, Material m) => (m == Material.Water || m == Material.Salt) && seaWater[tile] && !evaporite[tile];
 
         /// <summary>What the deposit held before any mining, kg (0 if there is none; infinity for sea water).</summary>
         public double ReserveKg(int tile, Material m)
@@ -292,6 +312,15 @@ namespace KardashevAscent.Simulation.Resources
             bool low = IsLithiumGround(here);
             if (chem.WaterHistory && low && !waterNeighbour && highNeighbour && Hash01(seed, t, 5) < LithiumShare)
                 list.Add(new Deposit(Material.Lithium, chem.MetalFactor * Vary(seed, t, 6)));
+
+            // Anorthosite (aluminium ore): old highland crust.
+            if ((here == TerrainType.Highland || here == TerrainType.Mountain) && Hash01(seed, t, 12) < AnorthositeShare)
+                list.Add(new Deposit(Material.Anorthosite, Vary(seed, t, 13)));
+            // Salt: dried-up salt lakes on planets that had water; sea salt on any shore of a liquid sea.
+            if (IsSaltFlat(here) && chem.WaterHistory && Hash01(seed, t, 14) < SaltFlatShare)
+                list.Add(new Deposit(Material.Salt, Vary(seed, t, 15)));
+            else if (waterNeighbour && !IsIceGround(here))
+                list.Add(new Deposit(Material.Salt, 1.0));
 
             // Rare earths: deep in rifts, old igneous mountains and alkaline volcanic rock; a cave reaches deeper.
             double ree = here == TerrainType.Canyon ? RareEarthCanyonShare

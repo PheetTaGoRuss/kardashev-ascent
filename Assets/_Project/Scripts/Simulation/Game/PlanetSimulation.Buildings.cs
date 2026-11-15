@@ -103,6 +103,7 @@ namespace KardashevAscent.Simulation.Game
             : stations.Contains((tileId, slot)) ? BuildingType.ChargingStation
             : relays.Contains((tileId, slot)) ? BuildingType.Relay
             : researchStations.Contains((tileId, slot)) ? BuildingType.ResearchStation
+            : refineryModules.TryGetValue((tileId, slot), out BuildingType module) ? module
             : BuildingType.None;
 
         public bool PlaceBattery(int tileId, int slot)
@@ -153,6 +154,8 @@ namespace KardashevAscent.Simulation.Game
                 Vacate(tileId, slot);
                 return true;
             }
+            if (RemoveRefinery(tileId, slot))
+                return true;
             if (stations.Contains((tileId, slot)))
             {
                 Dismantle(tileId, slot, BuildingType.ChargingStation);
