@@ -183,7 +183,7 @@ namespace KardashevAscent.Simulation.Game
                 .Add("Why", "Copper and lithium ores form with water: copper near old seas, lithium in dried-up salt lakes.",
                      "Dry planets (Mars, Proxima b, Kepler-452 b) have little or none.")
                 .Add("What to do",
-                     "1. Land, build a Robot Workshop first (the lander's copper covers it).",
+                     "1. Land, mine rock and iron, and build a Robot Workshop (the lander brings its copper).",
                      "2. Mine rock and refine aluminium and sodium at the Workshop (Manufacturing, U).",
                      "3. Place buildings as usual: with no copper or lithium in stock they use aluminium wiring and sodium cells.")
                 .Add("Good to know",
