@@ -6,8 +6,8 @@ using UnityEngine.Rendering;
 namespace KardashevAscent.Presentation.Planet
 {
     /// <summary>
-    /// What the planet's surface shows from orbit, on top of the tiles: a peak on each mountain tile and a few tree
-    /// crowns on each forest tile. One mesh for the whole planet. The tile the
+    /// What the planet's surface shows from orbit, on top of the tiles: a peak on each mountain tile, a few low lava
+    /// mounds on volcanic rock and a few tree crowns on each forest tile. One mesh for the whole planet. The tile the
     /// player is zoomed into is left out, so its close-up detail (<see cref="SiteDecor"/>) takes over there.
     /// </summary>
     public static class TerrainFeatures
@@ -15,6 +15,7 @@ namespace KardashevAscent.Presentation.Planet
         static readonly Color32 Rock = new Color32(118, 110, 102, 40);
         static readonly Color32 Snow = new Color32(232, 238, 244, 90);
         static readonly Color32 Canopy = new Color32(34, 78, 38, 20);
+        static readonly Color32 Lava = new Color32(62, 50, 50, 30);
 
         /// <param name="tileRadius">The tile tops' distance from the centre (relief).</param>
         /// <param name="seaRadius">Sea level.</param>
@@ -36,7 +37,21 @@ namespace KardashevAscent.Presentation.Planet
                 var corners = sphere.Corners[t];
                 float span = (ToUnity(corners[0]) - up).magnitude * seaRadius;   // centre to corner, world units
                 TerrainType type = surface.Terrain[t];
-                if (type == TerrainType.Mountain || type == TerrainType.VolcanicRock)
+                if (type == TerrainType.VolcanicRock)
+                {
+                    // A lava field, not a mountain (director 2026-11-15: tall peaks walled in sites next to it): a few
+                    // low dark mounds, scattered by the tile id.
+                    for (int k = 0; k < 4; k++)
+                    {
+                        float a = (t * 2.399f + k * 1.9f) % (2f * Mathf.PI);
+                        float d = span * (0.15f + 0.5f * Hash(t, k + 11));
+                        Vector3 east = Vector3.Cross(Vector3.up, up).sqrMagnitude > 1e-6f ? Vector3.Cross(Vector3.up, up).normalized : Vector3.right;
+                        Vector3 north = Vector3.Cross(up, east);
+                        Vector3 dir = (up * r + (east * Mathf.Cos(a) + north * Mathf.Sin(a)) * d).normalized;
+                        Cone(v, n, c, tri, dir * r, dir, span * 0.16f, span * 0.12f, Lava);
+                    }
+                }
+                else if (type == TerrainType.Mountain)
                 {
                     // A peak: a pyramid over most of the tile, taller on higher ground, snow-capped on the highest.
                     float height = span * (0.5f + 0.9f * Mathf.Clamp01(surface.Elevation[t]));
