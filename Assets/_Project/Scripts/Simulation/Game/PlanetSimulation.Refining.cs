@@ -61,7 +61,7 @@ namespace KardashevAscent.Simulation.Game
         {
             if (!IsRefinery(type) || !CanPlace(type, tileId, slot))
                 return false;
-            StartSite(tileId, slot, BuildBill(type));
+            StartSite(tileId, slot, BuildBill(type), BuildCosts.BuildHours(type));
             refineryModules[(tileId, slot)] = type;
             Occupy(tileId, FootprintFor(type, tileId, slot));
             Settle((tileId, slot));

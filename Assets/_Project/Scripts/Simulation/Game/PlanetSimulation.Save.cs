@@ -332,49 +332,50 @@ namespace KardashevAscent.Simulation.Game
                 if (floating) floatingPanels.Add((r.Tile, r.Slot));
                 // Saves before version 5 have no area: their panels are base panel fields.
                 double area = r.AreaM2 > 0.0 ? r.AreaM2 : PanelAreaM2;
-                if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(PanelCost(area).Times(floating ? FloatingCostFactor : 1.0), r.Tile, r.Slot), PaidShareOf(r, area), WorkOf(r));
+                if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(PanelCost(area).Times(floating ? FloatingCostFactor : 1.0), r.Tile, r.Slot), PaidShareOf(r, area), WorkOf(r),
+                                           BuildCosts.BuildHours(floating ? BuildingType.FloatingSolar : BuildingType.SolarPanel, area));
                 AddPanel(r.Tile, r.Slot, r.Tilt, r.Azimuth, area);
             }
             else if (r.Type == BuildingType.ChargingStation)
             {
                 if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
                     return;
-                if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(BuildingType.ChargingStation), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r));
+                if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(BuildingType.ChargingStation), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r), BuildCosts.BuildHours(BuildingType.ChargingStation));
                 stations.Add((r.Tile, r.Slot));
             }
             else if (IsRefinery(r.Type))
             {
                 if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
                     return;
-                if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(r.Type), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r));
+                if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(r.Type), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r), BuildCosts.BuildHours(r.Type));
                 refineryModules[(r.Tile, r.Slot)] = r.Type;
             }
             else if (r.Type == BuildingType.ResearchStation)
             {
                 if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
                     return;
-                if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(BuildingType.ResearchStation), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r));
+                if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(BuildingType.ResearchStation), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r), BuildCosts.BuildHours(BuildingType.ResearchStation));
                 researchStations.Add((r.Tile, r.Slot));
             }
             else if (r.Type == BuildingType.Relay)
             {
                 if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
                     return;
-                if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(BuildingType.Relay), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r));
+                if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(BuildingType.Relay), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r), BuildCosts.BuildHours(BuildingType.Relay));
                 relays.Add((r.Tile, r.Slot));
             }
             else if (r.Type == BuildingType.Workshop)
             {
                 if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
                     return;
-                if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(BuildingType.Workshop), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r));
+                if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(BuildingType.Workshop), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r), BuildCosts.BuildHours(BuildingType.Workshop));
                 workshops.Add((r.Tile, r.Slot));
             }
             else if (r.Type == BuildingType.Battery)
             {
                 if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
                     return;
-                if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(BuildingType.Battery), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r));
+                if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(BuildingType.Battery), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r), BuildCosts.BuildHours(BuildingType.Battery));
                 else Grid.Battery.AddCapacity(BatteryUnitWh);
                 AddBattery(r.Tile, r.Slot);
             }

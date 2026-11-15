@@ -10,7 +10,7 @@ namespace KardashevAscent.Simulation.Game
     /// A new building waits as a site with its bill of materials (<see cref="BuildCosts"/>). While a robot works on it,
     /// it takes materials from the colony's stock (<see cref="Pay"/>): each time, the same share of every material on
     /// its bill, as much as the scarcest one allows, so a site is always some share paid. Robots on the site also put in
-    /// work (<see cref="Work"/>, <see cref="BuildCosts.BuildHours"/>), never more than the materials delivered allow. It is
+    /// work (<see cref="Work"/>, <see cref="BuildCosts.BuildHours(BuildingType, double)"/>), never more than the materials delivered allow. It is
     /// finished when all its materials are in and the work is done; a site does nothing until then. Cancelling a site gives back what was put into it; taking down a
     /// finished building gives back <see cref="BuildCosts.SalvageShare"/> of its bill.
     /// </summary>
@@ -98,13 +98,13 @@ namespace KardashevAscent.Simulation.Game
         /// Start a building with this bill. Returns true when it needs nothing (finished now); otherwise it waits as a
         /// site until a robot brings the materials.
         /// </summary>
-        public bool Start(int tile, int slot, MaterialBill bill)
+        public bool Start(int tile, int slot, MaterialBill bill, double workHours = 0.0)
         {
             if (bill == null) throw new ArgumentNullException(nameof(bill));
             if (IsQueued(tile, slot)) throw new InvalidOperationException($"Slot {tile}.{slot} is already a construction site.");
             if (bill.IsEmpty)
                 return true;
-            queue.Add(new Site { Key = (tile, slot), Bill = bill, Share = 0.0, WorkHours = TimeEnabled ? BuildCosts.BuildHours(bill) : 0.0 });
+            queue.Add(new Site { Key = (tile, slot), Bill = bill, Share = 0.0, WorkHours = TimeEnabled ? Math.Max(0.0, workHours) : 0.0 });
             return false;
         }
 
@@ -112,12 +112,12 @@ namespace KardashevAscent.Simulation.Game
         /// Put back a site exactly as it was (when a game is loaded); it goes to the end of the queue.
         /// <paramref name="workDone"/> null: a save from before construction time (version 27): work as far as its materials.
         /// </summary>
-        public void RestoreSite(int tile, int slot, MaterialBill bill, double share, double? workDone = null)
+        public void RestoreSite(int tile, int slot, MaterialBill bill, double share, double? workDone = null, double workHours = 0.0)
         {
             if (IsQueued(tile, slot)) throw new InvalidOperationException($"Slot {tile}.{slot} is already a construction site.");
             bill = bill ?? new MaterialBill();
             share = Math.Max(0.0, Math.Min(share, 1.0));
-            double hours = TimeEnabled ? BuildCosts.BuildHours(bill) : 0.0;
+            double hours = TimeEnabled ? Math.Max(0.0, workHours) : 0.0;
             queue.Add(new Site { Key = (tile, slot), Bill = bill, Share = share, WorkHours = hours,
                                  WorkDone = Math.Max(0.0, Math.Min(workDone ?? share * hours, share * hours)) });
         }
@@ -131,8 +131,7 @@ namespace KardashevAscent.Simulation.Game
             int i = Find((tile, slot));
             if (i < 0 || bill == null || queue[i].Share > 0.0 || queue[i].WorkDone > 0.0)
                 return false;
-            queue[i].Bill = bill;
-            queue[i].WorkHours = TimeEnabled ? BuildCosts.BuildHours(bill) : 0.0;
+            queue[i].Bill = bill;   // the same work: only the metal changes
             return true;
         }
 
