@@ -357,8 +357,7 @@ namespace KardashevAscent.Presentation.UI
             Show(adjustBox, hasPanel && (placer.SelectedBuilding == BuildingType.SolarPanel || placer.SelectedBuilding == BuildingType.FloatingSolar));
             int tile = siteView.Site.Tile;
             siteTitle.text = $"Building site · tile #{tile}";
-            siteText.text = $"{placer.PanelsOnTile} panels · {placer.BatteriesOnTile} battery yards · " +
-                            $"{placer.PanelsOnTile + placer.BatteriesOnTile} of {siteView.Site.SlotCount} slots used";
+            siteText.text = $"{placer.PanelsOnTile + placer.BatteriesOnTile}/{siteView.Site.SlotCount} slots used";
             totals.text = placer.PanelCount == 0
                 ? ""
                 : placer.BestAngleUnlocked

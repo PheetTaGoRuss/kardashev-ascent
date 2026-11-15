@@ -13,7 +13,7 @@
             <ui:VisualElement name="site-box" class="panel box hidden">
                 <ui:Label name="site-title" class="value" text="Building site" />
                 <ui:Label name="site-text" class="body" text="" />
-                <ui:Label class="caption" text="Drag a building from the bar below onto a slot · click a slot to plan it · drag a box to select many · Ctrl+A: all" />
+                <ui:Label class="caption" text="Drag from the bar below · click a slot · box: many · Ctrl+A: all" />
             </ui:VisualElement>
 
             <ui:VisualElement name="planner-box" class="panel box hidden">
