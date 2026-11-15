@@ -233,6 +233,22 @@ namespace KardashevAscent.Presentation.UI
             groundActions.Clear();
             if (water)
                 return;
+            if (!surveyed && CoresWaiting(sim, tile))
+            {
+                // The cores are in and the survey waits on the player (director 2026-11-15: say so, with a way there).
+                var go = new Button(() =>
+                {
+                    PuzzleShelf.Focus(PuzzleShelf.SurveyKey(tile));
+                    SystemTabs.Open("research");
+                }) { text = "! Cores waiting: finish the survey (Research)" };
+                go.AddToClassList("primary-button");
+                go.style.flexGrow = 1;
+                go.style.height = 30;
+                go.style.fontSize = 14;
+                go.style.marginTop = 4;
+                go.tooltip = "A robot brought back rock cores. Work out each material's grade to finish surveying this tile.";
+                groundActions.Add(go);
+            }
             if (!surveyed && !CoresWaiting(sim, tile))
             {
                 bool ordered = sim.IsSurveyOrdered(tile);

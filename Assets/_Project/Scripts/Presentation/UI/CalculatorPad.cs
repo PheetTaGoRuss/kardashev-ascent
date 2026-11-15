@@ -21,6 +21,12 @@ namespace KardashevAscent.Presentation.UI
         static Label result;
         static Label status;
         static bool justEvaluated;
+        // History (director 2026-11-15): the last few sums, newest first; click one to use its result. "ans" is the latest.
+        const int HistorySize = 8;
+        static readonly System.Collections.Generic.List<(string Expression, double Value)> history =
+            new System.Collections.Generic.List<(string, double)>();
+        static VisualElement historyList;
+        static double LastAnswer => history.Count > 0 ? history[0].Value : double.NaN;
         static TextField lastAnswer;
 
         // ---- what the puzzle cards call ----
@@ -155,7 +161,7 @@ namespace KardashevAscent.Presentation.UI
 
         static void Preview()
         {
-            if (ScienceCalculator.TryEvaluate(display.value, out double v, out string error))
+            if (ScienceCalculator.TryEvaluate(display.value, LastAnswer, out double v, out string error))
             {
                 result.text = "= " + ScienceCalculator.Format(v);
                 status.text = "";
@@ -175,8 +181,9 @@ namespace KardashevAscent.Presentation.UI
                 case "C": Set(""); return;
                 case "Del": Set(s.Length > 0 ? s.Substring(0, s.Length - 1) : ""); return;
                 case "=":
-                    if (ScienceCalculator.TryEvaluate(s, out double v, out _))
+                    if (ScienceCalculator.TryEvaluate(s, LastAnswer, out double v, out _))
                     {
+                        Remember(s, v);
                         display.SetValueWithoutNotify(ScienceCalculator.Format(v));
                         Preview();
                         justEvaluated = true;
@@ -184,6 +191,8 @@ namespace KardashevAscent.Presentation.UI
                     return;
             }
             bool isOperator = k == "+" || k == "-" || k == "×" || k == "/" || k == "^";
+            if (k == "ans" && justEvaluated)
+                s = "";
             if (justEvaluated && !isOperator && k != ")")
                 s = "";
             Set(s + k);
@@ -245,7 +254,7 @@ namespace KardashevAscent.Presentation.UI
                 new[] { "4", "5", "6", "×", ")" },
                 new[] { "1", "2", "3", "-", "^" },
                 new[] { "0", ".", "pi", "+", "=" },
-                new[] { "sqrt(", "e" },
+                new[] { "sqrt(", "e", "ans" },
             };
             foreach (string[] line in keys)
             {
@@ -288,10 +297,59 @@ namespace KardashevAscent.Presentation.UI
                 actions.Add(b);
             }
             w.Add(actions);
+
+            Label historyHead = PuzzleGuide.Text("HISTORY · click to use a result", bold: true, size: PuzzleGuide.SmallSize);
+            historyHead.style.color = Accent;
+            historyHead.style.marginTop = 8;
+            w.Add(historyHead);
+            var historyScroll = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden };
+            historyScroll.style.maxHeight = 150;
+            historyList = historyScroll.contentContainer;
+            w.Add(historyScroll);
+            ShowHistory();
             return w;
         }
 
         static string ResultText() =>
-            ScienceCalculator.TryEvaluate(display?.value, out double v, out _) ? ScienceCalculator.Format(v) : "";
+            ScienceCalculator.TryEvaluate(display?.value, LastAnswer, out double v, out _) ? ScienceCalculator.Format(v) : "";
+
+        static void Remember(string expression, double value)
+        {
+            string shown = ScienceCalculator.Format(value);
+            if (expression.Trim() == shown)
+                return;   // pressing = again on a plain number adds nothing
+            history.Insert(0, (expression.Trim(), value));
+            if (history.Count > HistorySize)
+                history.RemoveAt(history.Count - 1);
+            ShowHistory();
+        }
+
+        static void ShowHistory()
+        {
+            if (historyList == null) return;
+            historyList.Clear();
+            if (history.Count == 0)
+            {
+                Label empty = PuzzleGuide.Text("Your sums appear here after =.", size: PuzzleGuide.SmallSize);
+                empty.style.color = UiPalette.Muted;
+                historyList.Add(empty);
+                return;
+            }
+            foreach (var (expression, value) in history)
+            {
+                string number = ScienceCalculator.Format(value);
+                Label line = PuzzleGuide.Text($"{expression} = {number}", size: PuzzleGuide.SmallSize + 1);
+                line.style.paddingLeft = 4;
+                line.tooltip = $"Click: put {number} in the calculator (and copy it)";
+                line.RegisterCallback<PointerEnterEvent>(_ => line.style.backgroundColor = UiPalette.AccentA(0.15f));
+                line.RegisterCallback<PointerLeaveEvent>(_ => line.style.backgroundColor = StyleKeyword.Null);
+                line.RegisterCallback<ClickEvent>(_ =>
+                {
+                    GUIUtility.systemCopyBuffer = number;
+                    Insert(number);
+                });
+                historyList.Add(line);
+            }
+        }
     }
 }

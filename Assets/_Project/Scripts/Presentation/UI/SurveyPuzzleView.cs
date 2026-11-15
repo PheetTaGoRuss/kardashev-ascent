@@ -10,14 +10,16 @@ using Material = KardashevAscent.Simulation.Resources.Material;
 namespace KardashevAscent.Presentation.UI
 {
     /// <summary>
-    /// One ground-survey puzzle (stage F): the cores a robot drilled, assayed per material, one answer box per
-    /// material for the tile's grade, and the rule behind a hint button.
+    /// One ground-survey puzzle (stage F): the cores a robot drilled, assayed per material, and one answer box with
+    /// its own Check button per material (director 2026-11-15: answer them one at a time, now or later).
     /// </summary>
     public sealed class SurveyPuzzleView : VisualElement
     {
         readonly IPlanetSimulation sim;
         readonly SurveyPuzzle puzzle;
         readonly List<TextField> answers = new List<TextField>();
+        readonly List<Button> checks = new List<Button>();
+        readonly List<Label> states = new List<Label>();
         readonly Label message, hints;
         readonly Action<string> solved;
 
@@ -76,17 +78,26 @@ namespace KardashevAscent.Presentation.UI
                 f.style.fontSize = PuzzleGuide.BodySize;
                 row.Add(f);
                 answers.Add(f);
+                int index = m;
+                var check = new Button(() => CheckOne(index)) { text = "Check" };
+                check.AddToClassList("small-button");
+                check.style.fontSize = PuzzleGuide.BodySize;
+                check.style.marginLeft = 4;
+                row.Add(check);
+                checks.Add(check);
+                Label state = PuzzleGuide.Text("", size: PuzzleGuide.SmallSize);
+                state.style.width = 44;
+                state.style.marginLeft = 4;
+                row.Add(state);
+                states.Add(state);
                 Add(row);
             }
 
             var buttons = new VisualElement();
             buttons.AddToClassList("button-row");
-            var submit = new Button(Submit) { text = "Check" };
-            submit.AddToClassList("small-button");
-            submit.style.fontSize = PuzzleGuide.BodySize;
-            buttons.Add(submit);
             buttons.Add(CalculatorPad.OpenButton());
             Add(buttons);
+            ShowSolved();
 
             hints = PuzzleGuide.Text("");
             hints.style.display = DisplayStyle.None;
@@ -96,24 +107,36 @@ namespace KardashevAscent.Presentation.UI
             Add(message);
         }
 
-        void Submit()
+        /// <summary>Check one material's answer; a right one is kept and its row locks.</summary>
+        void CheckOne(int m)
         {
-            var values = new List<double>();
-            foreach (TextField f in answers)
+            TextField f = answers[m];
+            if (!double.TryParse((f.value ?? "").Trim().Replace('−', '-').Replace(',', '.'),
+                                 System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double v))
             {
-                if (!double.TryParse((f.value ?? "").Trim().Replace('−', '-').Replace(',', '.'),
-                                     System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double v))
-                {
-                    message.text = "Enter a grade for every material (a number like 0.85).";
-                    return;
-                }
-                values.Add(v);
+                message.text = $"Enter a grade for {Materials.Name(puzzle.Materials[m]).ToLowerInvariant()} (a number like 0.85).";
+                return;
             }
-            string result = sim.AnswerSurveyPuzzle(puzzle.Tile, values, out LatitudePuzzle.Grade grade);
+            string result = sim.AnswerSurveyMaterial(puzzle.Tile, m, v, out LatitudePuzzle.Grade grade);
             KardashevAscent.Presentation.Audio.GameAudio.Play(grade != LatitudePuzzle.Grade.Wrong ? KardashevAscent.Presentation.Audio.Sfx.Correct : KardashevAscent.Presentation.Audio.Sfx.Wrong);
-            message.text = grade == LatitudePuzzle.Grade.Precise ? "Precise! " + result : result;
-            if (grade != LatitudePuzzle.Grade.Wrong)
+            message.text = result;
+            ShowSolved();
+            if (puzzle.AllSolved)
                 solved?.Invoke(message.text);
+        }
+
+        /// <summary>Rows already worked out show as done and can't be changed.</summary>
+        void ShowSolved()
+        {
+            for (int m = 0; m < answers.Count; m++)
+            {
+                bool done = puzzle.IsSolved(m);
+                bool rough = done && puzzle.RoughSolved != null && puzzle.RoughSolved.Contains(m);
+                answers[m].SetEnabled(!done);
+                checks[m].style.display = done ? DisplayStyle.None : DisplayStyle.Flex;
+                states[m].text = done ? (rough ? "close" : "done") : "";
+                states[m].style.color = rough ? UiPalette.Warning : UiPalette.Good;
+            }
         }
 
         static VisualElement Table(List<string> head, List<string[]> rows)
