@@ -136,10 +136,11 @@ namespace KardashevAscent.Simulation.Tests.Robots
 
         static readonly List<RobotFacility> Lander = new List<RobotFacility> { new RobotFacility(0, -1, ChargingCapability.Lander) };
 
-        sealed class Parts : IPartsStore
+        static KardashevAscent.Simulation.Resources.MaterialStock Plenty()
         {
-            public double StockWh => 1e12;
-            public double Take(double wh) => wh;
+            var s = new KardashevAscent.Simulation.Resources.MaterialStock();
+            foreach (var m in KardashevAscent.Simulation.Resources.Materials.All) s.Add(m, 1e9);
+            return s;
         }
 
         [Test]
@@ -165,7 +166,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             for (int i = 0; i < 10; i++)
             {
                 up.Plan(w, Lander, 1.0);
-                up.Apply(w, 1.0, 0.0, 0.0, 0.0, false, new Parts());
+                up.Apply(w, 1.0, 0.0, 0.0, 0.0, false, null, Plenty());
             }
             up.Plan(w, Lander, 1.0);
             Assert.IsFalse(r.CriticallyDamaged);

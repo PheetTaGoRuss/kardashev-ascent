@@ -141,6 +141,8 @@ namespace KardashevAscent.Simulation.Tests.Robots
             double Yield(int robots)
             {
                 var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
+                sim.Workforce.Reset(sim.BaseTileId, 1);
+                sim.Materials.Clear();
                 for (int i = 1; i < robots; i++) sim.Workforce.AddRobot(RobotKind.General, sim.BaseTileId);
                 sim.OrderMining(sim.BaseTileId, Material.Rock);
                 sim.Tick(5.0);
@@ -158,6 +160,8 @@ namespace KardashevAscent.Simulation.Tests.Robots
             double HoursToFinish(int robots)
             {
                 var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
+                sim.Workforce.Reset(sim.BaseTileId, 1);
+                sim.Materials.Clear();
                 for (int i = 1; i < robots; i++) sim.Workforce.AddRobot(RobotKind.General, sim.BaseTileId);
                 sim.PlaceWorkshop(sim.BaseTileId, 5);
                 foreach (Material m in Materials.All) sim.Materials.Add(m, 1000.0);

@@ -25,9 +25,27 @@ namespace KardashevAscent.Simulation.Tests.Game
             return r;
         }
 
-        static PlanetSimulation Create(PlanetRecord r) => new PlanetSimulation(Sphere, Surface, r);
+        static PlanetSimulation Create(PlanetRecord r) => new PlanetSimulation(Sphere, Surface, r) { ConstructionTimeEnabled = false };
 
         static double Tilt(PlanetSimulation sim) => Math.Abs(sim.GetTile(sim.BaseTileId).Latitude);
+
+        [Test]
+        public void TheMapSeed_ComesFromTheRecord_AndIsSaved()
+        {
+            // Director 2026-11-14: every new game gets a random map, so a save must say which one it was played on.
+            PlanetRecord r = Sunlike();
+            r.look.terrainSeed = 123456789;
+            var sim = Create(r);
+            Assert.AreEqual(123456789, sim.TerrainSeed);
+            SimulationState state = sim.CaptureState();
+            Assert.AreEqual(123456789, state.TerrainSeed);
+            Assert.AreEqual(29, SimulationState.CurrentVersion);
+            var older = JsonUtility_Free_OldState();
+            Assert.AreEqual(0, older.TerrainSeed, "a save from before random maps names none: the planet's own map");
+        }
+
+        /// <summary>A version-27 save as JSON would read it: no TerrainSeed field.</summary>
+        static SimulationState JsonUtility_Free_OldState() => new SimulationState { Version = 27 };
 
         [Test]
         public void Record_SetsIdStarAndClouds()
@@ -60,13 +78,20 @@ namespace KardashevAscent.Simulation.Tests.Game
         [Test]
         public void EarthClouds_LowerTheYearByTheLatitudesCloudFactor()
         {
-            var clear = Create(Sunlike());
             PlanetRecord r = Sunlike();
             r.flags.clouds = "earth";
             var cloudy = Create(r);
-            int t = clear.BaseTileId;
-            double ratio = cloudy.PreviewPanel(t, Tilt(cloudy), Math.PI).EnergyPerYearWh
-                           / clear.PreviewPanel(t, Tilt(clear), Math.PI).EnergyPerYearWh;
+            int t = cloudy.BaseTileId;
+            // The same planet with and without its clouds (its NASA air temperature and haze stay): take the clouds
+            // back out month by month.
+            double[] months = cloudy.MonthlyEnergyWh(t, Tilt(cloudy), Math.PI);
+            double withClouds = 0.0, without = 0.0;
+            for (int m = 0; m < months.Length; m++)
+            {
+                withClouds += months[m];
+                without += months[m] / cloudy.CloudFactor(t, 2.0 * Math.PI * (m + 0.5) / months.Length);
+            }
+            double ratio = withClouds / without;
             double lat = cloudy.GetTile(t).Latitude;
             double min = double.MaxValue, max = 0.0;
             for (int m = 0; m < 12; m++)
@@ -116,6 +141,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         {
             // The star never moves on a circular locked orbit, so the preview (per Earth year) is power × Earth-year hours.
             var sim = Create(PlanetRecordTests.ProximaForOtherTests());
+            sim.SafetyMarginsEnabled = false;   // the physics, without the design margin for unknown values
             int t = sim.BaseTileId;
             double tilt = Tilt(sim);
             Assert.IsTrue(sim.PlacePanel(t, 0, tilt, Math.PI));

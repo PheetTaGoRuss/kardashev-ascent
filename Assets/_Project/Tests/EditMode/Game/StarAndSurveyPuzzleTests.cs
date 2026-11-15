@@ -18,7 +18,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         static readonly HexSphere Sphere = HexSphere.Create(12);
         static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
 
-        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike);
+        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike) { PuzzleChance = 1.0 };   // these tests are about the puzzles
 
         [Test]
         public void Spectrum_PeakBin_GivesTheStarsTemperature_ByWien()
@@ -51,6 +51,41 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.AreEqual(LatitudePuzzle.Grade.Precise, p.Check(new[] { 0.82, 1.15 }));
             Assert.AreEqual(LatitudePuzzle.Grade.Rough, p.Check(new[] { 0.8, 1.0 }), "the worst estimate sets the grade");
             Assert.AreEqual(LatitudePuzzle.Grade.Wrong, p.Check(new[] { 0.8 }), "one estimate per material");
+        }
+
+        [Test]
+        public void WithoutAPuzzle_TheRobotWorksTheGradesOut()
+        {
+            var sim = Create();
+            sim.PuzzleChance = 0.0;   // director 2026-11-14: puzzles are occasional
+            int t = sim.BaseTileId;
+            Assume.That(sim.Deposits.At(t).Count > 1, "the base tile has more than rock");
+            Assert.IsTrue(sim.OrderSurvey(t));
+            for (int i = 0; i < 10 && !sim.Deposits.IsSurveyed(t); i++)
+                sim.Tick(1.0);
+            Assert.IsTrue(sim.Deposits.IsSurveyed(t));
+            Assert.IsFalse(sim.IsRoughSurvey(t), "worked out exactly");
+            Assert.AreEqual(0, sim.SurveyPuzzles.Count);
+        }
+
+        [Test]
+        public void PuzzleChance_IsOccasional()
+        {
+            Assert.AreEqual(0.25, PlanetSimulation.DefaultPuzzleChance, "game rule, TBD");
+            int puzzles = 0, tiles = 0;
+            for (int t = 0; t < Sphere.TileCount && tiles < 120; t += 7)
+            {
+                var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
+                if (sim.Deposits.At(t).Count < 2 || !sim.OrderSurvey(t)) continue;
+                sim.MovementEnabled = false;   // work any tile from the base: only the roll matters here
+                for (int i = 0; i < 6 && !sim.Deposits.IsSurveyed(t) && sim.SurveyPuzzles.Count == 0; i++) sim.Tick(1.0);
+                tiles++;
+                if (sim.SurveyPuzzles.Count > 0) puzzles++;
+            }
+            Assume.That(tiles >= 40, "enough tiles with more than rock");
+            double share = puzzles / (double)tiles;
+            Assert.Greater(share, 0.05, "some surveys still end in a puzzle");
+            Assert.Less(share, 0.5, "most don't");
         }
 
         [Test]

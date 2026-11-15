@@ -194,8 +194,11 @@ namespace KardashevAscent.Presentation.Planet
             HoveredTileChanged?.Invoke(tile);
         }
 
-        /// <summary>Plain description of a tile: id and shape, terrain, latitude/longitude (three lines).</summary>
-        public string Describe(int tile)
+        /// <summary>
+        /// Plain description of a tile: id and shape, terrain, latitude/longitude (three lines). Without
+        /// <paramref name="showPlace"/> (latitude not measured yet) the third line says so instead.
+        /// </summary>
+        public string Describe(int tile, bool showPlace = true)
         {
             HexSphere sphere = planet.Sphere;
             double lat = sphere.Latitude(tile) * Mathf.Rad2Deg;
@@ -204,7 +207,7 @@ namespace KardashevAscent.Presentation.Planet
             string shape = sphere.IsPentagon(tile) ? "pentagon" : "hexagon";
             return $"Tile #{tile} ({shape})\n" +
                    $"{terrain}\n" +
-                   $"{Math.Abs(lat):F1}° {(lat >= 0 ? "N" : "S")}, {Math.Abs(lon):F1}° {(lon >= 0 ? "E" : "W")}";
+                   (showPlace ? $"{Math.Abs(lat):F1}° {(lat >= 0 ? "N" : "S")}, {Math.Abs(lon):F1}° {(lon >= 0 ? "E" : "W")}" : "Latitude unknown");
         }
 
         static string Pretty(TerrainType terrain) => Terrains.Name(terrain);

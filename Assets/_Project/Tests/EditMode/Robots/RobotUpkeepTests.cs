@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using KardashevAscent.Simulation.Energy;
 using KardashevAscent.Simulation.Game;
+using KardashevAscent.Simulation.Resources;
 using KardashevAscent.Simulation.Robots;
 using NUnit.Framework;
 
@@ -61,22 +62,23 @@ namespace KardashevAscent.Simulation.Tests.Robots
         }
 
         [Test]
-        public void BatteryReplacement_CostsTheBatteryYardRule()
+        public void BatteryReplacement_TakesTheCellsMaterials()
         {
-            Assert.AreEqual(2408.0, BuildCosts.Battery(RobotSpecs.BatteryCapacityWh), 1e-9);
+            // LiFePO4 cathode, 2.05 kg per kWh: lithium 6.94/157.76 and iron 55.845/157.76 of it by mass.
+            MaterialBill cells = BuildCosts.BatteryCells(RobotSpecs.BatteryCapacityWh);
+            double cathode = 2.05 * RobotSpecs.BatteryCapacityWh / 1000.0;
+            Assert.AreEqual(cathode * 6.94 / 157.76, cells[Material.Lithium], 1e-9);
+            Assert.AreEqual(cathode * 55.845 / 157.76, cells[Material.Iron], 1e-9);
+            Assert.AreEqual(cathode, cells.TotalKg, 1e-9, "the rest (phosphate, oxygen) stands in as rock");
         }
 
         // ---- Charging hysteresis and facilities ----
 
-        sealed class Parts : IPartsStore
+        static MaterialStock StockOf(params (Material M, double Kg)[] items)
         {
-            public double StockWh { get; set; }
-            public double Take(double wh)
-            {
-                double t = Math.Min(StockWh, Math.Max(0.0, wh));
-                StockWh -= t;
-                return t;
-            }
+            var s = new MaterialStock();
+            foreach (var (m, kg) in items) s.Add(m, kg);
+            return s;
         }
 
         static Workforce WithRobots(int n, double charge)
@@ -151,11 +153,30 @@ namespace KardashevAscent.Simulation.Tests.Robots
 
             up.Plan(w, yard, 0.25);
             Assert.AreEqual(RobotActivity.Charging, r.Activity, "it got power last step: it stays");
-            Assert.Greater(up.TopUpRequestW, 0.0);
-            up.Apply(w, 0.25, 0.0, 0.0, 0.0, false, null);                    // no spare power for a top-up
+            Assert.Greater(up.CriticalRequestW, 0.0, "plugged in: priority charging up to 80 % (director 2026-11-14)");
+            Assert.AreEqual(0.0, up.TopUpRequestW);
+            up.Apply(w, 0.25, 0.0, 0.0, 0.0, false, null);                    // a brownout: nothing came
             up.Plan(w, yard, 0.25);
             Assert.AreEqual(RobotActivity.None, r.Activity, "nothing came: back to work above 20 %");
             Assert.IsTrue(r.Available);
+        }
+
+        [Test]
+        public void PluggedIn_ChargesAtPriority_AllTheWayTo80()
+        {
+            Workforce w = WithRobots(1, 0.1);
+            Robot r = w.Robots[0];
+            var yard = new List<RobotFacility> { new RobotFacility(0, 3, ChargingCapability.BatteryYard) };
+            var up = new RobotUpkeep();
+            for (int i = 0; i < 40 && r.Activity != RobotActivity.None || i == 0; i++)
+            {
+                up.Plan(w, yard, 0.25);
+                Assert.AreEqual(0.0, up.TopUpRequestW, "no waiting for the grid battery to fill");
+                up.Apply(w, 0.25, 0.0, up.CriticalRequestW, 0.0, false, null);
+            }
+            up.Plan(w, yard, 0.25);
+            Assert.GreaterOrEqual(r.Battery.StateOfCharge, RobotSpecs.ResumeWorkFraction - 1e-6);
+            Assert.AreEqual(RobotActivity.None, r.Activity, "charged: back to work");
         }
 
         [Test]
@@ -256,22 +277,22 @@ namespace KardashevAscent.Simulation.Tests.Robots
         }
 
         [Test]
-        public void LowCondition_Maintenance_RepairsWithParts_ThenBackToWork()
+        public void LowCondition_Maintenance_RepairsWithIron_ThenBackToWork()
         {
             Workforce w = WithRobots(1, 1.0);
             Robot r = w.Robots[0];
             r.Condition = 0.0;
-            var parts = new Parts { StockWh = 1e9 };
+            MaterialStock stock = StockOf((Material.Iron, 1e6));
             var up = new RobotUpkeep();
             up.Plan(w, LanderOnly, 1.0);
             Assert.AreEqual(RobotState.Maintenance, r.State);
-            up.Apply(w, 1.0, 0.0, 0.0, 0.0, false, parts);
+            up.Apply(w, 1.0, 0.0, 0.0, 0.0, false, null, stock);
             Assert.AreEqual(RobotSpecs.RepairPerHour, r.Condition, 1e-12);
-            Assert.AreEqual(1e9 - RobotSpecs.RepairPerHour * RobotSpecs.RepairPartsWh, parts.StockWh, 1e-6);
+            Assert.AreEqual(1e6 - RobotSpecs.RepairPerHour * RobotSpecs.RepairIronKg, stock[Material.Iron], 1e-6);
             for (int i = 0; i < 20 && r.Activity == RobotActivity.Maintenance; i++)
             {
                 up.Plan(w, LanderOnly, 1.0);
-                up.Apply(w, 1.0, 0.0, 0.0, 0.0, false, parts);
+                up.Apply(w, 1.0, 0.0, 0.0, 0.0, false, null, stock);
             }
             up.Plan(w, LanderOnly, 1.0);
             Assert.AreEqual(1.0, r.Condition, 1e-9);
@@ -279,16 +300,15 @@ namespace KardashevAscent.Simulation.Tests.Robots
         }
 
         [Test]
-        public void Repair_WaitsForParts()
+        public void Repair_WithoutIron_GoesSlower()
         {
             Workforce w = WithRobots(1, 1.0);
             Robot r = w.Robots[0];
             r.Condition = 0.1;
-            var parts = new Parts { StockWh = 0.0 };
             var up = new RobotUpkeep();
             up.Plan(w, LanderOnly, 1.0);
-            up.Apply(w, 1.0, 0.0, 0.0, 0.0, false, parts);
-            Assert.AreEqual(0.1, r.Condition, 1e-12);
+            up.Apply(w, 1.0, 0.0, 0.0, 0.0, false, null, new MaterialStock());
+            Assert.AreEqual(0.1 + RobotSpecs.RepairPerHour * RobotSpecs.RepairWithoutIronRate, r.Condition, 1e-12);
             Assert.AreEqual(RobotState.Maintenance, r.State);
         }
 
@@ -299,12 +319,14 @@ namespace KardashevAscent.Simulation.Tests.Robots
             Robot r = w.Robots[0];
             r.Battery.Restore(3200.0 * 2408.0, 1000.0);
             Assert.IsTrue(r.NeedsMaintenance);
-            var parts = new Parts { StockWh = 5000.0 };
+            MaterialStock stock = StockOf((Material.Lithium, 10.0), (Material.Iron, 10.0), (Material.Rock, 10.0));
+            MaterialBill cells = BuildCosts.BatteryCells(r.Battery.NominalWh);
             var up = new RobotUpkeep();
             up.Plan(w, LanderOnly, 0.25);
-            up.Apply(w, 0.25, 0.0, 0.0, 0.0, false, parts);
+            up.Apply(w, 0.25, 0.0, 0.0, 0.0, false, null, stock);
             Assert.AreEqual(1.0, r.Battery.Health);
-            Assert.AreEqual(5000.0 - 2408.0, parts.StockWh, 1e-9);
+            Assert.AreEqual(10.0 - cells[Material.Lithium], stock[Material.Lithium], 1e-9);
+            Assert.AreEqual(10.0 - cells[Material.Iron] - RobotSpecs.RepairIronKg * 0.0, stock[Material.Iron], 1e-6);
             up.Plan(w, LanderOnly, 0.25);
             Assert.IsTrue(r.Available, "condition was fine: back to work");
         }

@@ -120,6 +120,11 @@ namespace KardashevAscent.Presentation.UI
 
         void Update()
         {
+            // The system tabs belong to a running colony: hidden on the menus and while choosing where to land.
+            if (bar != null)
+                bar.style.display = GameFlow.IsPlaying ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!GameFlow.IsPlaying)
+                return;
             foreach (SystemWindow w in windows)
                 if (ScreenInput.KeyDown(w.Key))
                     SystemTabs.Toggle(w.Id);

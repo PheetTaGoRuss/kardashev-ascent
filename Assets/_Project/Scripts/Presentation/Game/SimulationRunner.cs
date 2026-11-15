@@ -12,7 +12,7 @@ namespace KardashevAscent.Presentation.Game
     /// <summary>
     /// Owns the planet's simulation and its clock: builds a <see cref="PlanetSimulation"/> for the chosen
     /// <see cref="PlanetDNA"/> (real NASA planets or hand-made ones, #11), then ticks it with game time every frame.
-    /// Keys: Space pause/resume, 1–5 speed (pause, real time, 1 hour/s, 1 day/s, 1 year/min).
+    /// Keys: Space pause/resume, 1–4 speed (pause, real time, 1 hour/s, 1 day/s; no faster, director 2026-11-14).
     /// </summary>
     public sealed class SimulationRunner : MonoBehaviour
     {
@@ -60,14 +60,16 @@ namespace KardashevAscent.Presentation.Game
         /// Land the colony on <paramref name="tileId"/> instead (a new colony on the same planet). Returns null if it
         /// moved, else why not. <paramref name="force"/> skips the "nothing built yet" rule (loading a save).
         /// </summary>
-        public string LandAt(int tileId, bool force = false)
+        /// <param name="checkGround">False when a saved game puts its colony back (older saves may sit on ground no longer allowed).</param>
+        public string LandAt(int tileId, bool force = false, bool checkGround = true)
         {
             if (Simulation == null || planet == null || planet.Sphere == null)
                 return "The planet isn't ready.";
             if (tileId < 0 || tileId >= Simulation.TileCount)
                 return "No such tile.";
-            if (Simulation.GetTile(tileId).IsWater)
-                return "The lander can't come down on water.";
+            string problem = Terrains.LandingProblem(Simulation.GetTile(tileId).Terrain);
+            if (problem != null && (checkGround || Simulation.GetTile(tileId).IsWater))
+                return problem;
             if (tileId == Simulation.BaseTileId)
                 return null;
             if (!force && !CanMoveLanding)
@@ -110,6 +112,45 @@ namespace KardashevAscent.Presentation.Game
         }
 
         /// <summary>Start a new colony on planet <paramref name="index"/> of <see cref="Planets"/>. False if it cannot be landed on.</summary>
+        /// <summary>The seed of the map now on screen (and in the simulation).</summary>
+        public int TerrainSeed => record?.look?.terrainSeed ?? PlanetSimulation.DefaultTerrainSeed;
+
+        readonly System.Random mapRandom = new System.Random();
+
+        /// <summary>
+        /// A new random map for the planet now chosen (director 2026-11-14: every new game is a new map). The
+        /// continents and the deposits change; the planet's NASA values don't. Returns the seed.
+        /// </summary>
+        public int NewRandomMap()
+        {
+            int seed = mapRandom.Next(1, 2_000_000_000);
+            UseMap(seed);
+            return seed;
+        }
+
+        /// <summary>Put this map on screen and in the simulation (a saved game's map; nothing happens if it already is).</summary>
+        public void UseMap(int seed)
+        {
+            if (record == null || planet == null || seed == TerrainSeed)
+                return;
+            // A copy: the planet asset keeps its own map for the chooser and for older saves.
+            record = JsonUtility.FromJson<PlanetRecord>(JsonUtility.ToJson(record));
+            if (record.look == null) record.look = new PlanetRecord.LookRecord();
+            record.look.terrainSeed = seed;
+            landingTile = null;
+            if (planet.SetSurface(record.ToSurfaceSettings()))
+                planet.EnsureBuilt();
+            else if (planet.Sphere != null)
+                CreateSimulation();
+        }
+
+        /// <summary>The planet's own map, as in its data (for saves from before random maps).</summary>
+        public void UseOriginalMap()
+        {
+            if (CurrentIndex >= 0 && CurrentIndex < planets.Length && planets[CurrentIndex] != null)
+                UseMap(planets[CurrentIndex].Record.look?.terrainSeed ?? PlanetSimulation.DefaultTerrainSeed);
+        }
+
         public bool ChoosePlanet(int index)
         {
             if (index < 0 || index >= planets.Length || planets[index] == null || !planets[index].Record.IsPlayable)
@@ -198,13 +239,15 @@ namespace KardashevAscent.Presentation.Game
             if (ScreenInput.KeyDown(KeyCode.Alpha2)) SetSpeed(ClockSpeed.RealTime);
             if (ScreenInput.KeyDown(KeyCode.Alpha3)) SetSpeed(ClockSpeed.HourPerSecond);
             if (ScreenInput.KeyDown(KeyCode.Alpha4)) SetSpeed(ClockSpeed.DayPerSecond);
-            if (ScreenInput.KeyDown(KeyCode.Alpha5)) SetSpeed(ClockSpeed.YearPerMinute);
         }
 
         public void SetSpeed(ClockSpeed speed)
         {
             if (Clock == null)
                 return;
+            // The fastest speed is a day per second (director, 2026-11-14).
+            if (speed > ClockSpeed.DayPerSecond)
+                speed = ClockSpeed.DayPerSecond;
             if (Clock.Speed != ClockSpeed.Paused)
                 speedBeforePause = Clock.Speed;
             Clock.Speed = speed;

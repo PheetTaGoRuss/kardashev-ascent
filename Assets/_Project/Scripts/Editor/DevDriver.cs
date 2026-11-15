@@ -179,7 +179,7 @@ namespace KardashevAscent.EditorTools
                 {
                     var sim = Runner()?.Simulation;
                     if (sim != null)
-                        Log($"STATUS t={sim.TimeHours:0}h gen={sim.GenerationW:0}W demand={sim.DemandW:0}W battery={sim.BatteryStoredWh / 1e6:0.0}MWh brownout={sim.IsBrownout} K={sim.PlanetK:0.000} milestones={sim.MilestonesReached} parts={sim.BuildStockWh / 1e6:0.0}MWh queue={sim.ConstructionQueueCount} robots={sim.Workforce.Robots.Count}");
+                        Log($"STATUS t={sim.TimeHours:0}h gen={sim.GenerationW:0}W demand={sim.DemandW:0}W battery={sim.BatteryStoredWh / 1e6:0.0}MWh brownout={sim.IsBrownout} K={sim.PlanetK:0.000} milestones={sim.MilestonesReached} iron={sim.Materials[KardashevAscent.Simulation.Resources.Material.Iron]:0}kg queue={sim.ConstructionQueueCount} robots={sim.Workforce.Robots.Count}");
                     return true;
                 }
                 case "select":

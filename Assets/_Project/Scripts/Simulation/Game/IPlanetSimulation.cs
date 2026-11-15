@@ -35,6 +35,8 @@ namespace KardashevAscent.Simulation.Game
         Relay,
         /// <summary>Solar panels on pontoons over shallow sea or wetland (decided 2026-11-13): 1.5 times the cost, cooler cells.</summary>
         FloatingSolar,
+        /// <summary>Research Station (director 2026-11-14): where robots measure the planet's values and run experiments.</summary>
+        ResearchStation,
     }
 
     /// <summary>Static facts about one tile.</summary>

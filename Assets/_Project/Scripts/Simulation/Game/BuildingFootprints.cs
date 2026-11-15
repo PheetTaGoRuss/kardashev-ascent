@@ -13,6 +13,7 @@ namespace KardashevAscent.Simulation.Game
         public const int Workshop = 3;
         public const int ChargingStation = 1;
         public const int Relay = 1;
+        public const int ResearchStation = 1;
 
         public static int SlotsFor(BuildingType type, int panelTier)
         {

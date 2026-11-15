@@ -23,9 +23,13 @@ namespace KardashevAscent.Presentation.Game
 
         static string FilePath => Path.Combine(Application.persistentDataPath, FileName);
 
+        /// <summary>True when there is a saved game to load.</summary>
+        public bool HasSave => File.Exists(FilePath);
+
         void Update()
         {
-            if (ScreenInput.KeyDown(saveKey))
+            // Nothing to save before the colony has landed.
+            if (ScreenInput.KeyDown(saveKey) && GameFlow.IsPlaying)
                 Save();
             else if (ScreenInput.KeyDown(loadKey))
                 Load();
@@ -75,9 +79,15 @@ namespace KardashevAscent.Presentation.Game
                         return;
                     }
                 }
+                // Its map: a new game's random one (version 28), or the planet's own for older saves.
+                if (state != null)
+                {
+                    if (state.TerrainSeed != 0) runner.UseMap(state.TerrainSeed);
+                    else runner.UseOriginalMap();
+                }
                 // A save from a colony that landed elsewhere on this planet: land there first.
                 if (state != null && state.TileCount == runner.Simulation.TileCount && state.BaseTileId != runner.Simulation.BaseTileId)
-                    runner.LandAt(state.BaseTileId, true);
+                    runner.LandAt(state.BaseTileId, true, false);
                 if (state == null || !runner.Simulation.RestoreState(state))
                 {
                     Show("That save is from a different planet");

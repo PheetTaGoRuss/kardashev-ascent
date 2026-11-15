@@ -21,7 +21,7 @@
             </ui:VisualElement>
             <ui:VisualElement class="divider" />
             <ui:VisualElement class="block build-block">
-                <ui:Label class="heading" text="BUILD PARTS" />
+                <ui:Label class="heading" text="MATERIALS" />
                 <ui:Label name="build-stock" class="value" text="0 kWh" />
                 <ui:Label name="build-queue" class="caption" text="no sites" />
             </ui:VisualElement>
@@ -40,7 +40,6 @@
                     <ui:Button name="speed-real" class="speed-button" text="Real" />
                     <ui:Button name="speed-hour" class="speed-button" text="1 h/s" />
                     <ui:Button name="speed-day" class="speed-button" text="1 d/s" />
-                    <ui:Button name="speed-year" class="speed-button" text="1 y/min" />
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>

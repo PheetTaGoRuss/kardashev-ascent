@@ -18,7 +18,12 @@ namespace KardashevAscent.Simulation.Tests.Game
         static readonly HexSphere Sphere = HexSphere.Create(12);
         static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
 
-        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike);
+        static PlanetSimulation Create()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { PuzzleChance = 1.0 };   // these tests are about the puzzles
+            sim.AddFinishedResearchStationForTests(sim.BaseTileId);   // measuring is done at a Research Station
+            return sim;
+        }
 
         static ParameterEffect Effect(List<ParameterEffect> list, SolarParameter p) => list.Find(e => e.Parameter == p);
 
@@ -37,6 +42,19 @@ namespace KardashevAscent.Simulation.Tests.Game
             }
             Assert.IsTrue(Effect(effects, SolarParameter.Clouds).Known, "no cloud model on this planet: nothing to measure");
             Assert.Greater(Effect(effects, SolarParameter.OpticalDepth).HighWh, Effect(effects, SolarParameter.OpticalDepth).LowWh);
+        }
+
+        [Test]
+        public void WithoutAPuzzle_TheRobotWorksTheValueOut()
+        {
+            var sim = Create();
+            sim.PuzzleChance = 0.0;
+            int t = sim.BaseTileId;
+            Assert.IsTrue(sim.OrderMeasure(SolarParameter.Spectrum, t));
+            for (int i = 0; i < 40 && !sim.Parameters.IsMeasured(SolarParameter.Spectrum); i++)
+                sim.Tick(1.0);
+            Assert.IsTrue(sim.Parameters.IsMeasured(SolarParameter.Spectrum));
+            Assert.AreEqual(0, sim.ParameterPuzzles.Count);
         }
 
         [Test]

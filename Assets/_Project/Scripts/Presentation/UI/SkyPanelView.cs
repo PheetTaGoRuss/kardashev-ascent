@@ -24,7 +24,7 @@ namespace KardashevAscent.Presentation.UI
 
         VisualElement panelRoot, labelLayer;
         Label title, season, date, decl, hour, sunLabel, lat, panelLabel, theta, power, log;
-        Button workDecl, measureSun, measurePole;
+        Button workDecl, measureSun, measurePole, noonLat;
         OrbitInset orbit;
         readonly List<Label> domeLabels = new List<Label>();
         float nextText;
@@ -37,6 +37,7 @@ namespace KardashevAscent.Presentation.UI
             root.pickingMode = PickingMode.Ignore;
             ScreenInput.Register(root.panel);
             panelRoot = root.Q("sky");
+            PanelDrag.AddGrip(panelRoot);   // drag it anywhere (director 2026-11-14)
             labelLayer = root.Q("labels");
             title = root.Q<Label>("title");
             season = root.Q<Label>("season");
@@ -52,9 +53,18 @@ namespace KardashevAscent.Presentation.UI
             workDecl = root.Q<Button>("work-decl");
             measureSun = root.Q<Button>("measure-sun");
             measurePole = root.Q<Button>("measure-pole");
-            if (workDecl != null) workDecl.clicked += () => { sky?.WorkOutDeclination(); nextText = 0f; };
-            if (measureSun != null) measureSun.clicked += () => { sky?.MeasureSun(); nextText = 0f; };
-            if (measurePole != null) measurePole.clicked += () => { sky?.MeasurePole(); nextText = 0f; };
+            // Each button opens a puzzle from real-world readings (director 2026-11-14: no more click-to-know).
+            if (workDecl != null) { workDecl.text = "Work out δ  ►"; workDecl.clicked += () => Open(Puzzle.Declination); }
+            if (measureSun != null) { measureSun.text = "Measure the sun's shadow  ►"; measureSun.clicked += () => Open(Puzzle.Sun); }
+            if (measurePole != null)
+            {
+                measurePole.text = "Sight the celestial pole (night)  ►";
+                measurePole.clicked += () => Open(Puzzle.Pole);
+                noonLat = new Button(() => Open(Puzzle.Noon)) { text = "Latitude from the noon sun  ►" };
+                noonLat.AddToClassList("action");
+                measurePole.parent.Insert(measurePole.parent.IndexOf(measurePole), noonLat);
+            }
+            BuildTutorial(root.Q<ScrollView>("scroll"));
             orbit = new OrbitInset();
             root.Q("orbit")?.Add(orbit);
         }
@@ -152,6 +162,7 @@ namespace KardashevAscent.Presentation.UI
             }
             decl.EnableInClassList("unknown", !book.KnowsDeclination);
             workDecl.SetEnabled(!book.KnowsDeclination);
+            noonLat?.SetEnabled(book.NoonSighting != null && book.KnowsDeclination && !KnowsLatitudeHere(book, tile));
 
             // 2. The sun
             hour.text = r.TidallyLocked
@@ -209,6 +220,316 @@ namespace KardashevAscent.Presentation.UI
             log.text = lines.Count > 0 ? string.Join("\n", lines) : "Nothing measured yet.";
         }
 
+        static bool KnowsLatitudeHere(SkyNotebook book, int tile) => book.MeasuredLatitude(tile);
+
+        // ---- Puzzles (director 2026-11-14): readings from real instruments; the player works the value out ----
+
+        const string DEG = "Use a calculator in degrees mode (DEG), not radians.";
+        enum Puzzle { Declination, Sun, Noon, Pole }
+
+        VisualElement card;
+        Puzzle openPuzzle;
+        SkyReport snapshot;
+        TextField answerA, answerB;
+        Label cardMessage;
+
+        void Open(Puzzle which)
+        {
+            if (sky == null) return;
+            bool same = card != null && openPuzzle == which;
+            CloseCard();
+            if (same) return;   // the button toggles its card
+            openPuzzle = which;
+            snapshot = sky.Report;
+            Button anchor = which == Puzzle.Declination ? workDecl : which == Puzzle.Sun ? measureSun : which == Puzzle.Noon ? noonLat : measurePole;
+            card = BuildCard(which, snapshot);
+            anchor.parent.Insert(anchor.parent.IndexOf(anchor) + 1, card);
+        }
+
+        void CloseCard()
+        {
+            card?.RemoveFromHierarchy();
+            card = null;
+        }
+
+        VisualElement BuildCard(Puzzle which, SkyReport r)
+        {
+            var c = new VisualElement();
+            c.AddToClassList("sky-puzzle");
+            c.style.marginTop = 4; c.style.marginBottom = 6;
+            c.style.paddingLeft = c.style.paddingRight = 8; c.style.paddingTop = c.style.paddingBottom = 6;
+            c.style.backgroundColor = UiPalette.AccentA(0.08f);
+            c.style.borderLeftWidth = 2; c.style.borderLeftColor = UiPalette.Accent;
+            SkyNotebook book = sky.Notebook;
+            string hint;
+            answerA = answerB = null;
+            switch (which)
+            {
+                case Puzzle.Declination:
+                    c.Add(PuzzleGuide.Text("Today's sun declination δ", bold: true, size: PuzzleGuide.TitleSize));
+                    c.Add(Line("δ is how far north (+) or south (−) of the equator the sun is today. It comes from how tilted the planet is and where it is on its orbit."));
+                    c.Add(Line($"Tilt ε = {r.ObliquityDeg:0.##}°   ·   orbit position λ = {r.EclipticLongitudeDeg:0.#}°", true));
+                    c.Add(CalculatorPad.Values("ε", r.ObliquityDeg.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture), "λ", r.EclipticLongitudeDeg.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)));
+                    c.Add(PuzzleGuide.Steps(
+                        "Press sin on the tilt ε.",
+                        "Press sin on the orbit position λ.",
+                        "Multiply the two answers.",
+                        "Press arcsin (shift + sin) on that. That is δ in degrees. " + DEG));
+                    c.Add(PuzzleGuide.Example(
+                        "ε = 23.44°, λ = 60°:",
+                        "sin 23.44° = 0.3978   ·   sin 60° = 0.8660",
+                        "0.3978 × 0.8660 = 0.3445   →   arcsin 0.3445 = 20.15°"));
+                    answerA = Field(c, "δ (°)");
+                    hint = "";
+                    break;
+                case Puzzle.Sun:
+                {
+                    var (shadow, bearing) = SkyNotebook.GnomonReading(r);
+                    if (double.IsNaN(shadow))
+                    {
+                        c.Add(Line("The sun is down: no shadow. Wait for day, or sight the celestial pole tonight."));
+                        hint = "";
+                        break;
+                    }
+                    c.Add(PuzzleGuide.Text("Where is the sun? Read a stick's shadow", bold: true, size: PuzzleGuide.TitleSize));
+                    c.Add(new GnomonPlot(SkyNotebook.GnomonLengthM, shadow));
+                    c.Add(Line($"A {SkyNotebook.GnomonLengthM:0.000} m stick stands straight up. Its shadow is {shadow:0.000} m long and points to {bearing:0}° on the compass (0° = north, 90° = east).", true));
+                    c.Add(CalculatorPad.Values("stick", SkyNotebook.GnomonLengthM.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture), "shadow", shadow.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture),
+                                               "shadow direction", bearing.ToString("0", System.Globalization.CultureInfo.InvariantCulture)));
+                    c.Add(PuzzleGuide.Steps(
+                        "Height h: divide stick / shadow, then press arctan (shift + tan). " + DEG,
+                        "Direction A_s: the sun is on the opposite side of the stick from the shadow, so take the shadow's direction − 180°.",
+                        "If that comes out negative, add 360°."));
+                    c.Add(PuzzleGuide.Example(
+                        "Stick 1.000 m, shadow 0.700 m pointing to 320°:",
+                        "1 / 0.7 = 1.4286   →   arctan 1.4286 = 55.0°  (h)",
+                        "320° − 180° = 140°  (A_s, the sun is south-east)"));
+                    answerA = Field(c, "Sun's height h (°)");
+                    answerB = Field(c, "Sun's direction A_s (°)");
+                    hint = "";
+                    break;
+                }
+                case Puzzle.Noon:
+                {
+                    var noon = book.NoonSighting;
+                    if (noon == null || !book.KnowsDeclination)
+                    {
+                        c.Add(Line("Needs δ (step 1) and a shadow sighting within a quarter hour of noon (step 2)."));
+                        hint = "";
+                        break;
+                    }
+                    c.Add(PuzzleGuide.Text("Your latitude from the noon sun", bold: true, size: PuzzleGuide.TitleSize));
+                    c.Add(Line($"At noon the sun stood h = {noon.Value.AltitudeDeg:0.0}° high, in the {(noon.Value.South ? "south" : "north")}. Today δ = {r.DeclinationDeg:+0.00;−0.00}°.", true));
+                    c.Add(CalculatorPad.Values("h", noon.Value.AltitudeDeg.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), "δ", r.DeclinationDeg.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)));
+                    c.Add(PuzzleGuide.Steps(
+                        "Sun in the south: φ = 90° − h + δ.",
+                        "Sun in the north: φ = h − 90° + δ.",
+                        "Careful with signs: adding a negative δ makes the answer smaller. φ positive = north, negative = south."));
+                    c.Add(PuzzleGuide.Example(
+                        "h = 60°, sun in the south, δ = −10°:",
+                        "φ = 90° − 60° + (−10°) = 20°  (20° north)"));
+                    answerA = Field(c, "Latitude φ (°, south is −)");
+                    hint = "";
+                    break;
+                }
+                default:
+                {
+                    var (reading, north) = SkyNotebook.QuadrantReading(r);
+                    if (double.IsNaN(reading))
+                    {
+                        c.Add(Line("Too bright to see the stars: sight the pole after sunset."));
+                        hint = "";
+                        break;
+                    }
+                    c.Add(PuzzleGuide.Text("Your latitude from the pole star point", bold: true, size: PuzzleGuide.TitleSize));
+                    c.Add(new QuadrantPlot(reading));
+                    c.Add(Line($"Sighting the {(north ? "north" : "south")} celestial pole (the point the night sky turns around) along the quadrant's edge, the hanging string crosses the scale at {reading:0.0}° (counted from straight up).", true));
+                    c.Add(CalculatorPad.Values("reading", reading.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)));
+                    c.Add(PuzzleGuide.Steps(
+                        "The pole's height above the horizon = 90° − the reading.",
+                        "That height is your latitude.",
+                        "North pole: φ is positive. South pole: put a minus sign in front."));
+                    c.Add(PuzzleGuide.Example(
+                        "Reading 35° on the north pole:",
+                        "90° − 35° = 55°   →   φ = +55°  (on the south pole it would be −55°)"));
+                    answerA = Field(c, "Latitude φ (°, south is −)");
+                    hint = "";
+                    break;
+                }
+            }
+            var row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.marginTop = 4;
+            if (answerA != null)
+            {
+                var check = new Button(() => Check(which)) { text = "Check" };
+                check.AddToClassList("action");
+                row.Add(check);
+                var calc = CalculatorPad.OpenButton();
+                calc.RemoveFromClassList("small-button");
+                calc.AddToClassList("action");
+                row.Add(calc);
+                var hintLabel = Line(hint);
+                hintLabel.style.display = DisplayStyle.None;
+                if (which == Puzzle.Sun)
+                {
+                    var again = new Button(() => { CloseCard(); Open(Puzzle.Sun); }) { text = "New reading" };
+                    again.AddToClassList("action");
+                    row.Add(again);
+                }
+                c.Add(row);
+                c.Add(hintLabel);
+            }
+            cardMessage = Line("");
+            c.Add(cardMessage);
+            return c;
+        }
+
+        static Label Line(string text, bool strong = false)
+        {
+            Label l = PuzzleGuide.Text(text, bold: strong);
+            l.AddToClassList("wrap");
+            return l;
+        }
+
+        static TextField Field(VisualElement parent, string label)
+        {
+            var row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.alignItems = Align.Center;
+            row.style.marginTop = 3;
+            var l = Line(label, true);
+            l.style.flexGrow = 1;
+            row.Add(l);
+            var f = new TextField { maxLength = 12 };
+            CalculatorPad.TrackAnswer(f);
+            f.AddToClassList("puzzle-field");
+            f.style.width = 110;
+            f.style.fontSize = PuzzleGuide.BodySize;
+            row.Add(f);
+            parent.Add(row);
+            return f;
+        }
+
+        static bool Number(TextField f, out double v) =>
+            double.TryParse((f?.value ?? "").Trim().Replace('−', '-').Replace(',', '.'),
+                            System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out v);
+
+        void Check(Puzzle which)
+        {
+            SkyNotebook book = sky.Notebook;
+            if (!Number(answerA, out double a) || (answerB != null && !Number(answerB, out _)))
+            {
+                cardMessage.text = "Enter a number in degrees.";
+                return;
+            }
+            Number(answerB, out double b);
+            bool right;
+            string result = which == Puzzle.Declination ? book.AnswerDeclination(snapshot, a, out right)
+                : which == Puzzle.Sun ? book.AnswerSun(sky.Tile, snapshot, a, b, out right)
+                : which == Puzzle.Noon ? book.AnswerNoonLatitude(sky.Tile, snapshot, a, out right)
+                : book.AnswerPole(sky.Tile, snapshot, a, out right);
+            KardashevAscent.Presentation.Audio.GameAudio.Play(right ? KardashevAscent.Presentation.Audio.Sfx.Correct : KardashevAscent.Presentation.Audio.Sfx.Wrong);
+            cardMessage.text = (right ? "Right! " : "") + result;
+            cardMessage.style.color = right ? new Color(0.45f, 0.85f, 0.55f) : new Color(1f, 0.70f, 0.45f);
+            nextText = 0f;
+            if (right)
+            {
+                // Keep the result on screen a moment, then fold the card away.
+                var done = card;
+                done.schedule.Execute(() => { if (card == done) CloseCard(); }).StartingIn(1800);
+            }
+        }
+
+        // ---- First-time tutorial ----
+
+        const string TutorialSeenKey = "kardashev.tutorial.sky";
+        VisualElement tutorial;
+        Label tutorialTitle, tutorialText, tutorialCount;
+        VisualElement tutorialPicture;
+        Button tutorialNext;
+        int tutorialAt;
+
+        static readonly (string Title, string Text, int Picture)[] Steps =
+        {
+            ("Find your place from the sky", "Before GPS, people found where they were with a stick, a shadow and the date. You'll do the same here.", 0),
+            ("1 · The date gives δ", "The planet's tilt and its place on the orbit give the sun's declination δ: how far north or south of the equator it shines.", 0),
+            ("2 · A stick's shadow gives the sun", "A stick 1 m tall: the shorter its shadow, the higher the sun. tan h = stick / shadow, and the sun is opposite the shadow.", 1),
+            ("3 · Noon gives your latitude", "At noon the sun is highest: φ = 90° − h + δ. At night, sight the celestial pole with a quadrant instead.", 2),
+            ("Your latitude unlocks the best angle", "Once φ is known, B sets a panel to the best angle for this place, and every tile's latitude is known.", 1),
+        };
+
+        void BuildTutorial(ScrollView scroll)
+        {
+            if (scroll == null) return;
+            tutorial = new VisualElement();
+            tutorial.style.marginBottom = 8;
+            tutorial.style.paddingLeft = tutorial.style.paddingRight = 8;
+            tutorial.style.paddingTop = tutorial.style.paddingBottom = 6;
+            tutorial.style.backgroundColor = new Color(1f, 0.85f, 0.35f, 0.10f);
+            tutorial.style.borderLeftWidth = 2; tutorial.style.borderLeftColor = new Color(1f, 0.85f, 0.35f);
+            var row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.alignItems = Align.Center;
+            tutorialPicture = new VisualElement();
+            tutorialPicture.style.width = 90;
+            tutorialPicture.style.marginRight = 8;
+            row.Add(tutorialPicture);
+            var words = new VisualElement();
+            words.style.flexGrow = 1; words.style.flexShrink = 1;
+            tutorialTitle = Line("", true);
+            tutorialTitle.style.unityFontStyleAndWeight = FontStyle.Bold;
+            words.Add(tutorialTitle);
+            tutorialText = Line("");
+            words.Add(tutorialText);
+            row.Add(words);
+            tutorial.Add(row);
+            var buttons = new VisualElement();
+            buttons.style.flexDirection = FlexDirection.Row;
+            buttons.style.alignItems = Align.Center;
+            buttons.style.marginTop = 4;
+            tutorialCount = Line("");
+            tutorialCount.style.flexGrow = 1;
+            buttons.Add(tutorialCount);
+            var skip = new Button(CloseTutorial) { text = "Skip" };
+            skip.AddToClassList("action");
+            buttons.Add(skip);
+            tutorialNext = new Button(() => ShowTutorial(tutorialAt + 1)) { text = "Next ►" };
+            tutorialNext.AddToClassList("action");
+            buttons.Add(tutorialNext);
+            tutorial.Add(buttons);
+            scroll.contentContainer.Insert(0, tutorial);
+            var help = new Button(() => ShowTutorial(0)) { text = "? How to measure" };
+            help.AddToClassList("action");
+            scroll.contentContainer.Insert(1, help);
+            bool seen = false;
+            try { seen = PlayerPrefs.GetInt(TutorialSeenKey, 0) == 1; } catch { }
+            if (seen) tutorial.style.display = DisplayStyle.None;
+            else ShowTutorial(0);
+        }
+
+        void ShowTutorial(int step)
+        {
+            if (step >= Steps.Length) { CloseTutorial(); return; }
+            tutorialAt = step;
+            tutorial.style.display = DisplayStyle.Flex;
+            var s = Steps[step];
+            tutorialTitle.text = s.Title;
+            tutorialText.text = s.Text;
+            tutorialCount.text = $"{step + 1} / {Steps.Length}";
+            tutorialNext.text = step == Steps.Length - 1 ? "Got it" : "Next ►";
+            tutorialPicture.Clear();
+            tutorialPicture.Add(s.Picture == 1 ? (VisualElement)new GnomonPlot(1.0, 0.6) { style = { height = 70 } }
+                                : s.Picture == 2 ? new QuadrantPlot(55.0) { style = { height = 70 } }
+                                : new Label("δ") { style = { fontSize = 34, unityTextAlign = TextAnchor.MiddleCenter, color = new Color(1f, 0.85f, 0.35f) } });
+        }
+
+        void CloseTutorial()
+        {
+            tutorial.style.display = DisplayStyle.None;
+            try { PlayerPrefs.SetInt(TutorialSeenKey, 1); PlayerPrefs.Save(); } catch { }
+        }
+
         static string Signed(double v, int decimals) =>
             v.ToString((decimals == 1 ? "+0.0;−0.0;0.0" : "+0.00;−0.00;0.00"), System.Globalization.CultureInfo.InvariantCulture);
 
@@ -221,6 +542,82 @@ namespace KardashevAscent.Presentation.UI
     }
 
     /// <summary>The planet's orbit from above: star at the focus, equinoxes and solstices, where the planet is now.</summary>
+    /// <summary>A stick standing on the ground and its shadow, with the sun's height angle h at the shadow's tip.</summary>
+    public sealed class GnomonPlot : VisualElement
+    {
+        readonly double stick, shadow;
+
+        public GnomonPlot(double stickM, double shadowM)
+        {
+            stick = stickM; shadow = shadowM;
+            style.height = 90;
+            style.marginTop = 2;
+            generateVisualContent += Draw;
+        }
+
+        void Draw(MeshGenerationContext ctx)
+        {
+            Rect r = contentRect;
+            if (r.width <= 0f) return;
+            float ground = r.height - 10f, left = 14f;
+            float scale = Mathf.Min((r.height - 20f) / (float)stick, (r.width - 28f) / (float)Math.Max(stick, shadow));
+            Vector2 foot = new Vector2(left, ground), top = new Vector2(left, ground - (float)stick * scale);
+            Vector2 tip = new Vector2(left + (float)shadow * scale, ground);
+            var g = ctx.painter2D;
+            g.lineWidth = 1f; g.strokeColor = new Color(1f, 1f, 1f, 0.35f);
+            g.BeginPath(); g.MoveTo(new Vector2(4f, ground)); g.LineTo(new Vector2(r.width - 4f, ground)); g.Stroke();
+            g.lineWidth = 4f; g.strokeColor = new Color(0.25f, 0.25f, 0.30f);
+            g.BeginPath(); g.MoveTo(foot); g.LineTo(tip); g.Stroke();                                   // shadow
+            g.lineWidth = 3f; g.strokeColor = new Color(0.85f, 0.72f, 0.50f);
+            g.BeginPath(); g.MoveTo(foot); g.LineTo(top); g.Stroke();                                    // stick
+            g.lineWidth = 1f; g.strokeColor = new Color(1f, 0.85f, 0.35f, 0.8f);
+            g.BeginPath(); g.MoveTo(top); g.LineTo(tip); g.Stroke();                                     // sunbeam over the stick
+            float h = Mathf.Atan2((float)stick, (float)shadow) * Mathf.Rad2Deg;
+            g.BeginPath(); g.Arc(tip, 16f, Angle.Degrees(180f), Angle.Degrees(180f + h)); g.Stroke();   // h at the tip
+        }
+    }
+
+    /// <summary>A quarter-circle quadrant with its plumb line hanging at the reading (degrees from straight up).</summary>
+    public sealed class QuadrantPlot : VisualElement
+    {
+        readonly double reading;
+
+        public QuadrantPlot(double readingDeg)
+        {
+            reading = readingDeg;
+            style.height = 90;
+            style.marginTop = 2;
+            generateVisualContent += Draw;
+        }
+
+        void Draw(MeshGenerationContext ctx)
+        {
+            Rect r = contentRect;
+            if (r.width <= 0f) return;
+            float radius = Mathf.Min(r.height - 12f, r.width - 12f);
+            Vector2 apex = new Vector2(8f, 6f);
+            var g = ctx.painter2D;
+            g.lineWidth = 1.5f; g.strokeColor = new Color(0.85f, 0.72f, 0.50f);
+            g.BeginPath(); g.MoveTo(apex); g.LineTo(apex + new Vector2(radius, 0f)); g.Stroke();            // sighting edge
+            g.BeginPath(); g.MoveTo(apex); g.LineTo(apex + new Vector2(0f, radius)); g.Stroke();
+            g.BeginPath(); g.Arc(apex, radius, Angle.Degrees(0f), Angle.Degrees(90f)); g.Stroke();          // scale
+            g.strokeColor = new Color(1f, 1f, 1f, 0.3f); g.lineWidth = 1f;
+            for (int d = 0; d <= 90; d += 10)
+            {
+                float a = d * Mathf.Deg2Rad;
+                Vector2 u = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+                g.BeginPath(); g.MoveTo(apex + u * (radius - 5f)); g.LineTo(apex + u * radius); g.Stroke();
+            }
+            // Plumb line: hangs from the apex; with the edge on the pole it crosses the scale at the reading.
+            float p = (float)(90.0 - reading) * Mathf.Deg2Rad;
+            Vector2 down = new Vector2(Mathf.Cos(p), Mathf.Sin(p));
+            g.strokeColor = new Color(0.56f, 0.70f, 1f); g.lineWidth = 1.5f;
+            g.BeginPath(); g.MoveTo(apex); g.LineTo(apex + down * radius); g.Stroke();
+            g.fillColor = new Color(0.56f, 0.70f, 1f);
+            g.BeginPath(); g.Arc(apex + down * radius, 3f, Angle.Degrees(0f), Angle.Degrees(360f)); g.Fill();
+        }
+    }
+
     public sealed class OrbitInset : VisualElement
     {
         PlanetSolarParams planet;

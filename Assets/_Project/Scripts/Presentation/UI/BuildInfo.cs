@@ -24,6 +24,7 @@ namespace KardashevAscent.Presentation.UI
                 case BuildMode.Battery: return "Battery yard";
                 case BuildMode.Workshop: return "Robot Workshop";
                 case BuildMode.ChargingStation: return "Charging station";
+                case BuildMode.ResearchStation: return "Research Station";
                 default: return "Network relay";
             }
         }
@@ -54,13 +55,19 @@ namespace KardashevAscent.Presentation.UI
                     what = $"Charges up to {c.Slots} robots at once at {Format.Power(c.PowerW)} each, from the grid. Robots drive " +
                            "to the nearest charger, so build one near where they work.";
                     break;
+                case BuildMode.ResearchStation:
+                    what = "A lab where robots measure the planet's solar values and run experiments: air pressure, water's " +
+                           "boiling point, surface temperature, gravity. What they learn unlocks buildings (floating solar needs " +
+                           "to know water stays liquid) and removes the safety margins on panels and batteries. Research (T).";
+                    break;
                 default:
                     what = $"Extends the colony network {ColonyNetwork.RangeTiles} tiles around it, so robots working out there " +
                            $"stay connected. Draws {Format.Power(ColonyNetwork.RelayPowerW)}; down in a brownout. Network (N).";
                     break;
             }
             int slots = placer.FootprintOf(m);
-            return what + $"\nCost: {Format.Energy(placer.CostOf(m))} of build parts · covers {slots} slot{(slots == 1 ? "" : "s")}" +
+            return what + $"\nTakes: {placer.CostOf(m).Describe()} · covers {slots} slot{(slots == 1 ? "" : "s")}" +
+                   (m == BuildMode.FloatingSolar ? "\nBuilt by a robot with a boat hull (Workshop upgrade)." : "") +
                    "\nDrag it from the bar onto the site. Trees and rocks on its slots are cleared.";
         }
     }

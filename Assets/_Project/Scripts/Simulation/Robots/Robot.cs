@@ -74,6 +74,12 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>Charge it must keep to drive back to the nearest charger, as a share of capacity (set each step).</summary>
         internal double ReserveFraction;
 
+        /// <summary>
+        /// Charge to reach before a trip too long for the usual 80 %, as a share of capacity (0: none). Set when the only
+        /// work it could do is that far (sea trips with a boat hull); it charges to this, then sets off (game rule, 2026-11-14).
+        /// </summary>
+        public double TripCharge { get; internal set; }
+
         public bool IsTravelling => Route.Count > 0;
         /// <summary>The tile it is driving into, while driving.</summary>
         public int? NextTile => Route.Count > 0 ? Route[0] : (int?)null;
@@ -120,7 +126,8 @@ namespace KardashevAscent.Simulation.Robots
         /// Below the charge threshold (20 %, plus what it needs to drive back to a charger) and not yet charging.
         /// </summary>
         public bool NeedsCharge => Activity == RobotActivity.None
-                                   && Battery.StateOfCharge < RobotSpecs.ReturnToChargeFraction + ReserveFraction;
+                                   && (Battery.StateOfCharge < RobotSpecs.ReturnToChargeFraction + ReserveFraction
+                                       || (TripCharge > 0.0 && Battery.StateOfCharge < TripCharge - 1e-6));
 
         /// <summary>Its group's maintenance rule: go for repair below this condition (spec v2 §8, set each step).</summary>
         internal double MaintenanceBelow = RobotSpecs.MaintenanceBelowCondition;
