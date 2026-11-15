@@ -17,7 +17,7 @@ MonoBehaviour:
     displayName: Kepler-442 b
     archiveName: Kepler-442 b
     source: NASA Exoplanet Archive, table pscomppars
-    retrieved: 2026-11-14
+    retrieved: 2026-11-15
     solar:
       luminosityW: 4.476843668824066e+25
       semiMajorAxisM: 61185529116.299995
@@ -36,6 +36,9 @@ MonoBehaviour:
       massKg: 1.21097823e+30
       spectralType: 
       count: 1
+      raDeg: 285.3666029
+      decDeg: 39.2800704
+      distancePc: 365.965
     planet:
       insolationWm2: 898.26
       radiusM: 8546654
@@ -72,6 +75,15 @@ MonoBehaviour:
     - field: star.ageGyr
       origin: nasa
       note: st_age
+    - field: star.raDeg
+      origin: nasa
+      note: ra
+    - field: star.decDeg
+      origin: nasa
+      note: dec
+    - field: star.distancePc
+      origin: nasa
+      note: sy_dist
     - field: star.count
       origin: nasa
       note: sy_snum

@@ -36,6 +36,9 @@ MonoBehaviour:
       massKg: 0
       spectralType: 
       count: 1
+      raDeg: 0
+      decDeg: 0
+      distancePc: 0
     planet:
       insolationWm2: 1361.1664654085753
       radiusM: 6378100

@@ -17,7 +17,7 @@ MonoBehaviour:
     displayName: TOI-700 d
     archiveName: TOI-700 d
     source: NASA Exoplanet Archive, table pscomppars
-    retrieved: 2026-11-14
+    retrieved: 2026-11-15
     solar:
       luminosityW: 8.919323771542712e+24
       semiMajorAxisM: 24563970368.94
@@ -36,6 +36,9 @@ MonoBehaviour:
       massKg: 8.2919199e+29
       spectralType: M2.5 V
       count: 1
+      raDeg: 97.0957165
+      decDeg: -65.5786149
+      distancePc: 31.1265
     planet:
       insolationWm2: 1156.85
       radiusM: 7302924.5
@@ -75,6 +78,15 @@ MonoBehaviour:
     - field: star.ageGyr
       origin: nasa
       note: st_age
+    - field: star.raDeg
+      origin: nasa
+      note: ra
+    - field: star.decDeg
+      origin: nasa
+      note: dec
+    - field: star.distancePc
+      origin: nasa
+      note: sy_dist
     - field: star.count
       origin: nasa
       note: sy_snum
