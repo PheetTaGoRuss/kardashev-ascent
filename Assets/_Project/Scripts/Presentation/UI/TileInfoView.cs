@@ -387,8 +387,10 @@ namespace KardashevAscent.Presentation.UI
     }
 
     /// <summary>
-    /// Elevation (0–90°, up) against azimuth (across, centred on the equator side: south in the north, north in the
-    /// south). Three day-tracks, the star now (filled dot) and where the panel faces (open diamond).
+    /// The sky seen from above (director 2026-11-15: the flat chart looked broken where the sun passes overhead): the
+    /// centre is straight up, the rim is the horizon, rings every 30°, north at the top and east to the right. Three
+    /// day-tracks, the star now (filled dot) and where the panel faces (open diamond). Any path draws as one smooth
+    /// curve, tropics and midnight sun included.
     /// </summary>
     public sealed class SunPathChart : VisualElement
     {
@@ -398,34 +400,35 @@ namespace KardashevAscent.Presentation.UI
             new Color32(217, 89, 38, 255),     // summer / second
             new Color32(25, 158, 112, 255),    // equinox
         };
-        static readonly Color GridColor = new Color(1f, 1f, 1f, 0.08f);
+        static readonly Color GridColor = new Color(1f, 1f, 1f, 0.10f);
+        static readonly Color HorizonColor = new Color(1f, 1f, 1f, 0.28f);
         static readonly Color NowColor = new Color32(255, 214, 120, 255);
         static readonly Color PanelColor = new Color32(230, 236, 255, 255);
-
-        const float PadLeft = 22f, PadBottom = 14f, PadTop = 4f, PadRight = 6f;
+        const float Margin = 16f;
 
         SunPathPoint[][] paths = new SunPathPoint[3][];
-        double centreAzimuth = 180.0;
         double nowAz = double.NaN, nowEl = double.NaN, panelAz = double.NaN, panelEl = double.NaN;
-        readonly Label[] xLabels = new Label[5];
+        readonly Label[] compass = new Label[4];
+        readonly Label[] rings = new Label[3];
 
         public SunPathChart()
         {
             generateVisualContent += Draw;
             pickingMode = PickingMode.Ignore;
-            for (int i = 0; i < 5; i++)
+            string[] names = { "N", "E", "S", "W" };
+            for (int i = 0; i < 4; i++)
             {
-                xLabels[i] = new Label();
-                xLabels[i].AddToClassList("axis-label");
-                Add(xLabels[i]);
+                compass[i] = new Label(names[i]);
+                compass[i].AddToClassList("axis-label");
+                Add(compass[i]);
             }
-            foreach (int el in new[] { 30, 60, 90 })
+            int[] els = { 0, 30, 60 };
+            for (int i = 0; i < 3; i++)
             {
-                var label = new Label($"{el}°");
-                label.AddToClassList("axis-label");
-                label.style.left = 2f;
-                label.userData = el;
-                Add(label);
+                rings[i] = new Label($"{els[i]}°");
+                rings[i].AddToClassList("axis-label");
+                rings[i].userData = els[i];
+                Add(rings[i]);
             }
             RegisterCallback<GeometryChangedEvent>(_ => PlaceLabels());
         }
@@ -433,8 +436,6 @@ namespace KardashevAscent.Presentation.UI
         public void SetPaths(SunPathPoint[] first, SunPathPoint[] second, SunPathPoint[] third, double latitude)
         {
             paths = new[] { first, second, third };
-            centreAzimuth = latitude >= 0.0 ? 180.0 : 0.0;
-            PlaceLabels();
             MarkDirtyRepaint();
         }
 
@@ -452,49 +453,57 @@ namespace KardashevAscent.Presentation.UI
             MarkDirtyRepaint();
         }
 
-        float X(double azimuth, Rect r)
-        {
-            double t = ((azimuth - centreAzimuth + 540.0) % 360.0) / 360.0;   // centre at 0.5
-            return r.xMin + PadLeft + (float)t * (r.width - PadLeft - PadRight);
-        }
+        static Vector2 Centre(Rect r) => r.center;
+        static float Radius(Rect r) => Mathf.Max(10f, Mathf.Min(r.width, r.height) / 2f - Margin);
 
-        float Y(double elevation, Rect r) =>
-            r.yMax - PadBottom - (float)(Math.Max(0.0, elevation) / 90.0) * (r.height - PadBottom - PadTop);
+        /// <summary>A sky direction on the chart: the lower the elevation, the farther from the centre.</summary>
+        static Vector2 At(double azimuthDeg, double elevationDeg, Rect r)
+        {
+            float d = (float)((90.0 - Math.Max(0.0, Math.Min(90.0, elevationDeg))) / 90.0) * Radius(r);
+            double a = azimuthDeg * Math.PI / 180.0;
+            return Centre(r) + new Vector2((float)Math.Sin(a) * d, -(float)Math.Cos(a) * d);
+        }
 
         void PlaceLabels()
         {
             Rect r = contentRect;
             if (r.width <= 0f)
                 return;
-            string[] names = { "N", "E", "S", "W" };
-            for (int i = 0; i < 5; i++)
+            float rad = Radius(r);
+            Vector2 c = Centre(r);
+            Vector2[] at = { new Vector2(-4f, -rad - 14f), new Vector2(rad + 4f, -7f), new Vector2(-4f, rad + 1f), new Vector2(-rad - 13f, -7f) };
+            for (int i = 0; i < 4; i++)
             {
-                double az = centreAzimuth - 180.0 + 90.0 * i;
-                int index = (int)Math.Round(((az % 360.0) + 360.0) % 360.0 / 90.0) % 4;
-                xLabels[i].text = names[index];
-                xLabels[i].style.left = X(az + (i == 4 ? -0.001 : 0.0), r) - 4f;
-                xLabels[i].style.top = r.height - PadBottom + 1f;
+                compass[i].style.left = c.x + at[i].x;
+                compass[i].style.top = c.y + at[i].y;
             }
-            foreach (VisualElement child in Children())
-                if (child.userData is int el)
-                    child.style.top = Y(el, r) - 6f;
+            foreach (Label l in rings)
+            {
+                Vector2 p = At(135.0, (int)l.userData, r);   // along the south-east diagonal
+                l.style.left = p.x + 2f;
+                l.style.top = p.y - 2f;
+            }
         }
 
         void Draw(MeshGenerationContext ctx)
         {
             Rect r = contentRect;
             Painter2D p = ctx.painter2D;
+            Vector2 c = Centre(r);
+            float rad = Radius(r);
 
-            // Grid: elevation every 30°, azimuth every 90°.
-            p.strokeColor = GridColor;
+            // Rings at 0° (the horizon), 30° and 60°, and the compass cross.
             p.lineWidth = 1f;
-            for (int el = 0; el <= 90; el += 30)
-                Line(p, new Vector2(r.xMin + PadLeft, Y(el, r)), new Vector2(r.xMax - PadRight, Y(el, r)));
-            for (int i = 0; i <= 4; i++)
+            for (int el = 0; el < 90; el += 30)
             {
-                float x = r.xMin + PadLeft + i / 4f * (r.width - PadLeft - PadRight);
-                Line(p, new Vector2(x, Y(0, r)), new Vector2(x, Y(90, r)));
+                p.strokeColor = el == 0 ? HorizonColor : GridColor;
+                p.BeginPath();
+                p.Arc(c, rad * (90f - el) / 90f, 0f, 360f);
+                p.Stroke();
             }
+            p.strokeColor = GridColor;
+            Line(p, c + new Vector2(0f, -rad), c + new Vector2(0f, rad));
+            Line(p, c + new Vector2(-rad, 0f), c + new Vector2(rad, 0f));
 
             // Day tracks, only above the horizon.
             for (int s = 0; s < paths.Length; s++)
@@ -506,31 +515,24 @@ namespace KardashevAscent.Presentation.UI
                 p.lineWidth = 2f;
                 p.lineJoin = LineJoin.Round;
                 bool drawing = false;
-                float lastX = 0f;
-                for (int i = 0; i < path.Length; i++)
+                foreach (SunPathPoint pt in path)
                 {
-                    SunPathPoint pt = path[i];
-                    float x = X(pt.AzimuthDeg, r);
                     bool up = pt.ElevationDeg > 0.0;
-                    // Break the line where it wraps around the chart's edge (midnight sun crossing the far side).
-                    bool jump = drawing && Math.Abs(x - lastX) > (r.width - PadLeft - PadRight) * 0.5f;
-                    if (up && (!drawing || jump))
+                    Vector2 at = At(pt.AzimuthDeg, pt.ElevationDeg, r);
+                    if (up && !drawing)
                     {
-                        if (drawing) p.Stroke();
                         p.BeginPath();
-                        p.MoveTo(new Vector2(x, Y(pt.ElevationDeg, r)));
+                        p.MoveTo(at);
                         drawing = true;
                     }
                     else if (up)
-                    {
-                        p.LineTo(new Vector2(x, Y(pt.ElevationDeg, r)));
-                    }
+                        p.LineTo(at);
                     else if (drawing)
                     {
+                        p.LineTo(at);   // down to the horizon ring
                         p.Stroke();
                         drawing = false;
                     }
-                    lastX = x;
                 }
                 if (drawing)
                     p.Stroke();
@@ -539,14 +541,14 @@ namespace KardashevAscent.Presentation.UI
             // Where the panel faces: an open diamond.
             if (!double.IsNaN(panelAz))
             {
-                Vector2 c = new Vector2(X(panelAz, r), Y(panelEl, r));
+                Vector2 d = At(panelAz, panelEl, r);
                 p.strokeColor = PanelColor;
                 p.lineWidth = 2f;
                 p.BeginPath();
-                p.MoveTo(c + new Vector2(0f, -6f));
-                p.LineTo(c + new Vector2(6f, 0f));
-                p.LineTo(c + new Vector2(0f, 6f));
-                p.LineTo(c + new Vector2(-6f, 0f));
+                p.MoveTo(d + new Vector2(0f, -6f));
+                p.LineTo(d + new Vector2(6f, 0f));
+                p.LineTo(d + new Vector2(0f, 6f));
+                p.LineTo(d + new Vector2(-6f, 0f));
                 p.ClosePath();
                 p.Stroke();
             }
@@ -554,14 +556,14 @@ namespace KardashevAscent.Presentation.UI
             // The star now, when it is up: a filled dot with a dark ring so it reads over the lines.
             if (!double.IsNaN(nowAz) && nowEl > 0.0)
             {
-                Vector2 c = new Vector2(X(nowAz, r), Y(nowEl, r));
+                Vector2 n = At(nowAz, nowEl, r);
                 p.fillColor = new Color(0.04f, 0.06f, 0.1f, 1f);
                 p.BeginPath();
-                p.Arc(c, 6f, 0f, 360f);
+                p.Arc(n, 6f, 0f, 360f);
                 p.Fill();
                 p.fillColor = NowColor;
                 p.BeginPath();
-                p.Arc(c, 4f, 0f, 360f);
+                p.Arc(n, 4f, 0f, 360f);
                 p.Fill();
             }
         }

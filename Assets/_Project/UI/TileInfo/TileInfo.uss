@@ -79,5 +79,5 @@
 .tile-info .caption { font-size: 13px; }
 .tile-info .heading { font-size: 12px; }
 .tile-info .axis-label { font-size: 11px; }
-.sunpath-chart { height: 190px; }
+.sunpath-chart { height: 260px; }
 .monthly-chart { height: 110px; }

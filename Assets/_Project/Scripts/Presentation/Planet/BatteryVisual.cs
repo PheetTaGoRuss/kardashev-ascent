@@ -1,60 +1,101 @@
+using System.Collections.Generic;
 using KardashevAscent.Simulation.Planet;
 using UnityEngine;
 
 namespace KardashevAscent.Presentation.Planet
 {
     /// <summary>
-    /// A battery yard on one slot: a row of three grid-scale battery containers on a low concrete pad, lined up with
-    /// the slot's north. Same interface as <see cref="SolarPanelVisual"/> so the placer can treat both alike.
+    /// A block building (battery yard, Workshop, charger, relay, Research Station): one module on each slot it covers,
+    /// a row of three containers on a low pad, lined up with the slot's north. Each module fits inside its own hex slot
+    /// (director 2026-11-15: buildings fit the tile and don't overlap), so a 2-slot yard is two blocks side by side.
+    /// Same interface as <see cref="SolarPanelVisual"/> so the placer can treat both alike.
     /// </summary>
     public sealed class BatteryVisual
     {
-        readonly GameObject root;
-        readonly Renderer[] renderers;
+        readonly string name;
+        readonly Transform planet;
+        readonly Material body, top;
+        readonly List<GameObject> modules = new List<GameObject>();
+        readonly List<Renderer> renderers = new List<Renderer>();
         MaterialPropertyBlock block;
+        float shownSize = 1f;
+        float growth = 1f;
 
         public BatteryVisual(string name, Transform planet, Material body, Material top)
         {
-            root = new GameObject(name) { hideFlags = HideFlags.DontSave };
-            root.transform.SetParent(planet, false);
+            this.name = name;
+            this.planet = planet;
+            this.body = body;
+            this.top = top;
+            AddModule();
+        }
 
-            Part("Pad", body, new Vector3(0f, 0.01f, 0f), new Vector3(0.9f, 0.02f, 0.75f));
+        GameObject AddModule()
+        {
+            var root = new GameObject(modules.Count == 0 ? name : $"{name} ({modules.Count + 1})") { hideFlags = HideFlags.DontSave };
+            root.transform.SetParent(planet, false);
+            Part(root, "Pad", body, new Vector3(0f, 0.01f, 0f), new Vector3(0.9f, 0.02f, 0.75f));
             for (int i = -1; i <= 1; i++)
             {
                 float x = i * 0.28f;
-                Part("Container", body, new Vector3(x, 0.1f, 0f), new Vector3(0.22f, 0.16f, 0.6f));
-                Part("Vents", top, new Vector3(x, 0.185f, 0f), new Vector3(0.18f, 0.012f, 0.52f));
+                Part(root, "Container", body, new Vector3(x, 0.1f, 0f), new Vector3(0.22f, 0.16f, 0.6f));
+                Part(root, "Vents", top, new Vector3(x, 0.185f, 0f), new Vector3(0.18f, 0.012f, 0.52f));
             }
-            renderers = root.GetComponentsInChildren<Renderer>();
+            foreach (Renderer r in root.GetComponentsInChildren<Renderer>())
+            {
+                renderers.Add(r);
+                if (block != null) r.SetPropertyBlock(block);
+            }
             root.SetActive(false);
+            modules.Add(root);
+            return root;
         }
 
-        /// <summary>Stand the yard on the ground at <paramref name="direction"/>, <paramref name="size"/> across.</summary>
-        public void Show(Vector3 direction, float groundRadius, float size)
+        /// <summary>Stand one module on the ground at <paramref name="direction"/>, <paramref name="size"/> across.</summary>
+        public void Show(Vector3 direction, float groundRadius, float size) =>
+            Show(new[] { direction }, new[] { groundRadius }, size);
+
+        /// <summary>One module on each slot: directions from the planet's centre and their ground radii; each <paramref name="size"/> across.</summary>
+        public void Show(IReadOnlyList<Vector3> directions, IReadOnlyList<float> groundRadii, float size)
         {
-            var d = new System.Numerics.Vector3(direction.x, direction.y, direction.z);
-            double lat = PlanetFrame.Latitude(d), lon = PlanetFrame.Longitude(d);
-            Vector3 up = ToUnity(PlanetFrame.FromLocal(new Simulation.Solar.Double3(0, 0, 1), lat, lon));
-            Vector3 north = ToUnity(PlanetFrame.FromLocal(new Simulation.Solar.Double3(0, 1, 0), lat, lon));
-            root.transform.localPosition = up * groundRadius;
-            root.transform.localRotation = Quaternion.LookRotation(north, up);
-            root.transform.localScale = Vector3.one * size;
+            while (modules.Count < directions.Count)
+                AddModule();
             shownSize = size;
-            root.SetActive(true);
+            growth = 1f;   // shown whole; the construction animation sets its growth again each frame
+            for (int i = 0; i < modules.Count; i++)
+            {
+                GameObject m = modules[i];
+                if (i >= directions.Count)
+                {
+                    m.SetActive(false);
+                    continue;
+                }
+                var d = new System.Numerics.Vector3(directions[i].x, directions[i].y, directions[i].z);
+                double lat = PlanetFrame.Latitude(d), lon = PlanetFrame.Longitude(d);
+                Vector3 up = ToUnity(PlanetFrame.FromLocal(new Simulation.Solar.Double3(0, 0, 1), lat, lon));
+                Vector3 north = ToUnity(PlanetFrame.FromLocal(new Simulation.Solar.Double3(0, 1, 0), lat, lon));
+                m.transform.localPosition = up * groundRadii[i];
+                m.transform.localRotation = Quaternion.LookRotation(north, up);
+                m.transform.localScale = new Vector3(size, size * growth, size);
+                m.SetActive(true);
+            }
         }
 
-        public void Hide() => root.SetActive(false);
-
-        float shownSize = 1f;
+        public void Hide()
+        {
+            foreach (GameObject m in modules)
+                m.SetActive(false);
+        }
 
         /// <summary>
         /// Height as a share of the full building (construction animation: a site rises as it is built; above 1 for the
         /// short pop when it is finished). Widths stay as they are.
         /// </summary>
-        public void SetGrowth(float growth)
+        public void SetGrowth(float g)
         {
-            float g = Mathf.Max(0.02f, growth);
-            root.transform.localScale = new Vector3(shownSize, shownSize * g, shownSize);
+            growth = Mathf.Max(0.02f, g);
+            foreach (GameObject m in modules)
+                m.transform.localScale = new Vector3(shownSize, shownSize * growth, shownSize);
         }
 
         public void SetTint(Color color)
@@ -67,11 +108,14 @@ namespace KardashevAscent.Presentation.Planet
 
         public void Destroy()
         {
-            if (root != null)
-                Object.Destroy(root);
+            foreach (GameObject m in modules)
+                if (m != null)
+                    Object.Destroy(m);
+            modules.Clear();
+            renderers.Clear();
         }
 
-        void Part(string name, Material material, Vector3 position, Vector3 scale)
+        static void Part(GameObject root, string name, Material material, Vector3 position, Vector3 scale)
         {
             GameObject part = GameObject.CreatePrimitive(PrimitiveType.Cube);
             part.name = name;
