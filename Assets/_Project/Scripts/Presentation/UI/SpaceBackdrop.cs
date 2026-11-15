@@ -63,9 +63,9 @@ namespace KardashevAscent.Presentation.UI
             float w = r.width, h = r.height, unit = Mathf.Min(w, h);
 
             // Nebula: soft clouds made of many faint discs.
-            Glow(p, new Vector2(w * 0.20f, h * 0.30f), unit * 0.55f, new Color(0.35f, 0.12f, 0.45f), 0.022f, 18);
-            Glow(p, new Vector2(w * 0.42f, h * 0.78f), unit * 0.45f, new Color(0.05f, 0.30f, 0.42f), 0.020f, 16);
-            Glow(p, new Vector2(w * 0.62f, h * 0.18f), unit * 0.35f, new Color(0.55f, 0.25f, 0.12f), 0.014f, 14);
+            Glow(p, new Vector2(w * 0.20f, h * 0.30f), unit * 0.55f, new Color(0.35f, 0.12f, 0.45f), 0.009f, 44);
+            Glow(p, new Vector2(w * 0.42f, h * 0.78f), unit * 0.45f, new Color(0.05f, 0.30f, 0.42f), 0.008f, 40);
+            Glow(p, new Vector2(w * 0.62f, h * 0.18f), unit * 0.35f, new Color(0.55f, 0.25f, 0.12f), 0.006f, 36);
 
             // Stars: twinkling, drifting slowly to the left, nearer ones faster (parallax).
             foreach (Star s in stars)
@@ -92,28 +92,28 @@ namespace KardashevAscent.Presentation.UI
 
             // A distant sun, top left, with a warm glow.
             Vector2 sun = new Vector2(w * 0.08f, h * 0.12f);
-            Glow(p, sun, unit * 0.32f, new Color(1f, 0.75f, 0.42f), 0.03f, 16);
+            Glow(p, sun, unit * 0.32f, new Color(1f, 0.75f, 0.42f), 0.011f, 48);
             p.fillColor = new Color(1f, 0.95f, 0.85f, 1f);
             p.BeginPath(); p.Arc(sun, unit * 0.012f, 0f, 360f); p.Fill();
 
             // The planet: right side, partly below the edge; lit from the sun's side.
             Vector2 c0 = new Vector2(w * 0.80f, h * 0.80f);
-            float R = unit * 0.62f;
+            float R = unit * 0.56f;
             // Atmosphere glow around the limb.
-            for (int i = 14; i >= 1; i--)
+            for (int i = 36; i >= 1; i--)
             {
-                p.fillColor = new Color(0.30f, 0.65f, 1f, 0.018f);
-                p.BeginPath(); p.Arc(c0, R * (1f + 0.012f * i), 0f, 360f); p.Fill();
+                p.fillColor = new Color(0.30f, 0.65f, 1f, 0.008f);
+                p.BeginPath(); p.Arc(c0, R * (1f + 0.005f * i), 0f, 360f); p.Fill();
             }
             // Body: ocean blue fading to deep blue towards the night side.
             p.fillColor = new Color(0.07f, 0.22f, 0.42f);
             p.BeginPath(); p.Arc(c0, R, 0f, 360f); p.Fill();
             Vector2 toSun = (sun - c0).normalized;
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 40; i++)
             {
-                float k = i / 10f;
-                p.fillColor = new Color(0.20f + 0.25f * k, 0.48f + 0.25f * k, 0.70f + 0.15f * k, 0.10f);
-                p.BeginPath(); p.Arc(c0 + toSun * R * (0.25f + 0.05f * i), R * (0.95f - 0.07f * i), 0f, 360f); p.Fill();
+                float k = i / 40f;
+                p.fillColor = new Color(0.20f + 0.25f * k, 0.48f + 0.25f * k, 0.70f + 0.15f * k, 0.03f);
+                p.BeginPath(); p.Arc(c0 + toSun * R * (0.25f + 0.0125f * i), R * (0.95f - 0.0175f * i), 0f, 360f); p.Fill();
             }
             // Continents: a few soft green-brown patches on the day side, slowly turning.
             for (int i = 0; i < 7; i++)
@@ -126,10 +126,10 @@ namespace KardashevAscent.Presentation.UI
                 p.BeginPath(); p.Arc(at, R * (0.09f + 0.03f * (i % 3)), 0f, 360f); p.Fill();
             }
             // Night side: a dark disc shifted away from the sun, leaving a lit crescent.
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < 30; i++)
             {
-                p.fillColor = new Color(0.005f, 0.01f, 0.03f, 0.28f);
-                p.BeginPath(); p.Arc(c0 - toSun * R * (0.18f + 0.03f * i), R * (0.98f - 0.01f * i), 0f, 360f); p.Fill();
+                p.fillColor = new Color(0.005f, 0.01f, 0.03f, 0.075f);
+                p.BeginPath(); p.Arc(c0 - toSun * R * (0.10f + 0.012f * i), R * (0.99f - 0.004f * i), 0f, 360f); p.Fill();
             }
             // City lights on the night side (a growing civilisation).
             var lights = new System.Random(7);
@@ -145,7 +145,7 @@ namespace KardashevAscent.Presentation.UI
             p.strokeColor = new Color(0.65f, 0.85f, 1f, 0.55f);
             p.lineWidth = 2f;
             float rim = Mathf.Atan2(toSun.y, toSun.x) * Mathf.Rad2Deg;
-            p.BeginPath(); p.Arc(c0, R, rim - 70f, rim + 70f); p.Stroke();
+            p.BeginPath(); p.Arc(c0, R, rim - 50f, rim + 50f); p.Stroke();
 
             // An orbit and its moon.
             Vector2 axis = new Vector2(R * 1.55f, R * 0.32f);
