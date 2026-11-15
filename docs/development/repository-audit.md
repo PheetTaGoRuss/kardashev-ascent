@@ -33,7 +33,7 @@ How to read the status words:
 | --- | --- | --- |
 | Source | All 128 `.cs` files listed with line counts; interface, state, orchestrator, energy, resources, robot catalogue, manufacturing, planet record, Kardashev and the runner read in full or in large part | Most Presentation views were read only by outline; shaders and materials were listed, not read |
 | Tests | All 40 test files listed and counted; compiled and run outside Unity | Not run inside the Unity Test Runner |
-| Documentation | `CLAUDE.md`, `CONTRIBUTING.md`, `docs/simulation-interface.md`, both workforce design documents, the headings and fix list of `docs/physics/physics-verification.md`, the tool READMEs | `docs/physics/explainer-th.md` and the five research notes were read by heading only |
+| Documentation | `AGENTS.md`, `CONTRIBUTING.md`, `docs/simulation-interface.md`, both workforce design documents, the headings and fix list of `docs/physics/physics-verification.md`, the tool READMEs | `docs/physics/explainer-th.md` and the five research notes were read by heading only |
 | Data | `Assets/_Project/Data/Planets/planets.json` (structure, five planets) | `tools/exoplanets/cache/pscomppars.csv` |
 | GitHub | All issues (14, all closed), all pull requests (#1–#61), all remote branches compared with `main` | Project boards, releases and repository settings |
 | Unity project | `Packages/manifest.json`, `ProjectVersion.txt`, build scene list, assembly definitions | The scene file `Assets/Scenes/Main.unity` (never read as text, by project rule) |
@@ -51,7 +51,7 @@ How to read the status words:
 | Assemblies | `KardashevAscent.Simulation` (`noEngineReferences`, no references), `.Presentation` (references Simulation), `.Editor` (references both), `.Simulation.Tests` (references Simulation only, EditMode) | the four `.asmdef` files |
 | Code size | 16,746 lines in `Scripts`, 6,714 lines in `Tests` | `wc -l` |
 | Continuous integration | None (no `.github` folder) | repository root |
-| Languages in documents | Thai: `CLAUDE.md`, `CONTRIBUTING.md`, `simulation-interface.md`, the physics documents, tool READMEs. English: `docs/design/*`, all code comments and UI text | — |
+| Languages in documents | Thai: `AGENTS.md`, `CONTRIBUTING.md`, `simulation-interface.md`, the physics documents, tool READMEs. English: `docs/design/*`, all code comments and UI text | — |
 
 ## 4. System inventory
 
@@ -162,7 +162,7 @@ None of these stops current work. The migration plan is in [`../architecture/sys
 - `docs/design/robotic-workforce-v2-audit.md` says that `main` is at `274f999` and that nothing in the workforce stack is merged; PRs #50–#61 are all merged.
 - The physics report lists sources that could not be reached when it was written and values that are inferred, not sourced (its last section).
 - The design document that the physics report reviews is referred to as "เอกสารดีไซน์" and is not in the repository, so its content could not be checked.
-- `CLAUDE.md` describes the structure and four rules; it had no reading order, no workflow and no status tracking.
+- `AGENTS.md` describes the structure and four rules; it had no reading order, no workflow and no status tracking.
 
 ## 11. Dependencies between systems (as built)
 

@@ -102,7 +102,7 @@ Legend used below: **Implemented** (exists in `main` today), **Reuse** (existing
 | D2 | **Construction and labour.** Today sites finish automatically from spare power. Should sites need a robot present to progress? Does work rate depend on robots (how)? Should the old automatic behaviour remain for existing saves? | Phase 1 | Changes existing gameplay and the #38 balance |
 | D3 | **Resources.** The spec mentions basic materials, components, mining and manufactured parts; the repository only has build parts in Wh. Which resource types (names, units), where they come from (the geology notes propose ore-placement rules), and whether build parts become one of them? | Phases 2–3 | Biggest missing system |
 | D4 | **All numbers:** robot battery capacity (Wh), idle and working consumption (W, per task), charging power and slots per facility, group capacity start and upgrades, degradation rates, repair and manufacture costs and times, movement speeds. | Phases 1–3 | Spec forbids inventing them; options: you supply values, or approve clearly marked placeholder constants (`// TBD`) with no balance claims |
-| D5 | **Battery ageing model** (normal use, deep discharge, repeated 0 %). Needs a published model added to `docs/physics/physics-verification.md` before code, per `CLAUDE.md`. | Phase 2 | No source in the repo today |
+| D5 | **Battery ageing model** (normal use, deep discharge, repeated 0 %). Needs a published model added to `docs/physics/physics-verification.md` before code, per `AGENTS.md`. | Phase 2 | No source in the repo today |
 | D6 | **Grid priority** for robot charging versus colony demand, the battery yard and build-part production. | Phase 2 | `PowerGrid` serves one demand number today |
 | D7 | **Energy quotas.** Are they the existing K milestones (every 0.1 of planet K), or a separate quota system (targets, deadlines, rewards)? | Progression | Milestones already gate panel tiers |
 | D8 | **Technology / research.** No tech system exists. Unlock by milestones (like `PanelTiers`), or research points produced by Research robots, or both? | Phases 1 (capacity), 3 | Group capacity is "upgradeable through technology" |
@@ -202,7 +202,7 @@ The high-impact decisions come first, in this order: D3, D5, D6, D7, D8.
 - **Fallback if that is too heavy for the first version.** Use the lifetimes already in the repo: LFP/NMC lasts 10–20 years or 3,000–8,000 cycles **[repo: energy_sources table]**.
   - Health falls linearly to 80 % at the low end of the cycle range.
   - Calendar ageing is left out, and the doc says so.
-- **Either way.** Add the equations and test values to `physics-verification.md` first, as `CLAUDE.md` requires, and add tests on both sides if the Python prototype models it.
+- **Either way.** Add the equations and test values to `physics-verification.md` first, as `AGENTS.md` requires, and add tests on both sides if the Python prototype models it.
 - Health is separate from charge. Replacing the battery resets health, and other parts are kept (§8 of the spec).
 - Robots on a cold planet age differently, through the Arrhenius term. That gives a per-planet difference for free.
 

@@ -50,7 +50,7 @@ Where everything is written down, and which document wins when two disagree.
 
 | Document | Contents | Language |
 | --- | --- | --- |
-| [`../CLAUDE.md`](../CLAUDE.md) | Project instructions and workflow | Thai |
+| [`../AGENTS.md`](../AGENTS.md) | Project instructions and workflow | Thai |
 | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) | Team Git guide: setup, daily steps, conflicts | Thai |
 | [`development/development-workflow.md`](development/development-workflow.md) | The ten steps, prohibitions, pull requests, which document to update, model roles | English |
 | [`development/testing-standards.md`](development/testing-standards.md) | Kinds of test, how to run them, definition of done | English |

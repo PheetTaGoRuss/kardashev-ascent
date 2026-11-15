@@ -107,7 +107,7 @@ of power.
 - **Data tools:** Python (NASA POWER and Exoplanet Archive fetchers, a solar prototype checked with pvlib).
 - **Testing and CI:** NUnit and .NET test runner, GitHub and GitHub Actions.
 - **Sound:** Kenney sound packs (CC0).
-- **Development assistant:** Claude Code (see the SI section).
+- **Development assistant:** an AI coding assistant (see the SI section).
 
 [Optional, recommended for honesty: "Development began on 5 November 2026 as a prototype; during the hackathon
 (14–15 November) we added … ." Ask your Local Lead or the Space Apps team whether work from before the event is
@@ -115,15 +115,14 @@ allowed (your GitHub issue #14), and state it clearly here.]
 
 ## Use of Super Intelligence (SI)
 
-Yes. We used Claude Code (Anthropic), an AI coding assistant, throughout development:
+Yes. We used an AI coding assistant throughout development:
 - **Code and tests:** it wrote and refactored most of the C# simulation and UI code and its unit tests, following our
   design direction.
 - **Science and documentation:** it helped research scientific values and sources (each value is cited or marked TBD
   in the code), and drafted documentation and this submission text.
 
 The game idea, design decisions and direction came from our team: the game director approved every feature.
-- **Labelling:** AI-assisted code and docs are acknowledged in the repository. Commits carry a "Co-Authored-By:
-  Claude" line, and `docs/` records the decisions.
+- **Labelling:** AI assistance is disclosed here in the submission form; `docs/` records the team's decisions.
 - **Images:** no AI-generated images, video or audio are in the game. Screenshots are real gameplay. Sounds are CC0
   packs or made in code.
 - **Slides:** the demo slides were drafted with AI assistance and say so on the title slide.

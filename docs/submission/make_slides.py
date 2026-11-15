@@ -76,7 +76,7 @@ c.setFillColor(MUTED); c.setFont("Helvetica", 18)
 c.drawString(60, 255, "NASA Space Apps Challenge 2026 · Bangkok, Thailand")
 c.drawString(60, 225, "Challenge: Space Mission Design Game")
 c.setFont("Helvetica-Oblique", 13)
-c.drawString(60, 60, "Slides drafted with AI assistance (Claude); all images are real gameplay screenshots.")
+c.drawString(60, 60, "Slides drafted with AI assistance; all images are real gameplay screenshots.")
 c.showPage()
 
 # 2 Problem

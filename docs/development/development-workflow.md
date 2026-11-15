@@ -8,7 +8,7 @@ Every development task follows these steps. Do not skip one because the task loo
 
 | # | Step | What it means here |
 | --- | --- | --- |
-| 1 | Read the project instructions | `CLAUDE.md`, then the documents it lists for the area |
+| 1 | Read the project instructions | `AGENTS.md`, then the documents it lists for the area |
 | 2 | Inspect architecture and documentation | The system's row in [`../architecture/system-architecture.md`](../architecture/system-architecture.md), its specification in `docs/design/`, its entries in [`feature-registry.md`](feature-registry.md) |
 | 3 | Inspect existing implementations | Search the code for what already does part of the job. Read the tests of the systems you will touch |
 | 4 | Identify dependencies and integration points | Which systems give you inputs, which read your outputs, where in the step order you run, what the save needs |
@@ -76,7 +76,7 @@ Assign work according to the task and contributors’ availability. Ask the proj
 
 ## 6. Starting a first task
 
-1. Read `CLAUDE.md` and [`../README.md`](../README.md).
+1. Read `AGENTS.md` and [`../README.md`](../README.md).
 2. Run the tests before changing anything, so you know the starting state.
 3. Find the task in the registry and the roadmap. Read its specification, or write one from the template in [`../design/README.md`](../design/README.md) if it has none.
 4. Write the plan of step 5 and send it to whoever assigned the task.

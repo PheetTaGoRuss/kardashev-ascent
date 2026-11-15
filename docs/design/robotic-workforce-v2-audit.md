@@ -2,7 +2,7 @@
 
 Status: **in progress**. Stages A (#56), B (#57), C (#58) and D are done; stages E–H are not started.
 
-- **Source:** "Kardashev Ascent — Robotic Workforce System: Claude Implementation Handoff" (spec v2, 2026-11-08).
+- **Source:** "Kardashev Ascent — Robotic Workforce System: Implementation Handoff" (spec v2, 2026-11-08).
 - **Compared against:** the top of the unmerged stack #50 → #51 → #52 → #53 → #54 → #55 (branch `feature/landing-robots-camera`).
 - **`main`** is still 274f999. Nothing in the workforce stack is merged.
 - **Open issues:** only #14 and #15, both about submission, so they are out of scope.
@@ -86,7 +86,7 @@ Each stage raises `SimulationState.Version` by one and keeps reading older saves
 - **R2. The stub is growing too large.** `StubPlanetSimulation` (1,211 lines) holds the grid, construction, robots, resources and manufacturing. New stages should go into separate services; stage H finishes the split.
 - **R3. Placeholder balance.** Every new number is TBD (spec §0). Playtests will show odd balance until values are designed.
 - **R4. Per-robot simulation cost.** Fine for hundreds of robots; thousands need stage H's aggregate path.
-- **R5. Physics sources.** Depth-of-discharge ageing and any temperature effects need published sources in `physics-verification.md` before code (`CLAUDE.md`).
+- **R5. Physics sources.** Depth-of-discharge ageing and any temperature effects need published sources in `physics-verification.md` before code (`AGENTS.md`).
 
 ## 6. Questions that change what gets built
 

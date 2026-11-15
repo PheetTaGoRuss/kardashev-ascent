@@ -466,11 +466,11 @@ All formulas and checks are in `docs/physics/physics-verification.md`.
 
 ## 14. Team rules and workflow
 
-- **Team:** 3 people. They use many AI coding sessions (Claude Code, locally and in the cloud), coordinated through
+- **Team:** 3 people. They use many AI coding-assistant sessions (locally and in the cloud), coordinated through
   GitHub issues, pull requests and `docs/`.
 - **Pull requests:** never push to `main`; everything goes through a pull request.
 - **Workflow:**
-  1. Read `CLAUDE.md` and the docs.
+  1. Read `AGENTS.md` and the docs.
   2. Check the architecture and specs.
   3. Read the existing code and tests.
   4. Find what each system reads and writes, and what must be saved.
@@ -607,6 +607,6 @@ All formulas and checks are in `docs/physics/physics-verification.md`.
 - **To check:** work began on 5 November, before the 14 November event. Ask the Local Lead whether that is allowed, and
   disclose it.
 - **AI use:**
-  - Claude Code wrote most code, tests and docs under the team's direction; commits carry "Co-Authored-By: Claude".
+  - An AI coding assistant helped write code, tests and docs under the team's direction (disclosed in the submission form).
   - There are no AI-generated images, video or audio in the game.
   - The slides say they were drafted with AI assistance.
