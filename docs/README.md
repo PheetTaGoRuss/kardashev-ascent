@@ -25,6 +25,7 @@ Where everything is written down, and which document wins when two disagree.
 | [`design/robotic-workforce.md`](design/robotic-workforce.md) | Workforce specification v1: audit, decisions D1–D16, phases 1–4 | English |
 | [`design/robotic-workforce-v2-audit.md`](design/robotic-workforce-v2-audit.md) | Workforce specification v2: stages A–H, questions Q1–Q4 | English |
 | [`design/research-station.md`](design/research-station.md) | Research Station: measuring and experiments at a station, knowledge gates and safety margins, the brief before landing | English |
+| [`credits.md`](credits.md) | Who made the sounds (Kenney, CC0) and which file each one came from | English |
 
 ### Architecture
 

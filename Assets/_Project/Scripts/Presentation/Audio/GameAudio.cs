@@ -8,7 +8,8 @@ namespace KardashevAscent.Presentation.Audio
 {
     /// <summary>
     /// The game's sound (director 2026-11-14): effects for clicks, building, puzzles and alerts, and a quiet space
-    /// ambience, all made by <see cref="SoundSynth"/>. Starts itself after the scene loads (no scene edit), listens to
+    /// ambience. Effects come from Kenney's CC0 packs where one fits (Resources/Audio), the rest (ambience, alarm,
+    /// milestone) are made by <see cref="SoundSynth"/>. Starts itself after the scene loads (no scene edit), listens to
     /// the simulation's events and to every button press, and keeps the volumes in PlayerPrefs.
     /// <para>Call <see cref="Play"/> from anywhere: <c>GameAudio.Play(Sfx.Correct)</c>.</para>
     /// </summary>
@@ -80,8 +81,12 @@ namespace KardashevAscent.Presentation.Audio
             musicSource.playOnAwake = false;
             musicSource.loop = true;
             musicSource.spatialBlend = 0f;
+            // Kenney's CC0 sounds where we have one (Resources/Audio/<name>.ogg; see docs/credits.md), else made in code.
             foreach (Sfx s in (Sfx[])System.Enum.GetValues(typeof(Sfx)))
-                clips[s] = Clip(s.ToString(), SoundSynth.Make(s));
+            {
+                AudioClip recorded = Resources.Load<AudioClip>("Audio/" + s);
+                clips[s] = recorded != null ? recorded : Clip(s.ToString(), SoundSynth.Make(s));
+            }
             musicSource.clip = Clip("Ambience", SoundSynth.Ambience());
             ApplyMusic();
         }
