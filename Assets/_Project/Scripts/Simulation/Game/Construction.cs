@@ -10,7 +10,7 @@ namespace KardashevAscent.Simulation.Game
     /// A new building waits as a site with its bill of materials (<see cref="BuildCosts"/>). While a robot works on it,
     /// it takes materials from the colony's stock (<see cref="Pay"/>): each time, the same share of every material on
     /// its bill, as much as the scarcest one allows, so a site is always some share paid. Robots on the site also put in
-    /// work (<see cref="Work"/>, <see cref="BuildCosts.BuildHours(BuildingType, double)"/>), never more than the materials delivered allow. It is
+    /// work (<see cref="Work"/>, <see cref="BuildTimes.Hours(BuildingType, double)"/>), never more than the materials delivered allow. It is
     /// finished when all its materials are in and the work is done; a site does nothing until then. Cancelling a site gives back what was put into it; taking down a
     /// finished building gives back <see cref="BuildCosts.SalvageShare"/> of its bill.
     /// </summary>

@@ -141,15 +141,15 @@ namespace KardashevAscent.Simulation.Tests.Game
         {
             // Director 2026-11-15: as in real life. A 1 ha field about 1 000 robot hours (~1.6 person-hours per kW);
             // bigger fields take less per hectare; a mast a couple of days, a workshop hall weeks.
-            Assert.AreEqual(BuildCosts.PanelHoursPerHa, BuildCosts.BuildHours(BuildingType.SolarPanel, 10_000.0), 1e-9);
-            double hundred = BuildCosts.BuildHours(BuildingType.SolarPanel, 1_000_000.0);
-            Assert.Less(hundred, 100.0 * BuildCosts.PanelHoursPerHa);
-            Assert.Greater(hundred, 50.0 * BuildCosts.PanelHoursPerHa);
-            Assert.Greater(BuildCosts.BuildHours(BuildingType.FloatingSolar, 10_000.0), BuildCosts.PanelHoursPerHa);
+            Assert.AreEqual(BuildTimes.PanelHoursPerHa, BuildTimes.Hours(BuildingType.SolarPanel, 10_000.0), 1e-9);
+            double hundred = BuildTimes.Hours(BuildingType.SolarPanel, 1_000_000.0);
+            Assert.Less(hundred, 100.0 * BuildTimes.PanelHoursPerHa);
+            Assert.Greater(hundred, 50.0 * BuildTimes.PanelHoursPerHa);
+            Assert.Greater(BuildTimes.Hours(BuildingType.FloatingSolar, 10_000.0), BuildTimes.PanelHoursPerHa);
             foreach (BuildingType b in new[] { BuildingType.Battery, BuildingType.Workshop, BuildingType.ChargingStation, BuildingType.Relay,
                                                BuildingType.ResearchStation, BuildingType.AluminaPlant, BuildingType.Electrolyser })
-                Assert.That(BuildCosts.BuildHours(b), Is.InRange(24.0, 24.0 * 60.0), b + ": a day to two months for one robot");
-            Assert.Less(BuildCosts.BuildHours(BuildingType.Relay), BuildCosts.BuildHours(BuildingType.Workshop));
+                Assert.That(BuildTimes.Hours(b), Is.InRange(24.0, 24.0 * 60.0), b + ": a day to two months for one robot");
+            Assert.Less(BuildTimes.Hours(BuildingType.Relay), BuildTimes.Hours(BuildingType.Workshop));
         }
 
         [Test]
@@ -189,7 +189,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.IsTrue(sim.PlacePanel(t, 0, 0.3, Math.PI));
             Assert.IsTrue(sim.IsUnderConstruction(t, 0), "not at once any more");
             double hours = sim.ConstructionWork(t, 0).Total;
-            Assert.AreEqual(BuildCosts.BuildHours(BuildingType.SolarPanel, sim.PanelAreaAt(t, 0)), hours, 1e-9);
+            Assert.AreEqual(BuildTimes.Hours(BuildingType.SolarPanel, sim.PanelAreaAt(t, 0)), hours, 1e-9);
             sim.Tick(1.0);
             Assert.IsTrue(sim.IsBeingBuilt(t, 0));
             Assert.Greater(sim.ConstructionProgress(t, 0), 0.0);

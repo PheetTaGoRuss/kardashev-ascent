@@ -817,7 +817,7 @@ namespace KardashevAscent.Presentation.Planet
         {
             if (simulation == null) return 0.0;
             double area = IsPanel(what) ? simulation.NewPanelAreaM2(tile >= 0 ? tile : simulation.BaseTileId) : 0.0;
-            return KardashevAscent.Simulation.Resources.BuildCosts.BuildHours(TypeOf(what), area);
+            return BuildTimes.Hours(TypeOf(what), area);
         }
 
         /// <summary>Materials a building of this kind takes.</summary>

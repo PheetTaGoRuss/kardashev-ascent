@@ -18,7 +18,7 @@ namespace KardashevAscent.Simulation.Game
         {
             if (!CanPlace(BuildingType.Relay, tileId, slot))
                 return false;
-            StartSite(tileId, slot, BuildBill(BuildingType.Relay), BuildCosts.BuildHours(BuildingType.Relay));
+            StartSite(tileId, slot, BuildBill(BuildingType.Relay), BuildTimes.Hours(BuildingType.Relay));
             relays.Add((tileId, slot));
             Occupy(tileId, FootprintFor(BuildingType.Relay, tileId, slot));
             Settle((tileId, slot));
