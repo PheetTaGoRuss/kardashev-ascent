@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using KardashevAscent.Presentation.Game;
+using KardashevAscent.Presentation.Planet;
 using KardashevAscent.Simulation.Game;
 using KardashevAscent.Simulation.Planet;
 using KardashevAscent.Simulation.Solar;
@@ -12,7 +14,10 @@ namespace KardashevAscent.Presentation.UI
     /// Choose where to land (#11): the planets in planets.json, real ones from the NASA Exoplanet Archive and
     /// hand-made ones. Every value carries a NASA / calc / assumed tag, because which numbers are measured and which
     /// nobody knows yet is part of what the game teaches. Opens at start (clock paused) and with L (land).
-    /// UI Toolkit: UI/Planets/Planets.uxml + .uss.
+    /// Director 2026-11-15: a full-screen star map to pick a star from (<see cref="StarMapView"/>: real directions and
+    /// distances), with a target panel on the right: the system, its worlds as tabs, a turning 3D preview of the
+    /// picked world (<see cref="PlanetPreview"/>), key numbers as tiles, the full mission data and Land.
+    /// UI Toolkit: UI/Planets/Planets.uxml + .uss; the layout is built here.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     public sealed class PlanetChooserView : MonoBehaviour
@@ -25,10 +30,12 @@ namespace KardashevAscent.Presentation.UI
         [Tooltip("Open the chooser when the game starts.")]
         [SerializeField] bool showAtStart = true;
 
-        VisualElement panelRoot, rows;
-        ScrollView list;
-        Label subtitle, nameLabel, source, verdict, note;
+        VisualElement panelRoot, rows, systemList, worldTabs, stats, previewBox, previewGlow;
+        Label subtitle, nameLabel, source, verdict, note, systemName, starLine;
         Button land;
+        StarMapView map;
+        PlanetPreview preview;
+        Color previewColour = Color.white;
         int selected = -1;
         bool shownAtStart;
         ClockSpeed speedWhenOpened = ClockSpeed.HourPerSecond;
@@ -45,19 +52,8 @@ namespace KardashevAscent.Presentation.UI
             ScreenInput.Register(root.panel);
 
             panelRoot = root.Q("planets");
-            list = root.Q<ScrollView>("list");
-            rows = root.Q("rows");
-            subtitle = root.Q<Label>("subtitle");
-            nameLabel = root.Q<Label>("name");
-            source = root.Q<Label>("source");
-            verdict = root.Q<Label>("verdict");
-            note = root.Q<Label>("note");
-            land = root.Q<Button>("land");
-            if (land != null)
-                land.clicked += Land;
-            Button close = root.Q<Button>("close");
-            if (close != null)
-                close.clicked += () => SetVisible(false);
+            if (panelRoot != null)
+                Build(panelRoot);
             if (runner != null)
                 runner.SimulationCreated += OnSimulationCreated;
             SetVisible(Visible);
@@ -65,6 +61,8 @@ namespace KardashevAscent.Presentation.UI
 
         void OnDisable()
         {
+            preview?.Dispose();
+            preview = null;
             if (runner != null)
                 runner.SimulationCreated -= OnSimulationCreated;
             UIDocument document = GetComponent<UIDocument>();
@@ -79,6 +77,7 @@ namespace KardashevAscent.Presentation.UI
                 shownAtStart = true;
                 SetVisible(true);
             }
+            preview?.Update(Time.unscaledDeltaTime);
             if (ScreenInput.KeyDown(toggleKey) && GameFlow.Phase != GamePhase.MainMenu)
                 SetVisible(!Visible);
             else if (Visible && ScreenInput.KeyDown(KeyCode.Escape))
@@ -101,11 +100,31 @@ namespace KardashevAscent.Presentation.UI
                 else if (closing && GameFlow.IsPlaying && runner.Clock.Speed == ClockSpeed.Paused && speedWhenOpened != ClockSpeed.Paused)
                     runner.SetSpeed(speedWhenOpened);
             }
-            if (opening)
+            if (opening && panelRoot != null)
             {
                 selected = runner != null && runner.CurrentIndex >= 0 ? runner.CurrentIndex : 0;
+                if (preview == null)
+                {
+                    PlanetView view = FindAnyObjectByType<PlanetView>();
+                    if (view != null)
+                    {
+                        preview = new PlanetPreview(view);
+                        previewBox?.Add(preview.Element);
+                        PlacePreview();
+                    }
+                }
                 Rebuild();
+                // Sweep in: the map settles from a little larger and fades up.
+                panelRoot.style.opacity = 0f;
+                panelRoot.style.scale = new Scale(new Vector3(1.04f, 1.04f, 1f));
+                panelRoot.schedule.Execute(() =>
+                {
+                    panelRoot.style.opacity = 1f;
+                    panelRoot.style.scale = new Scale(Vector3.one);
+                }).StartingIn(20);
+                KardashevAscent.Presentation.Audio.GameAudio.Play(KardashevAscent.Presentation.Audio.Sfx.Whoosh, 0.5f);
             }
+            preview?.SetActive(visible);
         }
 
         void OnSimulationCreated()
@@ -121,6 +140,7 @@ namespace KardashevAscent.Presentation.UI
             bool newPlanet = selected != runner.CurrentIndex;
             if (newPlanet && !runner.ChoosePlanet(selected))
                 return;
+            KardashevAscent.Presentation.Audio.GameAudio.Play(KardashevAscent.Presentation.Audio.Sfx.Milestone, 0.8f);
             SetVisible(false);
             // A new planet (or the first one) means choosing where to land next.
             if (newPlanet || GameFlow.Phase == GamePhase.ChoosingPlanet)
@@ -129,34 +149,92 @@ namespace KardashevAscent.Presentation.UI
 
         void Rebuild()
         {
-            if (runner == null || list == null)
+            if (runner == null || map == null)
                 return;
-            subtitle.text = $"{toggleKey}: open or close · landing somewhere new starts a new colony";
-            list.Clear();
+            subtitle.text = $"Click a star · {toggleKey} or Esc: close · landing somewhere new starts a new colony";
+            var systems = new List<StarMapView.StarSystem>();
+            var byName = new Dictionary<string, StarMapView.StarSystem>();
             for (int i = 0; i < runner.Planets.Count; i++)
             {
                 PlanetDNA dna = runner.Planets[i];
-                if (dna == null)
-                    continue;
-                int index = i;
+                if (dna == null) continue;
                 PlanetRecord r = dna.Record;
-                string here = i == runner.CurrentIndex ? "  ● here" : "";
-                var item = new Button(() => { selected = index; Rebuild(); })
+                string host = HostOf(dna);
+                if (!byName.TryGetValue(host, out StarMapView.StarSystem sys))
                 {
-                    text = $"{dna.DisplayName}{here}\n<size=10>{Short(r)}</size>"
-                };
-                item.AddToClassList("planet-item");
-                item.EnableInClassList("selected", i == selected);
-                item.EnableInClassList("unplayable", !r.IsPlayable);
-                list.Add(item);
+                    sys = new StarMapView.StarSystem { Name = host, TeffK = r.star.teffK };
+                    sys.IsSun = host == "Sol";
+                    sys.DistancePc = r.star.distancePc;
+                    sys.Real = sys.IsSun || r.star.distancePc > 0.0;
+                    if (sys.Real && !sys.IsSun)
+                    {
+                        GalacticCoordinates.FromEquatorial(r.star.raDeg, r.star.decDeg, out double l, out double b);
+                        sys.L = l;
+                        sys.B = b;
+                    }
+                    sys.Colour = PlanetPreview.StarColour(r.star.teffK);
+                    byName[host] = sys;
+                    systems.Add(sys);
+                }
+                sys.Planets.Add(i);
+            }
+            map.SetSystems(systems);
+
+            systemList.Clear();
+            var sorted = new List<StarMapView.StarSystem>(systems);
+            sorted.Sort((a, b) => Order(a).CompareTo(Order(b)));
+            foreach (StarMapView.StarSystem sys in sorted)
+            {
+                StarMapView.StarSystem s = sys;
+                string dist = s.IsSun ? "home system" : s.Real
+                    ? $"{s.DistancePc:0.#} pc · {s.DistancePc * GalacticCoordinates.LightYearsPerParsec:N0} ly"
+                    : "made-up world";
+                var item = new Button(() => PickSystem(s)) { text = $"{s.Name.ToUpperInvariant()}\n<size=10>{dist}</size>" };
+                item.AddToClassList("sys-item");
+                var dot = new VisualElement { pickingMode = PickingMode.Ignore };
+                dot.AddToClassList("sys-dot");
+                dot.style.backgroundColor = s.Colour;
+                item.Add(dot);
+                item.userData = s;
+                item.RegisterCallback<PointerEnterEvent>(_ => KardashevAscent.Presentation.Audio.GameAudio.Play(KardashevAscent.Presentation.Audio.Sfx.Hover, 0.4f));
+                systemList.Add(item);
             }
             ShowDetails();
         }
 
-        static string Short(PlanetRecord r)
+        static double Order(StarMapView.StarSystem s) => s.IsSun ? -1.0 : s.Real ? s.DistancePc : 1e9;
+
+        /// <summary>The star a world circles: the archive name without its planet letter; Mars is the Sun's.</summary>
+        static string HostOf(PlanetDNA dna)
         {
-            string star = string.IsNullOrEmpty(r.star.spectralType) ? $"{r.star.teffK:0} K star" : r.star.spectralType;
-            return $"{star} · {r.InsolationEarth:0.##}× Earth's light";
+            PlanetRecord r = dna.Record;
+            if (!string.IsNullOrEmpty(r.archiveName))
+            {
+                int cut = r.archiveName.LastIndexOf(' ');
+                return cut > 0 ? r.archiveName.Substring(0, cut) : r.archiveName;
+            }
+            return r.id == "mars" ? "Sol" : dna.DisplayName;
+        }
+
+        StarMapView.StarSystem SystemOf(int index)
+        {
+            if (map == null) return null;
+            foreach (StarMapView.StarSystem s in map.Systems)
+                if (s.Planets.Contains(index)) return s;
+            return null;
+        }
+
+        void PickSystem(StarMapView.StarSystem s)
+        {
+            if (s == null || s.Planets.Count == 0) return;
+            KardashevAscent.Presentation.Audio.GameAudio.Play(KardashevAscent.Presentation.Audio.Sfx.Beep, 0.6f);
+            int pick = s.Planets[0];
+            if (s.Planets.Contains(runner.CurrentIndex)) pick = runner.CurrentIndex;
+            else
+                foreach (int i in s.Planets)
+                    if (runner.Planets[i] != null && runner.Planets[i].Record.IsPlayable) { pick = i; break; }
+            selected = pick;
+            ShowDetails();
         }
 
         void ShowDetails()
@@ -172,7 +250,8 @@ namespace KardashevAscent.Presentation.UI
             }
             PlanetDNA dna = runner.Planets[selected];
             PlanetRecord r = dna.Record;
-            nameLabel.text = dna.DisplayName;
+            nameLabel.text = dna.DisplayName.ToUpperInvariant();
+            ShowSystem(dna);
             source.text = string.IsNullOrEmpty(r.archiveName)
                 ? r.source
                 : $"{r.source} (“{r.archiveName}”), retrieved {r.retrieved}";
@@ -184,6 +263,8 @@ namespace KardashevAscent.Presentation.UI
             Row(r, "Brightness", $"{r.solar.luminosityW / SunLuminosityW:0.####} × the Sun", "solar.luminosityW");
             if (r.star.count > 1)
                 Row(r, "Stars in system", r.flags.circumbinary ? $"{r.star.count}, the planet orbits two" : $"{r.star.count}; the others are far away", "star.count");
+            if (r.star.distancePc > 0.0)
+                Row(r, "Distance", $"{r.star.distancePc:0.###} pc ({r.star.distancePc * GalacticCoordinates.LightYearsPerParsec:0.#} light years)", "star.distancePc");
 
             Section("ORBIT");
             Row(r, "Distance", $"{r.solar.semiMajorAxisM / AuM:0.####} AU", "solar.semiMajorAxisM");
@@ -258,10 +339,85 @@ namespace KardashevAscent.Presentation.UI
                 verdict.text = $"A cool red star: most of its light is infrared, which silicon cannot use. Panels make {fSi * 100.0:0} % of what they would under the Sun.";
             else
                 verdict.text = "";
+            verdict.style.display = verdict.text.Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
 
             bool here = selected == runner.CurrentIndex;
-            land.text = here ? "You are here (close)" : why != null ? "Can't land here" : "Land here (starts a new colony)";
+            land.text = here ? "YOU ARE HERE  ·  CLOSE" : why != null ? "CAN'T LAND HERE" : "LAND HERE  ►";
             land.SetEnabled(here || why == null);
+            ShowStats(r, meanC, g, atm, insolation);
+        }
+
+        /// <summary>The target panel's top: the star system, its worlds as tabs, and the turning preview.</summary>
+        void ShowSystem(PlanetDNA dna)
+        {
+            PlanetRecord r = dna.Record;
+            StarMapView.StarSystem sys = SystemOf(selected);
+            map.Select(sys);
+            foreach (VisualElement item in systemList.Children())
+                item.EnableInClassList("selected", item.userData == sys);
+            systemName.text = sys != null ? sys.Name.ToUpperInvariant() : "";
+            string type = string.IsNullOrEmpty(r.star.spectralType) ? "" : r.star.spectralType + " · ";
+            string where = sys == null ? "" : sys.IsSun ? " · the Sun" : sys.Real
+                ? $" · {r.star.distancePc:0.##} pc ({r.star.distancePc * GalacticCoordinates.LightYearsPerParsec:0.#} light years) · galactic longitude {sys.L:0}°"
+                : " · a made-up system for practice";
+            starLine.text = $"{type}{r.star.teffK:N0} K star{where}";
+
+            worldTabs.Clear();
+            if (sys != null && sys.Planets.Count > 1)
+                foreach (int i in sys.Planets)
+                {
+                    int index = i;
+                    var tab = new Button(() =>
+                    {
+                        selected = index;
+                        KardashevAscent.Presentation.Audio.GameAudio.Play(KardashevAscent.Presentation.Audio.Sfx.Click, 0.6f);
+                        ShowDetails();
+                    }) { text = runner.Planets[i].DisplayName.ToUpperInvariant() };
+                    tab.AddToClassList("tab");
+                    tab.EnableInClassList("selected", i == selected);
+                    worldTabs.Add(tab);
+                }
+            worldTabs.style.display = worldTabs.childCount > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+
+            previewColour = sys != null ? sys.Colour : Color.white;
+            previewGlow?.MarkDirtyRepaint();
+            if (preview != null)
+            {
+                SurfaceSettings look = r.ToSurfaceSettings();
+                var rich = new SurfaceSettings(look.Seed, look.OceanFraction, look.IceLatitudeDeg, look.NoiseScale,
+                                               look.IceAroundSubStellar, look.LiquidWater, look.AirTemperatureC, true);
+                bool gas = r.Surface == SurfaceKind.Gaseous;
+                preview.Show(selected, view => view.BuildPreview(rich, gas), previewColour,
+                             r.flags.tidallyLocked ? 0f : (float)r.solar.obliquityDeg);
+            }
+        }
+
+        /// <summary>Six numbers that decide a landing, big enough to read at a glance.</summary>
+        void ShowStats(PlanetRecord r, double meanC, double g, double atm, double insolation)
+        {
+            stats.Clear();
+            Stat("STARLIGHT", $"{insolation:0.##}×", "Earth's");
+            Stat("GRAVITY", g > 0.0 ? $"{g / PlanetSimulation.StandardGravityMs2:0.##} g" : "?", "rough, from orbit");
+            Stat("MEAN TEMP.", $"{meanC:0} °C", $"± {OrbitalBrief.TemperatureSpreadC:0} °C");
+            Stat("AIR", atm > 0.0 ? $"{atm:0.##}×" : "none", atm > 0.0 ? "Earth's pressure" : "vacuum");
+            Stat("DAY", r.flags.tidallyLocked ? "locked" : $"{r.solar.dayLengthHours:0.#} h", r.flags.tidallyLocked ? "one face to the star" : "sunrise to sunrise");
+            Stat("YEAR", Year(r.solar.yearLengthHours).Replace(" Earth", ""), "one orbit");
+        }
+
+        void Stat(string label, string value, string caption)
+        {
+            var tile = new VisualElement();
+            tile.AddToClassList("stat");
+            var l = new Label(label);
+            l.AddToClassList("stat-label");
+            var v = new Label(value);
+            v.AddToClassList("stat-value");
+            var c = new Label(caption);
+            c.AddToClassList("stat-caption");
+            tile.Add(l);
+            tile.Add(v);
+            tile.Add(c);
+            stats.Add(tile);
         }
 
         static string Surface(SurfaceKind kind) =>
@@ -326,6 +482,175 @@ namespace KardashevAscent.Presentation.UI
                 case ValueOrigin.Assumed: return "not measurable for this planet yet, so the game assumes it";
                 default: return "source not recorded";
             }
+        }
+
+        // ---------------------------------------------------------------- layout
+
+        void Build(VisualElement root)
+        {
+            root.Clear();
+            map = new StarMapView();
+            map.style.right = 456;
+            map.Picked += PickSystem;
+            root.Add(map);
+
+            var header = new VisualElement { pickingMode = PickingMode.Ignore };
+            header.AddToClassList("map-header");
+            var kicker = new Label("STELLAR CARTOGRAPHY  ·  NASA EXOPLANET ARCHIVE");
+            kicker.AddToClassList("heading");
+            kicker.AddToClassList("map-kicker");
+            header.Add(kicker);
+            var title = new Label("CHOOSE A WORLD");
+            title.AddToClassList("map-title");
+            header.Add(title);
+            var line = new VisualElement();
+            line.AddToClassList("map-line");
+            header.Add(line);
+            subtitle = new Label("");
+            subtitle.AddToClassList("caption");
+            header.Add(subtitle);
+            root.Add(header);
+
+            var listHead = new Label("STAR SYSTEMS · NEAREST FIRST");
+            listHead.AddToClassList("heading");
+            listHead.AddToClassList("sys-head");
+            root.Add(listHead);
+            var listScroll = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden };
+            listScroll.AddToClassList("sys-list");
+            systemList = listScroll.contentContainer;
+            root.Add(listScroll);
+
+            var footnote = new Label("Up is towards the centre of the Milky Way. Each star's direction comes from its sky position; its distance from the Sun is on a log scale.");
+            footnote.AddToClassList("caption");
+            footnote.AddToClassList("map-footnote");
+            root.Add(footnote);
+
+            // The target panel.
+            var side = new VisualElement();
+            side.AddToClassList("panel");
+            side.AddToClassList("side-panel");
+            var sk = new Label("TARGET SYSTEM");
+            sk.AddToClassList("heading");
+            side.Add(sk);
+            systemName = new Label("");
+            systemName.AddToClassList("side-system");
+            side.Add(systemName);
+            starLine = new Label("");
+            starLine.AddToClassList("caption");
+            starLine.AddToClassList("wrap");
+            side.Add(starLine);
+            worldTabs = new VisualElement();
+            worldTabs.AddToClassList("world-tabs");
+            side.Add(worldTabs);
+
+            var scroll = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden };
+            scroll.AddToClassList("side-scroll");
+            side.Add(scroll);
+
+            previewBox = new VisualElement();
+            previewBox.AddToClassList("preview-box");
+            previewGlow = new VisualElement { pickingMode = PickingMode.Ignore };
+            previewGlow.style.position = Position.Absolute;
+            previewGlow.style.left = 0; previewGlow.style.right = 0; previewGlow.style.top = 0; previewGlow.style.bottom = 0;
+            previewGlow.generateVisualContent += DrawPreviewGlow;
+            previewBox.Add(previewGlow);
+            previewBox.RegisterCallback<GeometryChangedEvent>(_ => PlacePreview());
+            scroll.Add(previewBox);
+
+            nameLabel = new Label("");
+            nameLabel.AddToClassList("side-planet");
+            scroll.Add(nameLabel);
+            source = new Label("");
+            source.AddToClassList("caption");
+            source.AddToClassList("wrap");
+            scroll.Add(source);
+            stats = new VisualElement();
+            stats.AddToClassList("stats");
+            scroll.Add(stats);
+            verdict = new Label("");
+            verdict.AddToClassList("body");
+            verdict.AddToClassList("wrap");
+            verdict.AddToClassList("verdict");
+            scroll.Add(verdict);
+
+            var data = new Foldout { text = "MISSION DATA · WHERE EVERY NUMBER COMES FROM", value = false };
+            data.AddToClassList("mission-data");
+            rows = new VisualElement();
+            rows.AddToClassList("rows");
+            data.Add(rows);
+            var legend = new VisualElement();
+            legend.AddToClassList("legend");
+            AddChip(legend, "NASA", "origin-nasa", "measured");
+            AddChip(legend, "calc", "origin-derived", "worked out with physics");
+            AddChip(legend, "assumed", "origin-assumed", "a game value");
+            data.Add(legend);
+            note = new Label("Point at a value to see where it comes from.");
+            note.AddToClassList("caption");
+            note.AddToClassList("wrap");
+            note.AddToClassList("note");
+            data.Add(note);
+            scroll.Add(data);
+
+            land = new Button(Land) { text = "LAND HERE" };
+            land.AddToClassList("land-button");
+            side.Add(land);
+            root.Add(side);
+
+            var close = new Button(() => SetVisible(false)) { text = "×", tooltip = "Close (Esc)" };
+            close.AddToClassList("close-button");
+            close.AddToClassList("map-close");
+            root.Add(close);
+
+            root.style.transitionProperty = new List<StylePropertyName> { new StylePropertyName("opacity"), new StylePropertyName("scale") };
+            root.style.transitionDuration = new List<TimeValue> { new TimeValue(0.45f, TimeUnit.Second) };
+            root.style.transitionTimingFunction = new List<EasingFunction> { new EasingFunction(EasingMode.EaseOutCubic) };
+        }
+
+        static void AddChip(VisualElement to, string chip, string cls, string text)
+        {
+            var c = new Label(chip);
+            c.AddToClassList("chip");
+            c.AddToClassList(cls);
+            to.Add(c);
+            var t = new Label(text);
+            t.AddToClassList("caption");
+            t.AddToClassList("legend-text");
+            to.Add(t);
+        }
+
+        void PlacePreview()
+        {
+            if (preview == null || previewBox == null) return;
+            float h = previewBox.contentRect.height, w = previewBox.contentRect.width;
+            if (float.IsNaN(h) || h <= 0f) return;
+            VisualElement img = preview.Element;
+            img.style.position = Position.Absolute;
+            img.style.width = h;
+            img.style.height = h;
+            img.style.left = (w - h) * 0.5f;
+            img.style.top = 0;
+        }
+
+        /// <summary>A soft halo in the star's colour behind the planet, and two thin orbit arcs.</summary>
+        void DrawPreviewGlow(MeshGenerationContext ctx)
+        {
+            Rect rr = previewGlow.contentRect;
+            if (rr.width < 4f) return;
+            Painter2D p = ctx.painter2D;
+            Vector2 c = rr.center;
+            float r = rr.height * 0.5f * 0.80f;
+            Color col = previewColour;
+            for (int i = 8; i >= 1; i--)
+            {
+                col.a = 0.035f;
+                p.fillColor = col;
+                p.BeginPath(); p.Arc(c, r * (1f + 0.045f * i), 0f, 360f); p.Fill();
+            }
+            p.lineWidth = 1f;
+            p.strokeColor = new Color(1f, 0.78f, 0.36f, 0.35f);
+            p.BeginPath(); p.Arc(c, r * 1.22f, 200f, 340f); p.Stroke();
+            p.strokeColor = new Color(0.47f, 0.75f, 1f, 0.3f);
+            p.BeginPath(); p.Arc(c, r * 1.22f, 20f, 160f); p.Stroke();
         }
     }
 }

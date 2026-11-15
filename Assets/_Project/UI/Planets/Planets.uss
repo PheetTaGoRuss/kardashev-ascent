@@ -1,49 +1,109 @@
+/* The planet chooser (director 2026-11-15): a full-screen star map with a target panel on the right. */
 .planets {
     position: absolute;
-    top: 80px;
-    left: 50%;
-    translate: -50% 0;
-    width: 640px;
-    max-width: 96%;
-    max-height: 84%;
-    padding: 10px 12px;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: rgb(2, 4, 10);
 }
-.planets.panel { background-color: rgba(9, 13, 24, 0.95); }
 
-.title-row { flex-direction: row; align-items: flex-start; }
-.title-text { flex-grow: 1; }
+/* Header, top left. */
+.map-header { position: absolute; left: 32px; top: 26px; width: 520px; }
+.map-kicker { color: var(--cool); }
+.map-title { font-size: 40px; -unity-font-style: bold; letter-spacing: 12px; color: var(--text); margin: 4px 0 0 0; padding: 0; }
+.map-line { width: 120px; height: 2px; background-color: var(--accent); margin: 8px 0 8px 0; }
+.map-footnote { position: absolute; left: 32px; bottom: 14px; width: 560px; white-space: normal; color: rgba(150, 162, 182, 0.8); }
+
+/* Star system list, left. */
+.sys-head { position: absolute; left: 32px; top: 168px; }
+.sys-list { position: absolute; left: 26px; top: 186px; width: 232px; bottom: 300px; }
+.sys-item {
+    margin: 0 0 3px 0;
+    padding: 5px 8px 5px 26px;
+    border-width: 0;
+    border-left-width: 2px;
+    border-color: rgba(0, 0, 0, 0);
+    border-radius: 0;
+    background-color: rgba(9, 13, 24, 0.55);
+    -unity-text-align: middle-left;
+    white-space: normal;
+    color: var(--text);
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+.sys-item:hover { background-color: rgba(120, 190, 255, 0.12); border-left-color: var(--cool); }
+.sys-item.selected { background-color: rgba(255, 199, 92, 0.16); border-left-color: var(--accent); color: rgb(255, 236, 200); }
+.sys-dot { position: absolute; left: 9px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 4px; }
+
+/* Map labels. */
+.map-tag {
+    position: absolute;
+    font-size: 11px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    color: rgba(232, 238, 248, 0.85);
+    padding: 0;
+    margin: 0;
+    -unity-text-outline-width: 0;
+}
+.map-tag.hover { color: var(--cool); }
+.map-tag.selected { color: var(--accent); }
+.map-ring-tag { font-size: 9px; color: rgba(120, 190, 255, 0.55); padding: 0; margin: 0; }
+.map-axis-tag { font-size: 9px; letter-spacing: 2px; color: rgba(150, 175, 210, 0.7); padding: 0; margin: 0; }
+
+/* Close, top right of the map. */
+.map-close { position: absolute; top: 18px; right: 476px; width: 30px; height: 30px; font-size: 20px; }
 .close-button {
-    width: 24px;
-    height: 24px;
     margin: 0;
     padding: 0;
-    font-size: 16px;
     color: var(--text-muted);
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
 }
-.close-button:hover { color: var(--text); }
+.close-button:hover { color: var(--accent); background-color: rgba(0, 0, 0, 0); }
 
-.planets-body { flex-direction: row; flex-grow: 1; flex-shrink: 1; margin-top: 8px; min-height: 120px; }
-.planet-list { width: 190px; flex-shrink: 0; margin-right: 10px; }
-.planet-details { flex-grow: 1; flex-shrink: 1; }
-
-.planet-item {
-    margin: 0 0 4px 0;
-    padding: 6px 8px;
-    border-radius: 0;
-    border-width: 1px;
-    border-color: rgba(0, 0, 0, 0);
-    background-color: rgba(255, 255, 255, 0.04);
-    -unity-text-align: middle-left;
-    white-space: normal;
-    color: var(--text);
+/* Target panel, right. */
+.side-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 456px;
+    padding: 22px 24px 18px 24px;
+    background-color: rgba(7, 11, 21, 0.93);
+    border-top-width: 0;
+    border-right-width: 0;
+    border-bottom-width: 0;
+    border-left-width: 1px;
+    border-left-color: rgba(92, 150, 220, 0.45);
 }
-.planet-item:hover { background-color: rgba(255, 255, 255, 0.09); }
-.planet-item.selected { border-color: var(--accent); background-color: rgba(255, 199, 92, 0.14); }
-.planet-item.unplayable { color: var(--text-muted); }
+.side-system { font-size: 30px; -unity-font-style: bold; letter-spacing: 6px; margin: 2px 0 2px 0; padding: 0; color: var(--text); }
+.world-tabs { flex-direction: row; flex-wrap: wrap; margin-top: 10px; border-bottom-width: 1px; border-bottom-color: rgba(92, 150, 220, 0.25); }
+.side-scroll { flex-grow: 1; flex-shrink: 1; margin-top: 6px; }
+.preview-box { height: 300px; margin: 4px 0 2px 0; }
+.side-planet { font-size: 22px; -unity-font-style: bold; letter-spacing: 4px; color: var(--accent); margin: 0; padding: 0; -unity-text-align: middle-center; }
 
-.rows { margin-top: 8px; }
+.stats { flex-direction: row; flex-wrap: wrap; margin-top: 10px; justify-content: space-between; }
+.stat {
+    width: 32%;
+    margin-bottom: 6px;
+    padding: 6px 8px;
+    background-color: rgba(120, 190, 255, 0.06);
+    border-width: 0;
+    border-top-width: 1px;
+    border-top-color: rgba(120, 190, 255, 0.35);
+}
+.stat-label { font-size: 9px; letter-spacing: 2px; color: var(--cool); padding: 0; margin: 0; }
+.stat-value { font-size: 17px; -unity-font-style: bold; color: var(--text); padding: 0; margin: 2px 0 0 0; }
+.stat-caption { font-size: 9px; color: var(--text-muted); padding: 0; margin: 0; white-space: normal; }
+
+.mission-data { margin-top: 10px; }
+.mission-data > .unity-foldout__toggle .unity-label { font-size: 10px; letter-spacing: 2px; color: var(--accent); -unity-font-style: bold; }
+.mission-data > .unity-foldout__toggle .unity-toggle__checkmark { -unity-background-image-tint-color: var(--accent); background-color: rgba(0, 0, 0, 0); border-width: 0; }
+.mission-data > .unity-foldout__content { margin-left: 0; }
+
+.rows { margin-top: 4px; }
 .row { flex-direction: row; align-items: center; padding: 2px 4px; border-radius: 0; }
 .row:hover { background-color: rgba(255, 255, 255, 0.05); }
 .row-label { width: 120px; flex-shrink: 0; font-size: 11px; color: var(--text-muted); padding: 0; margin: 0; }
@@ -65,26 +125,28 @@
 .origin-assumed { background-color: rgb(242, 190, 80); }
 .origin-unknown { background-color: rgb(120, 128, 150); }
 
-.verdict { margin-top: 10px; }
-.verdict.warn { color: var(--warning); }
-.verdict.bad { color: var(--critical); }
-.body { font-size: 12px; padding: 0; margin: 0; }
+.verdict { margin-top: 8px; padding: 6px 8px; background-color: rgba(255, 255, 255, 0.04); }
+.verdict.warn { color: var(--warning); background-color: rgba(242, 190, 80, 0.08); }
+.verdict.bad { color: var(--critical); background-color: rgba(255, 120, 105, 0.08); }
+.body { font-size: 12px; margin: 0; }
 .wrap { white-space: normal; }
 
-.footer { margin-top: 8px; }
-.legend { flex-direction: row; flex-wrap: wrap; align-items: center; }
+.legend { flex-direction: row; flex-wrap: wrap; align-items: center; margin-top: 8px; }
 .legend .chip { margin: 0 4px 0 0; }
 .legend-text { margin-right: 10px; }
 .note { margin-top: 6px; min-height: 28px; }
+
 .land-button {
-    margin: 6px 0 0 0;
-    height: 28px;
-    font-size: 13px;
+    margin: 12px 0 0 0;
+    height: 46px;
+    font-size: 16px;
+    letter-spacing: 6px;
     -unity-font-style: bold;
     color: var(--on-accent);
     background-color: var(--accent);
-    border-width: 0;
-    border-radius: 0;
+    border-width: 1px;
+    border-color: rgb(255, 225, 160);
+    border-radius: 2px;
 }
-.land-button:hover { background-color: rgb(255, 220, 140); }
-.land-button:disabled { background-color: rgba(255, 255, 255, 0.10); color: var(--text-muted); }
+.land-button:hover { background-color: rgb(255, 222, 150); color: var(--on-accent); scale: 1.02 1.02; }
+.land-button:disabled { background-color: rgba(255, 255, 255, 0.08); color: var(--text-muted); border-color: rgba(255, 255, 255, 0.1); }

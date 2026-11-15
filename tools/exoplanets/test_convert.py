@@ -23,6 +23,19 @@ def prov(planet, field):
 
 
 class ConvertTests(unittest.TestCase):
+    def test_star_position_from_archive(self):
+        row = dict(SUN_EARTH_ROW, ra="217.42895", dec="-62.67948", sy_dist="1.30119")
+        p = convert(row, {"id": "t", "archiveName": "Test b"})
+        self.assertAlmostEqual(p["star"]["raDeg"], 217.42895)
+        self.assertAlmostEqual(p["star"]["decDeg"], -62.67948)
+        self.assertAlmostEqual(p["star"]["distancePc"], 1.30119)
+        self.assertEqual(prov(p, "star.distancePc"), "nasa")
+
+    def test_no_star_position_when_missing(self):
+        p = convert(SUN_EARTH_ROW, {"id": "t", "archiveName": "Test b"})
+        self.assertNotIn("raDeg", p["star"])
+        self.assertNotIn("distancePc", p["star"])
+
     def test_units_from_archive(self):
         p = convert(SUN_EARTH_ROW, {"id": "t", "archiveName": "Test b"})
         self.assertAlmostEqual(p["solar"]["luminosityW"], SOLAR_LUMINOSITY, delta=1e20)

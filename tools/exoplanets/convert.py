@@ -31,7 +31,7 @@ COLUMNS = [
     "pl_orbper", "pl_orbsmax", "pl_orbeccen", "pl_insol", "pl_eqt",
     "pl_rade", "pl_bmasse",
     "st_teff", "st_rad", "st_mass", "st_lum", "st_spectype", "st_age", "st_met", "st_metratio",
-    "sy_dist", "discoverymethod",
+    "sy_dist", "discoverymethod", "ra", "dec",
 ]
 
 # Radius bins for "does this planet have a surface to build on" (Earth radii).
@@ -169,6 +169,11 @@ def convert(row: dict[str, Any] | None, entry: dict[str, Any], retrieved: str = 
     age = _num(row, "st_age")
     if age is not None:
         b.put("star", "ageGyr", age, "nasa", "st_age")
+    # Where the star is: sky position (J2000, degrees) and distance (parsecs), for the star map.
+    for col, field in (("ra", "raDeg"), ("dec", "decDeg"), ("sy_dist", "distancePc")):
+        v = _num(row, col) if row else None
+        if v is not None:
+            b.put("star", field, v, "nasa", col)
     star_count = int(_num(row, "sy_snum") or assumed.get("starCount", 1))
     b.put("star", "count", star_count, "nasa" if row else "assumed", "sy_snum")
     # cb_flag = 1 only when the planet orbits both stars (P-type). A multi-star system with
