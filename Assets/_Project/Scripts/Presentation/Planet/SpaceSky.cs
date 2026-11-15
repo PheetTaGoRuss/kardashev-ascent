@@ -19,6 +19,7 @@ namespace KardashevAscent.Presentation.Planet
 
         Texture2D texture;
         Material material;
+        System.Threading.Tasks.Task<Color32[]> work;
 
         /// <summary>Add the sky once (GameFlow calls this at start).</summary>
         public static void Ensure()
@@ -27,13 +28,36 @@ namespace KardashevAscent.Presentation.Planet
                 new GameObject("Space Sky").AddComponent<SpaceSky>();
         }
 
-        void Start()
+        // The pixels take about a second, so they are made on a worker thread (plain maths, no Unity objects) and the
+        // sky appears when they are ready; the menu's intro keeps running meanwhile.
+        void Start() => work = System.Threading.Tasks.Task.Run(Pixels);
+
+        void Update()
         {
+            if (work == null || !work.IsCompleted)
+                return;
+            System.Threading.Tasks.Task<Color32[]> done = work;
+            work = null;
+            enabled = false;
+            if (done.IsFaulted)
+            {
+                Debug.LogException(done.Exception);
+                return;
+            }
             var source = Resources.Load<Material>("SpaceSky");
             Camera cam = Camera.main;
             if (source == null || cam == null)
                 return;
-            texture = Generate();
+            texture = new Texture2D(Width, Height, TextureFormat.RGBA32, false)
+            {
+                name = "Space sky",
+                wrapModeU = TextureWrapMode.Repeat,
+                wrapModeV = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear,
+                hideFlags = HideFlags.DontSave,
+            };
+            texture.SetPixels32(done.Result);
+            texture.Apply(false, true);
             material = new Material(source) { name = "Space Sky (runtime)" };
             material.SetTexture("_MainTex", texture);
             Skybox sky = cam.GetComponent<Skybox>();
@@ -48,7 +72,7 @@ namespace KardashevAscent.Presentation.Planet
             if (texture != null) Destroy(texture);
         }
 
-        static Texture2D Generate()
+        static Color32[] Pixels()
         {
             // The galaxy's plane, tilted against the panorama so the band crosses the sky at a slant.
             Vector3 pole = new Vector3(0.35f, 0.82f, 0.45f).normalized;
@@ -121,17 +145,7 @@ namespace KardashevAscent.Presentation.Planet
                 Stamp(pixels, v, tint * lum, bright > 0.55f ? 2 : bright > 0.2f ? 1 : 0);
             }
 
-            var tex = new Texture2D(Width, Height, TextureFormat.RGBA32, false)
-            {
-                name = "Space sky",
-                wrapModeU = TextureWrapMode.Repeat,
-                wrapModeV = TextureWrapMode.Clamp,
-                filterMode = FilterMode.Bilinear,
-                hideFlags = HideFlags.DontSave,
-            };
-            tex.SetPixels32(pixels);
-            tex.Apply(false, true);
-            return tex;
+            return pixels;
         }
 
         /// <summary>Panorama coordinates (u right, v up, 0–1) to a direction, matching Skybox/Panoramic.</summary>
