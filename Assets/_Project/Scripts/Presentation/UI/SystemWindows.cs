@@ -596,14 +596,19 @@ namespace KardashevAscent.Presentation.UI
             {
                 shownPuzzles = puzzleShape;
                 puzzles.Clear();
+                // Each card can be folded away and done later (director 2026-11-15).
                 foreach (LatitudePuzzle p in sim.LatitudePuzzles)
-                    puzzles.Add(new LatitudePuzzleView(sim, p, result => { solvedText.text = result; effectsTile = -2; }));
+                    puzzles.Add(PuzzleShelf.Wrap(new LatitudePuzzleView(sim, p, result => { solvedText.text = result; effectsTile = -2; }),
+                                                 PuzzleShelf.LatitudeKey(p.Tile), $"Latitude of tile #{p.Tile}"));
                 foreach (ParameterPuzzle p in sim.ParameterPuzzles)
-                    puzzles.Add(new LightPuzzleView(sim, p, result => { solvedText.text = result; effectsTile = -2; }));
+                    puzzles.Add(PuzzleShelf.Wrap(new LightPuzzleView(sim, p, result => { solvedText.text = result; effectsTile = -2; }),
+                                                 PuzzleShelf.LightKey(p.Parameter), SolarUnknowns.Name(p.Parameter)));
                 foreach (SurveyPuzzle p in sim.SurveyPuzzles)
-                    puzzles.Add(new SurveyPuzzleView(sim, p, result => { solvedText.text = result; effectsTile = -2; }));
+                    puzzles.Add(PuzzleShelf.Wrap(new SurveyPuzzleView(sim, p, result => { solvedText.text = result; effectsTile = -2; }),
+                                                 PuzzleShelf.SurveyKey(p.Tile), $"Ground survey of tile #{p.Tile}"));
                 puzzleHead.style.display = shownPuzzles > 0 || solvedText.text.Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
             }
+            PuzzleShelf.ShowFocused(puzzles);
             int tile = Tile(sim);
             double lat = sim.Sphere.Latitude(tile);
             if (tile != effectsTile || Time.unscaledTime >= nextEffects)
