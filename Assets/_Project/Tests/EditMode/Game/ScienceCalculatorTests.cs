@@ -49,6 +49,17 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.AreEqual(20.43, Eval("atan(1/2.684)"), 0.01);                   // the director's own reading
         }
 
+        [Test]
+        public void Ans_IsThePreviousResult()
+        {
+            Assert.IsTrue(ScienceCalculator.TryEvaluate("ans*2", 20.5, out double v, out _));
+            Assert.AreEqual(41.0, v, 1e-12);
+            Assert.IsTrue(ScienceCalculator.TryEvaluate("atan(1/ans)", 2.684, out double h, out _));
+            Assert.AreEqual(20.43, h, 0.01);
+            Assert.IsFalse(ScienceCalculator.TryEvaluate("ans+1", out _, out string error), "no answer yet");
+            StringAssert.Contains("ans", error);
+        }
+
         [TestCase("")]
         [TestCase("1/0")]
         [TestCase("asin(2)")]

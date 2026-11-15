@@ -433,6 +433,9 @@ namespace KardashevAscent.Simulation.Game
         /// </summary>
         string AnswerSurveyPuzzle(int tileId, System.Collections.Generic.IReadOnlyList<double> estimates, out Solar.LatitudePuzzle.Grade grade);
 
+        /// <summary>Answer one material of a survey puzzle; the tile is surveyed once every material is worked out.</summary>
+        string AnswerSurveyMaterial(int tileId, int materialIndex, double estimate, out Solar.LatitudePuzzle.Grade grade);
+
         /// <summary>The tile was surveyed from a rough estimate: its grades are shown as ±.</summary>
         bool IsRoughSurvey(int tileId);
     }

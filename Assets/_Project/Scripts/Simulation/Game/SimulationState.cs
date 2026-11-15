@@ -8,8 +8,8 @@ namespace KardashevAscent.Simulation.Game
     [Serializable]
     public sealed class SimulationState
     {
-        /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished. 7 added robots; 8 their batteries and condition; 9 resources; 10 the Workshop; 11 programs (facility, ranking, queue); 12 movement; 13 critical damage (stage A); 14 reservations and tasks to go back to (stage B); 15 battery ageing by depth, maintenance rules (stage D); 16 building footprints. 23 industry reports.</summary>
-        public const int CurrentVersion = 29;
+        /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished. 7 added robots; 8 their batteries and condition; 9 resources; 10 the Workshop; 11 programs (facility, ranking, queue); 12 movement; 13 critical damage (stage A); 14 reservations and tasks to go back to (stage B); 15 battery ageing by depth, maintenance rules (stage D); 16 building footprints. 23 industry reports. 29 experiments. 30 survey puzzles answered one material at a time.</summary>
+        public const int CurrentVersion = 30;
 
         /// <summary>The version this state was saved with (<see cref="CurrentVersion"/> for a new one).</summary>
         public int Version = CurrentVersion;
