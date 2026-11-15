@@ -108,6 +108,11 @@ namespace KardashevAscent.Simulation.Planet
             public double massKg;
             public string spectralType = "";
             public int count = 1;
+            /// <summary>Sky position, J2000 degrees (archive ra, dec); both 0 with no distance when unknown.</summary>
+            public double raDeg;
+            public double decDeg;
+            /// <summary>Distance from the Sun, parsecs (archive sy_dist); 0 when unknown (made-up worlds, Mars).</summary>
+            public double distancePc;
         }
 
         [Serializable]

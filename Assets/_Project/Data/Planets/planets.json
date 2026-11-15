@@ -1,7 +1,7 @@
 {
   "generatedBy": "tools/exoplanets/fetch_exoplanets.py",
   "archive": "NASA Exoplanet Archive (https://exoplanetarchive.ipac.caltech.edu), table pscomppars",
-  "retrieved": "2026-11-14",
+  "retrieved": "2026-11-15",
   "units": "SI unless the field name says otherwise; angles in degrees",
   "planets": [
     {
@@ -204,7 +204,7 @@
       "displayName": "Proxima Centauri b",
       "archiveName": "Proxima Cen b",
       "source": "NASA Exoplanet Archive, table pscomppars",
-      "retrieved": "2026-11-14",
+      "retrieved": "2026-11-15",
       "solar": {
         "luminosityW": 5.780320630408608e+23,
         "semiMajorAxisM": 7252504771.536,
@@ -223,6 +223,9 @@
         "radiusM": 98093699.99999999,
         "massKg": 2.42792187e+29,
         "spectralType": "M5.5 V",
+        "raDeg": 217.3934657,
+        "decDeg": -62.6761821,
+        "distancePc": 1.30119,
         "count": 3
       },
       "planet": {
@@ -274,6 +277,21 @@
           "field": "star.spectralType",
           "origin": "nasa",
           "note": "st_spectype"
+        },
+        {
+          "field": "star.raDeg",
+          "origin": "nasa",
+          "note": "ra"
+        },
+        {
+          "field": "star.decDeg",
+          "origin": "nasa",
+          "note": "dec"
+        },
+        {
+          "field": "star.distancePc",
+          "origin": "nasa",
+          "note": "sy_dist"
         },
         {
           "field": "star.count",
@@ -417,7 +435,7 @@
       "displayName": "TRAPPIST-1 e",
       "archiveName": "TRAPPIST-1 e",
       "source": "NASA Exoplanet Archive, table pscomppars",
-      "retrieved": "2026-11-14",
+      "retrieved": "2026-11-15",
       "solar": {
         "luminosityW": 2.116907731641514e+23,
         "semiMajorAxisM": 4375737717.975,
@@ -437,6 +455,9 @@
         "massKg": 1.78564606e+29,
         "spectralType": "M8.0 V",
         "ageGyr": 7.6,
+        "raDeg": 346.6263919,
+        "decDeg": -5.0434618,
+        "distancePc": 12.42988881,
         "count": 1
       },
       "planet": {
@@ -493,6 +514,21 @@
           "field": "star.ageGyr",
           "origin": "nasa",
           "note": "st_age"
+        },
+        {
+          "field": "star.raDeg",
+          "origin": "nasa",
+          "note": "ra"
+        },
+        {
+          "field": "star.decDeg",
+          "origin": "nasa",
+          "note": "dec"
+        },
+        {
+          "field": "star.distancePc",
+          "origin": "nasa",
+          "note": "sy_dist"
         },
         {
           "field": "star.count",
@@ -636,7 +672,7 @@
       "displayName": "Kepler-16 b",
       "archiveName": "Kepler-16 b",
       "source": "NASA Exoplanet Archive, table pscomppars",
-      "retrieved": "2026-11-14",
+      "retrieved": "2026-11-15",
       "solar": {
         "luminosityW": 4.785881367413777e+25,
         "semiMajorAxisM": 105436579269.36,
@@ -655,6 +691,9 @@
         "radiusM": 451439730.0,
         "massKg": 1.371447759e+30,
         "ageGyr": 3.8,
+        "raDeg": 289.0758307,
+        "decDeg": 51.757229,
+        "distancePc": 75.0852,
         "count": 2
       },
       "planet": {
@@ -706,6 +745,21 @@
           "field": "star.ageGyr",
           "origin": "nasa",
           "note": "st_age"
+        },
+        {
+          "field": "star.raDeg",
+          "origin": "nasa",
+          "note": "ra"
+        },
+        {
+          "field": "star.decDeg",
+          "origin": "nasa",
+          "note": "dec"
+        },
+        {
+          "field": "star.distancePc",
+          "origin": "nasa",
+          "note": "sy_dist"
         },
         {
           "field": "star.count",
@@ -849,7 +903,7 @@
       "displayName": "Kepler-452 b",
       "archiveName": "Kepler-452 b",
       "source": "NASA Exoplanet Archive, table pscomppars",
-      "retrieved": "2026-11-14",
+      "retrieved": "2026-11-15",
       "solar": {
         "luminosityW": 4.6499890383241664e+26,
         "semiMajorAxisM": 156479372752.2,
@@ -869,6 +923,9 @@
         "massKg": 2.0620433899999997e+30,
         "spectralType": "G2",
         "ageGyr": 6.0,
+        "raDeg": 296.003752,
+        "decDeg": 44.2775861,
+        "distancePc": 551.727,
         "count": 1
       },
       "planet": {
@@ -925,6 +982,21 @@
           "field": "star.ageGyr",
           "origin": "nasa",
           "note": "st_age"
+        },
+        {
+          "field": "star.raDeg",
+          "origin": "nasa",
+          "note": "ra"
+        },
+        {
+          "field": "star.decDeg",
+          "origin": "nasa",
+          "note": "dec"
+        },
+        {
+          "field": "star.distancePc",
+          "origin": "nasa",
+          "note": "sy_dist"
         },
         {
           "field": "star.count",
@@ -1263,7 +1335,7 @@
       "displayName": "TRAPPIST-1 f",
       "archiveName": "TRAPPIST-1 f",
       "source": "NASA Exoplanet Archive, table pscomppars",
-      "retrieved": "2026-11-14",
+      "retrieved": "2026-11-15",
       "solar": {
         "luminosityW": 2.116907731641514e+23,
         "semiMajorAxisM": 5758022043.243,
@@ -1283,6 +1355,9 @@
         "massKg": 1.78564606e+29,
         "spectralType": "M8.0 V",
         "ageGyr": 7.6,
+        "raDeg": 346.6263919,
+        "decDeg": -5.0434618,
+        "distancePc": 12.42988881,
         "count": 1
       },
       "planet": {
@@ -1339,6 +1414,21 @@
           "field": "star.ageGyr",
           "origin": "nasa",
           "note": "st_age"
+        },
+        {
+          "field": "star.raDeg",
+          "origin": "nasa",
+          "note": "ra"
+        },
+        {
+          "field": "star.decDeg",
+          "origin": "nasa",
+          "note": "dec"
+        },
+        {
+          "field": "star.distancePc",
+          "origin": "nasa",
+          "note": "sy_dist"
         },
         {
           "field": "star.count",
@@ -1482,7 +1572,7 @@
       "displayName": "TOI-700 d",
       "archiveName": "TOI-700 d",
       "source": "NASA Exoplanet Archive, table pscomppars",
-      "retrieved": "2026-11-14",
+      "retrieved": "2026-11-15",
       "solar": {
         "luminosityW": 8.919323771542712e+24,
         "semiMajorAxisM": 24563970368.940002,
@@ -1502,6 +1592,9 @@
         "massKg": 8.2919199e+29,
         "spectralType": "M2.5 V",
         "ageGyr": 1.5,
+        "raDeg": 97.0957165,
+        "decDeg": -65.5786149,
+        "distancePc": 31.1265,
         "count": 1
       },
       "planet": {
@@ -1558,6 +1651,21 @@
           "field": "star.ageGyr",
           "origin": "nasa",
           "note": "st_age"
+        },
+        {
+          "field": "star.raDeg",
+          "origin": "nasa",
+          "note": "ra"
+        },
+        {
+          "field": "star.decDeg",
+          "origin": "nasa",
+          "note": "dec"
+        },
+        {
+          "field": "star.distancePc",
+          "origin": "nasa",
+          "note": "sy_dist"
         },
         {
           "field": "star.count",
@@ -1701,7 +1809,7 @@
       "displayName": "LHS 1140 b",
       "archiveName": "LHS 1140 b",
       "source": "NASA Exoplanet Archive, table pscomppars",
-      "retrieved": "2026-11-14",
+      "retrieved": "2026-11-15",
       "solar": {
         "luminosityW": 1.4546279534250807e+24,
         "semiMajorAxisM": 14151958568.220001,
@@ -1721,6 +1829,9 @@
         "massKg": 3.66673868e+29,
         "spectralType": "M4.5 V",
         "ageGyr": 5.0,
+        "raDeg": 11.248632,
+        "decDeg": -15.2741085,
+        "distancePc": 14.9861,
         "count": 1
       },
       "planet": {
@@ -1777,6 +1888,21 @@
           "field": "star.ageGyr",
           "origin": "nasa",
           "note": "st_age"
+        },
+        {
+          "field": "star.raDeg",
+          "origin": "nasa",
+          "note": "ra"
+        },
+        {
+          "field": "star.decDeg",
+          "origin": "nasa",
+          "note": "dec"
+        },
+        {
+          "field": "star.distancePc",
+          "origin": "nasa",
+          "note": "sy_dist"
         },
         {
           "field": "star.count",
@@ -1920,7 +2046,7 @@
       "displayName": "Kepler-186 f",
       "archiveName": "Kepler-186 f",
       "source": "NASA Exoplanet Archive, table pscomppars",
-      "retrieved": "2026-11-14",
+      "retrieved": "2026-11-15",
       "solar": {
         "luminosityW": 2.1036424651269867e+25,
         "semiMajorAxisM": 64626280142.4,
@@ -1940,6 +2066,9 @@
         "massKg": 1.0817276800000001e+30,
         "spectralType": "M1",
         "ageGyr": 4.0,
+        "raDeg": 298.652736,
+        "decDeg": 43.9549884,
+        "distancePc": 177.594,
         "count": 1
       },
       "planet": {
@@ -1996,6 +2125,21 @@
           "field": "star.ageGyr",
           "origin": "nasa",
           "note": "st_age"
+        },
+        {
+          "field": "star.raDeg",
+          "origin": "nasa",
+          "note": "ra"
+        },
+        {
+          "field": "star.decDeg",
+          "origin": "nasa",
+          "note": "dec"
+        },
+        {
+          "field": "star.distancePc",
+          "origin": "nasa",
+          "note": "sy_dist"
         },
         {
           "field": "star.count",
@@ -2139,7 +2283,7 @@
       "displayName": "Kepler-442 b",
       "archiveName": "Kepler-442 b",
       "source": "NASA Exoplanet Archive, table pscomppars",
-      "retrieved": "2026-11-14",
+      "retrieved": "2026-11-15",
       "solar": {
         "luminosityW": 4.476843668824066e+25,
         "semiMajorAxisM": 61185529116.299995,
@@ -2158,6 +2302,9 @@
         "radiusM": 416028600.0,
         "massKg": 1.21097823e+30,
         "ageGyr": 2.9,
+        "raDeg": 285.3666029,
+        "decDeg": 39.2800704,
+        "distancePc": 365.965,
         "count": 1
       },
       "planet": {
@@ -2209,6 +2356,21 @@
           "field": "star.ageGyr",
           "origin": "nasa",
           "note": "st_age"
+        },
+        {
+          "field": "star.raDeg",
+          "origin": "nasa",
+          "note": "ra"
+        },
+        {
+          "field": "star.decDeg",
+          "origin": "nasa",
+          "note": "dec"
+        },
+        {
+          "field": "star.distancePc",
+          "origin": "nasa",
+          "note": "sy_dist"
         },
         {
           "field": "star.count",

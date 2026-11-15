@@ -17,7 +17,7 @@ MonoBehaviour:
     displayName: LHS 1140 b
     archiveName: LHS 1140 b
     source: NASA Exoplanet Archive, table pscomppars
-    retrieved: 2026-11-14
+    retrieved: 2026-11-15
     solar:
       luminosityW: 1.4546279534250807e+24
       semiMajorAxisM: 14151958568.22
@@ -36,6 +36,9 @@ MonoBehaviour:
       massKg: 3.66673868e+29
       spectralType: M4.5 V
       count: 1
+      raDeg: 11.248632
+      decDeg: -15.2741085
+      distancePc: 14.9861
     planet:
       insolationWm2: 585.23
       radiusM: 11034113
@@ -75,6 +78,15 @@ MonoBehaviour:
     - field: star.ageGyr
       origin: nasa
       note: st_age
+    - field: star.raDeg
+      origin: nasa
+      note: ra
+    - field: star.decDeg
+      origin: nasa
+      note: dec
+    - field: star.distancePc
+      origin: nasa
+      note: sy_dist
     - field: star.count
       origin: nasa
       note: sy_snum

@@ -271,6 +271,36 @@ namespace KardashevAscent.Presentation.Planet
         public SurfaceSettings Settings =>
             new SurfaceSettings(seed, oceanFraction, iceLatitude, continentScale, iceAroundSubStellar, liquidWater, airTemperatureC, true);
 
+        /// <summary>
+        /// Another planet's tiles in this planet's colours and relief, as a mesh of radius 1 (the planet chooser's
+        /// preview). Uses the same surface generator, so the preview is the world the player would land on. A gas
+        /// planet has no ground: it is drawn as cloud bands instead.
+        /// </summary>
+        public Mesh BuildPreview(in SurfaceSettings settings, bool gas = false, int previewFrequency = 20)
+        {
+            HexSphere sphere = HexSphere.Create(previewFrequency);
+            PlanetSurface surface = PlanetSurface.Generate(sphere, settings);
+            var colors = new Color32[sphere.TileCount];
+            var radii = new float[sphere.TileCount];
+            for (int t = 0; t < colors.Length; t++)
+            {
+                if (gas)
+                {
+                    float lat = (float)sphere.Latitude(t);
+                    float band = Mathf.Sin(lat * 9f + Mathf.Sin(lat * 23f) * 0.6f + (Hash01(t) - 0.5f) * 0.5f) * 0.5f + 0.5f;
+                    colors[t] = Color.Lerp(new Color(0.62f, 0.48f, 0.34f, 0.2f), new Color(0.93f, 0.86f, 0.72f, 0.2f), band);
+                    radii[t] = 1f;
+                    continue;
+                }
+                colors[t] = TileColor(surface.Terrain[t], surface.Elevation[t], t);
+                bool sea = Terrains.IsWater(surface.Terrain[t]) || surface.Terrain[t] == TerrainType.FrozenSea;
+                radii[t] = 1f + (sea ? 0f : reliefScale * 1.6f * Mathf.Max(0f, surface.Elevation[t]));
+            }
+            Mesh preview = PlanetMeshBuilder.Build(sphere, 1f, colors, gas ? 0f : borderWidth, borderDarken, radii);
+            preview.hideFlags = HideFlags.DontSave;
+            return preview;
+        }
+
         /// <summary>Makes sure the tiles exist now (they are otherwise built on the first Update).</summary>
         public void EnsureBuilt()
         {

@@ -17,7 +17,7 @@ MonoBehaviour:
     displayName: Kepler-186 f
     archiveName: Kepler-186 f
     source: NASA Exoplanet Archive, table pscomppars
-    retrieved: 2026-11-14
+    retrieved: 2026-11-15
     solar:
       luminosityW: 2.1036424651269867e+25
       semiMajorAxisM: 64626280142.4
@@ -36,6 +36,9 @@ MonoBehaviour:
       massKg: 1.08172768e+30
       spectralType: M1
       count: 1
+      raDeg: 298.652736
+      decDeg: 43.9549884
+      distancePc: 177.594
     planet:
       insolationWm2: 408.3
       radiusM: 7462377
@@ -75,6 +78,15 @@ MonoBehaviour:
     - field: star.ageGyr
       origin: nasa
       note: st_age
+    - field: star.raDeg
+      origin: nasa
+      note: ra
+    - field: star.decDeg
+      origin: nasa
+      note: dec
+    - field: star.distancePc
+      origin: nasa
+      note: sy_dist
     - field: star.count
       origin: nasa
       note: sy_snum

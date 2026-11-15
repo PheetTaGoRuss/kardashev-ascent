@@ -17,7 +17,7 @@ MonoBehaviour:
     displayName: Proxima Centauri b
     archiveName: Proxima Cen b
     source: NASA Exoplanet Archive, table pscomppars
-    retrieved: 2026-11-14
+    retrieved: 2026-11-15
     solar:
       luminosityW: 5.780320630408608e+23
       semiMajorAxisM: 7252504771.536
@@ -36,6 +36,9 @@ MonoBehaviour:
       massKg: 2.42792187e+29
       spectralType: M5.5 V
       count: 3
+      raDeg: 217.3934657
+      decDeg: -62.6761821
+      distancePc: 1.30119
     planet:
       insolationWm2: 872.4010000000001
       radiusM: 6505662
@@ -72,6 +75,15 @@ MonoBehaviour:
     - field: star.spectralType
       origin: nasa
       note: st_spectype
+    - field: star.raDeg
+      origin: nasa
+      note: ra
+    - field: star.decDeg
+      origin: nasa
+      note: dec
+    - field: star.distancePc
+      origin: nasa
+      note: sy_dist
     - field: star.count
       origin: nasa
       note: sy_snum

@@ -17,7 +17,7 @@ MonoBehaviour:
     displayName: TRAPPIST-1 f
     archiveName: TRAPPIST-1 f
     source: NASA Exoplanet Archive, table pscomppars
-    retrieved: 2026-11-14
+    retrieved: 2026-11-15
     solar:
       luminosityW: 2.116907731641514e+23
       semiMajorAxisM: 5758022043.243
@@ -36,6 +36,9 @@ MonoBehaviour:
       massKg: 1.78564606e+29
       spectralType: M8.0 V
       count: 1
+      raDeg: 346.6263919
+      decDeg: -5.0434618
+      distancePc: 12.42988881
     planet:
       insolationWm2: 507.653
       radiusM: 6665114.5
@@ -75,6 +78,15 @@ MonoBehaviour:
     - field: star.ageGyr
       origin: nasa
       note: st_age
+    - field: star.raDeg
+      origin: nasa
+      note: ra
+    - field: star.decDeg
+      origin: nasa
+      note: dec
+    - field: star.distancePc
+      origin: nasa
+      note: sy_dist
     - field: star.count
       origin: nasa
       note: sy_snum

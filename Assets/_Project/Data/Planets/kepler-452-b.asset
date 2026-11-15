@@ -17,7 +17,7 @@ MonoBehaviour:
     displayName: Kepler-452 b
     archiveName: Kepler-452 b
     source: NASA Exoplanet Archive, table pscomppars
-    retrieved: 2026-11-14
+    retrieved: 2026-11-15
     solar:
       luminosityW: 4.6499890383241664e+26
       semiMajorAxisM: 156479372752.2
@@ -36,6 +36,9 @@ MonoBehaviour:
       massKg: 2.0620433899999997e+30
       spectralType: G2
       count: 1
+      raDeg: 296.003752
+      decDeg: 44.2775861
+      distancePc: 551.727
     planet:
       insolationWm2: 1497.1
       radiusM: 10396303
@@ -75,6 +78,15 @@ MonoBehaviour:
     - field: star.ageGyr
       origin: nasa
       note: st_age
+    - field: star.raDeg
+      origin: nasa
+      note: ra
+    - field: star.decDeg
+      origin: nasa
+      note: dec
+    - field: star.distancePc
+      origin: nasa
+      note: sy_dist
     - field: star.count
       origin: nasa
       note: sy_snum

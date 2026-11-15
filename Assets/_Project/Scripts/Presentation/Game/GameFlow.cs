@@ -112,6 +112,7 @@ namespace KardashevAscent.Presentation.Game
             root.style.position = Position.Absolute;
             root.style.left = 0; root.style.right = 0; root.style.top = 0; root.style.bottom = 0;
             CopyStyles(root);
+            KardashevAscent.Presentation.Planet.SpaceSky.Ensure();
             ThemePopups(root);
             ScreenInput.Register(root.panel);
             BuildMenus();

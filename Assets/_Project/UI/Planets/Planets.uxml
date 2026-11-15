@@ -1,33 +1,5 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
     <Style src="Planets.uss" />
-    <ui:VisualElement name="planets" class="planets panel hidden">
-        <ui:VisualElement class="title-row">
-            <ui:VisualElement class="title-text">
-                <ui:Label class="value" text="Choose where to land" />
-                <ui:Label name="subtitle" class="caption" text="L: planets" />
-            </ui:VisualElement>
-            <ui:Button name="close" class="close-button" text="×" />
-        </ui:VisualElement>
-        <ui:VisualElement class="planets-body">
-            <ui:ScrollView name="list" class="planet-list" mode="Vertical" />
-            <ui:ScrollView name="details" class="planet-details" mode="Vertical">
-                <ui:Label name="name" class="value" text="" />
-                <ui:Label name="source" class="caption wrap" text="" />
-                <ui:VisualElement name="rows" class="rows" />
-                <ui:Label name="verdict" class="body wrap verdict" text="" />
-            </ui:ScrollView>
-        </ui:VisualElement>
-        <ui:VisualElement class="footer">
-            <ui:VisualElement class="legend">
-                <ui:Label class="chip origin-nasa" text="NASA" />
-                <ui:Label class="caption legend-text" text="measured (NASA Exoplanet Archive)" />
-                <ui:Label class="chip origin-derived" text="calc" />
-                <ui:Label class="caption legend-text" text="worked out with physics" />
-                <ui:Label class="chip origin-assumed" text="assumed" />
-                <ui:Label class="caption legend-text" text="not measurable yet: a game value" />
-            </ui:VisualElement>
-            <ui:Label name="note" class="caption wrap note" text="Point at a value to see where it comes from." />
-            <ui:Button name="land" class="land-button" text="Land here" />
-        </ui:VisualElement>
-    </ui:VisualElement>
+    <!-- The planet chooser: a full-screen star map and a target panel, built in PlanetChooserView. -->
+    <ui:VisualElement name="planets" class="planets hidden" />
 </ui:UXML>
