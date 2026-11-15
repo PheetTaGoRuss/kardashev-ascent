@@ -47,7 +47,7 @@ namespace KardashevAscent.Presentation.UI
             Button.style.marginLeft = 6;
             Button.style.marginRight = 0;
             Button.style.fontSize = 12;
-            Button.style.unityFontStyleAndWeight = FontStyle.BoldAndItalic;
+            Button.style.unityFontStyleAndWeight = FontStyle.Bold;   // upright: italic "i" reads as "/"
             Button.style.color = UiPalette.Accent;
             Button.style.borderTopWidth = Button.style.borderBottomWidth = Button.style.borderLeftWidth = Button.style.borderRightWidth = 1;
             Button.style.borderTopColor = Button.style.borderBottomColor = Button.style.borderLeftColor = Button.style.borderRightColor = UiPalette.AccentA(0.6f);
