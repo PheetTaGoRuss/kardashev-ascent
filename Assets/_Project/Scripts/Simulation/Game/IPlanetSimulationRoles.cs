@@ -98,28 +98,43 @@ namespace KardashevAscent.Simulation.Game
         int MilestonesReached { get; }
     }
 
-    /// <summary>Build parts and construction sites (read only).</summary>
+    /// <summary>Construction sites and what buildings cost in materials (read only).</summary>
     public interface IConstructionReadout
     {
-        /// <summary>Build parts on hand, Wh. Spare power is turned into parts; new buildings take their cost from them.</summary>
-        double BuildStockWh { get; }
+        /// <summary>
+        /// Materials one building of this type takes (director, 2026-11-14: buildings are built from materials, not
+        /// power). A robot brings them from the colony's stock while it works on the site.
+        /// </summary>
+        Resources.MaterialBill BuildBill(BuildingType type);
 
-        /// <summary>Spare power going into build parts now, W.</summary>
-        double BuildPowerW { get; }
+        /// <summary>Grid power the Workshop's jobs draw now, W.</summary>
+        double WorkshopPowerW { get; }
 
-        /// <summary>Parts one building of this type costs, Wh.</summary>
-        double BuildCostWh(BuildingType type);
-
-        /// <summary>Construction sites waiting for parts.</summary>
+        /// <summary>Construction sites waiting for materials or a robot.</summary>
         int ConstructionQueueCount { get; }
 
-        /// <summary>Parts still needed to finish every site, Wh.</summary>
-        double ConstructionRemainingWh { get; }
+        /// <summary>Materials still needed to finish every site.</summary>
+        Resources.MaterialBill ConstructionRemaining { get; }
 
-        /// <summary>True while the building in a slot is a site waiting for parts (it does nothing yet).</summary>
+        /// <summary>What the sites still need beyond the stock on hand (mine or refine these).</summary>
+        Resources.MaterialBill ConstructionShortfall { get; }
+
+        /// <summary>What the site in a slot still needs (empty for a finished building or an empty slot).</summary>
+        Resources.MaterialBill ConstructionRemainingAt(int tileId, int slot);
+
+        /// <summary>Share of a site's materials delivered, 0–1 (1 for no site).</summary>
+        double ConstructionMaterialShare(int tileId, int slot);
+
+        /// <summary>Robot work done and needed on a site, hours (construction takes time; director 2026-11-14).</summary>
+        (double Done, double Total) ConstructionWork(int tileId, int slot);
+
+        /// <summary>True while a robot is at work on the site in a slot (for the building animation).</summary>
+        bool IsBeingBuilt(int tileId, int slot);
+
+        /// <summary>True while the building in a slot is a site waiting for materials (it does nothing yet).</summary>
         bool IsUnderConstruction(int tileId, int slot);
 
-        /// <summary>How much of the site in a slot is paid for, 0–1; 1 for a finished building or an empty slot.</summary>
+        /// <summary>How far the site in a slot is built, 0–1; 1 for a finished building or an empty slot.</summary>
         double ConstructionProgress(int tileId, int slot);
     }
 
@@ -146,7 +161,7 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>
         /// Build a panel in one slot of a tile. Returns false (and changes nothing) if the slot cannot take one.
-        /// The panel takes <see cref="BuildCostWh"/> from the parts in stock; without enough it starts as a construction site.
+        /// The panel starts as a construction site; a robot brings its <see cref="IConstructionReadout.BuildBill"/> of materials.
         /// </summary>
         bool PlacePanel(int tileId, int slot, double tilt, double azimuth);
 
@@ -219,6 +234,12 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>A network relay on an empty slot (stage E). One per tile is enough: coverage is per tile.</summary>
         bool PlaceRelay(int tileId, int slot);
+
+        /// <summary>A Research Station on an empty land slot: where measurements and experiments are done.</summary>
+        bool PlaceResearchStation(int tileId, int slot);
+
+        /// <summary>What the colony still has to find out before it may build this, or null (knowledge gates buildings).</summary>
+        string KnowledgeBlocker(BuildingType type);
     }
 
     /// <summary>The robot workforce: orders, movement and the work waiting.</summary>
@@ -360,6 +381,27 @@ namespace KardashevAscent.Simulation.Game
         bool CancelMeasure(Solar.SolarParameter parameter);
         /// <summary>0–1 while a robot measures (1 once known).</summary>
         double MeasureProgress(Solar.SolarParameter parameter);
+
+        /// <summary>Why a measurement can't be ordered for this tile (no Research Station), or null.</summary>
+        string MeasureBlocker(Solar.SolarParameter parameter, int tileId);
+
+        // ---- the Research Station and its experiments (director 2026-11-14) ----
+
+        bool HasResearchStation { get; }
+        bool HasResearchStationOn(int tileId);
+        bool IsExperimentKnown(Planet.ExperimentKind kind);
+        bool IsExperimentOrdered(Planet.ExperimentKind kind);
+        /// <summary>Why an experiment can't be ordered now (no station, a prerequisite, done), or null.</summary>
+        string ExperimentBlocker(Planet.ExperimentKind kind);
+        bool OrderExperiment(Planet.ExperimentKind kind, int preferTile = -1);
+        bool CancelExperiment(Planet.ExperimentKind kind);
+        double ExperimentProgress(Planet.ExperimentKind kind);
+        /// <summary>What an experiment found, for the player, or null when not done.</summary>
+        string ExperimentResult(Planet.ExperimentKind kind);
+        /// <summary>Share of their real output solar panels deliver while values are unknown (a safety margin).</summary>
+        double SolarDesignShare { get; }
+        /// <summary>Share of battery capacity in use until the surface temperature is known.</summary>
+        double BatteryUsableShare { get; }
 
         /// <summary>
         /// What each parameter's uncertainty can change about a panel's yearly energy here (Earth years, Wh): the model

@@ -233,8 +233,8 @@ def convert(row: dict[str, Any] | None, entry: dict[str, Any], retrieved: str = 
         else:
             b.put("solar", "dayLengthHours", float(assumed["dayLengthHours"]), "assumed", "solar day, game value")
         b.put("solar", "obliquityDeg", float(assumed["obliquityDeg"]), "assumed", "axial tilt, game value")
-    b.put("solar", "perihelionLongitudeDeg", float(assumed["perihelionLongitudeDeg"]), "assumed",
-          "equinox -> periapsis, game value")
+    b.put("solar", "perihelionLongitudeDeg", float(assumed["perihelionLongitudeDeg"]), "assumed" if "perihelionLongitudeNote" not in assumed else "literature",
+          assumed.get("perihelionLongitudeNote", "equinox -> periapsis, game value"))
 
     # ---- atmosphere (game values) ------------------------------------------------------
     b.put("solar", "opticalDepth", float(assumed["opticalDepth"]), "assumed", "broadband tau, game value")
@@ -324,11 +324,18 @@ def convert(row: dict[str, Any] | None, entry: dict[str, Any], retrieved: str = 
         b.put("chemistry", "ironMassFraction", EARTH_IRON_FRACTION, "assumed",
               "composition not measured: Earth-like 32 wt % iron assumed")
 
+    # A hand-made planet may take some values from a NASA source (e.g. the NSSDC fact sheet for Mars): tag them so.
+    nasa_fields = set(entry.get("nasaFields", []))
+    nasa_source = entry.get("nasaSource", "")
+    for item in b.provenance:
+        if item["field"] in nasa_fields:
+            item["origin"] = "nasa"
+            item["note"] = nasa_source
     out: dict[str, Any] = {
         "id": entry["id"],
         "displayName": entry.get("displayName") or name or entry["id"],
         "archiveName": name or "",
-        "source": "NASA Exoplanet Archive, table pscomppars" if row else "hand-made game planet",
+        "source": "NASA Exoplanet Archive, table pscomppars" if row else (nasa_source or "hand-made game planet"),
         "retrieved": retrieved if row else "",
         "solar": b.values.get("solar", {}),
         "star": b.values.get("star", {}),

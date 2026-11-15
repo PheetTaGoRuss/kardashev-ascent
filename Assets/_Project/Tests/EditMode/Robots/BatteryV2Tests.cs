@@ -148,12 +148,6 @@ namespace KardashevAscent.Simulation.Tests.Robots
             Assert.AreEqual(RobotActivity.Maintenance, r.Activity);
         }
 
-        sealed class Parts : IPartsStore
-        {
-            public double StockWh => 1e12;
-            public double Take(double wh) => wh;
-        }
-
         [Test]
         public void Repairs_UseIron_OrGoSlowerWithout()
         {
@@ -167,7 +161,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
                 var lander = new List<RobotFacility> { new RobotFacility(0, -1, ChargingCapability.Lander) };
                 var up = new RobotUpkeep();
                 up.Plan(w, lander, 1.0);
-                up.Apply(w, 1.0, 0.0, 0.0, 0.0, false, new Parts(), null, stock);
+                up.Apply(w, 1.0, 0.0, 0.0, 0.0, false, null, stock);
                 return r.Condition - 0.1;
             }
             double with = Repaired(1000.0), without = Repaired(0.0);
@@ -187,7 +181,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         [Test]
         public void ColdPlanet_RobotsHaveLessUsableBattery_InsulationHelps()
         {
-            var sim = new PlanetSimulation(Sphere, Surface, Planet(-20.0));
+            var sim = new PlanetSimulation(Sphere, Surface, Planet(-20.0)) { ConstructionTimeEnabled = false };
             Robot r = sim.Workforce.Robots[0];
             Robot insulated = sim.Workforce.AddRobot(RobotKind.General, sim.BaseTileId);
             insulated.Modules = RobotModule.ThermalInsulation;
@@ -200,7 +194,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         [Test]
         public void ChargingStation_IsAFacility_AndSaved()
         {
-            var sim = new PlanetSimulation(Sphere, Surface, Planet(25.0));
+            var sim = new PlanetSimulation(Sphere, Surface, Planet(25.0)) { ConstructionTimeEnabled = false };
             int t = sim.BaseTileId;
             Assert.IsTrue(sim.PlaceChargingStation(t, 6));
             Assert.AreEqual(BuildingType.ChargingStation, sim.GetBuilding(t, 6));
@@ -210,7 +204,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             Assert.IsTrue(found);
             SimulationState state = sim.CaptureState();
             Assert.AreEqual(SimulationState.CurrentVersion, state.Version);
-            var b = new PlanetSimulation(Sphere, Surface, Planet(25.0));
+            var b = new PlanetSimulation(Sphere, Surface, Planet(25.0)) { ConstructionTimeEnabled = false };
             Assert.IsTrue(b.RestoreState(state));
             Assert.AreEqual(BuildingType.ChargingStation, b.GetBuilding(t, 6));
         }

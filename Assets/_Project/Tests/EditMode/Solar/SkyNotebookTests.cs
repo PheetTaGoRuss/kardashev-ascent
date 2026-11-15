@@ -14,6 +14,69 @@ namespace KardashevAscent.Simulation.Tests.Solar
                                  SkyMath.CosIncidence(h, a, 20.0, 180.0), 1361, 900, 100, 800, 40, 1e6, 1.0, 1.0);
         }
 
+        // ---- Puzzles from real-world readings (director 2026-11-14) ----
+
+        [Test]
+        public void Gnomon_ShadowGivesTheSunsHeight_AndPointsAwayFromIt()
+        {
+            SkyReport sky = Sky(20, 10, -30);
+            var (shadow, bearing) = SkyNotebook.GnomonReading(sky);
+            // tan h = stick / shadow; the shadow points opposite the sun.
+            Assert.AreEqual(sky.SunAltitudeDeg, System.Math.Atan(SkyNotebook.GnomonLengthM / shadow) * 180.0 / System.Math.PI, 0.05);
+            Assert.AreEqual((sky.SunAzimuthDeg + 180.0) % 360.0, bearing, 0.51);
+            Assert.IsNaN(SkyNotebook.GnomonReading(Sky(20, 0, 150)).ShadowM, "no shadow at night");
+        }
+
+        [Test]
+        public void SunPuzzle_WrongIsRefused_RightTracksTheSun()
+        {
+            var n = new SkyNotebook();
+            SkyReport sky = Sky(20, 10, -30);
+            n.AnswerSun(1, sky, sky.SunAltitudeDeg + 5.0, sky.SunAzimuthDeg, out bool wrong);
+            Assert.IsFalse(wrong);
+            Assert.IsFalse(n.TracksSun);
+            n.AnswerSun(1, sky, sky.SunAltitudeDeg + 0.4, sky.SunAzimuthDeg - 1.0, out bool right);
+            Assert.IsTrue(right);
+            Assert.IsTrue(n.TracksSun);
+            Assert.IsNull(n.NoonSighting, "not noon: no latitude from this one");
+        }
+
+        [Test]
+        public void DeclinationThenNoonShadow_GivesTheLatitude()
+        {
+            var n = new SkyNotebook();
+            SkyReport noon = Sky(35, -12, 0.5);
+            n.AnswerDeclination(noon, -20.0, out bool wrongDec);
+            Assert.IsFalse(wrongDec);
+            n.AnswerDeclination(noon, -12.3, out bool dec);
+            Assert.IsTrue(dec);
+            n.AnswerSun(7, noon, noon.SunAltitudeDeg, noon.SunAzimuthDeg, out bool sun);
+            Assert.IsTrue(sun);
+            Assert.IsNotNull(n.NoonSighting);
+            double phi = 90.0 - noon.SunAltitudeDeg + noon.DeclinationDeg;   // sun in the south
+            n.AnswerNoonLatitude(7, noon, phi + 3.0, out bool wrongPhi);
+            Assert.IsFalse(wrongPhi);
+            n.AnswerNoonLatitude(7, noon, phi + 0.5, out bool rightPhi);
+            Assert.IsTrue(rightPhi);
+            Assert.IsTrue(n.KnowsLatitude(7));
+            Assert.AreEqual(35.0, n.LatitudeDeg(7, 35.0), 0.5);
+        }
+
+        [Test]
+        public void Quadrant_OnThePole_GivesTheLatitudeAtNight()
+        {
+            var n = new SkyNotebook();
+            SkyReport night = Sky(-28, 0, 170);
+            var (reading, north) = SkyNotebook.QuadrantReading(night);
+            Assert.IsFalse(north, "south of the equator: the south celestial pole");
+            Assert.AreEqual(62.0, reading, 0.05, "90° − 28°");
+            n.AnswerPole(3, night, 28.0, out bool wrongSign);
+            Assert.IsFalse(wrongSign);
+            n.AnswerPole(3, night, -(90.0 - reading), out bool right);
+            Assert.IsTrue(right);
+            Assert.IsTrue(n.KnowsLatitude(3));
+        }
+
         [Test]
         public void StartsKnowingNothing()
         {

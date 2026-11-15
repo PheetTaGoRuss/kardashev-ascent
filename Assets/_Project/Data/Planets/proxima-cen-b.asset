@@ -17,7 +17,7 @@ MonoBehaviour:
     displayName: Proxima Centauri b
     archiveName: Proxima Cen b
     source: NASA Exoplanet Archive, table pscomppars
-    retrieved: 2026-11-08
+    retrieved: 2026-11-14
     solar:
       luminosityW: 5.780320630408608e+23
       semiMajorAxisM: 7252504771.536

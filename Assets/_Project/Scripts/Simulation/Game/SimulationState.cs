@@ -9,12 +9,17 @@ namespace KardashevAscent.Simulation.Game
     public sealed class SimulationState
     {
         /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished. 7 added robots; 8 their batteries and condition; 9 resources; 10 the Workshop; 11 programs (facility, ranking, queue); 12 movement; 13 critical damage (stage A); 14 reservations and tasks to go back to (stage B); 15 battery ageing by depth, maintenance rules (stage D); 16 building footprints. 23 industry reports.</summary>
-        public const int CurrentVersion = 25;
+        public const int CurrentVersion = 29;
 
         /// <summary>The version this state was saved with (<see cref="CurrentVersion"/> for a new one).</summary>
         public int Version = CurrentVersion;
         /// <summary>Planet id from planets.json (version 3); empty in older saves.</summary>
         public string PlanetId = "";
+        /// <summary>
+        /// The seed of the map this colony was played on (version 28: every new game gets a random map; director
+        /// 2026-11-14). 0 in older saves: the planet's own map.
+        /// </summary>
+        public int TerrainSeed;
         /// <summary>Milestones reached and the day-average power behind them (version 4; 0 in older saves).</summary>
         public int MilestonesReached;
         public double DayAveragePowerW;
@@ -29,7 +34,7 @@ namespace KardashevAscent.Simulation.Game
         public double ColonyAverageGenerationW;
         public double ColonyDayEnergyWh;
         public double ColonyDayClockHours;
-        /// <summary>Build parts on hand, Wh.</summary>
+        /// <summary>Build parts on hand, Wh (before version 26; buildings now take materials).</summary>
         public double BuildStockWh;
         /// <summary>Recent power samples, oldest first, and the totals since landing (missing in older saves: they start empty).</summary>
         public List<PowerSample> History = new List<PowerSample>();
@@ -74,6 +79,16 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Saved panel angle layouts (version 24; empty in older saves).</summary>
         public List<AnglePreset> AnglePresets = new List<AnglePreset>();
         public int NextAnglePresetId = 1;
+        /// <summary>Experiments done and waiting at a Research Station (version 29; older saves: none).</summary>
+        public List<int> KnownExperiments = new List<int>();
+        public List<ExperimentOrderRecord> ExperimentOrders = new List<ExperimentOrderRecord>();
+    }
+
+    [Serializable]
+    public sealed class ExperimentOrderRecord
+    {
+        public Planet.ExperimentKind Kind;
+        public int Tile;
     }
 
     [Serializable]
@@ -115,10 +130,14 @@ namespace KardashevAscent.Simulation.Game
         public BuildingType Type;
         public double Tilt;
         public double Azimuth;
-        /// <summary>True for a construction site still waiting for parts.</summary>
+        /// <summary>True for a construction site still waiting for materials.</summary>
         public bool UnderConstruction;
-        /// <summary>Parts already put into the site, Wh.</summary>
+        /// <summary>Parts already put into the site, Wh (before version 26).</summary>
         public double PaidWh;
+        /// <summary>Share of the site's bill of materials already put in, 0–1 (version 26).</summary>
+        public double PaidShare;
+        /// <summary>Robot work already put into the site, hours (version 27; older saves: as far as its materials).</summary>
+        public double WorkDoneHours;
         /// <summary>The site's place in the construction queue (0 = next to finish).</summary>
         public int QueueOrder;
         /// <summary>Ground a panel covers, m² (version 5; 0 in older saves = a base panel field).</summary>

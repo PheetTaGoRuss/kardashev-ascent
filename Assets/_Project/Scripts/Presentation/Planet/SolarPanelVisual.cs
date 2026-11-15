@@ -57,6 +57,7 @@ namespace KardashevAscent.Presentation.Planet
             root.transform.localPosition = up * groundRadius;
             root.transform.localRotation = tileRotation;
             root.transform.localScale = Vector3.one * size;
+            shownSize = size;
 
             post.localPosition = new Vector3(0f, height / size * 0.5f, 0f);
             post.localScale = new Vector3(0.07f, height / size, 0.07f);
@@ -66,6 +67,18 @@ namespace KardashevAscent.Presentation.Planet
         }
 
         public void Hide() => root.SetActive(false);
+
+        float shownSize = 1f;
+
+        /// <summary>
+        /// Height as a share of the full building (construction animation: a site rises as it is built; above 1 for the
+        /// short pop when it is finished). Widths stay as they are.
+        /// </summary>
+        public void SetGrowth(float growth)
+        {
+            float g = Mathf.Max(0.02f, growth);
+            root.transform.localScale = new Vector3(shownSize, shownSize * g, shownSize);
+        }
 
         /// <summary>Tint every part (used for the see-through placement ghost).</summary>
         public void SetTint(Color color)

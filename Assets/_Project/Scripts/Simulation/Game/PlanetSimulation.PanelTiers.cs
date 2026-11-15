@@ -27,7 +27,7 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Ground the panel in a slot covers, m² (0 if there is none).</summary>
         public double PanelAreaAt(int tileId, int slot) => panels.TryGetValue((tileId, A(tileId, slot)), out var p) ? p.Area : 0.0;
 
-        double PanelCost(double areaM2) => BuildCosts.Panel(EmbodiedWhPerM2, areaM2);
+        MaterialBill PanelCost(double areaM2) => BuildCosts.Panel(areaM2);
 
         bool CanPlacePanel(int tileId, int slot, double tilt, double azimuth) =>
             CanPlace(BuildingType.SolarPanel, tileId, slot) && PreviewPanel(tileId, tilt, azimuth).CanPlace;

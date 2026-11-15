@@ -26,38 +26,43 @@ namespace KardashevAscent.Presentation.UI
             style.paddingTop = 4;
             style.paddingBottom = 6;
             style.borderLeftWidth = 2;
-            style.borderLeftColor = new Color(0.56f, 0.70f, 1f);
+            style.borderLeftColor = UiPalette.Accent;
 
-            Add(MakeLabel($"Latitude of tile #{puzzle.Tile}: noon shadow", "robot-name"));
+            Add(PuzzleGuide.Text($"Your latitude from a noon shadow · tile #{puzzle.Tile}", bold: true, size: PuzzleGuide.TitleSize));
             var drawing = new ShadowDrawing(puzzle);
             Add(drawing);
-            string shadowWay = puzzle.SunSouth ? "north (the sun is to the south)" : "south (the sun is to the north)";
-            Add(MakeLabel(
-                $"A robot stood a rod H = {puzzle.RodHeightM:0.00} m upright and marked its shortest shadow of the day " +
-                $"(local noon): L = {puzzle.ShadowM:0.00} m, pointing {shadowWay}.\n" +
-                $"Today's declination (from the date): δ = {puzzle.DeclinationDeg:+0.00;−0.00}°.", "job-text"));
+            string shadowWay = puzzle.SunSouth ? "north (so the sun is in the south)" : "south (so the sun is in the north)";
+            Add(PuzzleGuide.Text(
+                $"At noon a robot stood a rod H = {puzzle.RodHeightM:0.00} m tall. Its shadow was L = {puzzle.ShadowM:0.00} m long, " +
+                $"pointing {shadowWay}. Today's declination δ = {puzzle.DeclinationDeg:+0.00;−0.00}° (how far north of the equator the sun is today)."));
+            Add(CalculatorPad.Values("H", $"{puzzle.RodHeightM:0.00}", "L", $"{puzzle.ShadowM:0.00}",
+                                     "δ", (puzzle.DeclinationDeg).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)));
+            Add(PuzzleGuide.Steps(
+                "Divide the rod by the shadow: H / L.",
+                "Press arctan (shift + tan) on that, calculator in degrees. That is the sun's height h.",
+                "Shadow pointing north: φ = 90° − h + δ.   Shadow pointing south: φ = h − 90° + δ.",
+                "Positive φ means north of the equator, negative means south."));
+            Add(PuzzleGuide.Example(
+                "Rod 1.00 m, shadow 0.58 m pointing north, δ = +10°:",
+                "1.00 / 0.58 = 1.724  →  arctan 1.724 = 59.9°  (that's h)",
+                "φ = 90° − 59.9° + 10° = 40.1°  (40° north)"));
 
-            altitudeField = Field("Sun's altitude h (°), optional check:");
-            latitudeField = Field("Latitude φ (°, + north, − south):");
+            altitudeField = Field("Sun's height h (°), optional check:");
+            latitudeField = Field("Latitude φ (°, south is −):");
 
             var buttons = new VisualElement();
             buttons.AddToClassList("button-row");
-            var check = new Button(Submit) { text = "Submit" };
+            var check = new Button(Submit) { text = "Check" };
             check.AddToClassList("small-button");
+            check.style.fontSize = PuzzleGuide.BodySize;
             buttons.Add(check);
-            var hint = new Button(() => hints.style.display = DisplayStyle.Flex) { text = "Show the formulas" };
-            hint.AddToClassList("small-button");
-            buttons.Add(hint);
+            buttons.Add(CalculatorPad.OpenButton());
             Add(buttons);
 
-            hints = MakeLabel(
-                "1. The rod and its shadow make a right triangle: tan h = H / L, so h = atan(H / L).\n" +
-                "2. At noon the sun is 90° − h from straight overhead, along the meridian.\n" +
-                "   Shadow pointing north (sun to the south): φ = 90° − h + δ.\n" +
-                "   Shadow pointing south (sun to the north): φ = h − 90° + δ.", "job-text");
+            hints = PuzzleGuide.Text("");
             hints.style.display = DisplayStyle.None;
             Add(hints);
-            message = MakeLabel("", "job-text");
+            message = PuzzleGuide.Text("");
             message.AddToClassList("message");
             Add(message);
             this.solved = solved;
@@ -71,12 +76,14 @@ namespace KardashevAscent.Presentation.UI
             row.style.flexDirection = FlexDirection.Row;
             row.style.alignItems = Align.Center;
             row.style.marginTop = 3;
-            Label l = MakeLabel(label, "job-text");
+            Label l = PuzzleGuide.Text(label, bold: true);
             l.style.flexGrow = 1;
             row.Add(l);
-            var f = new TextField { maxLength = 8 };
+            var f = new TextField { maxLength = 12 };
+            CalculatorPad.TrackAnswer(f);
             f.AddToClassList("puzzle-field");
-            f.style.width = 70;
+            f.style.width = 110;
+            f.style.fontSize = PuzzleGuide.BodySize;
             row.Add(f);
             Add(row);
             return f;
@@ -95,6 +102,7 @@ namespace KardashevAscent.Presentation.UI
                 return;
             }
             string result = sim.AnswerLatitudePuzzle(puzzle.Tile, phi, out LatitudePuzzle.Grade grade);
+            KardashevAscent.Presentation.Audio.GameAudio.Play(grade != LatitudePuzzle.Grade.Wrong ? KardashevAscent.Presentation.Audio.Sfx.Correct : KardashevAscent.Presentation.Audio.Sfx.Wrong);
             message.text = notes + (grade == LatitudePuzzle.Grade.Wrong ? result
                 : grade == LatitudePuzzle.Grade.Precise ? "Precise! " + result : "Close enough (rough fix). " + result);
             if (grade != LatitudePuzzle.Grade.Wrong)

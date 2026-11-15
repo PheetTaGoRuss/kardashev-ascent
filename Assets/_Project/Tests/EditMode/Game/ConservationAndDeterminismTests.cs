@@ -88,7 +88,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.AreEqual(a.TimeHours, b.TimeHours);
             Assert.AreEqual(a.BatteryStoredWh, b.BatteryStoredWh);
             Assert.AreEqual(a.KardashevPowerW, b.KardashevPowerW);
-            Assert.AreEqual(a.BuildStockWh, b.BuildStockWh);
+            Assert.AreEqual(a.ConstructionQueueCount, b.ConstructionQueueCount);
             Assert.AreEqual(a.MilestonesReached, b.MilestonesReached);
             Assert.AreEqual(a.Workforce.Robots.Count, b.Workforce.Robots.Count);
             foreach (Material m in Materials.All)

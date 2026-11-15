@@ -143,8 +143,8 @@ namespace KardashevAscent.Presentation.UI
             gizmoLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
             gizmoLabel.style.color = new Color(0.9f, 0.93f, 1f);
             gizmoLabel.style.backgroundColor = new Color(0.04f, 0.06f, 0.1f, 0.85f);
-            gizmoLabel.style.borderTopLeftRadius = gizmoLabel.style.borderTopRightRadius = 4;
-            gizmoLabel.style.borderBottomLeftRadius = gizmoLabel.style.borderBottomRightRadius = 4;
+            gizmoLabel.style.borderTopLeftRadius = gizmoLabel.style.borderTopRightRadius = 0;
+            gizmoLabel.style.borderBottomLeftRadius = gizmoLabel.style.borderBottomRightRadius = 0;
             gizmo.Add(gizmoLabel);
             root.Add(gizmo);
         }
@@ -409,8 +409,11 @@ namespace KardashevAscent.Presentation.UI
             nextRefresh = 0f;
         }
 
-        static string Place(AnglePreset p) =>
-            $"{Mathf.Abs((float)p.LatitudeDeg):0.0}°{(p.LatitudeDeg >= 0 ? "N" : "S")} {Mathf.Abs((float)p.LongitudeDeg):0.0}°{(p.LongitudeDeg >= 0 ? "E" : "W")}";
+        /// <summary>Where a layout was saved: its latitude and longitude once the colony knows them, else just its tile.</summary>
+        static string Place(AnglePreset p, IPlanetSimulation sim) =>
+            sim != null && sim.Notebook != null && sim.Notebook.KnowsLatitude(p.TileId)
+                ? $"{Mathf.Abs((float)p.LatitudeDeg):0.0}°{(p.LatitudeDeg >= 0 ? "N" : "S")} {Mathf.Abs((float)p.LongitudeDeg):0.0}°{(p.LongitudeDeg >= 0 ? "E" : "W")}"
+                : "place unmeasured";
 
         void RebuildList(IPlanetSimulation sim)
         {
@@ -436,7 +439,7 @@ namespace KardashevAscent.Presentation.UI
                 title.style.unityFontStyleAndWeight = FontStyle.Bold;
                 title.style.whiteSpace = WhiteSpace.Normal;
                 row.Add(title);
-                var where = new Label($"{Place(preset)} · tile #{preset.TileId} slot {preset.Slot + 1} · day {(int)(preset.SavedHours / 24.0) + 1}");
+                var where = new Label($"{Place(preset, sim)} · tile #{preset.TileId} slot {preset.Slot + 1} · day {(int)(preset.SavedHours / 24.0) + 1}");
                 where.AddToClassList("caption");
                 row.Add(where);
                 if (!string.IsNullOrEmpty(preset.Note))

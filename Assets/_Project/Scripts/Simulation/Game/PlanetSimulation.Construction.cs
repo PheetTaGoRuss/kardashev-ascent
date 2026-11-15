@@ -12,21 +12,53 @@ namespace KardashevAscent.Simulation.Game
 {
     public sealed partial class PlanetSimulation
     {
-        public double BuildStockWh => Build.StockWh;
-        public double BuildPowerW { get; private set; }
         public int ConstructionQueueCount => Build.QueueCount;
-        public double ConstructionRemainingWh => Build.RemainingWh;
+
+        /// <summary>
+        /// Buildings take robot work hours (true, director 2026-11-14) or are finished as soon as their materials are in
+        /// (false, as before; tests about other things use it, like <see cref="MovementEnabled"/>).
+        /// </summary>
+        public bool ConstructionTimeEnabled
+        {
+            get => Build.TimeEnabled;
+            set => Build.TimeEnabled = value;
+        }
+        public MaterialBill ConstructionRemaining => Build.Remaining;
+        public MaterialBill ConstructionShortfall => Build.Remaining.Minus(Materials);
+        public MaterialBill ConstructionRemainingAt(int tileId, int slot) => Build.RemainingAt(tileId, A(tileId, slot));
+        public double ConstructionMaterialShare(int tileId, int slot) => Build.MaterialShare(tileId, A(tileId, slot));
+        public (double Done, double Total) ConstructionWork(int tileId, int slot) => Build.WorkAt(tileId, A(tileId, slot));
+        public bool IsBeingBuilt(int tileId, int slot)
+        {
+            int a = A(tileId, slot);
+            return Build.IsQueued(tileId, a) && Workforce.IsWorkedOnSite(new WorkTask(TaskKind.Build, tileId, a));
+        }
         public bool IsUnderConstruction(int tileId, int slot) => Build.IsQueued(tileId, A(tileId, slot));
         public double ConstructionProgress(int tileId, int slot) => Build.Progress(tileId, A(tileId, slot));
 
-        public double BuildCostWh(BuildingType type)
+        public MaterialBill BuildBill(BuildingType type)
         {
             switch (type)
             {
                 case BuildingType.SolarPanel: return PanelCost(PanelAreaM2 * PanelTiers.All[PanelTier].Scale);
                 case BuildingType.Battery: return BuildCosts.Battery(BatteryUnitWh);
-                case BuildingType.FloatingSolar: return PanelCost(PanelAreaM2 * PanelTiers.All[PanelTier].Scale) * FloatingCostFactor;
-                default: return BuildingCatalog.Get(type)?.FixedPartsWh ?? 0.0;
+                case BuildingType.FloatingSolar: return PanelCost(PanelAreaM2 * PanelTiers.All[PanelTier].Scale).Times(FloatingCostFactor);
+                default: return BuildingCatalog.Get(type)?.FixedBill ?? new MaterialBill();
+            }
+        }
+
+        /// <summary>What a building cost in build parts before save version 26, Wh (to read old construction sites).</summary>
+        double LegacyCostWh(BuildingType type, double areaM2)
+        {
+            switch (type)
+            {
+                case BuildingType.SolarPanel: return BuildCosts.LegacyPanelWh(EmbodiedWhPerM2, areaM2);
+                case BuildingType.FloatingSolar: return BuildCosts.LegacyPanelWh(EmbodiedWhPerM2, areaM2) * FloatingCostFactor;
+                case BuildingType.Battery: return BuildCosts.LegacyBatteryWh(BatteryUnitWh);
+                case BuildingType.Workshop: return BuildCosts.LegacyWorkshopWh;
+                case BuildingType.ChargingStation: return BuildCosts.LegacyChargingStationWh;
+                case BuildingType.Relay: return BuildCosts.LegacyRelayWh;
+                default: return 0.0;
             }
         }
 
@@ -35,8 +67,8 @@ namespace KardashevAscent.Simulation.Game
         {
             if (batteries.Contains((tileId, slot)))
                 Grid.Battery.AddCapacity(BatteryUnitWh);
-            else
-                GenerationW = ComputeGeneration() + RtgW;
+            else if (!stepping)
+                GenerationW = ComputeGeneration() + RtgW;   // during a step, the next step counts it (keeps the step's books balanced)
             if (relays.Contains((tileId, slot)))
                 RefreshNetwork();
             if (raise)
