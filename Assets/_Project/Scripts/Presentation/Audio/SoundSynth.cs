@@ -130,7 +130,7 @@ namespace KardashevAscent.Presentation.Audio
             for (int k = 0; k < notes.Length; k++)
                 brass = Mix(brass, Tone(4.0, notes[k], 0.06, 3.2, amps[k], harmonics: 1.0, vibrato: 3.0));
             float[] hit = Mix(Mix(sub, blast), brass);
-            float[] echo = Delay(Scale(hit, 0.28), 0.42);
+            float[] echo = Delay(Scale(hit, 0.28f), 0.42);
             return Mix(hit, echo);
         }
 
