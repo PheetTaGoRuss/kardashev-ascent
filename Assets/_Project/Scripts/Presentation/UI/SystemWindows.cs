@@ -162,32 +162,41 @@ namespace KardashevAscent.Presentation.UI
         public override int Order => 10;
 
         Label now, sources, uses, battery, buildings;
+        InfoTip nowTip;
 
+        // One line per section; what each means is behind "i" (director 2026-11-15, after Oxygen Not Included).
         protected override void BuildBody()
         {
             now = Text();
+            nowTip = InfoTip.After(now, "");
             Heading("MADE");
             sources = Text();
+            InfoTip.After(sources, "Solar: all your panels now (0 at night). RTG: the lander's nuclear battery, steady day and night. " +
+                                   "Wasted: power made with nowhere to go (battery full, demand met).");
             Heading("USED");
             uses = Text();
+            InfoTip.After(uses, "Colony: what the colony draws now; it grows toward its target after a day without brownout. " +
+                                "Workshop: jobs being made. Charging: robots topping up.");
             Heading("BATTERY");
             battery = Text();
-            Heading("POWER BUILDINGS");
+            InfoTip.After(battery, "Charges from surplus by day, carries the colony through the night. Until the surface " +
+                                   "temperature experiment is done, it only charges to 80 % (safety margin).");
+            Heading("BUILDINGS");
             buildings = Text();
-            Text("caption").text = "The week chart of power made and needed is in Overview → Power (C).";
+            InfoTip.After(buildings, "The week chart of power made and needed is in Overview, Power tab (C).");
         }
 
         protected override void RefreshBody(IPlanetSimulation sim)
         {
             double solar = sim.GenerationW - sim.RtgW;
-            now.text = (sim.IsBrownout ? "BROWNOUT: demand is not met.\n" : "") +
-                       $"Making {Format.Power(sim.GenerationW)} · needed {Format.Power(sim.DemandW)} " +
-                       $"(colony target {Format.Power(sim.DemandTargetW)})";
+            now.text = (sim.IsBrownout ? "BROWNOUT · " : "") +
+                       $"Making {Format.Power(sim.GenerationW)} · need {Format.Power(sim.DemandW)}";
+            if (nowTip != null)
+                nowTip.Text = $"Colony target {Format.Power(sim.DemandTargetW)}: demand grows toward it after a full day without " +
+                              "brownout. A brownout is when power made plus the battery can't meet demand; growth stops until it ends.";
             now.EnableInClassList("message", sim.IsBrownout);
-            sources.text = $"Solar panels {Format.Power(System.Math.Max(0.0, solar))}\nRTGs (lander) {Format.Power(sim.RtgW)}\n" +
-                           $"Wasted (nowhere to put it) {Format.Power(sim.CurtailedW)}";
-            uses.text = $"Colony {Format.Power(sim.DemandW)}\nWorkshop {Format.Power(sim.WorkshopPowerW)}\n" +
-                        $"Robot charging {Format.Power(sim.RobotChargingW)}";
+            sources.text = $"Solar {Format.Power(System.Math.Max(0.0, solar))} · RTG {Format.Power(sim.RtgW)} · wasted {Format.Power(sim.CurtailedW)}";
+            uses.text = $"Colony {Format.Power(sim.DemandW)} · workshop {Format.Power(sim.WorkshopPowerW)} · charging {Format.Power(sim.RobotChargingW)}";
             double share = sim.BatteryCapacityWh > 0.0 ? sim.BatteryStoredWh / sim.BatteryCapacityWh : 0.0;
             string flow = sim.BatteryPowerW > 1.0 ? $"charging {Format.Power(sim.BatteryPowerW)}"
                         : sim.BatteryPowerW < -1.0 ? $"discharging {Format.Power(-sim.BatteryPowerW)}" : "idle";
@@ -199,7 +208,7 @@ namespace KardashevAscent.Presentation.UI
                 panels += sim.PanelCount(t);
                 yards += sim.BatteryCount(t);
             }
-            buildings.text = $"{panels} solar panel{(panels == 1 ? "" : "s")} · {yards} battery yard{(yards == 1 ? "" : "s")}";
+            buildings.text = $"{panels} panel{(panels == 1 ? "" : "s")} · {yards} battery yard{(yards == 1 ? "" : "s")}";
         }
     }
 
