@@ -72,7 +72,7 @@ namespace KardashevAscent.Presentation.UI
             box.style.height = NodeH;
             box.style.paddingLeft = box.style.paddingRight = 7;
             box.style.paddingTop = 5;
-            box.style.backgroundColor = new Color(0.13f, 0.13f, 0.15f, 0.95f);
+            box.style.backgroundColor = new Color(0.05f, 0.08f, 0.15f, 0.95f);
             box.style.borderTopWidth = box.style.borderBottomWidth = box.style.borderLeftWidth = box.style.borderRightWidth = 2;
             box.tooltip = kind.HasValue ? Experiments.What(kind.Value)
                 : "The lab's instruments stand on surveyed bedrock: survey the Research Station's tile before any experiment.";

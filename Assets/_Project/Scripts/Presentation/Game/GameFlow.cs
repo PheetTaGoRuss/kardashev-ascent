@@ -112,6 +112,7 @@ namespace KardashevAscent.Presentation.Game
             root.style.position = Position.Absolute;
             root.style.left = 0; root.style.right = 0; root.style.top = 0; root.style.bottom = 0;
             CopyStyles(root);
+            ThemePopups(root);
             ScreenInput.Register(root.panel);
             BuildMenus();
             if (saveGame != null)
@@ -773,40 +774,79 @@ namespace KardashevAscent.Presentation.Game
             return b;
         }
 
-        static void FadeIn(VisualElement e)
-        {
-            if (e == null) return;
-            e.style.opacity = 0f;
-            e.style.transitionDuration = new System.Collections.Generic.List<TimeValue> { new TimeValue(1.2f, TimeUnit.Second) };
-            e.schedule.Execute(() => e.style.opacity = 1f).StartingIn(60);
-        }
-
-        /// <summary>A screen over the menus: the space backdrop, a title and a scrolling panel, and Back.</summary>
+        /// <summary>
+        /// A glass panel that slides in from the right over the live menu (director 2026-11-15: the menu must not change
+        /// when Settings opens): the 3D planet, starfield and title stay as they are behind a light scrim, the menu
+        /// buttons dim, and the panel has an amber kicker, a spaced title, a scrolling body and Back. A click on the
+        /// scrim closes it too.
+        /// </summary>
         VisualElement Overlay(string title, out VisualElement body, float width)
         {
-            VisualElement s = Screen(dim: 0f);
-            s.Add(new SpaceBackdrop());
+            VisualElement s = Screen(dim: 0.32f);
+            s.style.alignItems = Align.FlexEnd;
+            s.style.paddingRight = new Length(6, LengthUnit.Percent);
+            s.RegisterCallback<PointerDownEvent>(e => { if (e.target == s) ShowOverlay(s, false); });
             var panel = new VisualElement();
             panel.AddToClassList("panel");
+            panel.AddToClassList("overlay-panel");
             panel.style.width = width;
-            panel.style.maxHeight = new Length(82, LengthUnit.Percent);
-            panel.style.paddingLeft = panel.style.paddingRight = 26;
-            panel.style.paddingTop = panel.style.paddingBottom = 20;
-            panel.style.backgroundColor = new Color(0.06f, 0.07f, 0.1f, 0.92f);
+            panel.style.maxWidth = new Length(88, LengthUnit.Percent);
+            panel.style.maxHeight = new Length(84, LengthUnit.Percent);
+            panel.style.paddingLeft = panel.style.paddingRight = 30;
+            panel.style.paddingTop = 22; panel.style.paddingBottom = 20;
+            var kicker = new Label("KARDASHEV ASCENT  ·  MISSION CONTROL");
+            kicker.AddToClassList("heading");
+            kicker.style.color = UiPalette.Cool;
+            panel.Add(kicker);
             var t = new Label(title.ToUpperInvariant());
-            t.style.fontSize = 28; t.style.unityFontStyleAndWeight = FontStyle.Bold; t.style.letterSpacing = 8;
-            t.style.marginBottom = 10;
+            t.style.fontSize = 30; t.style.unityFontStyleAndWeight = FontStyle.Bold; t.style.letterSpacing = 10;
+            t.style.marginTop = 4;
+            t.style.color = UiPalette.Text;
             panel.Add(t);
+            var rule = new VisualElement();
+            rule.style.height = 2; rule.style.width = 90;
+            rule.style.marginTop = 6; rule.style.marginBottom = 14;
+            rule.style.backgroundColor = UiPalette.Accent;
+            panel.Add(rule);
             var scroll = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden };
             scroll.style.flexShrink = 1;
             body = scroll.contentContainer;
             panel.Add(scroll);
-            var back = MenuButton("Back (Esc)", () => { Show(s, false); });
-            back.style.marginTop = 12;
+            var back = MenuButton("◄  Back (Esc)", () => ShowOverlay(s, false));
+            back.style.marginTop = 14;
             panel.Add(back);
             s.Add(panel);
             Show(s, false);
             return s;
+        }
+
+        /// <summary>Slide an overlay's panel in (or hide it) and dim the menu buttons behind it meanwhile.</summary>
+        void ShowOverlay(VisualElement s, bool show)
+        {
+            if (s == null) return;
+            Show(s, show);
+            if (menuButtons != null)
+            {
+                menuButtons.style.transitionDuration = new System.Collections.Generic.List<TimeValue> { new TimeValue(0.3f, TimeUnit.Second) };
+                menuButtons.style.opacity = show ? 0.25f : 1f;
+            }
+            if (!show) return;
+            KardashevAscent.Presentation.Audio.GameAudio.Play(KardashevAscent.Presentation.Audio.Sfx.Whoosh, 0.6f);
+            VisualElement panel = s.Q(className: "overlay-panel");
+            s.style.opacity = 0f;
+            s.style.transitionDuration = new System.Collections.Generic.List<TimeValue> { new TimeValue(0.35f, TimeUnit.Second) };
+            if (panel != null)
+            {
+                panel.style.translate = new Translate(70, 0);
+                panel.style.transitionProperty = new System.Collections.Generic.List<StylePropertyName> { new StylePropertyName("translate") };
+                panel.style.transitionDuration = new System.Collections.Generic.List<TimeValue> { new TimeValue(0.45f, TimeUnit.Second) };
+                panel.style.transitionTimingFunction = new System.Collections.Generic.List<EasingFunction> { new EasingFunction(EasingMode.EaseOutCubic) };
+            }
+            s.schedule.Execute(() =>
+            {
+                s.style.opacity = 1f;
+                if (panel != null) panel.style.translate = new Translate(0, 0);
+            }).StartingIn(30);
         }
 
         static Label Heading(VisualElement to, string text)
@@ -901,9 +941,9 @@ namespace KardashevAscent.Presentation.Game
         /// <summary>The team, shown in the credits (one line each; empty hides the section). Fill in your names.</summary>
         static readonly string[] TeamMembers = { "Team GIE", "Kiattiyot Sinprasom", "Puwanantorn Lertpoonsawat", "Methapat Khamkanya" };
 
-        void ShowSettings(bool show) { Show(settingsScreen, show); if (show) FadeIn(settingsScreen); }
+        void ShowSettings(bool show) => ShowOverlay(settingsScreen, show);
 
-        void ShowCredits(bool show) { Show(creditsScreen, show); if (show) FadeIn(creditsScreen); }
+        void ShowCredits(bool show) => ShowOverlay(creditsScreen, show);
 
         /// <summary>The guide book on the menus, the planet chooser and before landing (in play it is the J tab).</summary>
         void ShowMenuGuide(bool show)
@@ -973,6 +1013,22 @@ namespace KardashevAscent.Presentation.Game
         static void Show(VisualElement e, bool visible)
         {
             if (e != null) e.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        /// <summary>
+        /// Drop-down lists open on the panel's top level, outside every document, so the shared theme never reached them
+        /// (they were Unity's white with a blue highlight and hard to read). Give the top level the shared sheet too.
+        /// </summary>
+        static void ThemePopups(VisualElement root)
+        {
+            VisualElement top = root?.panel?.visualTree;
+            if (top == null) return;
+            for (int i = 0; i < root.styleSheets.count; i++)
+            {
+                StyleSheet sheet = root.styleSheets[i];
+                if (sheet != null && sheet.name == "Common" && !top.styleSheets.Contains(sheet))
+                    top.styleSheets.Add(sheet);
+            }
         }
 
         static void CopyStyles(VisualElement target)
