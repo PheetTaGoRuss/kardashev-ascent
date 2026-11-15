@@ -163,7 +163,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             SurveyPuzzle p = CoresAtBase(a);
             a.AnswerSurveyMaterial(t, 0, p.Answer(0), out _);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(30, state.Version);
+            Assert.AreEqual(SimulationState.CurrentVersion, state.Version);
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));
             Assert.IsTrue(b.SurveyPuzzles[0].IsSolved(0), "the worked-out material is kept");

@@ -107,6 +107,15 @@ namespace KardashevAscent.Simulation.Game
         /// </summary>
         Resources.MaterialBill BuildBill(BuildingType type);
 
+        /// <summary>
+        /// What one building of this type would take if placed now: <see cref="BuildBill"/> with aluminium for copper or
+        /// sodium for lithium when the colony has no copper or lithium for it and no known ore (director 2026-11-15).
+        /// </summary>
+        Resources.MaterialBill BillToBuild(BuildingType type);
+
+        /// <summary>The stand-ins the building or site at this slot was made with.</summary>
+        Resources.StandIn StandInsAt(int tileId, int slot);
+
         /// <summary>Grid power the Workshop's jobs draw now, W.</summary>
         double WorkshopPowerW { get; }
 

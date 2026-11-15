@@ -74,7 +74,7 @@ namespace KardashevAscent.Simulation.Game
         {
             if (!CanPlace(BuildingType.ChargingStation, tileId, slot))
                 return false;
-            Build.Start(tileId, slot, BuildBill(BuildingType.ChargingStation));
+            StartSite(tileId, slot, BuildBill(BuildingType.ChargingStation));
             stations.Add((tileId, slot));
             Occupy(tileId, FootprintFor(BuildingType.ChargingStation, tileId, slot));
             Settle((tileId, slot));
