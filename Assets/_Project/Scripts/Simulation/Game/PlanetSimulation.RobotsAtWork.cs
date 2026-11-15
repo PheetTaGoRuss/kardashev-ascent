@@ -17,6 +17,7 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Open work: construction sites in queue order, then salvage orders in the order asked.</summary>
         List<WorkTask> OpenTasks()
         {
+            ReconsiderStandIns();
             var tasks = new List<WorkTask>(Build.QueueCount + salvageOrders.Count);
             int i = 0;
             // Floating panels are built by robots with a boat module (director, 2026-11-14; before, raft crews built them).

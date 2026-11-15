@@ -122,6 +122,20 @@ namespace KardashevAscent.Simulation.Game
                                  WorkDone = Math.Max(0.0, Math.Min(workDone ?? share * hours, share * hours)) });
         }
 
+        /// <summary>
+        /// Give a site nothing has gone into yet a new bill (a stand-in metal). Returns false, changing nothing, if it is
+        /// no site or materials or work are already in it.
+        /// </summary>
+        public bool Rebill(int tile, int slot, MaterialBill bill)
+        {
+            int i = Find((tile, slot));
+            if (i < 0 || bill == null || queue[i].Share > 0.0 || queue[i].WorkDone > 0.0)
+                return false;
+            queue[i].Bill = bill;
+            queue[i].WorkHours = TimeEnabled ? BuildCosts.BuildHours(bill) : 0.0;
+            return true;
+        }
+
         /// <summary>Remove a site and give back the materials already in it. Returns them (empty if it was no site).</summary>
         public MaterialBill Cancel(int tile, int slot, MaterialStock stock)
         {
