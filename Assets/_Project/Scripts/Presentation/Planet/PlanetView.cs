@@ -79,6 +79,26 @@ namespace KardashevAscent.Presentation.Planet
             tileRadius != null && tile >= 0 && tile < tileRadius.Length ? tileRadius[tile] : radius;
 
         IReadOnlyDictionary<int, float> builtShare;
+        IReadOnlyDictionary<int, KardashevAscent.Simulation.Resources.PassageKind> passages;
+
+        /// <summary>Opened mountains and canyons: a tunnel mouth, a blasted notch, a bridge (director 2026-11-15).</summary>
+        public void SetPassages(IReadOnlyDictionary<int, KardashevAscent.Simulation.Resources.PassageKind> opened)
+        {
+            var copy = opened != null ? new Dictionary<int, KardashevAscent.Simulation.Resources.PassageKind>(opened) : null;
+            if (SamePassages(copy)) return;
+            passages = copy;
+            BuildFeatures();
+        }
+
+        bool SamePassages(Dictionary<int, KardashevAscent.Simulation.Resources.PassageKind> other)
+        {
+            int a = passages?.Count ?? 0, b = other?.Count ?? 0;
+            if (a != b) return false;
+            if (a == 0) return true;
+            foreach (var kv in other)
+                if (!passages.TryGetValue(kv.Key, out var k) || k != kv.Value) return false;
+            return true;
+        }
 
         /// <summary>Share of each tile's slots built on: its forest canopy thins out to match (from orbit).</summary>
         public void SetBuiltShare(IReadOnlyDictionary<int, float> share)
@@ -202,7 +222,7 @@ namespace KardashevAscent.Presentation.Planet
                 if (Application.isPlaying) Destroy(featuresMesh);
                 else DestroyImmediate(featuresMesh);
             }
-            featuresMesh = TerrainFeatures.Build(Sphere, Surface, tileRadius, radius, detailTile, builtShare);
+            featuresMesh = TerrainFeatures.Build(Sphere, Surface, tileRadius, radius, detailTile, builtShare, passages);
             featuresMesh.hideFlags = HideFlags.DontSave;
             features.GetComponent<MeshFilter>().sharedMesh = featuresMesh;
             features.GetComponent<MeshRenderer>().sharedMaterial = terrainMaterial;
@@ -287,6 +307,10 @@ namespace KardashevAscent.Presentation.Planet
                     break;
                 case TerrainType.VolcanicRock:
                     c = Color.Lerp(new Color32(70, 54, 54, 255), new Color32(96, 76, 70, 255), Mathf.InverseLerp(0.3f, 1f, elevation));
+                    break;
+                case TerrainType.Canyon:
+                    // Layered red-brown walls in shadow, like Valles Marineris or the Grand Canyon.
+                    c = Color.Lerp(new Color32(92, 50, 36, 255), new Color32(132, 78, 52, 255), Mathf.InverseLerp(0f, 0.5f, elevation));
                     break;
                 case TerrainType.DryBasin:
                     // Deeper basins darker.

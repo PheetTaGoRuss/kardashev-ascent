@@ -362,6 +362,8 @@ namespace KardashevAscent.Presentation.UI
                     return $"Measure {KardashevAscent.Simulation.Solar.SolarUnknowns.Name((KardashevAscent.Simulation.Solar.SolarParameter)t.Slot).ToLowerInvariant()} · Research Station, tile {t.Tile}";
                 case TaskKind.Experiment:
                     return $"Experiment: {KardashevAscent.Simulation.Planet.Experiments.Name((KardashevAscent.Simulation.Planet.ExperimentKind)t.Slot).ToLowerInvariant()} · Research Station, tile {t.Tile}";
+                case TaskKind.Excavate:
+                    return $"{KardashevAscent.Simulation.Resources.Passages.Name((KardashevAscent.Simulation.Resources.PassageKind)t.Slot)} · tile {t.Tile} ({sim.PassageProgress(t.Tile) * 100.0:0} %)";
                 default: return t.ToString();
             }
         }

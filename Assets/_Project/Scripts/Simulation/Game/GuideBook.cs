@@ -152,6 +152,14 @@ namespace KardashevAscent.Simulation.Game
                     page.Add("Where", "Not mined: a Workshop refines it from rock, on any planet.",
                              $"{Unlock(Material.Sodium)}; {Kg(RobotTech.RefineBatchKg(Material.Sodium))} a batch.");
                     break;
+                case Material.RareEarth:
+                    page.Add("Where", $"Deep ore in {GroundList(grounds)}: canyons most often, then mountains and volcanic rock.",
+                             "Carbonatites form in rifts (the East African Rift has many) and sit deep in old igneous mountains (Mountain Pass, California).",
+                             "A cave doubles the chance: it reaches deeper rock.");
+                    page.Add("How to find it", "Run the seismic survey at the Research Station (it needs gravity first). Then surveyed mountains, canyons and caves show it.",
+                             "Mountains and canyons must be opened (tunnel, blasting, bridge) before robots can mine there.");
+                    page.Add("Used for", $"Faster drive: {RobotTech.RareEarthPerDriveKg:0} kg for its NdFeB magnets (neodymium-iron-boron, the strongest permanent magnets).");
+                    break;
                 default:
                     page.Add("Where", "What is left of rock after refining.");
                     break;
@@ -225,6 +233,16 @@ namespace KardashevAscent.Simulation.Game
             if (!Terrains.IsWater(t))
                 page.Add("Also", "Next to a sea: water to pump.");
             page.Add("Landing", Terrains.LandingProblem(t) ?? "You can land here.");
+            if (Terrains.IsBarrier(t))
+            {
+                var ways = Passages.For(t);
+                page.Add("Barrier", "Robots can't drive across it, build on it or mine it until it is opened. They can still survey it from the edge.",
+                         string.Join(" · ", ways.Select(k => $"{Passages.Name(k)}: {Passages.Bill(k, false).Describe()}, {Passages.WorkHours(k, false):0} h")) + ".");
+                if (t == TerrainType.Mountain)
+                    page.Add("Caves", "A cave (found by a survey) halves a tunnel's work and steel. Both ways through bring out the cut rock.");
+            }
+            if (DepositMap.IsDeepGround(t))
+                page.Add("Deep ore", $"Its deposits hold {DepositMap.DeepReserveFactor:0}× as much (ore reached deep in the rock), and rare earths can be here (seismic survey).");
             double hop = RouteFinder.HopHours(t);
             page.Add("Robots", double.IsInfinity(hop) ? "Need a boat hull to work here." : $"Cross it in {hop:0.#} h ({hop / RouteFinder.FlatHopHours:0.#}× flat ground).");
             page.Add("Sunlight", $"Reflects {Terrains.Albedo(t) * 100:0} % of light (ground shine for tilted panels).");
