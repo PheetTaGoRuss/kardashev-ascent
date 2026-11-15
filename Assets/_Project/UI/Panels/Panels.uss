@@ -1,6 +1,6 @@
 .screen { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
 
-.left-column { position: absolute; left: 12px; top: 80px; width: 390px; }
+.left-column { position: absolute; left: 12px; top: 88px; width: 390px; }
 .box { padding: 8px 12px; margin-bottom: 8px; }
 .body { font-size: 15px; white-space: normal; padding: 0; margin: 1px 0; }
 .numbers { margin-top: 6px; }
