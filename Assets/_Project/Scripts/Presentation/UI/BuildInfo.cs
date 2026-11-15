@@ -29,46 +29,39 @@ namespace KardashevAscent.Presentation.UI
             }
         }
 
-        /// <summary>The description, with this colony's numbers.</summary>
+        /// <summary>
+        /// One or two short lines (director 2026-11-15: fewer words; the cost is shown as material icons under it).
+        /// </summary>
         public static string Describe(BuildMode m, PanelPlacer placer)
         {
             string what;
             switch (m)
             {
                 case BuildMode.SolarPanel:
-                    what = "Turns starlight into power. Output depends on the tile's sunlight, the panel's tilt and facing, " +
-                           "clouds, heat and the star's spectrum. Bigger panel tiers unlock at milestones.";
+                    what = "Power from starlight. Tilt and facing matter; bigger tiers at milestones.";
                     break;
                 case BuildMode.FloatingSolar:
-                    what = "A solar panel on shallow sea. Works like a land panel; the water keeps it cooler.";
+                    what = "A panel on shallow sea, kept cooler by the water. Built by a boat robot.";
                     break;
                 case BuildMode.Battery:
-                    what = $"Stores {Format.Energy(placer.BatteryUnitWh)}: charges from surplus by day and carries the colony " +
-                           "through the night. Robots can also charge here.";
+                    what = $"Stores {Format.Energy(placer.BatteryUnitWh)} for the night. Robots can charge here.";
                     break;
                 case BuildMode.Workshop:
-                    what = "Makes new robots, robot upgrades (bigger battery, processors, insulation...) and refines aluminium " +
-                           "or sodium from rock. A robot has to work there; order jobs in Manufacturing (U).";
+                    what = "Builds robots and upgrades, refines aluminium and sodium. Manufacturing (U).";
                     break;
                 case BuildMode.ChargingStation:
                     ChargingCapability c = ChargingCapability.Station;
-                    what = $"Charges up to {c.Slots} robots at once at {Format.Power(c.PowerW)} each, from the grid. Robots drive " +
-                           "to the nearest charger, so build one near where they work.";
+                    what = $"Charges {c.Slots} robots at {Format.Power(c.PowerW)}. Build it near their work.";
                     break;
                 case BuildMode.ResearchStation:
-                    what = "A lab where robots measure the planet's solar values and run experiments: air pressure, water's " +
-                           "boiling point, surface temperature, gravity. What they learn unlocks buildings (floating solar needs " +
-                           "to know water stays liquid) and removes the safety margins on panels and batteries. Research (T).";
+                    what = "Measurements and experiments. Unlocks buildings, removes safety margins. Research (T).";
                     break;
                 default:
-                    what = $"Extends the colony network {ColonyNetwork.RangeTiles} tiles around it, so robots working out there " +
-                           $"stay connected. Draws {Format.Power(ColonyNetwork.RelayPowerW)}; down in a brownout. Network (N).";
+                    what = $"Network +{ColonyNetwork.RangeTiles} tiles. Uses {Format.Power(ColonyNetwork.RelayPowerW)}; off in a brownout.";
                     break;
             }
             int slots = placer.FootprintOf(m);
-            return what + $"\nTakes: {placer.CostOf(m).Describe()} · covers {slots} slot{(slots == 1 ? "" : "s")}" +
-                   (m == BuildMode.FloatingSolar ? "\nBuilt by a robot with a boat hull (Workshop upgrade)." : "") +
-                   "\nDrag it from the bar onto the site. Trees and rocks on its slots are cleared.";
+            return what + $"\n{slots} slot{(slots == 1 ? "" : "s")} · drag it onto the site · cost (red = short):";
         }
     }
 }
