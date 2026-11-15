@@ -25,6 +25,13 @@ namespace KardashevAscent.Simulation.Resources
         /// <summary>One row per core: that core's assay for each material in <see cref="Materials"/> (0 = not found).</summary>
         public List<CoreRow> Rows = new List<CoreRow>();
         public int Attempts;
+        /// <summary>Materials already worked out, by index (director 2026-11-15: answer one at a time). Version 30.</summary>
+        public List<int> Solved = new List<int>();
+        /// <summary>Of those, the ones answered only roughly.</summary>
+        public List<int> RoughSolved = new List<int>();
+
+        public bool IsSolved(int materialIndex) => Solved != null && Solved.Contains(materialIndex);
+        public bool AllSolved => Materials.Count > 0 && Solved != null && Solved.Count >= Materials.Count;
 
         [Serializable]
         public sealed class CoreRow
@@ -66,6 +73,17 @@ namespace KardashevAscent.Simulation.Resources
             foreach (CoreRow r in Rows)
                 sum += r.Grades[materialIndex];
             return Rows.Count > 0 ? sum / Rows.Count : 0.0;
+        }
+
+        /// <summary>Grade one material's estimate.</summary>
+        public LatitudePuzzle.Grade CheckOne(int materialIndex, double estimate)
+        {
+            if (materialIndex < 0 || materialIndex >= Materials.Count)
+                return LatitudePuzzle.Grade.Wrong;
+            double answer = Answer(materialIndex);
+            double error = Math.Abs(estimate - answer) / Math.Max(1e-9, Math.Abs(answer));
+            return error <= PreciseShare ? LatitudePuzzle.Grade.Precise
+                 : error <= RoughShare ? LatitudePuzzle.Grade.Rough : LatitudePuzzle.Grade.Wrong;
         }
 
         /// <summary>Grade every material's estimate; the worst one is the puzzle's grade.</summary>

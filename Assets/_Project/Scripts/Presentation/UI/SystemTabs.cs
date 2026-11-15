@@ -56,6 +56,14 @@ namespace KardashevAscent.Presentation.UI
             tab.SetOpen(open);
         }
 
+        /// <summary>Open this system's window if it isn't open (closing the others); never closes it.</summary>
+        public static void Open(string id)
+        {
+            Tab tab = tabs.Find(t => t.Id == id);
+            if (tab != null && !tab.IsOpen())
+                Toggle(id);
+        }
+
         /// <summary>A window opened itself (e.g. by its key): close the others.</summary>
         public static void Opened(string id)
         {

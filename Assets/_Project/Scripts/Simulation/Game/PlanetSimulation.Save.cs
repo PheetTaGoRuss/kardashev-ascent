@@ -208,7 +208,11 @@ namespace KardashevAscent.Simulation.Game
             if (state.SurveyPuzzles != null)   // version 21
                 foreach (SurveyPuzzle p in state.SurveyPuzzles)
                     if (p != null && p.Tile >= 0 && p.Tile < TileCount && !Deposits.IsSurveyed(p.Tile))
+                    {
+                        p.Solved ??= new List<int>();        // before version 30: nothing worked out one at a time yet
+                        p.RoughSolved ??= new List<int>();
                         surveyPuzzles.Add(p);
+                    }
             if (state.RoughSurveys != null)
                 foreach (int tile in state.RoughSurveys)
                     if (Deposits.IsSurveyed(tile))

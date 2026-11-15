@@ -239,7 +239,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             a.Workforce.Pause(a.Workforce.Robots[0].GroupId);
             Assert.IsTrue(a.OrderExperiment(ExperimentKind.Gravity));
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(29, state.Version);
+            Assert.AreEqual(SimulationState.CurrentVersion, state.Version);
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));
             Assert.IsTrue(b.HasResearchStation);
