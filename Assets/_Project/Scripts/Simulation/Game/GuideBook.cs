@@ -65,6 +65,7 @@ namespace KardashevAscent.Simulation.Game
             var pages = new List<GuidePage>();
             foreach (Material m in Resources.Materials.All)
                 pages.Add(MaterialPage(m));
+            pages.Add(NoOrePage());
             foreach (TerrainType t in (TerrainType[])Enum.GetValues(typeof(TerrainType)))
                 pages.Add(GroundPage(t));
             pages.AddRange(BuildingPages());
@@ -143,12 +144,12 @@ namespace KardashevAscent.Simulation.Game
                              $"About {DepositMap.LithiumShare * 100:0} % of such tiles hold a brine.");
                     break;
                 case Material.Aluminium:
-                    page.Add("Where", "Not mined: a Workshop refines it from rock.",
-                             $"Unlocks at milestone {RobotTech.UnlockMilestone(Material.Aluminium)}; {Kg(RobotTech.RefineBatchKg(Material.Aluminium))} a batch.");
+                    page.Add("Where", "Not mined: a Workshop refines it from rock, on any planet.",
+                             $"{Unlock(Material.Aluminium)}; {Kg(RobotTech.RefineBatchKg(Material.Aluminium))} a batch.");
                     break;
                 case Material.Sodium:
-                    page.Add("Where", "Not mined: a Workshop refines it from rock.",
-                             $"Unlocks at milestone {RobotTech.UnlockMilestone(Material.Sodium)}; {Kg(RobotTech.RefineBatchKg(Material.Sodium))} a batch.");
+                    page.Add("Where", "Not mined: a Workshop refines it from rock, on any planet.",
+                             $"{Unlock(Material.Sodium)}; {Kg(RobotTech.RefineBatchKg(Material.Sodium))} a batch.");
                     break;
                 default:
                     page.Add("Where", "What is left of rock after refining.");
@@ -161,10 +162,32 @@ namespace KardashevAscent.Simulation.Game
             List<string> uses = BuildingsUsing(m);
             if (uses.Count > 0)
                 page.Add("Used for", string.Join(", ", uses) + ".");
-            if (m == Material.Aluminium) page.Add("Used for", "Robot wiring instead of copper.");
-            if (m == Material.Sodium) page.Add("Used for", "Robot batteries instead of lithium.");
+            if (m == Material.Aluminium)
+                page.Add("Used for", $"Wiring instead of copper: {string.Join(", ", BuildingsUsing(Material.Copper))}, robots.",
+                         $"{StandIns.AluminiumPerCopperKg:0.00} kg for each kg of copper: it conducts {StandIns.AluminiumIacs * 100:0} % as well, so the wire is thicker, but it is {StandIns.CopperDensity / StandIns.AluminiumDensity:0.0} times lighter.");
+            if (m == Material.Sodium)
+                page.Add("Used for", $"Sodium-ion cells instead of lithium: {string.Join(", ", BuildingsUsing(Material.Lithium))}, robots.",
+                         $"{StandIns.SodiumPerLithiumKg:0.0} kg for each kg of lithium: one sodium ion carries the same charge as one lithium ion, and weighs {StandIns.SodiumPerLithiumKg:0.0} times as much.");
             return page;
         }
+
+        static string Unlock(Material refined) =>
+            RobotTech.UnlockMilestone(refined) == 0 ? "Open from the start" : $"Unlocks at milestone {RobotTech.UnlockMilestone(refined)}";
+
+        /// <summary>How to start on a planet with no copper or lithium ore (director 2026-11-15).</summary>
+        static GuidePage NoOrePage() =>
+            new GuidePage(Materials, "No copper or lithium?", "Every rocky planet can be started: rock gives aluminium and sodium.")
+                .Add("Why", "Copper and lithium ores form with water: copper near old seas, lithium in dried-up salt lakes.",
+                     "Dry planets (Mars, Proxima b, Kepler-452 b) have little or none.")
+                .Add("What to do",
+                     "1. Land, build a Robot Workshop first (the lander's copper covers it).",
+                     "2. Mine rock and refine aluminium and sodium at the Workshop (Manufacturing, U).",
+                     "3. Place buildings as usual: with no copper or lithium in stock they use aluminium wiring and sodium cells.")
+                .Add("Good to know",
+                     "A site that is still waiting takes whichever metal arrives first, copper or aluminium.",
+                     $"Refining costs power: about {RobotTech.Refine(Material.Aluminium).EnergyWh / RobotTech.RefineBatchKg(Material.Aluminium) / 1000.0:0} kWh for each kg of aluminium.",
+                     "Taking a building down gives back what it was made of.")
+                .Add("Choosing where to land", "Land near rock you can mine and in strong light: refining needs power. On a wet planet, high ground near a sea has copper.");
 
         static string Summary(Material m)
         {

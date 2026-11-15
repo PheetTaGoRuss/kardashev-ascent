@@ -138,14 +138,17 @@ namespace KardashevAscent.Simulation.Tests.Robots
         }
 
         [Test]
-        public void Substitutes_NeedTheirUnlock()
+        public void Substitutes_AreOpenFromTheStart()
         {
+            // Director 2026-11-15: a planet with no copper ore must still be playable, so aluminium wiring is open at milestone 0.
             var sim = WithWorkshop();
+            sim.Materials.Take(Material.Copper, sim.Materials[Material.Copper]);
             sim.Materials.Add(Material.Iron, 400.0);
             sim.Materials.Add(Material.Rock, 200.0);
             sim.Materials.Add(Material.Aluminium, 40.0);
             sim.Materials.Add(Material.Lithium, 2.0);
-            StringAssert.Contains("copper", sim.OrderRobot(RobotKind.General), "aluminium wiring is locked at milestone 0");
+            Assert.IsNull(sim.OrderRobot(RobotKind.General));
+            Assert.IsTrue(sim.Jobs[sim.Jobs.Count - 1].AluminiumWiring);
         }
 
         [Test]
@@ -158,7 +161,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             Assert.AreEqual(100.0 - 60.0, sim.Materials[Material.Rock], 1e-9);
             RunUntil(sim, () => sim.Jobs.Count == 0);
             Assert.AreEqual(10.0, sim.Materials[Material.Aluminium], 1e-9);
-            StringAssert.Contains("milestone 2", sim.OrderRefine(Material.Sodium));
+            StringAssert.DoesNotContain("milestone", sim.OrderRefine(Material.Sodium) ?? "", "sodium refining is open from the start");
         }
 
         [Test]

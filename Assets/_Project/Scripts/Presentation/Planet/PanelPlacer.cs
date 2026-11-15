@@ -763,7 +763,7 @@ namespace KardashevAscent.Presentation.Planet
         public double BatteryUnitWh => simulation != null ? simulation.BatteryUnitWh : 0.0;
 
         /// <summary>Materials one building of the current mode takes.</summary>
-        public MaterialBill BuildBill => simulation != null ? simulation.BuildBill(TypeOf(mode)) : new MaterialBill();
+        public MaterialBill BuildBill => simulation != null ? simulation.BillToBuild(TypeOf(mode)) : new MaterialBill();
 
         /// <summary>With several slots selected: how many buildings of the current mode P would make there.</summary>
         public int PlannedBuildings { get; private set; }
@@ -775,7 +775,7 @@ namespace KardashevAscent.Presentation.Planet
         public int FootprintOf(BuildMode what) => simulation != null ? simulation.FootprintSize(TypeOf(what)) : 1;
 
         /// <summary>Materials a building of this kind takes.</summary>
-        public MaterialBill CostOf(BuildMode what) => simulation != null ? simulation.BuildBill(TypeOf(what)) : new MaterialBill();
+        public MaterialBill CostOf(BuildMode what) => simulation != null ? simulation.BillToBuild(TypeOf(what)) : new MaterialBill();
 
         /// <summary>What a new solar building here is, e.g. "solar farm (1 km²)".</summary>
         public string NewPanelName => simulation == null ? "solar panel"
