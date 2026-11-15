@@ -42,6 +42,20 @@ namespace KardashevAscent.Presentation.Game
         /// <summary>True while the setup tutorial runs (time stopped).</summary>
         public static bool InSetup => Phase == GamePhase.Setup;
 
+        /// <summary>The landing tile while the setup tutorial runs (−1 otherwise): the essentials go there.</summary>
+        public static int SetupTile => instance != null && InSetup ? instance.setupTile : -1;
+
+        /// <summary>A building was refused because it wasn't on the landing tile: say so in the setup panel.</summary>
+        public static void WarnNotLandingTile()
+        {
+            if (instance == null || !InSetup || instance.setupNow == null) return;
+            instance.setupWarning = $"Build the essentials on your landing tile #{instance.setupTile}. Press R to fly back there.";
+            instance.RefreshSetup();
+        }
+
+        string setupWarning;
+        int lastSetupStep = -1;
+
         /// <summary>True when a flow is running (it opens the chooser itself, so the chooser doesn't open on its own).</summary>
         public static bool Active => instance != null;
 
@@ -214,13 +228,25 @@ namespace KardashevAscent.Presentation.Game
                 return;
             }
             var e = Essentials[next];
-            setupNow.text = $"Step {next + 1} of {Essentials.Length}: open {e.Category} in the build bar at the bottom and drag a {e.Name} onto a free slot of the site. " +
-                            $"Time starts when all {Essentials.Length} are placed; your three robots then build them from the lander's cargo.";
+            if (next != lastSetupStep)
+                setupWarning = null;   // a building went down: the warning has done its job
+            lastSetupStep = next;
+            // Short: what to do now; the warning (wrong tile) in red underneath.
+            setupNow.text = $"Step {next + 1}/{Essentials.Length}: {e.Category} ► drag a {e.Name} onto your site." +
+                            (setupWarning != null ? "\n" + setupWarning : "");
+            setupNow.style.color = setupWarning != null ? new Color(1f, 0.47f, 0.41f) : StyleKeyword.Null;
         }
 
         void SkipSetup()
         {
-            if (placer != null)
+            // The rest go on the landing tile, whichever site is open now (director 2026-11-15: building elsewhere first
+            // left Skip with nothing to place).
+            if (placer != null && setupTile >= 0 && placer.Tile != setupTile && picker != null)
+            {
+                picker.Select(-1);
+                picker.Select(setupTile);
+            }
+            if (placer != null && placer.Tile == setupTile)
                 foreach (var e in Essentials)
                     if (!Has(e.Type))
                         placer.AutoPlace(e.Mode);

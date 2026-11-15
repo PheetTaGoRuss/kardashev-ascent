@@ -1039,6 +1039,12 @@ namespace KardashevAscent.Presentation.Planet
         {
             if (simulation == null || tile < 0 || s < 0 || Occupied(s) || siteView.Site == null)
                 return false;
+            // During the setup tutorial the essentials go on the landing tile only (director 2026-11-15).
+            if (GameFlow.InSetup && GameFlow.SetupTile >= 0 && tile != GameFlow.SetupTile)
+            {
+                GameFlow.WarnNotLandingTile();
+                return false;
+            }
             padsDirty = true;
             if (mode == BuildMode.Battery || mode == BuildMode.Workshop || mode == BuildMode.ChargingStation || mode == BuildMode.Relay
                 || mode == BuildMode.ResearchStation)

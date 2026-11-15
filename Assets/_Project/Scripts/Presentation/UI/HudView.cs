@@ -23,6 +23,13 @@ namespace KardashevAscent.Presentation.UI
 
         UIDocument document;
         Label date, time, season, power, demand, battery, kLabel, kPlanetLabel, kDetailLabel, kHeading, brownout, toast, buildStock, buildQueue;
+        VisualElement stockChips;
+        string stockShape;
+        static readonly KardashevAscent.Simulation.Resources.Material[] StockShown =
+        {
+            KardashevAscent.Simulation.Resources.Material.Iron, KardashevAscent.Simulation.Resources.Material.Copper,
+            KardashevAscent.Simulation.Resources.Material.Lithium, KardashevAscent.Simulation.Resources.Material.Rock,
+        };
         VisualElement batteryFill, kFill;
         // The fastest speed is a day per second (director, 2026-11-14): no year per minute.
         readonly Button[] speedButtons = new Button[4];
@@ -56,6 +63,13 @@ namespace KardashevAscent.Presentation.UI
             toast = root.Q<Label>("toast");
             buildStock = root.Q<Label>("build-stock");
             buildQueue = root.Q<Label>("build-queue");
+            // Materials as icons (director 2026-11-15): Fe Cu Li Rk chips, red when there is none.
+            stockChips = new VisualElement();
+            if (buildStock != null)
+            {
+                buildStock.parent.Insert(buildStock.parent.IndexOf(buildStock), stockChips);
+                buildStock.style.display = DisplayStyle.None;
+            }
             batteryFill = root.Q("battery-fill");
             kFill = root.Q("k-fill");
 
@@ -202,15 +216,18 @@ namespace KardashevAscent.Presentation.UI
 
             if (buildStock != null)
             {
-                // The metals buildings take (chemical symbols keep it short), then rock and the sites.
-                buildStock.text = $"Fe {Mass(sim.Materials[KardashevAscent.Simulation.Resources.Material.Iron])} · " +
-                                  $"Cu {Mass(sim.Materials[KardashevAscent.Simulation.Resources.Material.Copper])}";
+                var m = sim.Materials;
+                string shape = $"{Mass(m[KardashevAscent.Simulation.Resources.Material.Iron])}|{Mass(m[KardashevAscent.Simulation.Resources.Material.Copper])}|" +
+                               $"{Mass(m[KardashevAscent.Simulation.Resources.Material.Lithium])}|{Mass(m[KardashevAscent.Simulation.Resources.Material.Rock])}";
+                if (shape != stockShape)
+                {
+                    stockShape = shape;
+                    MaterialChips.FillStock(stockChips, m, StockShown);
+                }
                 int sites = sim.ConstructionQueueCount;
-                buildQueue.text = $"Li {Mass(sim.Materials[KardashevAscent.Simulation.Resources.Material.Lithium])} · " +
-                                  $"rock {Mass(sim.Materials[KardashevAscent.Simulation.Resources.Material.Rock])} · " +
-                                  (sites == 0 ? "no sites"
-                                   : sim.ConstructionShortfall.IsEmpty ? $"{sites} site{(sites == 1 ? "" : "s")}, in stock"
-                                   : $"{sites} site{(sites == 1 ? "" : "s")} short");
+                bool shortOf = !sim.ConstructionShortfall.IsEmpty;
+                buildQueue.text = sites == 0 ? "no sites" : shortOf ? $"{sites} site{(sites == 1 ? "" : "s")} short" : $"{sites} site{(sites == 1 ? "" : "s")}";
+                buildQueue.style.color = sites > 0 && shortOf ? UiPalette.Critical : StyleKeyword.Null;
             }
             kLabel.text = Format.Power(sim.KardashevPowerW);
             if (kHeading != null)
