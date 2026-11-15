@@ -44,6 +44,9 @@ namespace KardashevAscent.Simulation.Game
             foreach (int tile in Deposits.Surveyed)
                 state.SurveyedTiles.Add(tile);
             state.SurveyedTiles.Sort();
+            foreach (var (tile, m, kg) in Deposits.Mined)
+                state.Mined.Add(new MinedRecord { Tile = tile, Material = m, Kg = kg });
+            state.Mined.Sort((x, y) => x.Tile != y.Tile ? x.Tile.CompareTo(y.Tile) : x.Material.CompareTo(y.Material));
             state.SurveyOrders.AddRange(surveyOrders);
             state.MeasuredParameters = Parameters.Capture();
             state.LatitudePuzzles.AddRange(latitudePuzzles);
@@ -195,6 +198,11 @@ namespace KardashevAscent.Simulation.Game
                         salvageOrders.Add((o.Tile, o.Slot));
             // Version 9 added resources; older saves start with nothing surveyed or mined.
             Deposits.SetSurveyed(state.SurveyedTiles);
+            var mined = new List<(int, Material, double)>();
+            if (state.Mined != null)
+                foreach (MinedRecord r in state.Mined)
+                    if (r != null) mined.Add((r.Tile, r.Material, r.Kg));
+            Deposits.SetMined(mined);
             Materials.Clear();
             surveyOrders.Clear();
             miningOrders.Clear();
@@ -250,6 +258,7 @@ namespace KardashevAscent.Simulation.Game
             if (state.MiningOrders != null)
                 foreach (MiningOrderRecord o in state.MiningOrders)
                     if (o.Tile >= 0 && o.Tile < TileCount && Deposits.IsKnown(o.Tile, o.Material) && Deposits.GradeOf(o.Tile, o.Material) > 0.0
+                        && !Deposits.IsExhausted(o.Tile, o.Material)
                         && !miningOrders.Contains((o.Tile, o.Material)))
                         miningOrders.Add((o.Tile, o.Material));
             if (state.FieldWork != null)

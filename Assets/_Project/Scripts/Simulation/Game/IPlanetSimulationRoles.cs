@@ -513,6 +513,9 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>A robot finished surveying a tile: its deposits are known now.</summary>
         event Action<int> TileSurveyed;
+
+        /// <summary>A deposit was mined out (tile, material); its mining order ended (director 2026-11-15).</summary>
+        event Action<int, Resources.Material> DepositExhausted;
     }
 
 }

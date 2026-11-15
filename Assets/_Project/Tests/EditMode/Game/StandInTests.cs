@@ -149,7 +149,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             a.Tick(0.25);   // some aluminium goes in: the choice is kept
             Assert.IsTrue(a.IsUnderConstruction(t, 0));
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(31, state.Version);
+            Assert.AreEqual(SimulationState.CurrentVersion, state.Version);
 
             var b = Create();
             Assert.IsTrue(b.RestoreState(state));

@@ -272,6 +272,16 @@ namespace KardashevAscent.Presentation.UI
             return false;
         }
 
+        /// <summary>"42 t of 50 t left", "used up" or "never runs out" (director 2026-11-15: deposits run out).</summary>
+        static string Left(DepositMap map, int tile, Material m)
+        {
+            if (map.IsEndless(tile, m)) return "never runs out (sea water)";
+            if (map.IsExhausted(tile, m)) return "used up";
+            return $"{Tonnes(map.RemainingKg(tile, m))} of {Tonnes(map.ReserveKg(tile, m))} left";
+        }
+
+        static string Tonnes(double kg) => kg >= 10_000.0 ? $"{kg / 1000.0:0} t" : kg >= 1000.0 ? $"{kg / 1000.0:0.0} t" : $"{kg:0} kg";
+
         void RefreshGround(IPlanetSimulation sim, int tile)
         {
             if (ground == null || groundActions == null)
@@ -293,8 +303,9 @@ namespace KardashevAscent.Presentation.UI
                 text = "";
                 bool rough = sim.IsRoughSurvey(tile);
                 foreach (Deposit d in map.At(tile))
-                    text += $"{Materials.Name(d.Material)}: grade {(rough && d.Material != Material.Rock ? "±" : "")}{d.Grade:0.00}" +
+                    text += $"{Materials.Name(d.Material)}: grade {(rough && d.Material != Material.Rock ? "±" : "")}{d.Grade:0.00}, {Left(map, tile, d.Material)}" +
                             $"{(sim.IsMiningOrdered(tile, d.Material) ? " · being mined" : "")}\n";
+                text += "Deposits run out: what robots mine comes out of the ground. Sea water from a shore never runs out.\n";
                 if (rough)
                     text += "± : surveyed from a rough estimate (the mine pays by the real grade).\n";
                 if (map.At(tile).Count <= 2)
@@ -315,7 +326,7 @@ namespace KardashevAscent.Presentation.UI
 
             string shape = $"{tile}|{water}|{surveyed}|{sim.IsSurveyOrdered(tile)}|{CoresWaiting(sim, tile)}";
             foreach (Material m in Materials.Mined)
-                shape += sim.IsMiningOrdered(tile, m) ? "1" : "0";
+                shape += (sim.IsMiningOrdered(tile, m) ? "1" : "0") + (int)(map.RemainingShare(tile, m) * 100.0);
             if (shape == groundShape)
                 return;
             groundShape = shape;
@@ -332,11 +343,14 @@ namespace KardashevAscent.Presentation.UI
                     chip.style.marginTop = 3;
                     chip.Add(MaterialChips.Icon(d.Material, 18f));
                     bool rough = sim.IsRoughSurvey(tile) && d.Material != Material.Rock;
-                    var g = new Label($"×{(rough ? "±" : "")}{d.Grade:0.00}{(sim.IsMiningOrdered(tile, d.Material) ? " · mining" : "")}");
+                    bool empty = map.IsExhausted(tile, d.Material);
+                    string share = map.IsEndless(tile, d.Material) ? "" : empty ? " · empty" : $" · {map.RemainingShare(tile, d.Material) * 100.0:0}%";
+                    var g = new Label($"×{(rough ? "±" : "")}{d.Grade:0.00}{share}{(sim.IsMiningOrdered(tile, d.Material) ? " · mining" : "")}");
                     g.style.marginLeft = 4;
                     g.style.fontSize = 14;
+                    if (empty) g.style.color = UiPalette.Muted;
                     chip.Add(g);
-                    chip.tooltip = $"{Materials.Name(d.Material)}: grade {d.Grade:0.00} (1 = an ordinary deposit on Earth)";
+                    chip.tooltip = $"{Materials.Name(d.Material)}: grade {d.Grade:0.00} (1 = an ordinary deposit on Earth); {Left(map, tile, d.Material)}";
                     groundChips.Add(chip);
                 }
             if (water)
