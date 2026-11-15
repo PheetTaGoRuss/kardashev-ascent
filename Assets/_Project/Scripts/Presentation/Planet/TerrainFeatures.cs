@@ -88,10 +88,22 @@ namespace KardashevAscent.Presentation.Planet
                     // A steel bridge across the gorge, at the height of the ground beside it.
                     Vector3 east = Vector3.Cross(Vector3.up, up).sqrMagnitude > 1e-6f ? Vector3.Cross(Vector3.up, up).normalized : Vector3.right;
                     Vector3 north = Vector3.Cross(up, east);
-                    float rim = r + span * 0.35f;
-                    Slab(v, n, c, tri, up * rim, up, east, span * 1.7f, span * 0.16f, span * 0.04f, Steel);
-                    foreach (float side in new[] { -0.5f, 0.5f })
-                        Slab(v, n, c, tri, up * (r + span * 0.17f) + east * side * span, up, east, span * 0.06f, span * 0.06f, span * 0.35f, Steel);
+                    // The deck spans the gorge at the rim (the highest ground beside it); piers stand on the floor.
+                    float rim = r;
+                    foreach (int nb in sphere.Neighbors[t])
+                        if (surface.Terrain[nb] != TerrainType.Canyon) rim = Mathf.Max(rim, tileRadius[nb]);
+                    // Across the gorge: towards a rim tile.
+                    Vector3 across = east;
+                    foreach (int nb in sphere.Neighbors[t])
+                        if (surface.Terrain[nb] != TerrainType.Canyon)
+                        {
+                            Vector3 d = ToUnity(sphere.Centers[nb]) - up;
+                            across = (d - Vector3.Dot(d, up) * up).normalized;
+                            break;
+                        }
+                    Slab(v, n, c, tri, up * rim, up, across, span * 2.1f, span * 0.16f, span * 0.04f, Steel);
+                    foreach (float side in new[] { -0.45f, 0.45f })
+                        Slab(v, n, c, tri, up * r + across * side * span, up, across, span * 0.06f, span * 0.06f, rim - r, Steel);
                 }
                 else if (type == TerrainType.Forest)
                 {

@@ -41,9 +41,10 @@ namespace KardashevAscent.Simulation.Tests.Robots
             Workforce w = WithRobots(5);
             w.Assign(new List<WorkTask> { MineAt(1) });
             Assert.AreEqual(FacilityStaffing.MineSiteCapacity, Crew(w, MineAt(1)));
-            Assert.AreEqual(1, FacilityStaffing.CapacityFor(TaskKind.Build));
-            w.Assign(new List<WorkTask> { new WorkTask(TaskKind.Build, 1, 2) });
-            Assert.AreEqual(1, Crew(w, new WorkTask(TaskKind.Build, 1, 2)), "one robot per site");
+            Assert.AreEqual(FacilityStaffing.BuildCrewCapacity, FacilityStaffing.CapacityFor(TaskKind.Build));
+            Workforce many = WithRobots(FacilityStaffing.BuildCrewCapacity + 3);
+            many.Assign(new List<WorkTask> { new WorkTask(TaskKind.Build, 1, 2) });
+            Assert.AreEqual(FacilityStaffing.BuildCrewCapacity, Crew(many, new WorkTask(TaskKind.Build, 1, 2)), "a crew per site, never more");
         }
 
         [Test]
@@ -140,7 +141,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         {
             double Yield(int robots)
             {
-                var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
+                var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { ConstructionTimeEnabled = false };
                 sim.Workforce.Reset(sim.BaseTileId, 1);
                 sim.Materials.Clear();
                 for (int i = 1; i < robots; i++) sim.Workforce.AddRobot(RobotKind.General, sim.BaseTileId);
@@ -159,7 +160,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         {
             double HoursToFinish(int robots)
             {
-                var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
+                var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { ConstructionTimeEnabled = false };
                 sim.Workforce.Reset(sim.BaseTileId, 1);
                 sim.Materials.Clear();
                 for (int i = 1; i < robots; i++) sim.Workforce.AddRobot(RobotKind.General, sim.BaseTileId);

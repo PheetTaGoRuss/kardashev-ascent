@@ -44,6 +44,8 @@ namespace KardashevAscent.Simulation.Game
             { BuildingType.Relay, new BuildingDefinition(BuildingType.Relay, "relay", BuildingFootprints.Relay, BuildCosts.Relay) },
             { BuildingType.FloatingSolar, new BuildingDefinition(BuildingType.FloatingSolar, "floating solar", 1) },
             { BuildingType.ResearchStation, new BuildingDefinition(BuildingType.ResearchStation, "Research Station", BuildingFootprints.ResearchStation, BuildCosts.ResearchStation) },
+            { BuildingType.AluminaPlant, new BuildingDefinition(BuildingType.AluminaPlant, "Alumina plant", BuildingFootprints.RefineryModule, BuildCosts.AluminaPlant) },
+            { BuildingType.Electrolyser, new BuildingDefinition(BuildingType.Electrolyser, "Electrolysis cell", BuildingFootprints.RefineryModule, BuildCosts.Electrolyser) },
         };
 
         /// <summary>Every building the player can build.</summary>

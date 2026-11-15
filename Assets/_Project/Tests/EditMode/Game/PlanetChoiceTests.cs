@@ -39,7 +39,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.AreEqual(123456789, sim.TerrainSeed);
             SimulationState state = sim.CaptureState();
             Assert.AreEqual(123456789, state.TerrainSeed);
-            Assert.AreEqual(33, SimulationState.CurrentVersion);
+            Assert.AreEqual(34, SimulationState.CurrentVersion);
             var older = JsonUtility_Free_OldState();
             Assert.AreEqual(0, older.TerrainSeed, "a save from before random maps names none: the planet's own map");
         }
