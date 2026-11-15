@@ -79,7 +79,13 @@ namespace KardashevAscent.Presentation.Planet
         public BuildMode Mode
         {
             get => mode;
-            set => mode = value;
+            set
+            {
+                if (value == mode) return;
+                mode = value;
+                previewDirty = true;   // land and floating panels are checked differently
+                lastPreviewTime = float.NegativeInfinity;
+            }
         }
 
         bool dragging;
@@ -680,7 +686,7 @@ namespace KardashevAscent.Presentation.Planet
             }
 
             if (tile >= 0 && ScreenInput.KeyDown(KeyCode.Tab))
-                mode = mode == BuildMode.SolarPanel ? BuildMode.Battery : mode == BuildMode.Battery ? BuildMode.Workshop
+                Mode = mode == BuildMode.SolarPanel ? BuildMode.Battery : mode == BuildMode.Battery ? BuildMode.Workshop
                      : mode == BuildMode.Workshop ? BuildMode.ChargingStation
                      : mode == BuildMode.ChargingStation ? BuildMode.Relay
                      : mode == BuildMode.Relay ? BuildMode.ResearchStation
