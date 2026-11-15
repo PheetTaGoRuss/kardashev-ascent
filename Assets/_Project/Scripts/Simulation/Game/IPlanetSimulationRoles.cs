@@ -343,6 +343,24 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Order a batch of a refined material (aluminium or sodium). Returns null if ordered, else why not.</summary>
         string OrderRefine(Resources.Material output);
 
+        // ---- refinery modules (director 2026-11-15) ----
+
+        /// <summary>Queue one batch of a refining process (needs a module of its kind next to a Workshop).</summary>
+        string OrderRefine(Resources.RefineProcess process);
+        /// <summary>Why the process can't start now (no module, not enough input), or null.</summary>
+        string RefineBlocker(Resources.RefineProcess process);
+        System.Collections.Generic.IReadOnlyList<Resources.RefineProcess> RefineQueue { get; }
+        bool CancelRefineOrder(int index);
+        /// <summary>Keep this much output in stock (0: off): batches start by themselves below it.</summary>
+        void SetAutoRefine(Resources.RefineProcess process, double keepKg);
+        double AutoRefineTarget(Resources.RefineProcess process);
+        int RefineryCount(Resources.RefineryKind kind);
+        System.Collections.Generic.List<RefineryLine> RefineryLines();
+        double RefineryPowerW { get; }
+        /// <summary>A refinery module in this slot; must touch a Workshop.</summary>
+        bool PlaceRefinery(BuildingType type, int tileId, int slot);
+        string RefineryBlocker(BuildingType type, int tileId, int slot);
+
         /// <summary>Cancel a job; its materials and parts come back.</summary>
         bool CancelJob(int index);
     }

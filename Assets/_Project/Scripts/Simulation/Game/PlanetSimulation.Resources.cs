@@ -155,7 +155,9 @@ namespace KardashevAscent.Simulation.Game
                     continue;
                 fieldWork[t] = (fieldWork.TryGetValue(t, out double h) ? h : 0.0) + dt * speed;
             }
-            WorkshopPowerW = workshopW;
+            AdvanceRefineries(dt);
+            // Refinery modules draw from the grid as part of the industrial load.
+            WorkshopPowerW = workshopW + RefineryPowerW;
             for (int i = jobs.Count - 1; i >= 0; i--)
             {
                 ManufacturingJob j = jobs[i];

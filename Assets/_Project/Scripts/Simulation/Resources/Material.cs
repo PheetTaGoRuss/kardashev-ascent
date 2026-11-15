@@ -17,12 +17,21 @@ namespace KardashevAscent.Simulation.Resources
         /// Deep ore: only a seismic survey finds it, in mountains, canyons and caves.
         /// </summary>
         RareEarth,
+        /// <summary>Anorthosite: pale highland rock rich in alumina (about 30 % Al₂O₃), the aluminium ore of the colony (2026-11-15).</summary>
+        Anorthosite,
+        /// <summary>Salt (halite, NaCl) from evaporite flats and sea water: the source of sodium (2026-11-15).</summary>
+        Salt,
+        /// <summary>Alumina (Al₂O₃) powder: step 1 of aluminium.</summary>
+        Alumina,
+        /// <summary>High-purity aluminium (99.99 %), for advanced electronics.</summary>
+        PureAluminium,
     }
 
     public static class Materials
     {
         /// <summary>Materials found in the ground (the rest are made from them).</summary>
-        public static readonly Material[] Mined = { Material.Rock, Material.Iron, Material.Water, Material.Copper, Material.Lithium, Material.RareEarth };
+        public static readonly Material[] Mined = { Material.Rock, Material.Iron, Material.Water, Material.Copper, Material.Lithium, Material.RareEarth,
+                                                    Material.Anorthosite, Material.Salt };
 
         public static readonly Material[] All = (Material[])Enum.GetValues(typeof(Material));
 
@@ -39,6 +48,10 @@ namespace KardashevAscent.Simulation.Resources
                 case Material.Sodium: return "Sodium";
                 case Material.Slag: return "Slag";
                 case Material.RareEarth: return "Rare earths";
+                case Material.Anorthosite: return "Anorthosite";
+                case Material.Salt: return "Salt";
+                case Material.Alumina: return "Alumina";
+                case Material.PureAluminium: return "Aluminium 99.99 %";
                 default: return m.ToString();
             }
         }
@@ -57,6 +70,10 @@ namespace KardashevAscent.Simulation.Resources
                 case Material.Sodium: return "made in the Workshop; Na-ion batteries replace lithium (~160 vs ~250 Wh/kg)";
                 case Material.Slag: return "the rock left over when a Workshop refines aluminium or sodium (mass is conserved: rock in = metal + slag)";
                 case Material.RareEarth: return "deep in mountains, canyons (rifts) and caves, in carbonatite and alkaline igneous rock; a seismic survey finds it";
+                case Material.Anorthosite: return "highlands and mountains: the oldest crust, made of feldspar rich in alumina (like the Moon's pale highlands)";
+                case Material.Salt: return "dry basins and deserts on planets that once had seas (evaporites), and every shore of a salty sea";
+                case Material.Alumina: return "made from anorthosite or rock in an Alumina plant (step 1 of aluminium)";
+                case Material.PureAluminium: return "aluminium refined again in an Electrolysis cell (three-layer process)";
                 default: return "";
             }
         }

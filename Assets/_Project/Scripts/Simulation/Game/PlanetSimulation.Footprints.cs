@@ -43,6 +43,8 @@ namespace KardashevAscent.Simulation.Game
                 return false;   // the colony doesn't know enough yet (director 2026-11-14)
             foreach (int s in FootprintFor(type, tileId, slot))
                 if (GetBuilding(tileId, s) != BuildingType.None) return false;
+            if (!restoringState && RefineryBlocker(type, tileId, slot) != null)
+                return false;   // refinery modules touch a Workshop (director 2026-11-15)
             return true;
         }
 

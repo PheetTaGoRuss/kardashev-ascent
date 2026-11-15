@@ -87,7 +87,9 @@ namespace KardashevAscent.Simulation.Game
                             || (m == Material.Water && DepositMap.IsIceGround(t))
                             || (m == Material.Copper && DepositMap.IsCopperGround(t))
                             || (m == Material.Lithium && DepositMap.IsLithiumGround(t))
-                            || (m == Material.RareEarth && DepositMap.IsDeepGround(t));
+                            || (m == Material.RareEarth && DepositMap.IsDeepGround(t))
+                            || (m == Material.Anorthosite && (t == TerrainType.Highland || t == TerrainType.Mountain))
+                            || (m == Material.Salt && DepositMap.IsSaltFlat(t));
                 if (here) list.Add(t);
             }
             return list;
@@ -145,12 +147,25 @@ namespace KardashevAscent.Simulation.Game
                              $"About {DepositMap.LithiumShare * 100:0} % of such tiles hold a brine.");
                     break;
                 case Material.Aluminium:
-                    page.Add("Where", "Not mined: a Workshop refines it from rock, on any planet.",
-                             $"{Unlock(Material.Aluminium)}; {Kg(RobotTech.RefineBatchKg(Material.Aluminium))} a batch.");
-                    break;
+                case Material.Alumina:
+                case Material.PureAluminium:
                 case Material.Sodium:
-                    page.Add("Where", "Not mined: a Workshop refines it from rock, on any planet.",
-                             $"{Unlock(Material.Sodium)}; {Kg(RobotTech.RefineBatchKg(Material.Sodium))} a batch.");
+                    foreach (RefineRecipe r in Refining.All)
+                        if (r.Output == m)
+                            page.Add(r.Name, $"{Refining.ModuleName(r.Module)}: {r.InputKg:0} kg {Resources.Materials.Name(r.Input).ToLowerInvariant()} → {r.OutputKg:0} kg in {Days(r.Hours)}, {r.EnergyWh / 1000.0:0} kWh.",
+                                     r.What);
+                    page.Add("Refinery", "Refinery modules go in slots touching a Robot Workshop. Each runs one batch at a time; build more to make more at once.",
+                             "Batches pause in a brownout. Auto keeps a chosen amount in stock (Manufacturing, U).");
+                    break;
+                case Material.Anorthosite:
+                    page.Add("Where", $"Highlands and mountains: {GroundList(grounds)} (about {DepositMap.AnorthositeShare * 100:0} % of them).",
+                             $"About {Refining.AnorthositeAluminaShare * 100:0} % alumina, twice ordinary rock ({Refining.RockAluminaShare * 100:0} %): the Moon's pale highlands are anorthosite.");
+                    page.Add("Used for", "Alumina plant: step 1 of aluminium.");
+                    break;
+                case Material.Salt:
+                    page.Add("Where", $"Salt flats on {GroundList(grounds)} of planets that had seas (evaporites, like Death Valley or Mars's chloride deposits).",
+                             "Any shore of a liquid sea: evaporate sea water (about 2.7 % salt). Never runs out.");
+                    page.Add("Used for", $"Sodium: {Refining.SaltPerSodium:0.00} kg salt per kg (the rest leaves as chlorine).");
                     break;
                 case Material.RareEarth:
                     page.Add("Where", $"Deep ore in {GroundList(grounds)}: canyons most often, then mountains and volcanic rock.",
@@ -210,11 +225,18 @@ namespace KardashevAscent.Simulation.Game
                 case Material.Water: return "Ice or sea water, near cold ground and shores.";
                 case Material.Copper: return "Wiring metal, in high ground.";
                 case Material.Lithium: return "Battery metal, in dry inland basins.";
-                case Material.Aluminium: return "Light metal refined from rock.";
-                case Material.Sodium: return "Battery metal refined from rock.";
+                case Material.Aluminium: return "Light metal: alumina, then electrolysis.";
+                case Material.Sodium: return "Battery metal made from salt.";
+                case Material.Anorthosite: return "Aluminium ore: pale highland rock.";
+                case Material.Salt: return "Salt flats and sea water: sodium's source.";
+                case Material.Alumina: return "White powder: step 1 of aluminium.";
+                case Material.PureAluminium: return "99.99 % aluminium for chips.";
+                case Material.RareEarth: return "Deep ore for strong magnets.";
                 default: return "Waste rock left by refining.";
             }
         }
+
+        static string Days(double hours) => hours >= 48.0 ? $"{hours / 24.0:0.#} days" : $"{hours:0} h";
 
         static string Kg(double kg) => kg >= 1000.0 ? $"{kg / 1000.0:0.#} t" : $"{kg:0} kg";
 
@@ -258,7 +280,9 @@ namespace KardashevAscent.Simulation.Game
                 { "Solar panel", "Power from starlight. Tilt and facing matter; bigger tiers at milestones." },
                 { "Battery yard", "Stores power for the night; robots can charge there too." },
                 { "Floating solar", "A panel on shallow sea or wetland, cooled by the water. Needs a boat robot and the water experiments." },
-                { "Robot workshop", "Builds robots and upgrades, refines aluminium and sodium." },
+                { "Robot workshop", "Builds robots and upgrades. Refinery modules attach to it." },
+                { "Alumina plant", "Refinery module next to a Workshop: rock or anorthosite to alumina (3–4 days a batch)." },
+                { "Electrolysis cell", "Refinery module next to a Workshop: alumina to aluminium, salt to sodium (days to a week a batch)." },
                 { "Charging station", "Charges several robots at once from the grid." },
                 { "Relay", "Extends the colony network; needs grid power." },
                 { "Research station", "Where robots measure the planet and run experiments." },

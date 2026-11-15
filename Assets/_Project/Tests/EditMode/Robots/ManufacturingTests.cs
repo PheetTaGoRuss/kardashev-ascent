@@ -152,34 +152,6 @@ namespace KardashevAscent.Simulation.Tests.Robots
         }
 
         [Test]
-        public void Refining_TurnsRockIntoAluminium()
-        {
-            var sim = WithWorkshop();
-            Unlock(sim, 1);
-            sim.Materials.Add(Material.Rock, 100.0);
-            Assert.IsNull(sim.OrderRefine(Material.Aluminium));
-            Assert.AreEqual(100.0 - 60.0, sim.Materials[Material.Rock], 1e-9);
-            RunUntil(sim, () => sim.Jobs.Count == 0);
-            Assert.AreEqual(10.0, sim.Materials[Material.Aluminium], 1e-9);
-            StringAssert.DoesNotContain("milestone", sim.OrderRefine(Material.Sodium) ?? "", "sodium refining is open from the start");
-        }
-
-        [Test]
-        public void Refining_ConservesMass_TheRestOfTheRockIsSlag()
-        {
-            var sim = WithWorkshop();
-            Unlock(sim, 1);
-            sim.Materials.Add(Material.Rock, 100.0);
-            double before = sim.Materials[Material.Rock];
-            Assert.IsNull(sim.OrderRefine(Material.Aluminium));
-            RunUntil(sim, () => sim.Jobs.Count == 0);
-            double after = sim.Materials[Material.Rock] + sim.Materials[Material.Aluminium] + sim.Materials[Material.Slag];
-            Assert.AreEqual(before, after, 1e-9, "rock in = rock left + metal + slag");
-            Assert.AreEqual(50.0, sim.Materials[Material.Slag], 1e-9, "60 kg of rock for 10 kg of aluminium leaves 50 kg of slag");
-            Assert.IsTrue(sim.IndustrialReports[sim.IndustrialReports.Count - 1].Message.Contains("slag"));
-        }
-
-        [Test]
         public void Slag_IsKeptInSaves_AndOldSavesStillLoad()
         {
             var sim = WithWorkshop();

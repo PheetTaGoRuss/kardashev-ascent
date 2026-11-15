@@ -81,10 +81,13 @@ namespace KardashevAscent.Simulation.Game
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.Relay });
             foreach (var c in researchStations)
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.ResearchStation });
+            foreach (var kv in refineryModules)
+                state.Buildings.Add(new BuildingRecord { Tile = kv.Key.Tile, Slot = kv.Key.Slot, Type = kv.Value });
             foreach (BuildingRecord r in state.Buildings)
                 r.StandIns = StandInsAt(r.Tile, r.Slot);
             CaptureResearch(state);
             CapturePassages(state);
+            CaptureRefining(state);
             foreach (ManufacturingJob j in jobs)
                 state.Jobs.Add(new JobRecord
                 {
@@ -153,6 +156,8 @@ namespace KardashevAscent.Simulation.Game
             foreach (var key in new List<(int Tile, int Slot)>(relays))
                 RemoveBuilding(key.Tile, key.Slot);
             foreach (var key in new List<(int Tile, int Slot)>(researchStations))
+                RemoveBuilding(key.Tile, key.Slot);
+            foreach (var key in new List<(int Tile, int Slot)>(refineryModules.Keys))
                 RemoveBuilding(key.Tile, key.Slot);
             TimeHours = state.TimeHours;
             MilestonesReached = Math.Max(0, Math.Min(10, state.MilestonesReached));
@@ -241,6 +246,7 @@ namespace KardashevAscent.Simulation.Game
                         latitudePuzzles.Add(p);
             RestoreResearch(state);
             RestorePassages(state);
+            RestoreRefining(state);
             measureOrders.Clear();
             if (state.MeasureOrders != null)
                 foreach (MeasureOrderRecord mo in state.MeasureOrders)
@@ -277,6 +283,12 @@ namespace KardashevAscent.Simulation.Game
                         RobotId = jr.RobotId, Module = jr.Module, Output = jr.Output, OutputKg = jr.OutputKg, DoneHours = Math.Max(0.0, jr.DoneHours),
                     };
                     j.Recipe = RecipeOf(j);
+                    if (j.Kind == JobKind.Refine)
+                    {
+                        // Before version 34 the Workshop refined; refining now runs in refinery modules: give the rock back.
+                        foreach (var (m, kg) in j.Recipe.Inputs) Materials.Add(m, kg);
+                        continue;
+                    }
                     jobs.Add(j);
                 }
             industrialReports.Restore(state.IndustrialReports);
@@ -329,6 +341,13 @@ namespace KardashevAscent.Simulation.Game
                     return;
                 if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(BuildingType.ChargingStation), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r));
                 stations.Add((r.Tile, r.Slot));
+            }
+            else if (IsRefinery(r.Type))
+            {
+                if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
+                    return;
+                if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(r.Type), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r));
+                refineryModules[(r.Tile, r.Slot)] = r.Type;
             }
             else if (r.Type == BuildingType.ResearchStation)
             {
