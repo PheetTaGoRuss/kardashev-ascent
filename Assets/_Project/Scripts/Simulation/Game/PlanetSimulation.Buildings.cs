@@ -20,7 +20,7 @@ namespace KardashevAscent.Simulation.Game
                 return false;
             double area = NewPanelAreaM2(tileId);
             // It waits as a site until a robot works on it; an idle robot takes it now (design D2).
-            StartSite(tileId, slot, PanelCost(area), BuildCosts.BuildHours(BuildingType.SolarPanel, area));
+            StartSite(tileId, slot, PanelCost(area), BuildTimes.Hours(BuildingType.SolarPanel, area));
             AddPanel(tileId, slot, tilt, azimuth, area);
             Occupy(tileId, FootprintFor(BuildingType.SolarPanel, tileId, slot));
             Settle((tileId, slot));
@@ -57,7 +57,7 @@ namespace KardashevAscent.Simulation.Game
             if (!CanPlace(BuildingType.FloatingSolar, tileId, slot) || !PreviewFloatingPanel(tileId, tilt, azimuth).CanPlace)
                 return false;
             double area = NewPanelAreaM2(tileId);
-            StartSite(tileId, slot, PanelCost(area).Times(FloatingCostFactor), BuildCosts.BuildHours(BuildingType.FloatingSolar, area));
+            StartSite(tileId, slot, PanelCost(area).Times(FloatingCostFactor), BuildTimes.Hours(BuildingType.FloatingSolar, area));
             AddPanel(tileId, slot, tilt, azimuth, area);
             floatingPanels.Add((tileId, slot));
             Occupy(tileId, FootprintFor(BuildingType.FloatingSolar, tileId, slot));
@@ -110,7 +110,7 @@ namespace KardashevAscent.Simulation.Game
         {
             if (!CanPlace(BuildingType.Battery, tileId, slot))
                 return false;
-            bool finished = StartSite(tileId, slot, BuildBill(BuildingType.Battery), BuildCosts.BuildHours(BuildingType.Battery));
+            bool finished = StartSite(tileId, slot, BuildBill(BuildingType.Battery), BuildTimes.Hours(BuildingType.Battery));
             AddBattery(tileId, slot);
             Occupy(tileId, FootprintFor(BuildingType.Battery, tileId, slot));
             if (finished)
