@@ -109,6 +109,20 @@ namespace KardashevAscent.Simulation.Resources
             return d;
         }
 
+        // Where each material can be, as named rules: the generator below and the guide book read the same ones.
+
+        /// <summary>Ground that holds ice, or (with a sea next to it) water to pump.</summary>
+        public static bool IsIceGround(TerrainType t) => t == TerrainType.Ice || t == TerrainType.FrozenSea || t == TerrainType.Tundra;
+
+        /// <summary>High ground where copper ores form (arc porphyry near a sea; magmatic sulfides anywhere).</summary>
+        public static bool IsCopperGround(TerrainType t) => t == TerrainType.Mountain || t == TerrainType.Highland || t == TerrainType.VolcanicRock;
+
+        /// <summary>Low ground where lithium brines collect (inland, beside high ground, on a planet that had water).</summary>
+        public static bool IsLithiumGround(TerrainType t) => t == TerrainType.Lowland || t == TerrainType.Desert || t == TerrainType.DryBasin;
+
+        /// <summary>Ground counted as "high" next to a lithium basin.</summary>
+        public static bool IsHighNeighbour(TerrainType t) => IsCopperGround(t);
+
         static List<Deposit> Generate(HexSphere sphere, PlanetSurface surface, PlanetChemistry chem, int seed, int t, int tilesToSea)
         {
             var list = new List<Deposit>();
@@ -121,7 +135,7 @@ namespace KardashevAscent.Simulation.Resources
             {
                 TerrainType nt = surface.Terrain[n];
                 waterNeighbour |= Terrains.IsWater(nt);
-                highNeighbour |= nt == TerrainType.Highland || nt == TerrainType.Mountain || nt == TerrainType.VolcanicRock;
+                highNeighbour |= IsHighNeighbour(nt);
             }
 
             list.Add(new Deposit(Material.Rock, 1.0));
@@ -137,7 +151,7 @@ namespace KardashevAscent.Simulation.Resources
             // Copper (claims 1 and 5). Arc copper (porphyry, epithermal) forms in high ground near a sea on a planet with
             // water; stand-in: highland or mountain within ArcReachTiles of a sea. Magmatic and impact Ni-Cu sulfides
             // form in high ground on any planet, rarer and poorer.
-            bool high = here == TerrainType.Mountain || here == TerrainType.Highland || here == TerrainType.VolcanicRock;
+            bool high = IsCopperGround(here);
             if (high && chem.WaterHistory && tilesToSea <= ArcReachTiles && Hash01(seed, t, 3) < CopperShare)
                 list.Add(new Deposit(Material.Copper, chem.MetalFactor * Vary(seed, t, 4)));
             else if (high && Hash01(seed, t, 7) < SulfideCopperShare)
@@ -145,7 +159,7 @@ namespace KardashevAscent.Simulation.Resources
 
             // Lithium brine: arid closed basin with a volcanic source and a water history (claim 2, USGS).
             // Stand-in: inland low ground (no sea next to it) beside highlands.
-            bool low = here == TerrainType.Lowland || here == TerrainType.Desert || here == TerrainType.DryBasin;
+            bool low = IsLithiumGround(here);
             if (chem.WaterHistory && low && !waterNeighbour && highNeighbour && Hash01(seed, t, 5) < LithiumShare)
                 list.Add(new Deposit(Material.Lithium, chem.MetalFactor * Vary(seed, t, 6)));
             return list;

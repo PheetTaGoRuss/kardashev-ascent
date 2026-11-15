@@ -17,7 +17,7 @@ namespace KardashevAscent.Presentation.UI
         const float RefreshInterval = 0.5f;
 
         readonly List<SystemWindow> windows = new List<SystemWindow>
-            { new PowerWindow(), new ManufacturingWindow(), new ResearchWindow(), new NetworkWindow() };
+            { new PowerWindow(), new ManufacturingWindow(), new ResearchWindow(), new NetworkWindow(), new GuideWindow() };
 
         SimulationRunner runner;
         VisualElement bar;
