@@ -84,6 +84,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             GuidePage na = pages.First(p => p.Material == Material.Sodium);
             Assert.IsTrue(na.Mentions("Battery yard"));
             Assert.IsTrue(pages.Any(p => p.Mentions("Mars") && p.Mentions("aluminium")), "a page on starting a dry planet");
+            Assert.IsTrue(pages.First(p => p.Material == Material.Copper).Mentions("runs out"), "deposits run out");
         }
 
         [Test]

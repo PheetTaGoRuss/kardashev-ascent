@@ -44,6 +44,28 @@ namespace KardashevAscent.Simulation.Resources
 
         readonly List<Deposit>[] deposits;
         readonly HashSet<int> surveyed = new HashSet<int>();
+        /// <summary>Tiles whose water is pumped from the sea next to them (no ice): it does not run out.</summary>
+        readonly bool[] seaWater;
+        readonly Dictionary<(int Tile, Material Material), double> mined = new Dictionary<(int, Material), double>();
+
+        /// <summary>
+        /// What a grade-1 deposit holds within reach of the colony's robots on one tile, kg (director 2026-11-15:
+        /// deposits run out; KI-12). Game rule, TBD (D4): only the order matters so far. Common materials hold more
+        /// than rare ones, as in the crust (rock and iron are bulk; copper and lithium are scarce). A deposit holds
+        /// its grade times this. Sea water pumped from a shore never runs out.
+        /// </summary>
+        public static double ReserveKgAtGrade1(Material m)
+        {
+            switch (m)
+            {
+                case Material.Rock: return 1_000_000.0;
+                case Material.Iron: return 50_000.0;
+                case Material.Water: return 50_000.0;
+                case Material.Copper: return 3_000.0;
+                case Material.Lithium: return 500.0;
+                default: return 0.0;
+            }
+        }
 
         public DepositMap(HexSphere sphere, PlanetSurface surface, PlanetChemistry chemistry, int seed)
         {
@@ -51,9 +73,71 @@ namespace KardashevAscent.Simulation.Resources
             if (surface == null) throw new ArgumentNullException(nameof(surface));
             Chemistry = chemistry;
             deposits = new List<Deposit>[sphere.TileCount];
+            seaWater = new bool[sphere.TileCount];
             int[] toSea = SeaDistance(sphere, surface);
             for (int t = 0; t < sphere.TileCount; t++)
+            {
                 deposits[t] = Generate(sphere, surface, chemistry, seed, t, toSea[t]);
+                TerrainType here = surface.Terrain[t];
+                seaWater[t] = !Terrains.IsWater(here) && !IsIceGround(here) && GradeOf(t, Material.Water) > 0.0;
+            }
+        }
+
+        /// <summary>True when this material never runs out here (sea water pumped from a shore).</summary>
+        public bool IsEndless(int tile, Material m) => m == Material.Water && seaWater[tile];
+
+        /// <summary>What the deposit held before any mining, kg (0 if there is none; infinity for sea water).</summary>
+        public double ReserveKg(int tile, Material m)
+        {
+            double grade = GradeOf(tile, m);
+            if (grade <= 0.0) return 0.0;
+            return IsEndless(tile, m) ? double.PositiveInfinity : grade * ReserveKgAtGrade1(m);
+        }
+
+        /// <summary>Mined from this tile so far, kg.</summary>
+        public double MinedKg(int tile, Material m) => mined.TryGetValue((tile, m), out double kg) ? kg : 0.0;
+
+        /// <summary>What is still in the ground, kg.</summary>
+        public double RemainingKg(int tile, Material m) => Math.Max(0.0, ReserveKg(tile, m) - MinedKg(tile, m));
+
+        /// <summary>Share of the deposit still in the ground, 0–1 (1 for sea water).</summary>
+        public double RemainingShare(int tile, Material m)
+        {
+            double reserve = ReserveKg(tile, m);
+            return reserve <= 0.0 ? 0.0 : double.IsPositiveInfinity(reserve) ? 1.0 : RemainingKg(tile, m) / reserve;
+        }
+
+        public bool IsExhausted(int tile, Material m) => GradeOf(tile, m) > 0.0 && RemainingKg(tile, m) <= 1e-9;
+
+        /// <summary>Take up to <paramref name="kg"/> out of the ground; returns what came out.</summary>
+        public double Extract(int tile, Material m, double kg)
+        {
+            if (kg <= 0.0) return 0.0;
+            double take = Math.Min(kg, RemainingKg(tile, m));
+            if (take <= 0.0) return 0.0;
+            if (!IsEndless(tile, m))
+                mined[(tile, m)] = MinedKg(tile, m) + take;
+            return take;
+        }
+
+        /// <summary>Everything mined so far (for saving).</summary>
+        public IEnumerable<(int Tile, Material Material, double Kg)> Mined
+        {
+            get
+            {
+                foreach (var kv in mined)
+                    yield return (kv.Key.Tile, kv.Key.Material, kv.Value);
+            }
+        }
+
+        /// <summary>Put back what was mined (when a game is loaded).</summary>
+        public void SetMined(IEnumerable<(int Tile, Material Material, double Kg)> list)
+        {
+            mined.Clear();
+            if (list == null) return;
+            foreach (var (t, m, kg) in list)
+                if (t >= 0 && t < deposits.Length && kg > 0.0 && !IsEndless(t, m))
+                    mined[(t, m)] = MinedKg(t, m) + kg;
         }
 
         public PlanetChemistry Chemistry { get; }
