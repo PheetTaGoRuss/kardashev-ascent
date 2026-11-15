@@ -12,7 +12,7 @@
 
 .sky {
     position: absolute;
-    top: 80px;
+    top: 88px;
     right: 8px;
     width: 480px;
     max-height: 88%;

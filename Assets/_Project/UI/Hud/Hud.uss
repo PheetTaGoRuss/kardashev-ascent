@@ -22,7 +22,7 @@
 .time-block { width: 170px; }
 .power-block { width: 150px; }
 .meter-block { width: 170px; }
-.build-block { width: 170px; }
+.build-block { width: 300px; }   /* one row of material icons: the bar keeps its height */
 .build-block .caption { white-space: normal; }
 
 .divider {
