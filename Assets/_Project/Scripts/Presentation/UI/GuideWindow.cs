@@ -107,11 +107,12 @@ namespace KardashevAscent.Presentation.UI
                 item.style.height = 28;
                 item.style.marginBottom = 3;
                 item.style.paddingLeft = 6;
-                if (p.Material.HasValue)
+                VisualElement thumb = p.Material.HasValue ? new GuidePicture(p.Material.Value, 24f)
+                                    : p.Ground.HasValue ? new GuidePicture(p.Ground.Value, 24f) : null;
+                if (thumb != null)
                 {
-                    VisualElement icon = MaterialChips.Icon(p.Material.Value, 18f);
-                    icon.style.marginRight = 6;
-                    item.Add(icon);
+                    thumb.style.marginRight = 6;
+                    item.Add(thumb);
                 }
                 var name = new Label(searching ? $"{p.Title} · {p.Category}" : p.Title);
                 name.style.fontSize = 14;
@@ -132,11 +133,19 @@ namespace KardashevAscent.Presentation.UI
             var head = new VisualElement();
             head.style.flexDirection = FlexDirection.Row;
             head.style.alignItems = Align.Center;
+            // A picture of the material or the ground (director 2026-11-15).
+            VisualElement picture = open.Material.HasValue ? new GuidePicture(open.Material.Value, 88f)
+                                  : open.Ground.HasValue ? new GuidePicture(open.Ground.Value, 88f) : null;
+            if (picture != null)
+            {
+                picture.style.marginRight = 12;
+                head.Add(picture);
+            }
             if (open.Material.HasValue)
             {
-                VisualElement big = MaterialChips.Icon(open.Material.Value, 30f);
-                big.style.marginRight = 10;
-                head.Add(big);
+                VisualElement chip = MaterialChips.Icon(open.Material.Value, 22f);
+                chip.style.marginRight = 8;
+                head.Add(chip);
             }
             var title = new Label(open.Title);
             title.style.fontSize = 22;

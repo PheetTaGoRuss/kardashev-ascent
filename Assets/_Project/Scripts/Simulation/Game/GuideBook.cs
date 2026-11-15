@@ -26,6 +26,8 @@ namespace KardashevAscent.Simulation.Game
         public List<(string Heading, List<string> Lines)> Sections { get; } = new List<(string, List<string>)>();
         /// <summary>A material the page is about (for its icon), if any.</summary>
         public Material? Material { get; set; }
+        /// <summary>A ground the page is about (for its picture), if any.</summary>
+        public TerrainType? Ground { get; set; }
 
         public GuidePage Add(string heading, params string[] lines)
         {
@@ -189,7 +191,7 @@ namespace KardashevAscent.Simulation.Game
             string use = Terrains.IsWater(t) ? (Terrains.AllowsFloating(t) ? "Floating solar only" : "No building")
                        : Terrains.AllowsFloating(t) ? "Floating solar only (too soft for land buildings)"
                        : "Land buildings";
-            var page = new GuidePage(Ground, name, use + ".");
+            var page = new GuidePage(Ground, name, use + ".") { Ground = t };
             var materials = Resources.Materials.Mined.Where(m => GroundsWith(m).Contains(t)).Select(Resources.Materials.Name).ToList();
             page.Add("Can hold", materials.Count > 0 ? string.Join(", ", materials) + (t == TerrainType.Lowland || t == TerrainType.Desert || t == TerrainType.DryBasin ? " (lithium only inland beside high ground)" : "") + "."
                                                      : "Nothing robots can mine yet.");
