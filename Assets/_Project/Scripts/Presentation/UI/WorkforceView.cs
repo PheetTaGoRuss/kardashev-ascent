@@ -34,6 +34,7 @@ namespace KardashevAscent.Presentation.UI
         /// <summary>The robot the TASKS Reserve buttons act on.</summary>
         int targetRobotId = -1;
         Label subtitle, summary, notes, workshopMessage;
+        InfoTip summaryTip;
         readonly System.Collections.Generic.HashSet<int> openGroups = new System.Collections.Generic.HashSet<int>();
         float nextRefresh;
         string shownShape;
@@ -55,6 +56,8 @@ namespace KardashevAscent.Presentation.UI
             subtitle = root.Q<Label>("subtitle");
             summary = root.Q<Label>("summary");
             notes = root.Q<Label>("notes");
+            if (summary != null)
+                summaryTip = InfoTip.After(summary, "");   // the full line behind "i" (director 2026-11-15)
             workshopMessage = root.Q<Label>("workshop-message");
             groupActions = root.Q("group-actions");
             tasksHolder = root.Q("tasks");
@@ -104,7 +107,12 @@ namespace KardashevAscent.Presentation.UI
             foreach (Robot r in w.Robots)
                 if (r.State == RobotState.Working) working++;
             subtitle.text = $"{toggleKey}: close";
-            summary.text = $"{w.Robots.Count} robot{(w.Robots.Count == 1 ? "" : "s")} · {working} working · " +
+            int blocked = w.Tasks.Count(TaskState.Blocked), help = w.Tasks.Count(TaskState.AssistanceNeeded);
+            bool shortOf = !sim.ConstructionShortfall.IsEmpty;
+            summary.text = $"{w.Robots.Count} robots · {working} working · {sim.ConstructionQueueCount} sites" +
+                           (shortOf ? " · short" : "") + (blocked + help > 0 ? $" · {blocked + help} stuck" : "");
+            summary.style.color = shortOf || blocked + help > 0 ? UiPalette.Warning : StyleKeyword.Null;
+            if (summaryTip != null) summaryTip.Text = $"{w.Robots.Count} robot{(w.Robots.Count == 1 ? "" : "s")} · {working} working · " +
                            $"{sim.ConstructionQueueCount} site{(sim.ConstructionQueueCount == 1 ? "" : "s")} waiting · " +
                            (sim.ConstructionShortfall.IsEmpty ? "materials in stock" : $"sites short of {sim.ConstructionShortfall.Describe()}") +
                            (w.Tasks.Count(TaskState.Blocked) > 0 ? $" · {w.Tasks.Count(TaskState.Blocked)} blocked" : "") +
@@ -142,7 +150,10 @@ namespace KardashevAscent.Presentation.UI
                 if (taskLabels.TryGetValue(r.Id, out Label l))
                     l.text = TaskText(sim, r);
                 if (vitalLabels.TryGetValue(r.Id, out Label v))
-                    v.text = Vitals(r);
+                {
+                    v.text = ShortVitals(r);
+                    v.tooltip = Vitals(r);   // the full numbers on hover
+                }
             }
         }
 
@@ -562,6 +573,11 @@ namespace KardashevAscent.Presentation.UI
             return options[(i + 1) % options.Count];
         }
 
+        /// <summary>One short line: battery, health and condition (the details are in the tooltip).</summary>
+        static string ShortVitals(Robot r) =>
+            $"Battery {r.Battery.StateOfCharge * 100.0:0} % · health {r.Battery.Health * 100.0:0} % · condition {r.Condition * 100.0:0} %" +
+            (r.Battery.ColdFactor < 0.999 ? " · cold" : "");
+
         static string Vitals(Robot r) =>
             $"Battery {r.Battery.StateOfCharge * 100.0:0} % · health {r.Battery.Health * 100.0:0} % " +
             $"({r.Battery.EquivalentFullCycles:0} cycles" + (r.Battery.ZeroDischarges > 0 ? $", {r.Battery.ZeroDischarges}× run flat" : "") + ")" +
@@ -572,8 +588,7 @@ namespace KardashevAscent.Presentation.UI
         static string TaskText(IPlanetSimulation sim, Robot r)
         {
             if (r.IsStranded)
-                return $"Stranded on tile {r.Tile}: battery empty away from a charger. Rescue is a later feature; " +
-                       "a battery yard built on this tile would charge it.";
+                return $"Stranded on tile {r.Tile}: battery empty · build a battery yard there";
             if (r.ManualTarget.HasValue)
                 return $"Driving to tile {r.ManualTarget.Value} (sent by you) · {r.HopsLeft} tile{(r.HopsLeft == 1 ? "" : "s")} to go";
             string what = DoingText(sim, r);
