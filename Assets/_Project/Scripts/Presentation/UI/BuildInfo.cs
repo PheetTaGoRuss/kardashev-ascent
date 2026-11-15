@@ -10,10 +10,12 @@ namespace KardashevAscent.Presentation.UI
     /// </summary>
     public static class BuildInfo
     {
-        public enum Category { Power, Stations }
+        public enum Category { Power, Stations, Industry }
 
         public static Category CategoryOf(BuildMode m) =>
-            m == BuildMode.SolarPanel || m == BuildMode.FloatingSolar || m == BuildMode.Battery ? Category.Power : Category.Stations;
+            m == BuildMode.SolarPanel || m == BuildMode.FloatingSolar || m == BuildMode.Battery ? Category.Power
+            : m == BuildMode.Workshop || m == BuildMode.AluminaPlant || m == BuildMode.Electrolyser ? Category.Industry
+            : Category.Stations;
 
         public static string Title(BuildMode m)
         {
@@ -25,6 +27,8 @@ namespace KardashevAscent.Presentation.UI
                 case BuildMode.Workshop: return "Robot Workshop";
                 case BuildMode.ChargingStation: return "Charging station";
                 case BuildMode.ResearchStation: return "Research Station";
+                case BuildMode.AluminaPlant: return "Alumina plant";
+                case BuildMode.Electrolyser: return "Electrolysis cell";
                 default: return "Network relay";
             }
         }
@@ -47,7 +51,11 @@ namespace KardashevAscent.Presentation.UI
                     what = $"Stores {Format.Energy(placer.BatteryUnitWh)} for the night. Robots can charge here.";
                     break;
                 case BuildMode.Workshop:
-                    what = "Builds robots and upgrades, refines aluminium and sodium. Manufacturing (U).";
+                    what = "Builds robots and upgrades. Refinery modules attach to it. Manufacturing (U).";
+                    break;
+                case BuildMode.AluminaPlant:
+                case BuildMode.Electrolyser:
+                    what = Short(m == BuildMode.AluminaPlant ? BuildingType.AluminaPlant : BuildingType.Electrolyser);
                     break;
                 case BuildMode.ChargingStation:
                     ChargingCapability c = ChargingCapability.Station;
@@ -60,8 +68,29 @@ namespace KardashevAscent.Presentation.UI
                     what = $"Network +{ColonyNetwork.RangeTiles} tiles. Uses {Format.Power(ColonyNetwork.RelayPowerW)}; off in a brownout.";
                     break;
             }
+            what += $"\nTakes {placer.BuildHoursOf(m) / 24.0:0.#} robot-days to build (a crew is faster).";
             int slots = placer.FootprintOf(m);
             return what + $"\n{slots} slot{(slots == 1 ? "" : "s")} · drag it onto the site · cost (red = short):";
+        }
+
+        /// <summary>One or two lines on a building, for the hover card.</summary>
+        public static string Short(BuildingType t)
+        {
+            switch (t)
+            {
+                case BuildingType.SolarPanel: return "Makes power from starlight; tilt and facing set how much.";
+                case BuildingType.FloatingSolar: return "A solar panel on pontoons, cooled by the water.";
+                case BuildingType.Battery: return "Stores power for the night; robots can charge here.";
+                case BuildingType.Workshop: return "Builds robots and upgrades. Refinery modules attach to its sides.";
+                case BuildingType.ChargingStation: return "Charges robots from the grid near their work.";
+                case BuildingType.Relay: return "Extends the robot network; needs grid power.";
+                case BuildingType.ResearchStation: return "Measurements and experiments (Research, T).";
+                case BuildingType.AluminaPlant:
+                    return "Refinery module: sinters anorthosite or rock and leaches out alumina (step 1 of aluminium). One batch at a time, 3–4 days each. Must touch a Workshop.";
+                case BuildingType.Electrolyser:
+                    return "Refinery module: electrolysis. Alumina to aluminium (about a week), salt to sodium, aluminium to 99.99 %. Must touch a Workshop.";
+                default: return "";
+            }
         }
     }
 }
