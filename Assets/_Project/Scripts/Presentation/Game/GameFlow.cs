@@ -784,13 +784,13 @@ namespace KardashevAscent.Presentation.Game
         {
             VisualElement s = Screen(dim: 0.32f);
             s.style.alignItems = Align.FlexEnd;
-            s.style.paddingRight = new Length(6, LengthUnit.Percent);
+            s.style.paddingRight = new Length(3, LengthUnit.Percent);
             s.RegisterCallback<PointerDownEvent>(e => { if (e.target == s) ShowOverlay(s, false); });
             var panel = new VisualElement();
             panel.AddToClassList("panel");
             panel.AddToClassList("overlay-panel");
             panel.style.width = width;
-            panel.style.maxWidth = new Length(88, LengthUnit.Percent);
+            panel.style.maxWidth = new Length(40, LengthUnit.Percent);   // clear of the title on small screens
             panel.style.maxHeight = new Length(84, LengthUnit.Percent);
             panel.style.paddingLeft = panel.style.paddingRight = 30;
             panel.style.paddingTop = 22; panel.style.paddingBottom = 20;
