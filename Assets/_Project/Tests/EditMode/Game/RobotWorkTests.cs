@@ -266,9 +266,10 @@ namespace KardashevAscent.Simulation.Tests.Game
         // ---- Phase 2: batteries, charging, wear ----
 
         [Test]
-        public void OverTenDays_TheRobotChargesAtTheLander_AndNeverRunsFlat()
+        public void OverTenDays_TheRobotChargesAtACharger_AndNeverRunsFlat()
         {
             var sim = Create();
+            KardashevAscent.Simulation.Tests.TestColony.AddCharger(sim);
             Robot r = sim.Workforce.Robots[0];
             bool charged = false;
             double lowest = 1.0;
@@ -286,6 +287,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         public void RobotCharging_CountsAsUsedPower()
         {
             var sim = Create();
+            KardashevAscent.Simulation.Tests.TestColony.AddCharger(sim);
             Robot r = sim.Workforce.Robots[0];
             r.Battery.Restore(0.0, 0.1 * RobotSpecs.BatteryCapacityWh);
             sim.Tick(0.25);
@@ -295,23 +297,39 @@ namespace KardashevAscent.Simulation.Tests.Game
         }
 
         [Test]
-        public void NoPanels_EmptyBattery_TheRobotStillRecovers_AndCanBuild()
+        public void WithoutACharger_ARobotCannotRecharge_ItWorksOnAndBuildsOne()
         {
+            // Director 2026-11-15: no charger, no recharging (the lander only repairs). With no charger anywhere a
+            // robot has nothing to keep charge for: it keeps working, so the first crew can build the charger.
             var sim = Create();
-            sim.Grid.Battery.SetStored(0.0);
             Robot r = sim.Workforce.Robots[0];
             r.Battery.Restore(0.0, 0.15 * RobotSpecs.BatteryCapacityWh);
+            double start = r.Battery.StateOfCharge;
+            for (int h = 0; h < 2; h++)
+                sim.Tick(1.0);
+            Assert.Less(r.Battery.StateOfCharge, start, "nothing charged it");
+            Assert.AreNotEqual(RobotState.Charging, r.State);
+            Assert.IsTrue(r.Available, "below 20 % it still works: there is no charger to keep charge for");
+
+            double before = r.Battery.StateOfCharge;
+            KardashevAscent.Simulation.Tests.TestColony.AddCharger(sim);   // the robot builds it
+            Assert.IsTrue(sim.RobotFacilities().Exists(f => f.Capability.Charges));
             double highest = 0.0;
-            for (int h = 0; h < 12; h++)
+            for (int h = 0; h < 24; h++)
             {
                 sim.Tick(1.0);
-                highest = System.Math.Max(highest, r.Battery.StateOfCharge);
+                highest = Math.Max(highest, r.Battery.StateOfCharge);
             }
-            Assert.IsTrue(sim.IsBrownout, "the colony has nothing to spare");
-            Assert.GreaterOrEqual(highest, RobotSpecs.ResumeWorkFraction - 0.01, "the lander's RTGs charged it to 80 %");
-            Assert.IsTrue(r.Available);
-            Assert.IsTrue(sim.PlacePanel(sim.BaseTileId, 0, 0.3, Math.PI));
-            Assert.IsFalse(sim.IsUnderConstruction(sim.BaseTileId, 0));
+            Assert.Greater(highest, before + 0.1, "with a charger on the landing tile it charges, even with no panels");
+        }
+
+        [Test]
+        public void TheLander_RepairsButDoesNotCharge()
+        {
+            Assert.IsFalse(ChargingCapability.Lander.Charges);
+            Assert.IsTrue(ChargingCapability.Lander.Repairs);
+            Assert.IsTrue(ChargingCapability.Station.Charges);
+            Assert.IsTrue(ChargingCapability.BatteryYard.Charges);
         }
 
         [Test]

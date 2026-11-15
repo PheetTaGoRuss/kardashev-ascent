@@ -194,10 +194,18 @@ namespace KardashevAscent.Simulation.Robots
         {
             Routes = routes;
             HoursToCharger = hoursToCharger;
+            if (hoursToCharger != null)
+                foreach (double h in hoursToCharger)
+                    if (!double.IsInfinity(h)) { HasCharger = true; break; }
             HoursToChargerOnWater = hoursToChargerOnWater;
         }
 
         public RouteFinder Routes { get; }
+        /// <summary>
+        /// False while the colony has no charger (director 2026-11-15: no charger, no recharging): robots then work
+        /// until their battery is empty instead of keeping charge for a way back to nowhere.
+        /// </summary>
+        public bool HasCharger { get; }
         /// <summary>Driving hours from each tile to the nearest charger.</summary>
         public double[] HoursToCharger { get; }
         /// <summary>The same for a robot with a boat module (null: as on land).</summary>

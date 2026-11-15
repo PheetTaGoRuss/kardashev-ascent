@@ -128,8 +128,14 @@ namespace KardashevAscent.Simulation.Robots
             AllowedKinds = null;
         }
 
-        /// <summary>The lander: the robots' home, charges and repairs (D10). TBD values.</summary>
-        public static ChargingCapability Lander => new ChargingCapability(2, 1_000.0, true);
+        /// <summary>
+        /// The lander: the robots' home and repair dock (D10). It does not charge robots (director 2026-11-15: no
+        /// charger, no recharging): they charge at a battery yard or a charging station.
+        /// </summary>
+        public static ChargingCapability Lander => new ChargingCapability(2, 0.0, true);
+
+        /// <summary>True when robots can charge here.</summary>
+        public bool Charges => PowerW > 0.0;
 
         /// <summary>A battery yard charges robots (spec §6 example). TBD values.</summary>
         public static ChargingCapability BatteryYard => new ChargingCapability(4, 2_000.0, false);

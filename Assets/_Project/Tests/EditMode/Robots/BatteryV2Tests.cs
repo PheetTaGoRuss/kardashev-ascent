@@ -1,3 +1,4 @@
+using static KardashevAscent.Simulation.Tests.TestColony;
 using System;
 using System.Collections.Generic;
 using KardashevAscent.Simulation.Game;
@@ -138,7 +139,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             var w = new Workforce();
             Robot r = w.AddRobot(RobotKind.General, 0);
             r.Condition = 0.4;
-            var lander = new List<RobotFacility> { new RobotFacility(0, -1, ChargingCapability.Lander) };
+            var lander = new List<RobotFacility> { new RobotFacility(0, -1, TestDock) };
             var up = new RobotUpkeep();
             up.Plan(w, lander, 0.25);
             Assert.AreEqual(RobotActivity.None, r.Activity, "default rule: below 30 %");
@@ -158,7 +159,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
                 r.Condition = 0.1;
                 var stock = new MaterialStock();
                 stock.Add(Material.Iron, iron);
-                var lander = new List<RobotFacility> { new RobotFacility(0, -1, ChargingCapability.Lander) };
+                var lander = new List<RobotFacility> { new RobotFacility(0, -1, TestDock) };
                 var up = new RobotUpkeep();
                 up.Plan(w, lander, 1.0);
                 up.Apply(w, 1.0, 0.0, 0.0, 0.0, false, null, stock);
