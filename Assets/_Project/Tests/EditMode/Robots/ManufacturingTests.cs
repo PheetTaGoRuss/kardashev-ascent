@@ -22,9 +22,10 @@ namespace KardashevAscent.Simulation.Tests.Robots
         {
             var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { ConstructionTimeEnabled = false };
             sim.Workforce.Reset(sim.BaseTileId, 1);   // these tests follow one robot
+            foreach (var (m, kg) in sim.BuildBill(BuildingType.Workshop).Items()) sim.Materials.Add(m, kg);   // the lander brings only its copper
             Assert.IsTrue(sim.PlaceWorkshop(sim.BaseTileId, 5));
             RunUntil(sim, () => sim.WorkshopCount == 1);
-            Assert.AreEqual(1, sim.WorkshopCount, "a starter robot builds it from the lander's cargo");
+            Assert.AreEqual(1, sim.WorkshopCount, "a starter robot builds it");
             sim.Materials.Clear();   // tests stock exactly what they need
             return sim;
         }
