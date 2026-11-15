@@ -144,6 +144,12 @@ namespace KardashevAscent.Presentation.UI
             plannerBest = root.Q<Label>("planner-best");
             plannerReason = root.Q<Label>("planner-reason");
             plannerCost = root.Q<Label>("planner-cost");
+            // "i" boxes for the planner's numbers and angles (director 2026-11-15).
+            Label plannerNumbersLabel = root.Q<Label>("planner-numbers"), placedNumbersLabel = root.Q<Label>("placed-numbers");
+            Label tiltL = root.Q<Label>("tilt-label");
+            if (plannerNumbersLabel != null) InfoTip.After(plannerNumbersLabel, NumbersInfo);
+            if (tiltL != null) InfoTip.After(tiltL, "Tilt β: 0° lies flat, 90° stands upright. Facing γ: the compass direction the panel faces " +
+                                                    "(180° = south). A panel facing the equator, tilted about your latitude, gets the most over a year.");
             plannerCostRow = new VisualElement();
             plannerCostRow.style.marginTop = 4;
             if (plannerCost != null)
@@ -470,7 +476,7 @@ namespace KardashevAscent.Presentation.UI
                 : stationMode ? "Charges robots · build it near their work"
                 : workshopMode ? "Robots, upgrades, refining · Manufacturing (U)"
                 : $"Stores {Format.Energy(placer.BatteryUnitWh)} for the night";
-            tiltLabel.text = $"Tilt β  {placer.TiltDeg:0}°  (0° flat, 90° upright)";
+            tiltLabel.text = $"Tilt β  {placer.TiltDeg:0}°";
             facingLabel.text = $"Facing γ  {placer.AzimuthDeg:0}° {Compass(placer.AzimuthDeg)}";
 
             PanelPreview preview = placer.Preview;
@@ -535,10 +541,12 @@ namespace KardashevAscent.Presentation.UI
             legendTile.text = tile >= 0 ? $"Tile #{tile}: {lightMap.ValueAt(tile):N0} kWh/m²/yr" : "Point at a tile for its value";
         }
 
+        // One short line; what the numbers mean is behind "i" (director 2026-11-15).
         static string Numbers(PanelPreview p) =>
-            $"Energy  {Format.Energy(p.EnergyPerYearWh)} / year\n" +
-            $"Capacity factor  {p.CapacityFactor * 100.0:0.0} %\n" +
-            $"EROI  {p.Eroi:0.0}  ·  payback  {(double.IsInfinity(p.PaybackYears) || double.IsNaN(p.PaybackYears) ? "never" : $"{p.PaybackYears:0.0} years")}";
+            $"{Format.Energy(p.EnergyPerYearWh)}/yr · CF {p.CapacityFactor * 100.0:0} % · EROI {p.Eroi:0}" +
+            $" · pays back {(double.IsInfinity(p.PaybackYears) || double.IsNaN(p.PaybackYears) ? "never" : $"{p.PaybackYears:0.0} y")}";
+
+        const string NumbersInfo = "Energy: what the panel makes in an Earth year here. Capacity factor: that energy as a share of running at full power all year (nights, angle, air and clouds take the rest). EROI: energy it returns for the energy it took to make. Payback: years until it has returned that energy.";
 
         static string Compass(float azimuthDeg)
         {
