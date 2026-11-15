@@ -67,7 +67,9 @@ namespace KardashevAscent.Presentation.Game
         TilePicker picker;
         SiteView siteView;
         PanelPlacer placer;
-        VisualElement root, mainMenu, pauseMenu, landingBanner, setupPanel;
+        VisualElement root, mainMenu, pauseMenu, landingBanner, setupPanel, settingsScreen, creditsScreen, menuButtons, menuHome;
+        GuideWindow menuGuide;
+        VisualElement menuGuidePanel;
         Label setupSteps, setupNow;
         int setupTile = -1;
         float nextSetupRefresh;
@@ -137,6 +139,10 @@ namespace KardashevAscent.Presentation.Game
             Phase = phase;
             pauseOpen = false;
             Show(mainMenu, phase == GamePhase.MainMenu);
+            Show(settingsScreen, false);
+            Show(creditsScreen, false);
+            ShowMenuGuide(false);
+            if (phase == GamePhase.MainMenu) FadeIn(menuHome);
             Show(pauseMenu, false);
             Show(landingBanner, phase == GamePhase.Landing);
             Show(setupPanel, phase == GamePhase.Setup);
@@ -292,9 +298,15 @@ namespace KardashevAscent.Presentation.Game
             if (Phase == GamePhase.ChoosingPlanet && chooser != null && !chooser.Visible)
                 SetPhase(GamePhase.Landing);
 
+            if (!IsPlaying && ScreenInput.KeyDown(KeyCode.J))
+                ShowMenuGuide(menuGuide == null || !menuGuide.Visible);
+
             if (ScreenInput.KeyDown(KeyCode.Escape))
             {
-                if (pauseOpen) ClosePause();
+                if (menuGuide != null && menuGuide.Visible) ShowMenuGuide(false);
+                else if (settingsScreen != null && settingsScreen.style.display == DisplayStyle.Flex) ShowSettings(false);
+                else if (creditsScreen != null && creditsScreen.style.display == DisplayStyle.Flex) ShowCredits(false);
+                else if (pauseOpen) ClosePause();
                 else if (IsPlaying && idleLastFrame) OpenPause();
             }
         }
@@ -340,27 +352,7 @@ namespace KardashevAscent.Presentation.Game
 
         void BuildMenus()
         {
-            mainMenu = Screen(dim: 0.88f);
-            VisualElement box = Box(mainMenu, 360);
-            var title = new Label("Kardashev Ascent");
-            title.style.fontSize = 30; title.style.unityFontStyleAndWeight = FontStyle.Bold;
-            title.style.unityTextAlign = TextAnchor.MiddleCenter; title.style.marginBottom = 4;
-            box.Add(title);
-            var tag = new Label("Land a colony on another world and grow it toward a Kardashev civilisation.");
-            tag.AddToClassList("caption"); tag.style.whiteSpace = WhiteSpace.Normal;
-            tag.style.unityTextAlign = TextAnchor.MiddleCenter; tag.style.marginBottom = 14;
-            box.Add(tag);
-            box.Add(MenuButton("New game", () => SetPhase(GamePhase.ChoosingPlanet), primary: true));
-            continueButton = MenuButton("Continue saved game", () =>
-            {
-                saveGame?.Load();
-                if (Phase == GamePhase.MainMenu) menuMessage.text = saveGame != null ? saveGame.Message : "";
-            });
-            box.Add(continueButton);
-            box.Add(MenuButton("Quit", Quit));
-            menuMessage = new Label(""); menuMessage.AddToClassList("caption");
-            menuMessage.style.unityTextAlign = TextAnchor.MiddleCenter; menuMessage.style.marginTop = 6;
-            box.Add(menuMessage);
+            BuildMainMenu();
 
             pauseMenu = Screen(dim: 0.55f);
             VisualElement pbox = Box(pauseMenu, 300);
@@ -372,6 +364,8 @@ namespace KardashevAscent.Presentation.Game
             pbox.Add(MenuButton("Save", () => { saveGame?.Save(); pauseMessage.text = saveGame != null ? saveGame.Message : ""; loadButton.SetEnabled(saveGame != null && saveGame.HasSave); }));
             loadButton = MenuButton("Load", () => saveGame?.Load());
             pbox.Add(loadButton);
+            pbox.Add(MenuButton("Guide book (J)", () => { ClosePause(); SystemTabs.Toggle("guide"); }));
+            pbox.Add(MenuButton("Settings", () => ShowSettings(true)));
             pbox.Add(MenuButton("Main menu", () => SetPhase(GamePhase.MainMenu)));
             pbox.Add(MenuButton("Quit", Quit));
             // Sound (director 2026-11-14): effects and ambience volumes, and mute; kept between games.
@@ -430,6 +424,256 @@ namespace KardashevAscent.Presentation.Game
             skip.style.height = 30; skip.style.fontSize = 13; skip.style.marginTop = 8;
             setupPanel.Add(skip);
             root.Add(setupPanel);
+
+            settingsScreen = BuildSettings();
+            creditsScreen = BuildCredits();
+            // The guide book on the menus and before landing (director 2026-11-15: open it any time).
+            menuGuide = new GuideWindow { CloseOverride = () => ShowMenuGuide(false) };
+            menuGuidePanel = menuGuide.Build();
+            root.Add(menuGuidePanel);
+            menuGuide.SetVisible(false);
+        }
+
+        // ---- The space menu (director 2026-11-15: make it beautiful) ----
+
+        void BuildMainMenu()
+        {
+            mainMenu = Screen(dim: 0f);
+            mainMenu.style.alignItems = Align.Stretch;
+            mainMenu.style.justifyContent = Justify.FlexStart;
+            mainMenu.Add(new SpaceBackdrop());
+
+            menuHome = new VisualElement();
+            menuHome.style.position = Position.Absolute;
+            menuHome.style.left = new Length(7, LengthUnit.Percent);
+            menuHome.style.top = new Length(18, LengthUnit.Percent);
+            menuHome.style.width = 520;
+            mainMenu.Add(menuHome);
+
+            var kicker = new Label("A PLANETARY ENGINEERING GAME");
+            kicker.style.fontSize = 14; kicker.style.letterSpacing = 6;
+            kicker.style.color = UiPalette.Accent; kicker.style.marginBottom = 6;
+            menuHome.Add(kicker);
+            foreach (string word in new[] { "KARDASHEV", "ASCENT" })
+            {
+                var t = new Label(word);
+                t.style.fontSize = 76; t.style.unityFontStyleAndWeight = FontStyle.Bold;
+                t.style.letterSpacing = 14; t.style.color = Color.white;
+                t.style.marginTop = -10; t.style.marginBottom = -10;
+                t.style.textShadow = new TextShadow { offset = new Vector2(0, 0), blurRadius = 18, color = new Color(0.4f, 0.7f, 1f, 0.55f) };
+                menuHome.Add(t);
+            }
+            var line = new VisualElement();
+            line.style.height = 2; line.style.width = 140;
+            line.style.backgroundColor = UiPalette.Accent;
+            line.style.marginTop = 18; line.style.marginBottom = 14;
+            menuHome.Add(line);
+            var tag = new Label("From one lander to a civilisation that harnesses its star.\nReal exoplanets · NASA data · real physics.");
+            tag.style.fontSize = 17; tag.style.whiteSpace = WhiteSpace.Normal;
+            tag.style.color = new Color(0.82f, 0.86f, 0.92f);
+            tag.style.marginBottom = 34;
+            menuHome.Add(tag);
+
+            menuButtons = new VisualElement();
+            menuButtons.style.width = 320;
+            menuHome.Add(menuButtons);
+            menuButtons.Add(SpaceButton("New mission", () => SetPhase(GamePhase.ChoosingPlanet), primary: true));
+            continueButton = SpaceButton("Continue", () =>
+            {
+                saveGame?.Load();
+                if (Phase == GamePhase.MainMenu) menuMessage.text = saveGame != null ? saveGame.Message : "";
+            });
+            menuButtons.Add(continueButton);
+            menuButtons.Add(SpaceButton("Guide book", () => ShowMenuGuide(true)));
+            menuButtons.Add(SpaceButton("Settings", () => ShowSettings(true)));
+            menuButtons.Add(SpaceButton("Credits", () => ShowCredits(true)));
+            menuButtons.Add(SpaceButton("Quit", Quit));
+            menuMessage = new Label("");
+            menuMessage.style.fontSize = 13; menuMessage.style.color = new Color(0.65f, 0.7f, 0.78f);
+            menuMessage.style.marginTop = 8;
+            menuButtons.Add(menuMessage);
+
+            var footer = new Label("NASA Space Apps Challenge 2026  ·  Space Mission Design Game");
+            footer.style.position = Position.Absolute;
+            footer.style.left = new Length(7, LengthUnit.Percent);
+            footer.style.bottom = 28;
+            footer.style.fontSize = 13; footer.style.letterSpacing = 2;
+            footer.style.color = new Color(0.6f, 0.65f, 0.75f, 0.9f);
+            mainMenu.Add(footer);
+        }
+
+        /// <summary>A menu button: text on space, an amber bar and glow on hover; the main choice is solid amber.</summary>
+        static Button SpaceButton(string text, System.Action onClick, bool primary = false)
+        {
+            var b = new Button(() => { KardashevAscent.Presentation.Audio.GameAudio.Play(KardashevAscent.Presentation.Audio.Sfx.Click); onClick(); }) { text = text };
+            b.style.height = 46;
+            b.style.marginTop = 5; b.style.marginBottom = 5;
+            b.style.fontSize = 19;
+            b.style.letterSpacing = 3;
+            b.style.unityTextAlign = TextAnchor.MiddleLeft;
+            b.style.paddingLeft = 22;
+            b.style.borderTopWidth = b.style.borderRightWidth = b.style.borderBottomWidth = 0;
+            b.style.borderLeftWidth = 3;
+            Color idleBg = primary ? UiPalette.Accent : new Color(1f, 1f, 1f, 0.04f);
+            Color idleText = primary ? UiPalette.OnAccent : new Color(0.9f, 0.93f, 0.97f);
+            Color idleEdge = primary ? UiPalette.Accent : new Color(1f, 1f, 1f, 0.15f);
+            void Idle()
+            {
+                b.style.backgroundColor = idleBg; b.style.color = idleText; b.style.borderLeftColor = idleEdge;
+                b.style.translate = new Translate(0, 0);
+            }
+            Idle();
+            b.style.transitionDuration = new System.Collections.Generic.List<TimeValue> { new TimeValue(0.15f, TimeUnit.Second) };
+            b.RegisterCallback<PointerEnterEvent>(_ =>
+            {
+                if (!b.enabledSelf) return;
+                b.style.backgroundColor = primary ? new Color(1f, 0.85f, 0.5f) : new Color(1f, 0.78f, 0.36f, 0.16f);
+                b.style.borderLeftColor = UiPalette.Accent;
+                b.style.color = primary ? UiPalette.OnAccent : Color.white;
+                b.style.translate = new Translate(6, 0);
+            });
+            b.RegisterCallback<PointerLeaveEvent>(_ => Idle());
+            return b;
+        }
+
+        static void FadeIn(VisualElement e)
+        {
+            if (e == null) return;
+            e.style.opacity = 0f;
+            e.style.transitionDuration = new System.Collections.Generic.List<TimeValue> { new TimeValue(1.2f, TimeUnit.Second) };
+            e.schedule.Execute(() => e.style.opacity = 1f).StartingIn(60);
+        }
+
+        /// <summary>A screen over the menus: the space backdrop, a title and a scrolling panel, and Back.</summary>
+        VisualElement Overlay(string title, out VisualElement body, float width)
+        {
+            VisualElement s = Screen(dim: 0f);
+            s.Add(new SpaceBackdrop());
+            var panel = new VisualElement();
+            panel.AddToClassList("panel");
+            panel.style.width = width;
+            panel.style.maxHeight = new Length(82, LengthUnit.Percent);
+            panel.style.paddingLeft = panel.style.paddingRight = 26;
+            panel.style.paddingTop = panel.style.paddingBottom = 20;
+            panel.style.backgroundColor = new Color(0.06f, 0.07f, 0.1f, 0.92f);
+            var t = new Label(title.ToUpperInvariant());
+            t.style.fontSize = 28; t.style.unityFontStyleAndWeight = FontStyle.Bold; t.style.letterSpacing = 8;
+            t.style.marginBottom = 10;
+            panel.Add(t);
+            var scroll = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden };
+            scroll.style.flexShrink = 1;
+            body = scroll.contentContainer;
+            panel.Add(scroll);
+            var back = MenuButton("Back (Esc)", () => { Show(s, false); });
+            back.style.marginTop = 12;
+            panel.Add(back);
+            s.Add(panel);
+            Show(s, false);
+            return s;
+        }
+
+        static Label Heading(VisualElement to, string text)
+        {
+            var h = new Label(text.ToUpperInvariant());
+            h.AddToClassList("heading");
+            h.style.marginTop = 14; h.style.marginBottom = 4; h.style.letterSpacing = 3;
+            h.style.color = UiPalette.Accent;
+            to.Add(h);
+            return h;
+        }
+
+        static Label Line(VisualElement to, string text, int size = 15)
+        {
+            var l = new Label(text);
+            l.style.whiteSpace = WhiteSpace.Normal;
+            l.style.fontSize = size;
+            l.style.marginTop = 2;
+            to.Add(l);
+            return l;
+        }
+
+        const string QualityKey = "kardashev.settings.quality", VSyncKey = "kardashev.settings.vsync";
+
+        VisualElement BuildSettings()
+        {
+            // Saved choices come back at start.
+            if (PlayerPrefs.HasKey(QualityKey)) QualitySettings.SetQualityLevel(Mathf.Clamp(PlayerPrefs.GetInt(QualityKey), 0, QualitySettings.names.Length - 1), true);
+            if (PlayerPrefs.HasKey(VSyncKey)) QualitySettings.vSyncCount = PlayerPrefs.GetInt(VSyncKey);
+
+            VisualElement s = Overlay("Settings", out VisualElement body, 520);
+            Heading(body, "Sound");
+            body.Add(VolumeSlider("Effects", KardashevAscent.Presentation.Audio.GameAudio.SfxVolume,
+                                  v => { KardashevAscent.Presentation.Audio.GameAudio.SetSfxVolume(v); KardashevAscent.Presentation.Audio.GameAudio.Play(KardashevAscent.Presentation.Audio.Sfx.Click); }));
+            body.Add(VolumeSlider("Ambience", KardashevAscent.Presentation.Audio.GameAudio.MusicVolume, KardashevAscent.Presentation.Audio.GameAudio.SetMusicVolume));
+            var mute = new Toggle("Mute all") { value = KardashevAscent.Presentation.Audio.GameAudio.Muted };
+            mute.RegisterValueChangedCallback(e => KardashevAscent.Presentation.Audio.GameAudio.SetMuted(e.newValue));
+            body.Add(mute);
+
+            Heading(body, "Display");
+            var full = new Toggle("Fullscreen") { value = UnityEngine.Screen.fullScreen };
+            full.RegisterValueChangedCallback(e => UnityEngine.Screen.fullScreen = e.newValue);
+            body.Add(full);
+            var vsync = new Toggle("V-Sync (smooth, no tearing)") { value = QualitySettings.vSyncCount > 0 };
+            vsync.RegisterValueChangedCallback(e => { QualitySettings.vSyncCount = e.newValue ? 1 : 0; PlayerPrefs.SetInt(VSyncKey, QualitySettings.vSyncCount); });
+            body.Add(vsync);
+            if (QualitySettings.names.Length > 1)
+            {
+                var quality = new DropdownField("Graphics quality", new System.Collections.Generic.List<string>(QualitySettings.names), QualitySettings.GetQualityLevel());
+                quality.RegisterValueChangedCallback(e =>
+                {
+                    int i = System.Array.IndexOf(QualitySettings.names, e.newValue);
+                    if (i >= 0) { QualitySettings.SetQualityLevel(i, true); PlayerPrefs.SetInt(QualityKey, i); }
+                });
+                body.Add(quality);
+            }
+
+            Heading(body, "Controls");
+            Line(body, "Drag or WASD / arrows: turn the camera · wheel or Q / E: zoom · R: back to the colony", 14);
+            Line(body, "J: guide book (any time) · K: calculator · H: all controls · Esc: menu · F5 / F9: save / load", 14);
+            root.Add(s);
+            return s;
+        }
+
+        VisualElement BuildCredits()
+        {
+            VisualElement s = Overlay("Credits", out VisualElement body, 620);
+            Line(body, "Kardashev Ascent: a planetary engineering game about running a robotic mission on a real world, with real physics.", 16);
+            Line(body, "Made for the NASA Space Apps Challenge 2026 (challenge: Space Mission Design Game), Bangkok.", 14);
+            if (TeamMembers.Length > 0)
+            {
+                Heading(body, "Team");
+                Line(body, string.Join("\n", TeamMembers));
+            }
+            Heading(body, "NASA data");
+            Line(body, "NASA Exoplanet Archive: the real planets and their stars (orbit, size, mass, star light and metals)");
+            Line(body, "NASA POWER: 25 years of monthly climate for clouds, air temperature, ground reflectance and haze");
+            Line(body, "NASA NSSDC Mars Fact Sheet: Mars");
+            Line(body, "NASA MMRTG fact sheet: the lander's radioisotope power · JPL Mars 2020 press kit: the robots' batteries");
+            Heading(body, "Science");
+            Line(body, "Solar model checked against pvlib · Antoine equation (Dortmund Data Bank) · IAPWS steam tables · ISO 2533 atmosphere");
+            Line(body, "IACS conductivity · IUPAC molar masses · International Aluminium Institute (smelting energy) · Rudnick & Gao 2003 (crust)");
+            Heading(body, "Sound");
+            Line(body, "Interface Sounds and Sci-Fi Sounds by Kenney (www.kenney.nl), CC0. Ambience, alarms and chords made in code.");
+            Heading(body, "Made with");
+            Line(body, "Unity 6 · C# · Python · NUnit");
+            Line(body, "This project uses NASA open data. It is not affiliated with or endorsed by NASA.", 13).style.color = new Color(0.65f, 0.7f, 0.78f);
+            root.Add(s);
+            return s;
+        }
+
+        /// <summary>The team, shown in the credits (one line each; empty hides the section). Fill in your names.</summary>
+        static readonly string[] TeamMembers = { };
+
+        void ShowSettings(bool show) { Show(settingsScreen, show); if (show) FadeIn(settingsScreen); }
+
+        void ShowCredits(bool show) { Show(creditsScreen, show); if (show) FadeIn(creditsScreen); }
+
+        /// <summary>The guide book on the menus, the planet chooser and before landing (in play it is the J tab).</summary>
+        void ShowMenuGuide(bool show)
+        {
+            if (menuGuide == null) return;
+            menuGuide.SetVisible(show);
+            if (show) menuGuidePanel.BringToFront();
         }
 
         VisualElement Screen(float dim)

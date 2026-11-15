@@ -29,6 +29,9 @@ namespace KardashevAscent.Presentation.UI
 
         public bool Visible { get; private set; }
 
+        /// <summary>When set, the close button calls this instead of the tab bar (a copy shown on the menus).</summary>
+        public Action CloseOverride { get; set; }
+
         public VisualElement Build()
         {
             panel = new VisualElement();
@@ -46,7 +49,7 @@ namespace KardashevAscent.Presentation.UI
             Subtitle = Label($"{Key}: close", "caption");
             titleText.Add(Subtitle);
             titleRow.Add(titleText);
-            var close = new Button(() => SystemTabs.Toggle(Id)) { text = "×" };
+            var close = new Button(() => { if (CloseOverride != null) CloseOverride(); else SystemTabs.Toggle(Id); }) { text = "×" };
             close.AddToClassList("close-button");
             titleRow.Add(close);
             panel.Add(titleRow);
