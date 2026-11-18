@@ -254,7 +254,7 @@ Each needs the director. Until answered, the listed default applies and work tha
 | --- | --- | --- | --- |
 | OQ-1 | How much permanent interface stays? Which of the HUD and panels become reports and inspections? | Pillar 8 against the existing HUD and panels | Keep existing panels; new information follows the information architecture |
 | OQ-2 | One colony per planet? When do several planets run at once, and does time pass on planets the player is not watching? | Decides whether a layer above the planet simulation is needed (architecture step M9) | One planet, one colony |
-| OQ-3 | Do build parts in Wh stay the construction currency once materials and industry exist? | Two currencies for building; affects every recipe | Both: parts for energy cost, materials on top, as today · **Answered 2026-11-14 (director): materials only; see CO-03a** |
+| OQ-3 | ~~Do build parts in Wh stay the construction currency once materials and industry exist?~~ **Answered by the director, 2026-11-18: no.** Construction already consumes materials, taken by the robots that build; build parts are not to be the lasting currency | Two currencies for building; affects every recipe | Build parts stay in the code until a design replaces them; no new feature may depend on them |
 | OQ-4 | What may the player see that the colony has not observed? Is god mode a debug tool or a feature? | Pillar 8 | God mode is a debug and teaching tool |
 | OQ-5 | Do milestones remain the unlock mechanism once research exists? | One unlock table or two systems | Milestones only |
 | OQ-6 | Which language are the documents in? Existing ones mix Thai and English | Consistency; AI and team readability | New architecture documents in English; existing Thai documents stay (TD-14) |
@@ -262,7 +262,8 @@ Each needs the director. Until answered, the listed default applies and work tha
 | OQ-8 | Transport robots before logistics exists (workforce Q3)? | A robot kind with no task | Locked |
 | OQ-9 | What destroys a robot (workforce Q4)? | Needed for "unsynchronised data is lost" | Robots cannot be destroyed |
 | OQ-10 | Is the uncommitted industrial-production work approved, and what is its specification? | It starts the industry system with no recorded design | Not on `main`; treat as unapproved |
-| OQ-11 | Which second energy source comes first? | Order of the energy roadmap | None scheduled |
-| OQ-12 | Balance values for every `TBD` placeholder: the director supplies them, or approves a balancing pass? | Placeholders shape play today | Placeholders stay, marked |
+| OQ-11 | ~~Which second energy source comes first?~~ **Answered by the director, 2026-11-18: tidal and wave power** (water energy; fits floating solar and the sea). Registered as EN-11 direction, not yet designed | Order of the energy roadmap | Design tidal and wave power next; needs the environment model for tides first (roadmap phase 3) |
+| OQ-12 | Balance values for every `TBD` placeholder: the director supplies them, or approves a balancing pass? | Placeholders shape play today | Placeholders stay, marked ([list of every placeholder](balance-placeholders.md)) |
 | OQ-13 | Is the original design document to be added to the repository? | The physics report reviews a document that is not here | Not available |
+| OQ-15 | The blue roll ring in the angle editor does nothing for power (a flat panel's output does not depend on twisting about its own normal). Remove it, or give it a use? | Clutter against orientation | Stays, drawn faint and labelled "no effect" |
 | OQ-14 | Does the game still target the NASA Space Apps submission, a longer commercial path, or both? | Scope and priority of the roadmap | Long-term development, per the 2026-11-12 brief |
