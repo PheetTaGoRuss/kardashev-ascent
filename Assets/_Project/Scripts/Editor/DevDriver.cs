@@ -219,6 +219,18 @@ namespace KardashevAscent.EditorTools
                     UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.PanelPlacer>().Mode =
                         (Presentation.Planet.BuildMode)Enum.Parse(typeof(Presentation.Planet.BuildMode), argument);
                     return true;
+                case "debug":
+                    // "debug" opens the debug panel; "debug free|material|unlock|battery" flips one switch.
+                    {
+                        var panel = UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.DebugPanel>();
+                        var tools = UnityEngine.Object.FindFirstObjectByType<SimulationRunner>().Simulation as Simulation.Game.IDebugTools;
+                        if (argument == "free") tools.Debug.FreeBuilding = true;
+                        else if (argument == "material") tools.Debug.InfiniteMaterials = true;
+                        else if (argument == "unlock") tools.Debug.UnlockAll = true;
+                        else if (argument == "battery") tools.Debug.FullBattery = true;
+                        panel.Open = true;
+                        return true;
+                    }
                 case "refresh":
                     // Import changed files and recompile without the editor being in front.
                     AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);

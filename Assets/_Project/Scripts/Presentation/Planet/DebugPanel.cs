@@ -17,6 +17,9 @@ namespace KardashevAscent.Presentation.Planet
         SimulationRunner runner;
         GodMode god;
         bool open;
+
+        /// <summary>Whether the panel is showing (the F10 key toggles it).</summary>
+        public bool Open { get => open; set => open = value; }
         Rect window = new Rect(20f, 80f, 270f, 10f);
         GUIStyle badge;
 
