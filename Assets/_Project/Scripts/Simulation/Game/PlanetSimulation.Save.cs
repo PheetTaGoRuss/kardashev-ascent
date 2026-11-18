@@ -79,7 +79,7 @@ namespace KardashevAscent.Simulation.Game
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.ChargingStation });
             foreach (var c in relays)
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.Relay });
-            foreach (var c in researchStations)
+            foreach (var c in research.Stations)
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.ResearchStation });
             foreach (var kv in refineryModules)
                 state.Buildings.Add(new BuildingRecord { Tile = kv.Key.Tile, Slot = kv.Key.Slot, Type = kv.Value });
@@ -155,7 +155,7 @@ namespace KardashevAscent.Simulation.Game
                 RemoveBuilding(key.Tile, key.Slot);
             foreach (var key in new List<(int Tile, int Slot)>(relays))
                 RemoveBuilding(key.Tile, key.Slot);
-            foreach (var key in new List<(int Tile, int Slot)>(researchStations))
+            foreach (var key in new List<(int Tile, int Slot)>(research.Stations))
                 RemoveBuilding(key.Tile, key.Slot);
             foreach (var key in new List<(int Tile, int Slot)>(refineryModules.Keys))
                 RemoveBuilding(key.Tile, key.Slot);
@@ -354,7 +354,7 @@ namespace KardashevAscent.Simulation.Game
                 if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
                     return;
                 if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(BuildingType.ResearchStation), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r), BuildTimes.Hours(BuildingType.ResearchStation));
-                researchStations.Add((r.Tile, r.Slot));
+                research.Stations.Add((r.Tile, r.Slot));
             }
             else if (r.Type == BuildingType.Relay)
             {
