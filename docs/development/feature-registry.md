@@ -183,7 +183,8 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | --- | --- | --- | --- | --- | --- |
 | UI-01 | HUD: power, battery, K, time, build parts | CONFIRMED when merged; now in question (OQ-1) | PR #31, #38, #42 | Implemented | `UI/HudView.cs` |
 | UI-02 | Tile panel, side panels, colony overview, robots panel, sky view, planet chooser, hints | CONFIRMED when merged; now in question (OQ-1) | PR #32, #34, #39, #46, #48, #50–#53 | Implemented | `UI/*` |
-| UI-03 | God mode (F10) | CONFIRMED | PR #61 | Implemented | `Planet/GodMode.cs` |
+| UI-03 | God mode (inside the debug panel, F10) | CONFIRMED | PR #61 | Implemented | `Planet/GodMode.cs` |
+| UI-04 | Debug mode (F10 panel: free/instant building, unlimited materials, unlock all, full battery, shortcuts; not saved, "DEBUG" badge) | PROPOSED (director asked for it 2026-11-18) | - | Implemented | `Game/DebugOptions.cs`, `Planet/DebugPanel.cs`, `DebugModeTests` |
 | UI-04 | One window per game system with a tab bar | No decision recorded in the repository | — | In progress | `feature/building-footprints` |
 | UI-05 | Minimal permanent interface | CONFIRMED as a principle | V | Not started | — |
 | UI-06 | Windows build from a menu | CONFIRMED | PR #44 | Implemented | `Editor/BuildWindows.cs` |

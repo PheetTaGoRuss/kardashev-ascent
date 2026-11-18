@@ -13,7 +13,7 @@ namespace KardashevAscent.Simulation.Game
     public sealed partial class PlanetSimulation
     {
         /// <summary>Index into <see cref="PanelTiers.All"/> of what new panels are built as.</summary>
-        public int PanelTier => PanelTiers.For(MilestonesReached);
+        public int PanelTier => PanelTiers.For(UnlockLevel);
 
         /// <summary>Ground one new panel covers on a tile, m²: the tier's size, capped at its footprint's share of the tile.</summary>
         public double NewPanelAreaM2(int tileId)

@@ -44,11 +44,11 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>Copper if there is enough, else aluminium once refining it is unlocked (and there is enough).</summary>
         bool UseAluminium(double kg) =>
-            Materials[Material.Copper] < kg && MilestonesReached >= RobotTech.UnlockMilestone(Material.Aluminium)
+            Materials[Material.Copper] < kg && UnlockLevel >= RobotTech.UnlockMilestone(Material.Aluminium)
             && Materials[Material.Aluminium] >= kg;
 
         bool UseSodium(double lithiumKg, double sodiumKg) =>
-            Materials[Material.Lithium] < lithiumKg && MilestonesReached >= RobotTech.UnlockMilestone(Material.Sodium)
+            Materials[Material.Lithium] < lithiumKg && UnlockLevel >= RobotTech.UnlockMilestone(Material.Sodium)
             && Materials[Material.Sodium] >= sodiumKg;
 
         /// <summary>Take a recipe's inputs, or say what is missing (and take nothing).</summary>
@@ -72,7 +72,7 @@ namespace KardashevAscent.Simulation.Game
 
         public string OrderRobot(RobotKind kind)
         {
-            if (MilestonesReached < RobotTech.UnlockMilestone(kind))
+            if (UnlockLevel < RobotTech.UnlockMilestone(kind))
                 return RobotTech.UnlockMilestone(kind) == int.MaxValue
                     ? $"{kind} robots are not available (transport is a later feature)."
                     : $"{kind} robots unlock at milestone {RobotTech.UnlockMilestone(kind)}.";
@@ -89,7 +89,7 @@ namespace KardashevAscent.Simulation.Game
         {
             Robot r = Workforce.GetRobot(robotId);
             if (r == null) return "No such robot.";
-            if (MilestonesReached < RobotTech.UnlockMilestone(module))
+            if (UnlockLevel < RobotTech.UnlockMilestone(module))
                 return $"{RobotTech.ModuleName(module)} unlocks at milestone {RobotTech.UnlockMilestone(module)}.";
             if (r.Has(module)) return $"{r.Name} already has it.";
             if (module == RobotModule.AdvancedProcessor && !r.Has(RobotModule.Processor))

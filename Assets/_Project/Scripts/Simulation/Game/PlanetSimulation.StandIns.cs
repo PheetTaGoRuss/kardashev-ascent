@@ -36,7 +36,7 @@ namespace KardashevAscent.Simulation.Game
                 double kg = bill[ore];
                 if (kg <= 0.0) { use &= ~flag; continue; }
                 bool oreCovers = Materials[ore] - reserved[ore] >= kg - 1e-9;
-                bool subCovers = Unlocked(sub, MilestonesReached) && Materials[sub] - reserved[sub] >= kg * ratio - 1e-9;
+                bool subCovers = Unlocked(sub, UnlockLevel) && Materials[sub] - reserved[sub] >= kg * ratio - 1e-9;
                 if (!oreCovers && subCovers) use |= flag;
                 else if (oreCovers && !subCovers) use &= ~flag;
             }
@@ -101,6 +101,11 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Start a construction site, choosing its stand-ins. True when it needs nothing (finished now).</summary>
         bool StartSite(int tileId, int slot, MaterialBill bill, double workHours)
         {
+            if (Debug.FreeBuilding)
+            {
+                standIns.Remove((tileId, slot));
+                return Build.Start(tileId, slot, new MaterialBill(), 0.0);   // debug: nothing to pay, nothing to wait for
+            }
             StandIn use = ChooseStandIns(bill, Build.Remaining);
             if (use != StandIn.None) standIns[(tileId, slot)] = use;
             else standIns.Remove((tileId, slot));

@@ -515,6 +515,21 @@ namespace KardashevAscent.Simulation.Game
         bool ApplyAnglePreset(int id, int tileId, int slot);
     }
 
+    /// <summary>Testing switches and shortcuts (the debug panel). Not saved.</summary>
+    public interface IDebugTools
+    {
+        DebugOptions Debug { get; }
+
+        /// <summary>Add this many kg of every material to the stock.</summary>
+        void DebugAddMaterials(double kg);
+
+        /// <summary>A new robot of this kind at the base, ready to work.</summary>
+        bool DebugAddRobot(Robots.RobotKind kind);
+
+        /// <summary>Mark every land tile surveyed (its ground becomes known). Returns how many were new.</summary>
+        int DebugSurveyAll();
+    }
+
     /// <summary>Capturing and restoring the whole colony.</summary>
     public interface ISimulationSave
     {

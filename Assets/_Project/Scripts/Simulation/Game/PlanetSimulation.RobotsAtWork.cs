@@ -66,7 +66,7 @@ namespace KardashevAscent.Simulation.Game
             while (true)
             {
                 Workforce.Movement = CurrentMovement();
-                Workforce.Milestones = MilestonesReached;
+                Workforce.Milestones = UnlockLevel;
                 Workforce.NowHours = TimeHours;
                 Workforce.Assign(OpenTasks(), Needs());
                 bool any = false;
