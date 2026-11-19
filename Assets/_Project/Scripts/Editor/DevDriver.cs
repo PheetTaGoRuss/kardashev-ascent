@@ -224,6 +224,14 @@ namespace KardashevAscent.EditorTools
                         Log($"experiment {kind}: blocker={sim.ExperimentBlocker(kind) ?? "none"} ordered={sim.OrderExperiment(kind)} known={sim.IsExperimentKnown(kind)} result={sim.ExperimentResult(kind) ?? "-"}");
                     return true;
                 }
+                case "robots":
+                {
+                    var sim = Runner()?.Simulation;
+                    if (sim != null)
+                        foreach (var r in sim.Workforce.Robots)
+                            Log($"ROBOT {r.Id} {r.Kind} tile={r.Tile} activity={r.Activity} task={(r.Task.HasValue ? r.Task.Value.Kind + "@" + r.Task.Value.Tile : "-")} battery={r.Battery.StoredWh:0}Wh stranded={r.IsStranded} charger={r.ChargerExists} connected={r.Connected} cond={r.Condition:0.00} program={sim.Workforce.EffectiveProgram(r)} surveyPriority={sim.Workforce.ProgramPriority(r, KardashevAscent.Simulation.Robots.TaskKind.Survey)} buildPriority={sim.Workforce.ProgramPriority(r, KardashevAscent.Simulation.Robots.TaskKind.Build)} available={r.Available} shutdown={r.IsShutDown} milestones={sim.MilestonesReached}");
+                    return true;
+                }
                 case "survey":
                 {
                     var sim = Runner()?.Simulation;

@@ -75,3 +75,4 @@ Bugs that need tracking by several people also get a GitHub issue; link it here.
 | --- | --- | --- | --- |
 | KI-32 | `feature/building-footprints` is 9 commits ahead of `main` with no open pull request | Solar measurements, system windows and the colony network are unmerged and will drift | Roadmap phase 0 |
 | KI-33 | Uncommitted industrial-production work in the main checkout | Could be lost; has no specification | Open question OQ-10 |
+| KI-34 | "Skip: place the rest for me" in the landing setup places one small panel (about 28 kW at noon) against a 100 kW base demand | The 2 MWh lander battery runs out in about a day, the colony browns out, the robot network goes offline and robots stop until the sun returns. Looks like a robot stall; it is not (found 2026-11-19) | Director's call (OQ-12 area): make Skip place enough panels to cover the base demand, or lower the starting demand. The manual tutorial already says the first panels must go up on day one |
