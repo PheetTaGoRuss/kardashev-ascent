@@ -13,7 +13,7 @@ namespace KardashevAscent.Presentation.UI
         public enum Category { Power, Stations, Industry }
 
         public static Category CategoryOf(BuildMode m) =>
-            m == BuildMode.SolarPanel || m == BuildMode.FloatingSolar || m == BuildMode.Battery || m == BuildMode.TidalTurbine ? Category.Power
+            m == BuildMode.SolarPanel || m == BuildMode.FloatingSolar || m == BuildMode.Battery || m == BuildMode.TidalTurbine || m == BuildMode.WaveConverter ? Category.Power
             : m == BuildMode.Workshop || m == BuildMode.AluminaPlant || m == BuildMode.Electrolyser ? Category.Industry
             : Category.Stations;
 
@@ -30,6 +30,7 @@ namespace KardashevAscent.Presentation.UI
                 case BuildMode.AluminaPlant: return "Alumina plant";
                 case BuildMode.Electrolyser: return "Electrolysis cell";
                 case BuildMode.TidalTurbine: return "Tidal turbine";
+                case BuildMode.WaveConverter: return "Wave converter";
                 default: return "Network relay";
             }
         }
@@ -50,6 +51,9 @@ namespace KardashevAscent.Presentation.UI
                     break;
                 case BuildMode.TidalTurbine:
                     what = Short(BuildingType.TidalTurbine);
+                    break;
+                case BuildMode.WaveConverter:
+                    what = Short(BuildingType.WaveConverter);
                     break;
                 case BuildMode.Battery:
                     what = $"Stores {Format.Energy(placer.BatteryUnitWh)} for the night. Robots can charge here.";
@@ -88,6 +92,7 @@ namespace KardashevAscent.Presentation.UI
                 case BuildingType.Workshop: return "Builds robots and upgrades. Refinery modules attach to its sides.";
                 case BuildingType.ChargingStation: return "Charges robots from the grid near their work.";
                 case BuildingType.Relay: return "Extends the robot network; needs grid power.";
+                case BuildingType.WaveConverter: return "A floating line of hinged floats on shallow sea. Power follows the waves: none in a calm, a cap in a good sea, shut down in a storm. Built by a boat robot.";
                 case BuildingType.TidalTurbine: return "A free-flow rotor on shallow sea. Power follows the tide: none at slack water. Coasts with land around them give the strongest stream. Built by a boat robot.";
                 case BuildingType.ResearchStation: return "Measurements and experiments (Research, T).";
                 case BuildingType.AluminaPlant:

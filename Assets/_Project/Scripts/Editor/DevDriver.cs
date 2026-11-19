@@ -179,7 +179,7 @@ namespace KardashevAscent.EditorTools
                 {
                     var sim = Runner()?.Simulation;
                     if (sim != null)
-                        Log($"STATUS t={sim.TimeHours:0}h gen={sim.GenerationW:0}W demand={sim.DemandW:0}W battery={sim.BatteryStoredWh / 1e6:0.0}MWh brownout={sim.IsBrownout} K={sim.PlanetK:0.000} milestones={sim.MilestonesReached} iron={sim.Materials[KardashevAscent.Simulation.Resources.Material.Iron]:0}kg queue={sim.ConstructionQueueCount} robots={sim.Workforce.Robots.Count} tidal={sim.TidalPowerW():0}W period={sim.TidePeriodHours:0.0}h moonM={sim.Moon.MassRatio:0.0000} moonD={sim.Moon.DistanceRadii:0}");
+                        Log($"STATUS t={sim.TimeHours:0}h gen={sim.GenerationW:0}W demand={sim.DemandW:0}W battery={sim.BatteryStoredWh / 1e6:0.0}MWh brownout={sim.IsBrownout} K={sim.PlanetK:0.000} milestones={sim.MilestonesReached} iron={sim.Materials[KardashevAscent.Simulation.Resources.Material.Iron]:0}kg queue={sim.ConstructionQueueCount} robots={sim.Workforce.Robots.Count} tidal={sim.TidalPowerW():0}W waves={sim.WavePowerW():0}W period={sim.TidePeriodHours:0.0}h moonM={sim.Moon.MassRatio:0.0000} moonD={sim.Moon.DistanceRadii:0}");
                     return true;
                 }
                 case "select":
@@ -244,6 +244,19 @@ namespace KardashevAscent.EditorTools
                     var kind = (Simulation.Planet.ExperimentKind)Enum.Parse(typeof(Simulation.Planet.ExperimentKind), argument);
                     if (sim != null)
                         Log($"known {kind}={sim.IsExperimentKnown(kind)} station={sim.HasResearchStation} turbineBlocker={sim.KnowledgeBlocker(Simulation.Game.BuildingType.TidalTurbine) ?? "none"} result={sim.ExperimentResult(kind) ?? "-"}");
+                    return true;
+                }
+                case "wave":
+                {
+                    // wave: open the site of the shallow-sea tile with the roughest sea.
+                    var sim = Runner()?.Simulation;
+                    var picker = UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.TilePicker>();
+                    int best = -1;
+                    double most = -1.0;
+                    for (int t = 0; sim != null && t < sim.TileCount; t++)
+                        if (sim.GetTile(t).Terrain == Simulation.Planet.TerrainType.ShallowOcean && sim.MeanWaveHeightAtM(t) > most) { most = sim.MeanWaveHeightAtM(t); best = t; }
+                    if (best >= 0 && picker != null) picker.Select(best);
+                    Log("wave tile " + best + " height " + most);
                     return true;
                 }
                 case "tide":
