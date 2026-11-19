@@ -36,7 +36,7 @@ namespace KardashevAscent.Simulation.Game
                 return false;
             TerrainType ground = GetTile(tileId).Terrain;
             if (type == BuildingType.FloatingSolar ? !Terrains.AllowsFloating(ground)
-                : type == BuildingType.TidalTurbine || type == BuildingType.WaveConverter ? ground != TerrainType.ShallowOcean
+                : type == BuildingType.TidalTurbine || type == BuildingType.WaveConverter || type == BuildingType.TidalBarrage ? ground != TerrainType.ShallowOcean
                 : !Terrains.IsBuildableLand(ground))
                 return false;
             if (!restoringState && !IsOpenGround(tileId))
@@ -45,6 +45,8 @@ namespace KardashevAscent.Simulation.Game
                 return false;   // the colony doesn't know enough yet (director 2026-11-14)
             foreach (int s in FootprintFor(type, tileId, slot))
                 if (GetBuilding(tileId, s) != BuildingType.None) return false;
+            if (!restoringState && type == BuildingType.TidalBarrage && BarrageBlocker(tileId) != null)
+                return false;   // a barrage needs a bay with a big tide, and only one per tile
             if (!restoringState && RefineryBlocker(type, tileId, slot) != null)
                 return false;   // refinery modules touch a Workshop (director 2026-11-15)
             return true;

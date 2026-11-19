@@ -79,6 +79,8 @@ namespace KardashevAscent.Simulation.Game
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.ChargingStation });
             foreach (var c in relays)
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.Relay });
+            foreach (var c in barrages)
+                state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.TidalBarrage });
             foreach (var c in waveConverters)
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.WaveConverter });
             foreach (var c in tidalTurbines)
@@ -153,6 +155,8 @@ namespace KardashevAscent.Simulation.Game
                 RemoveBuilding(key.Tile, key.Slot);
             foreach (var key in new List<(int Tile, int Slot)>(relays))
                 RemoveBuilding(key.Tile, key.Slot);
+            foreach (var key in new List<(int Tile, int Slot)>(barrages))
+                RemoveBuilding(key.Tile, key.Slot);
             foreach (var key in new List<(int Tile, int Slot)>(waveConverters))
                 RemoveBuilding(key.Tile, key.Slot);
             foreach (var key in new List<(int Tile, int Slot)>(tidalTurbines))
@@ -194,6 +198,7 @@ namespace KardashevAscent.Simulation.Game
                 Workforce.Reset(BaseTileId);
             Workforce.Network = Network;
             RefreshNetwork();   // the relays restored above start relaying; power follows the restored grid
+            RefreshBarrageBlocks();   // finished barrages dam their tiles again
             adjustOrders.Clear();
             if (state.AdjustOrders != null)   // version 17
                 foreach (AdjustOrderRecord o in state.AdjustOrders)
@@ -353,6 +358,13 @@ namespace KardashevAscent.Simulation.Game
                     return;
                 if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(BuildingType.ResearchStation), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r), BuildTimes.Hours(BuildingType.ResearchStation));
                 research.Stations.Add((r.Tile, r.Slot));
+            }
+            else if (r.Type == BuildingType.TidalBarrage)
+            {
+                if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
+                    return;
+                if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(BuildingType.TidalBarrage), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r), BuildTimes.Hours(BuildingType.TidalBarrage));
+                barrages.Add((r.Tile, r.Slot));
             }
             else if (r.Type == BuildingType.WaveConverter)
             {

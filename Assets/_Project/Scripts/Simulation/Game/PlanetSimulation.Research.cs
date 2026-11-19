@@ -215,6 +215,16 @@ namespace KardashevAscent.Simulation.Game
                         ? "Water can't be liquid here: the air is below water's triple point (0.61 kPa), so ice turns straight to vapour."
                         : $"Water boils at {boil:0.#} °C here.";
                 }
+                case ExperimentKind.BasinSurvey:
+                {
+                    int bays = 0;
+                    double bestRange = 0.0;
+                    for (int t = 0; t < TileCount; t++)
+                        if (GetTile(t).Terrain == TerrainType.ShallowOcean && BarrageBlocker(t) == null) { bays++; bestRange = Math.Max(bestRange, TidalRangeBaseM(t)); }
+                    if (bays == 0) return $"No bay here has the {Tides.BarrageMinRangeM:0} m of tide a barrage needs.";
+                    double gwh = Tides.BarrageEnergyPerTideJ(Tides.BarrageBasinM2, bestRange, SurfaceGravityMs2) * 365.25 * 24.0 / TidePeriodHours / 3.6e12;
+                    return $"{bays} bay{(bays == 1 ? "" : "s")} can hold a barrage. The best has {bestRange:0.#} m of tide: about {gwh:0} GWh a year. The dam weakens the tide behind it by {Tides.BarrageRangeDrop * 100.0:0} % and stops boats crossing.";
+                }
                 case ExperimentKind.WaveBuoy:
                 {
                     double bestH = 0.0;
@@ -276,6 +286,13 @@ namespace KardashevAscent.Simulation.Game
         {
             if (Debug.UnlockAll)
                 return null;
+            if (type == BuildingType.TidalBarrage)
+            {
+                if (!IsExperimentKnown(ExperimentKind.BasinSurvey))
+                    return "A tidal barrage needs the basin survey experiment: sound a bay first.";
+                if (UnlockLevel < Tides.BarrageMilestone)
+                    return $"A tidal barrage is a big build: it opens at milestone {Tides.BarrageMilestone}.";
+            }
             if (type == BuildingType.WaveConverter && !IsExperimentKnown(ExperimentKind.WaveBuoy))
                 return "Wave converters need to know the sea state here: run the wave buoy experiment.";
             if (type == BuildingType.TidalTurbine && !IsExperimentKnown(ExperimentKind.TideGauge))

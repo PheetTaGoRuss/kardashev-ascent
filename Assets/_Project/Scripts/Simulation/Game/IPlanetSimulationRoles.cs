@@ -543,6 +543,22 @@ namespace KardashevAscent.Simulation.Game
         bool PlaceTidalTurbine(int tileId, int slot);
     }
 
+    /// <summary>Tidal barrage (director 2026-11-19).</summary>
+    public interface ITidalBarrage
+    {
+        /// <summary>Why a barrage cannot go on this tile (not a bay, tide too small, one already), or null.</summary>
+        string BarrageBlocker(int tileId);
+
+        /// <summary>Electric power all finished barrages give now, W.</summary>
+        double BarragePowerW();
+
+        /// <summary>Put a barrage across a bay: it covers three slots in a row from this one.</summary>
+        bool PlaceBarrage(int tileId, int slot);
+
+        /// <summary>Whether a finished barrage dams this tile.</summary>
+        bool HasBarrage(int tileId);
+    }
+
     /// <summary>Sea waves and wave-energy converters (director 2026-11-19).</summary>
     public interface IWavePower
     {

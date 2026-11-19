@@ -6,7 +6,7 @@ namespace KardashevAscent.Simulation.Planet
     /// The experiments a Research Station runs to learn what is safe and doable on this planet (director 2026-11-14).
     /// Saved as integers: append new members at the end only.
     /// </summary>
-    public enum ExperimentKind { AirPressure, BoilingPoint, SurfaceTemperature, Gravity, SeismicSurvey, TideGauge, WaveBuoy }
+    public enum ExperimentKind { AirPressure, BoilingPoint, SurfaceTemperature, Gravity, SeismicSurvey, TideGauge, WaveBuoy, BasinSurvey }
 
     /// <summary>
     /// The physics behind each experiment, and what each one needs. Sources are in
@@ -15,7 +15,7 @@ namespace KardashevAscent.Simulation.Planet
     public static class Experiments
     {
         public static readonly ExperimentKind[] All =
-            { ExperimentKind.AirPressure, ExperimentKind.BoilingPoint, ExperimentKind.SurfaceTemperature, ExperimentKind.Gravity, ExperimentKind.SeismicSurvey, ExperimentKind.TideGauge, ExperimentKind.WaveBuoy };
+            { ExperimentKind.AirPressure, ExperimentKind.BoilingPoint, ExperimentKind.SurfaceTemperature, ExperimentKind.Gravity, ExperimentKind.SeismicSurvey, ExperimentKind.TideGauge, ExperimentKind.WaveBuoy, ExperimentKind.BasinSurvey };
 
         /// <summary>Standard atmosphere at sea level, Pa (ISO 2533 / US Standard Atmosphere 1976).</summary>
         public const double StandardPressurePa = 101_325.0;
@@ -42,6 +42,7 @@ namespace KardashevAscent.Simulation.Planet
                 case ExperimentKind.SeismicSurvey: return "Seismic survey";
                 case ExperimentKind.TideGauge: return "Tide gauge";
                 case ExperimentKind.WaveBuoy: return "Wave buoy";
+                case ExperimentKind.BasinSurvey: return "Basin survey";
                 default: return "Gravity";
             }
         }
@@ -54,6 +55,7 @@ namespace KardashevAscent.Simulation.Planet
                 case ExperimentKind.AirPressure: return "A barometer reading of the air's weight. Needed before water can be boiled.";
                 case ExperimentKind.BoilingPoint: return "Heat water in the lab at this air pressure. Says whether water stays liquid here: floating builds, cooling, steam.";
                 case ExperimentKind.SurfaceTemperature: return "Log the ground's coldest and warmest months. Says whether batteries and machines are safe here.";
+                case ExperimentKind.BasinSurvey: return "Sound a bay: its depth, shape and how the tide piles up in it. Says which bays can hold a barrage and how much the dam would give. Needs the tide gauge. Needed before a tidal barrage.";
                 case ExperimentKind.WaveBuoy: return "Float a buoy on the sea and log its heave and period through calm and storm. Says how high the waves run and how much power a line takes from them. Needed before wave converters.";
                 case ExperimentKind.TideGauge: return "Log the sea level through whole tide cycles on the shore. Says how high the tide runs on this world, how often, and how much a bay can funnel it. Needed before tidal turbines.";
                 case ExperimentKind.SeismicSurvey: return "Thump the ground and time the echoes from deep rock layers (a reflection survey, as oil and mining geologists do). Finds deep ore: rare earths in mountains, canyons and caves.";
@@ -72,6 +74,7 @@ namespace KardashevAscent.Simulation.Planet
                 case ExperimentKind.SeismicSurvey: return 16.0;
                 case ExperimentKind.TideGauge: return 20.0;
                 case ExperimentKind.WaveBuoy: return 20.0;
+                case ExperimentKind.BasinSurvey: return 40.0;
                 default: return 4.0;
             }
         }
@@ -86,6 +89,7 @@ namespace KardashevAscent.Simulation.Planet
             : k == ExperimentKind.SeismicSurvey ? ExperimentKind.Gravity
             : k == ExperimentKind.TideGauge ? ExperimentKind.Gravity
             : k == ExperimentKind.WaveBuoy ? ExperimentKind.Gravity
+            : k == ExperimentKind.BasinSurvey ? ExperimentKind.TideGauge
             : (ExperimentKind?)null;
 
         /// <summary>

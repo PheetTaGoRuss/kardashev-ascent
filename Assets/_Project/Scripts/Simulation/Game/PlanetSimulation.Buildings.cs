@@ -104,6 +104,7 @@ namespace KardashevAscent.Simulation.Game
             : relays.Contains((tileId, slot)) ? BuildingType.Relay
             : tidalTurbines.Contains((tileId, slot)) ? BuildingType.TidalTurbine
             : waveConverters.Contains((tileId, slot)) ? BuildingType.WaveConverter
+            : barrages.Contains((tileId, slot)) ? BuildingType.TidalBarrage
             : research.Stations.Contains((tileId, slot)) ? BuildingType.ResearchStation
             : refineryModules.TryGetValue((tileId, slot), out BuildingType module) ? module
             : BuildingType.None;
@@ -147,6 +148,14 @@ namespace KardashevAscent.Simulation.Game
                 relays.Remove((tileId, slot));
                 Vacate(tileId, slot);
                 RefreshNetwork();
+                return true;
+            }
+            if (barrages.Contains((tileId, slot)))
+            {
+                Dismantle(tileId, slot, BuildingType.TidalBarrage);
+                barrages.Remove((tileId, slot));
+                Vacate(tileId, slot);
+                RefreshBarrageBlocks();
                 return true;
             }
             if (waveConverters.Contains((tileId, slot)))

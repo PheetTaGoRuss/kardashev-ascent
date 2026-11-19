@@ -33,7 +33,10 @@ namespace KardashevAscent.Simulation.Game
         /// Open-ocean tide times how much this coast funnels it: a tile with more land around it is a bay or estuary and
         /// raises the tide up to about 8 times (real coasts: Fundy is 16 m on a 1 m ocean tide). Game rule, TBD.
         /// </summary>
-        public double TidalRangeAtM(int tileId)
+        public double TidalRangeAtM(int tileId) => TidalRangeBaseM(tileId) * (HasBarrage(tileId) ? 1.0 - Tides.BarrageRangeDrop : 1.0);
+
+        /// <summary>The tide at a tile before any barrage weakens it.</summary>
+        public double TidalRangeBaseM(int tileId)
         {
             if (tileId < 0 || tileId >= TileCount || !GetTile(tileId).IsWater)
                 return 0.0;

@@ -91,6 +91,10 @@ namespace KardashevAscent.Simulation.Resources
         public static readonly MaterialBill WaveConverter = new MaterialBill()
             .Add(Material.Iron, 900.0).Add(Material.Rock, 150.0).Add(Material.Copper, 120.0);
 
+        /// <summary>Tidal barrage: a long dam of rock and steel with gates and turbines (game rule, TBD; about ten turbines' worth).</summary>
+        public static readonly MaterialBill TidalBarrage = new MaterialBill()
+            .Add(Material.Iron, 12000.0).Add(Material.Rock, 20000.0).Add(Material.Copper, 800.0);
+
         /// <summary>Alumina plant: a kiln, leaching tanks and a precipitator (game rule, TBD).</summary>
         public static readonly MaterialBill AluminaPlant = new MaterialBill()
             .Add(Material.Iron, 400.0).Add(Material.Rock, 200.0).Add(Material.Copper, 15.0);
