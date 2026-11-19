@@ -27,9 +27,9 @@ namespace KardashevAscent.Presentation.UI
         bool skipped, colonyOpened;
         float nextCheck;
 
-        const int Steps = 5;
+        const int Steps = 6;
 
-        /// <summary>The hint being shown (0–4), or 5 when they are all done.</summary>
+        /// <summary>The hint being shown (0–5), or 6 when they are all done.</summary>
         public int Step => step;
 
         void OnEnable()
@@ -84,9 +84,19 @@ namespace KardashevAscent.Presentation.UI
                 case 1: return AnyPanel(sim);
                 case 2: return runner.Clock != null && runner.Clock.Speed >= ClockSpeed.DayPerSecond;
                 case 3: return colonyOpened;
-                case 4: return sim.MilestonesReached >= 1;
+                case 4: return ChargerCount(sim) >= 2 || sim.MilestonesReached >= 1;
+                case 5: return sim.MilestonesReached >= 1;
                 default: return true;
             }
+        }
+
+        static int ChargerCount(IPlanetSimulation sim)
+        {
+            int n = 0;
+            foreach (BuildingRecord r in sim.CaptureState().Buildings)
+                if (r.Type == BuildingType.ChargingStation)
+                    n++;
+            return n;
         }
 
         static bool AnyPanel(IPlanetSimulation sim)
@@ -113,6 +123,8 @@ namespace KardashevAscent.Presentation.UI
                 case 3:
                     return $"Press {(colony != null ? colony.ToggleKey.ToString() : "C")} for the colony overview: a week of power, your K and the next milestone.";
                 case 4:
+                    return "Robots work only as far from a charger as one charge lasts: about three tiles. Ore beyond that needs a Charging station built nearer (Stations tab); the tile panel says when a tile is out of range.";
+                case 5:
                     double next = Kardashev.PowerForMilestone(1, sim.TypeITargetW);
                     return $"Reach milestone 1: {Format.Power(next)} used through a whole day. Buildings take materials: survey and mine iron, copper and lithium for more.";
                 default:
