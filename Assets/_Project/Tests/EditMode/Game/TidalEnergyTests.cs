@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using KardashevAscent.Simulation.Game;
 using KardashevAscent.Simulation.Planet;
 using KardashevAscent.Simulation.Solar;
@@ -15,7 +16,15 @@ namespace KardashevAscent.Simulation.Tests.Game
             SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Math.PI / 180.0,
             282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0);
 
-        static PlanetSimulation Create() => new PlanetSimulation(Sphere, Surface, Earthlike);
+        /// <summary>A planet whose colony has already run the tide gauge (turbines are allowed).</summary>
+        static PlanetSimulation Create()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
+            sim.LearnExperimentForTests(ExperimentKind.TideGauge);
+            return sim;
+        }
+
+        static PlanetSimulation CreateUnknowing() => new PlanetSimulation(Sphere, Surface, Earthlike);
 
         /// <summary>The shallow-sea tile where the tide is strongest, and one that is far from land (weakest).</summary>
         static void FindCoasts(PlanetSimulation sim, out int best, out int open)
@@ -124,6 +133,54 @@ namespace KardashevAscent.Simulation.Tests.Game
                 without = Math.Max(without, none.GenerationW);
             }
             Assert.Greater(with, without, "the grid sees the tidal power");
+        }
+
+        [Test]
+        public void WithoutTheTideGauge_NoTurbineCanBeBuilt()
+        {
+            PlanetSimulation sim = CreateUnknowing();
+            FindCoasts(sim, out int best, out _);
+            sim.Debug.FreeBuilding = true;
+            StringAssert.Contains("tide gauge", sim.KnowledgeBlocker(BuildingType.TidalTurbine));
+            Assert.IsFalse(sim.PlaceTidalTurbine(best, 0));
+            sim.LearnExperimentForTests(ExperimentKind.TideGauge);
+            Assert.IsNull(sim.KnowledgeBlocker(BuildingType.TidalTurbine));
+            Assert.IsTrue(sim.PlaceTidalTurbine(best, 0));
+        }
+
+        [Test]
+        public void TheDebugUnlock_SkipsTheTideGauge()
+        {
+            PlanetSimulation sim = CreateUnknowing();
+            sim.Debug.UnlockAll = true;
+            Assert.IsNull(sim.KnowledgeBlocker(BuildingType.TidalTurbine));
+        }
+
+        [Test]
+        public void TheTideGauge_IsAnExperiment_ThatNeedsGravityFirst_AndReportsTheTide()
+        {
+            Assert.Contains(ExperimentKind.TideGauge, Experiments.All);
+            Assert.AreEqual(ExperimentKind.Gravity, Experiments.Needs(ExperimentKind.TideGauge));
+            PlanetSimulation sim = CreateUnknowing();
+            Assert.IsNull(sim.ExperimentResult(ExperimentKind.TideGauge), "nothing is known yet");
+            int t = sim.BaseTileId;
+            foreach (var (m, kg) in sim.BuildBill(BuildingType.ResearchStation).Items()) sim.Materials.Add(m, kg);
+            int slot = Enumerable.Range(0, sim.SlotCount(t)).First(s => sim.CanPlace(BuildingType.ResearchStation, t, s));
+            Assert.IsTrue(sim.PlaceResearchStation(t, slot));
+            for (int i = 0; i < 50 && !sim.HasResearchStation; i++) sim.Tick(0.5);
+            sim.Deposits.MarkSurveyed(t);
+            StringAssert.Contains("gravity", sim.ExperimentBlocker(ExperimentKind.TideGauge));
+            sim.LearnExperimentForTests(ExperimentKind.Gravity);
+            Assert.IsNull(sim.ExperimentBlocker(ExperimentKind.TideGauge));
+            Assert.IsTrue(sim.OrderExperiment(ExperimentKind.TideGauge));
+            for (int i = 0; i < 400 && !sim.IsExperimentKnown(ExperimentKind.TideGauge); i++) sim.Tick(0.5);
+            Assert.IsTrue(sim.IsExperimentKnown(ExperimentKind.TideGauge));
+            StringAssert.Contains("tide", sim.ExperimentResult(ExperimentKind.TideGauge));
+            Assert.IsNull(sim.KnowledgeBlocker(BuildingType.TidalTurbine), "the experiment opens turbines");
+            // and a save keeps it
+            PlanetSimulation other = CreateUnknowing();
+            Assert.IsTrue(other.RestoreState(sim.CaptureState()));
+            Assert.IsTrue(other.IsExperimentKnown(ExperimentKind.TideGauge));
         }
 
         [Test]

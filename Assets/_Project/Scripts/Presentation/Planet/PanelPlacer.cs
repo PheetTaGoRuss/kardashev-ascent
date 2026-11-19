@@ -769,6 +769,14 @@ namespace KardashevAscent.Presentation.Planet
                     string why = simulation.RefineryBlocker(TypeOf(mode), tile, slot);
                     if (why != null) preview = new PanelPreview(false, why, 0, 0, 0, 0);
                 }
+                if (mode == BuildMode.TidalTurbine)
+                {
+                    // Not a panel: the land-panel preview does not apply. The tide gauge gates it.
+                    string unknown = simulation.KnowledgeBlocker(BuildingType.TidalTurbine);
+                    preview = unknown != null ? new PanelPreview(false, unknown, 0, 0, 0, 0)
+                        : slot >= 0 && !simulation.CanPlace(BuildingType.TidalTurbine, tile, slot) ? new PanelPreview(false, "A tidal turbine stands on a free slot of a shallow-sea tile.", 0, 0, 0, 0)
+                        : new PanelPreview(true, "", 0, 0, 0, 0);
+                }
                 previewDirty = false;
                 lastPreviewTime = Time.unscaledTime;
             }
