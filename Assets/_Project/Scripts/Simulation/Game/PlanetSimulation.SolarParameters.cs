@@ -19,6 +19,7 @@ namespace KardashevAscent.Simulation.Game
         public int TileCount => Sphere.TileCount;
         public double DayLengthHours => planet.DayLengthHours;
         public double YearLengthHours => planet.YearLengthHours;
+        public double ObliquityRad => planet.Obliquity;
         public double BatteryStoredWh => Grid.Battery.StoredWh;
         public double BatteryCapacityWh => Grid.Battery.CapacityWh;
         public bool IsBrownout => Grid.IsBrownout;
