@@ -1054,6 +1054,31 @@ namespace KardashevAscent.Presentation.Planet
             return done;
         }
 
+        /// <summary>
+        /// Panels at the planned angles until the open site's panels would make about <paramref name="powerW"/> on average
+        /// over a year (with a margin for the battery's losses), counting the panels already there. Returns how many it
+        /// placed. Used by the setup tutorial's "Skip" so the colony does not start in a brownout: on a rich-terrain tile
+        /// one panel is a small slot, far below the base demand.
+        /// </summary>
+        public int AutoPlacePanelsFor(double powerW)
+        {
+            if (simulation == null || tile < 0 || siteView.Site == null || powerW <= 0.0)
+                return 0;
+            PanelPreview one = simulation.PreviewPanel(tile, tiltDeg * Mathf.Deg2Rad, azimuthDeg * Mathf.Deg2Rad);
+            double meanW = one.CanPlace ? one.EnergyPerYearWh / 8766.0 : 0.0;   // average over a year, night included
+            if (!(meanW > 0.0))
+                return 0;
+            int want = Mathf.Clamp(Mathf.CeilToInt((float)(1.3 * powerW / meanW)), 0, 60) - simulation.PanelCount(tile);
+            BuildMode was = mode;
+            mode = BuildMode.SolarPanel;
+            int placed = 0;
+            for (int s = 0; s < simulation.SlotCount(tile) && placed < want; s++)
+                if (!Occupied(s) && simulation.CanPlace(BuildingType.SolarPanel, tile, s) && PlaceAt(s))
+                    placed++;
+            mode = was;
+            return placed;
+        }
+
         /// <summary>Remove whatever stands in the selected slot.</summary>
         public bool Remove() => RemoveAt(slot);
 
