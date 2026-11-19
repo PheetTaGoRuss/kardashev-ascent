@@ -461,12 +461,12 @@ namespace KardashevAscent.Presentation.UI
             place.text = (knowsLatitude
                              ? $"{Math.Abs(latDeg):0.0}° {(latDeg >= 0 ? "N" : "S")}, {Math.Abs(lonDeg):0.0}° {(lonDeg >= 0 ? "E" : "W")}"
                              : "Latitude ?") +
-                         (!info.IsBuildableLand ? (Terrains.AllowsFloating(info.Terrain) ? " · floating only" : " · water") : $" · {sim.SlotCount(tile)} slots");
+                         (!info.IsBuildableLand ? (Terrains.AllowsFloating(info.Terrain) ? (info.Terrain == TerrainType.ShallowOcean ? " · floating solar, tidal turbines" : " · floating only") : " · water") : $" · {sim.SlotCount(tile)} slots");
             if (placeTip != null)
                 placeTip.Text = (knowsLatitude ? "Latitude and longitude of the tile's centre." :
                                     "Where the tile is stays unknown until you measure a latitude in the sky view (V); then the map gives every tile's.") +
                                 (!info.IsBuildableLand
-                                    ? (Terrains.AllowsFloating(info.Terrain) ? " Shallow water: only floating solar can go here." : " Deep water: nothing can be built here.")
+                                    ? (Terrains.AllowsFloating(info.Terrain) ? (info.Terrain == TerrainType.ShallowOcean ? $" Shallow sea: floating solar and tidal turbines can go here. Tide here: {sim.TidalRangeAtM(tile):0.0} m range, peak stream {sim.PeakStreamAtMs(tile):0.0} m/s (a turbine needs {KardashevAscent.Simulation.Planet.Tides.CutInMs:0.0} m/s)." : " Wetland: only floating solar can go here.") : " Deep water: nothing can be built here.")
                                     : $" A site has {sim.SlotCount(tile)} building slots; bigger buildings cover several.");
 
             PlanetSolarParams planet = runner.SolarParams;

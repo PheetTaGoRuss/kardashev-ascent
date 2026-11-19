@@ -41,7 +41,7 @@ namespace KardashevAscent.Presentation.UI
         Label siteProgress;
         string plannerCostShape, siteNeedsShape, buildInfoShape;
         Slider tilt, facing;
-        Button bestButton, placeButton, removeAllButton, reangleButton, modePanel, modeBattery, modeWorkshop, modeStation, modeRelay, modeFloating, modeResearch,
+        Button bestButton, placeButton, removeAllButton, reangleButton, modePanel, modeBattery, modeWorkshop, modeStation, modeRelay, modeFloating, modeTidal, modeResearch,
                modeAlumina, modeElectrolyser;
         // Build bar categories and the (i) descriptions.
         readonly System.Collections.Generic.Dictionary<BuildMode, (VisualElement Item, Button Info)> buildItems =
@@ -131,7 +131,7 @@ namespace KardashevAscent.Presentation.UI
             foreach (var (mode, key) in new[] { (BuildMode.SolarPanel, "panel"), (BuildMode.FloatingSolar, "floating"), (BuildMode.Battery, "battery"),
                                                 (BuildMode.Workshop, "workshop"), (BuildMode.ChargingStation, "station"), (BuildMode.Relay, "relay"),
                                                 (BuildMode.ResearchStation, "research"), (BuildMode.AluminaPlant, "alumina"),
-                                                (BuildMode.Electrolyser, "electrolyser") })
+                                                (BuildMode.Electrolyser, "electrolyser"), (BuildMode.TidalTurbine, "tidal") })
             {
                 VisualElement item = root.Q("item-" + key);
                 Button info = root.Q<Button>("info-" + key);
@@ -146,6 +146,10 @@ namespace KardashevAscent.Presentation.UI
             if (modeFloating != null)
                 modeFloating.clicked += () => { if (placer != null) placer.Mode = BuildMode.FloatingSolar; };
             DragFrom(modeFloating, BuildMode.FloatingSolar);
+            modeTidal = root.Q<Button>("mode-tidal");
+            if (modeTidal != null)
+                modeTidal.clicked += () => { if (placer != null) placer.Mode = BuildMode.TidalTurbine; };
+            DragFrom(modeTidal, BuildMode.TidalTurbine);
             hoverText = root.Q<Label>("hover-text");
             siteTitle = root.Q<Label>("site-title");
             siteText = root.Q<Label>("site-text");
@@ -314,6 +318,7 @@ namespace KardashevAscent.Presentation.UI
                 NameButton(modeRelay, "Relay", BuildMode.Relay);
                 NameButton(modeResearch, "Research Station", BuildMode.ResearchStation);
                 NameButton(modeFloating, "Floating solar", BuildMode.FloatingSolar);
+                NameButton(modeTidal, "Tidal turbine", BuildMode.TidalTurbine);
                 NameButton(modeAlumina, "Alumina plant", BuildMode.AluminaPlant);
                 NameButton(modeElectrolyser, "Electrolysis cell", BuildMode.Electrolyser);
                 if (buildHint != null)
@@ -334,6 +339,7 @@ namespace KardashevAscent.Presentation.UI
             Show(reangleButton, panelMode);
             modePanel.EnableInClassList("selected", panelMode && (!siteOpen || placer.Mode == BuildMode.SolarPanel));
             modeFloating?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.FloatingSolar);
+            modeTidal?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.TidalTurbine);
             modeBattery.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.Battery);
             modeWorkshop?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.Workshop);
             modeStation?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.ChargingStation);
