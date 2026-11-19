@@ -1013,7 +1013,7 @@ namespace KardashevAscent.Presentation.Game
 
         static void Show(VisualElement e, bool visible)
         {
-            if (e != null) e.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            UiMotion.Show(e, visible);
         }
 
         /// <summary>
