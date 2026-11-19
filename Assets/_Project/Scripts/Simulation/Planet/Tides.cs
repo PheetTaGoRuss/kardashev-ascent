@@ -46,18 +46,24 @@ namespace KardashevAscent.Simulation.Planet
 
         public const double MaxPeakMs = 5.0;
 
+        /// <summary>The highest tide a coast can reach, m: the Bay of Fundy record (about 16 m). A coast cannot funnel past it.</summary>
+        public const double MaxCoastRangeM = 16.0;
+
+        /// <summary>Open-sea range times how much a coast funnels it, capped at the Fundy record.</summary>
+        public static double CoastRangeM(double openRangeM, double funnel) => Math.Min(MaxCoastRangeM, openRangeM * funnel);
+
         /// <summary>Rated stream speed, m/s: above it the rotor sheds power and holds its rating (real rotors rate at about 3 m/s, e.g. a 1.2 MW SeaGen at 2.4 m/s). TBD.</summary>
         public const double RatedMs = 3.0;
 
         /// <summary>
-        /// A generated moon from the world's seed: mass ratio 0.002 to 0.02 (Earth's Moon is 0.0123) and distance 25 to 90
+        /// A generated moon from the world's seed: mass ratio 0.002 to 0.015 (Earth's Moon is 0.0123) and distance 35 to 90
         /// planet radii (Earth's Moon is 60). Deterministic. TBD ranges: a plausible spread, not a catalogue.
         /// </summary>
         public static Moon Generate(int seed)
         {
             var rng = new Random(unchecked(seed * 7919 + 104729));
-            double mass = 0.002 * Math.Pow(10.0, rng.NextDouble());   // 0.002 .. 0.02, log-uniform
-            double distance = 25.0 + 65.0 * rng.NextDouble();
+            double mass = 0.002 * Math.Pow(7.5, rng.NextDouble());   // 0.002 .. 0.015, log-uniform
+            double distance = 35.0 + 55.0 * rng.NextDouble();
             return new Moon(mass, distance);
         }
 

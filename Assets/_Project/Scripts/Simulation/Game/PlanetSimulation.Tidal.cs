@@ -47,7 +47,7 @@ namespace KardashevAscent.Simulation.Game
             uint h = unchecked((uint)(tileId * 2654435761u) ^ (uint)(TerrainSeed * 40503));
             double jitter = 0.7 + 0.6 * ((h >> 8) & 0xFFFF) / 65535.0;
             double funnel = 1.0 + 7.0 * landShare * jitter;
-            return Tides.EquilibriumRangeM(Moon, planetRadiusM) * funnel * (Debug.StrongTides ? 8.0 : 1.0);
+            return Tides.CoastRangeM(Tides.EquilibriumRangeM(Moon, planetRadiusM), funnel) * (Debug.StrongTides ? 8.0 : 1.0);
         }
 
         public double PeakStreamAtMs(int tileId) => Tides.PeakStreamMs(TidalRangeAtM(tileId));

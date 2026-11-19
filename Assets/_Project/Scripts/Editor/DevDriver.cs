@@ -215,6 +215,29 @@ namespace KardashevAscent.EditorTools
                         if (sim.GetTile(t).Terrain == kind) { picker.Select(t); Log("terrain tile " + t); break; }
                     return true;
                 }
+                case "experiment":
+                {
+                    // experiment TideGauge: order it at the station, and log what the order said and what is known.
+                    var sim = Runner()?.Simulation;
+                    var kind = (Simulation.Planet.ExperimentKind)Enum.Parse(typeof(Simulation.Planet.ExperimentKind), argument);
+                    if (sim != null)
+                        Log($"experiment {kind}: blocker={sim.ExperimentBlocker(kind) ?? "none"} ordered={sim.OrderExperiment(kind)} known={sim.IsExperimentKnown(kind)} result={sim.ExperimentResult(kind) ?? "-"}");
+                    return true;
+                }
+                case "survey":
+                {
+                    var sim = Runner()?.Simulation;
+                    if (sim != null) Log($"survey base tile {sim.BaseTileId}: ordered={sim.OrderSurvey(sim.BaseTileId)} surveyed={sim.Deposits.IsSurveyed(sim.BaseTileId)}");
+                    return true;
+                }
+                case "known":
+                {
+                    var sim = Runner()?.Simulation;
+                    var kind = (Simulation.Planet.ExperimentKind)Enum.Parse(typeof(Simulation.Planet.ExperimentKind), argument);
+                    if (sim != null)
+                        Log($"known {kind}={sim.IsExperimentKnown(kind)} station={sim.HasResearchStation} turbineBlocker={sim.KnowledgeBlocker(Simulation.Game.BuildingType.TidalTurbine) ?? "none"} result={sim.ExperimentResult(kind) ?? "-"}");
+                    return true;
+                }
                 case "tide":
                 {
                     // tide: open the site of the shallow-sea tile with the strongest tide.
@@ -242,6 +265,7 @@ namespace KardashevAscent.EditorTools
                         else if (argument == "unlock") tools.Debug.UnlockAll = true;
                         else if (argument == "battery") tools.Debug.FullBattery = true;
                         else if (argument == "tides") tools.Debug.StrongTides = true;
+                        else if (argument == "surveyall") tools.DebugSurveyAll();
                         panel.Open = true;
                         return true;
                     }

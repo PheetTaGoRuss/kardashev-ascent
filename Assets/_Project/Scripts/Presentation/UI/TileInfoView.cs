@@ -461,7 +461,7 @@ namespace KardashevAscent.Presentation.UI
             place.text = (knowsLatitude
                              ? $"{Math.Abs(latDeg):0.0}° {(latDeg >= 0 ? "N" : "S")}, {Math.Abs(lonDeg):0.0}° {(lonDeg >= 0 ? "E" : "W")}"
                              : "Latitude ?") +
-                         (!info.IsBuildableLand ? (Terrains.AllowsFloating(info.Terrain) ? (info.Terrain == TerrainType.ShallowOcean ? " · floating solar, tidal turbines" : " · floating only") : " · water") : $" · {sim.SlotCount(tile)} slots");
+                         (!info.IsBuildableLand ? (Terrains.AllowsFloating(info.Terrain) ? (info.Terrain == TerrainType.ShallowOcean ? " · floating solar, tidal turbines" + (sim.IsExperimentKnown(KardashevAscent.Simulation.Planet.ExperimentKind.TideGauge) ? $" · tide {sim.TidalRangeAtM(tile):0.0} m" : "") : " · floating only") : " · water") : $" · {sim.SlotCount(tile)} slots");
             if (placeTip != null)
                 placeTip.Text = (knowsLatitude ? "Latitude and longitude of the tile's centre." :
                                     "Where the tile is stays unknown until you measure a latitude in the sky view (V); then the map gives every tile's.") +

@@ -69,8 +69,9 @@ namespace KardashevAscent.Simulation.Tests.Planet
                 Moon a = Tides.Generate(seed), b = Tides.Generate(seed);
                 Assert.AreEqual(a.MassRatio, b.MassRatio);
                 Assert.AreEqual(a.DistanceRadii, b.DistanceRadii);
-                Assert.That(a.MassRatio, Is.InRange(0.002, 0.0200001));
-                Assert.That(a.DistanceRadii, Is.InRange(25.0, 90.0));
+                Assert.That(a.MassRatio, Is.InRange(0.002, 0.0150001));
+                Assert.That(a.DistanceRadii, Is.InRange(35.0, 90.0));
+                Assert.LessOrEqual(Tides.CoastRangeM(Tides.EquilibriumRangeM(a, EarthRadiusM), 8.0), Tides.MaxCoastRangeM, "no coast beats the Fundy record");
             }
             Assert.AreNotEqual(Tides.Generate(1).DistanceRadii, Tides.Generate(2).DistanceRadii);
         }
