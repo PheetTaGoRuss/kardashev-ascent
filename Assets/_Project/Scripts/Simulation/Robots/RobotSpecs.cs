@@ -74,7 +74,7 @@ namespace KardashevAscent.Simulation.Robots
         public const double MiningBatchHours = 1.0;
 
         /// <summary>Material mined per hour of work from a grade-1 deposit, kg. TBD (D4).</summary>
-        public const double MiningKgPerHour = 50.0;
+        public const double MiningKgPerHour = 150.0;
 
         /// <summary>A specialised robot's work speed at its own job, relative to a General robot. TBD (D4).</summary>
         public const double SpecialistSpeed = 2.0;

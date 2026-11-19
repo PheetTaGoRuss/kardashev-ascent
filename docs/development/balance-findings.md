@@ -32,6 +32,19 @@ Robots can only work as far from a charger as one battery lasts (80 % out and ba
 
 The tile panel now says why an order can never be worked (`PlanetSimulation.WorkReachProblem`, shown under the mining and survey buttons): "Out of range: N h of driving from the nearest charger, and a robot can go M h out and back on one charge. Build a charging station nearer." Measured on Viridia (2446 land tiles) after landing with the standard essentials: **32 land tiles in range (1.3 %), 2080 out of range, 334 cut off by water or a barrier**. So with one charger a colony can reach a radius of about three tiles. That is a deliberate frontier, but it makes the forward charger the player's first real decision. **Decided 2026-11-20 (director): keep the radius of about three tiles.** A first-steps hint (step 5 of 6) introduces the forward charger and is done once a second charger stands. Not tuned: robot battery, drive power and hop time as such. Earlier open question, now answered: whether the radius is right (it follows from robot battery 2.4 kWh, drive power 50 W and the hop time per tile; none is tuned), and a tutorial step that introduces forward chargers.
 
+## Pass 2 (2026-11-20): a smarter scripted player, and mining ×3
+
+`Tests/EditMode/Game/BalanceBot.cs` (explicit; run it by name: `dotnet test tools/simtests/SimTests.csproj --filter "Name=Timeline"`) is the repeatable version of the bot: it orders robots before anything else, builds forward chargers toward copper and lithium, mines what the stock lacks, and adds panels and batteries as demand grows. Standard test planet, three robots to start, panels at the tier the milestones allow.
+
+| Mining rate | Milestone 1 (10 MW) | Milestone 2 (100 MW) | What limited it |
+| --- | --- | --- | --- |
+| 50 kg/h per robot (old) | about day 65 to 70 | not within 280 days (about 40 MW demand) | **Rock**: panels need about a tonne per hectare and the stock sat at zero from day 90 on; robots could not even be ordered (200 kg of rock each) |
+| **150 kg/h per robot (now)** | **about day 35 to 40** | **about day 155 to 160** | Iron by the end of the run |
+
+Changed: `RobotSpecs.MiningKgPerHour` 50 → 150 (game rule, TBD). Reasoning: with the old rate a crew of twelve made about 14 t of rock a day against a tonne per panel hectare, so every milestone beyond the first was a wall of mining time, not play. The bot is a conservative player; a person should be faster.
+
+Still open: demand lags generation (at day 280 the bot makes 295 MW at peak but uses 41 MW, because the demand rule follows 85 % of the mean over a day, and night and angles cut the mean to about a fifth of peak); each milestone costs ten times the last, so milestone 3 and later need the larger panel tiers and a bigger crew than the bot builds. Those are next.
+
 ## Not yet balanced
 
 A smarter bot that builds forward chargers and relays is needed before tuning mining rates, robot costs and build times. Until then those numbers stay as placeholders.
