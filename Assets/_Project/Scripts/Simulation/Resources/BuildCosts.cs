@@ -108,7 +108,7 @@ namespace KardashevAscent.Simulation.Resources
         /// (game rule, TBD).
         /// </summary>
         public static readonly MaterialBill LanderCargo = new MaterialBill()
-            .Add(Material.Rock, 2500.0).Add(Material.Iron, 1500.0).Add(Material.Copper, 100.0).Add(Material.Lithium, 25.0);
+            .Add(Material.Rock, 2500.0).Add(Material.Iron, 1500.0).Add(Material.Copper, 250.0).Add(Material.Lithium, 25.0);
 
         // ---- Before save version 26: buildings cost "build parts" in Wh ----
 
