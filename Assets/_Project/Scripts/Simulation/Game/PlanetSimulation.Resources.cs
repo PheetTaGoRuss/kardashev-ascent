@@ -21,8 +21,7 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Grid power the Workshop's jobs drew in the last step, W (their recipes' energy over their work hours).</summary>
         public double WorkshopPowerW { get; private set; }
 
-        readonly List<int> surveyOrders = new List<int>();
-        readonly List<(int Tile, Material Material)> miningOrders = new List<(int, Material)>();
+        readonly FieldOrderBook orders = new FieldOrderBook();
         /// <summary>Hours of work done on survey tasks and the current mining batch.</summary>
         readonly Dictionary<WorkTask, double> fieldWork = new Dictionary<WorkTask, double>();
 
@@ -39,19 +38,19 @@ namespace KardashevAscent.Simulation.Game
 
         public bool OrderSurvey(int tileId)
         {
-            if (tileId < 0 || tileId >= TileCount || GetTile(tileId).IsWater || Deposits.IsSurveyed(tileId) || surveyOrders.Contains(tileId)
+            if (tileId < 0 || tileId >= TileCount || GetTile(tileId).IsWater || Deposits.IsSurveyed(tileId) || orders.HasSurvey(tileId)
                 || surveyPuzzles.Exists(q => q.Tile == tileId))
                 return false;
-            surveyOrders.Add(tileId);
+            orders.AddSurvey(tileId);
             Settle(null);
             return true;
         }
 
-        public bool IsSurveyOrdered(int tileId) => surveyOrders.Contains(tileId);
+        public bool IsSurveyOrdered(int tileId) => orders.HasSurvey(tileId);
 
         public bool CancelSurvey(int tileId)
         {
-            if (!surveyOrders.Remove(tileId))
+            if (!orders.RemoveSurvey(tileId))
                 return false;
             Workforce.Tasks.MarkCancelled(SurveyTask(tileId));
             fieldWork.Remove(SurveyTask(tileId));
@@ -71,18 +70,18 @@ namespace KardashevAscent.Simulation.Game
         public bool OrderMining(int tileId, Material material)
         {
             if (tileId < 0 || tileId >= TileCount || !Deposits.IsKnown(tileId, material) || Deposits.GradeOf(tileId, material) <= 0.0
-                || Deposits.IsExhausted(tileId, material) || miningOrders.Contains((tileId, material)) || !IsOpenGround(tileId))
+                || Deposits.IsExhausted(tileId, material) || orders.HasMining(tileId, material) || !IsOpenGround(tileId))
                 return false;
-            miningOrders.Add((tileId, material));
+            orders.AddMining(tileId, material);
             Settle(null);
             return true;
         }
 
-        public bool IsMiningOrdered(int tileId, Material material) => miningOrders.Contains((tileId, material));
+        public bool IsMiningOrdered(int tileId, Material material) => orders.HasMining(tileId, material);
 
         public bool CancelMining(int tileId, Material material)
         {
-            if (!miningOrders.Remove((tileId, material)))
+            if (!orders.RemoveMining(tileId, material))
                 return false;
             Workforce.Tasks.MarkCancelled(MineTask(tileId, material));
             fieldWork.Remove(MineTask(tileId, material));
@@ -90,14 +89,14 @@ namespace KardashevAscent.Simulation.Game
             return true;
         }
 
-        public int MiningOrderCount => miningOrders.Count;
+        public int MiningOrderCount => orders.Mining.Count;
 
         /// <summary>Robots on survey and mining tasks add work; finished surveys reveal tiles, finished batches add material.</summary>
         void AdvanceFieldWork(double dt)
         {
             // Interruption rule (D15): a survey (a measurement) restarts if no robot is on it; building, salvage and
             // mining keep their progress, which lives on the site or the batch.
-            foreach (int tile in surveyOrders)
+            foreach (int tile in orders.Survey)
             {
                 WorkTask st = SurveyTask(tile);
                 if (!TaskPolicy.For(TaskKind.Survey).KeepsProgress && fieldWork.ContainsKey(st) && !Workforce.IsWorkedOnSite(st))
@@ -167,13 +166,13 @@ namespace KardashevAscent.Simulation.Game
                 FinishJob(j);
                 JobFinished?.Invoke(j);
             }
-            foreach (int tile in surveyOrders.ToArray())
+            foreach (int tile in orders.SurveySnapshot())
             {
                 WorkTask t = SurveyTask(tile);
                 if (fieldWork.TryGetValue(t, out double h) && h >= RobotSpecs.SurveyWorkHours - 1e-9)
                 {
                     fieldWork.Remove(t);
-                    surveyOrders.Remove(tile);
+                    orders.RemoveSurvey(tile);
                     SurveyPuzzle puzzle = SurveyPuzzle.Make(tile, Deposits.At(tile));
                     // Only rock here: nothing to estimate, the survey is simply done (once the colony has it).
                     // Otherwise the cores are a puzzle only now and then; usually the robot works the grades out itself.
@@ -221,7 +220,7 @@ namespace KardashevAscent.Simulation.Game
             }
             AdvanceExperiments();
             AdvancePassages();
-            foreach (var order in miningOrders.ToArray())
+            foreach (var order in orders.MiningSnapshot())
             {
                 WorkTask t = MineTask(order.Tile, order.Material);
                 if (!fieldWork.TryGetValue(t, out double h) || h < RobotSpecs.MiningBatchHours - 1e-9)
@@ -233,7 +232,7 @@ namespace KardashevAscent.Simulation.Game
                 Workforce.Release(t);
                 if (Deposits.IsExhausted(order.Tile, order.Material))
                 {
-                    miningOrders.Remove(order);
+                    orders.RemoveMining(order.Tile, order.Material);
                     Workforce.Tasks.MarkCancelled(t);
                     fieldWork.Remove(t);
                     industrialReports.Add(TimeHours, "Mining", IndustrialBlocker.None,

@@ -47,7 +47,7 @@ namespace KardashevAscent.Simulation.Game
             foreach (var (tile, m, kg) in Deposits.Mined)
                 state.Mined.Add(new MinedRecord { Tile = tile, Material = m, Kg = kg });
             state.Mined.Sort((x, y) => x.Tile != y.Tile ? x.Tile.CompareTo(y.Tile) : x.Material.CompareTo(y.Material));
-            state.SurveyOrders.AddRange(surveyOrders);
+            state.SurveyOrders.AddRange(orders.Survey);
             state.MeasuredParameters = Parameters.Capture();
             state.LatitudePuzzles.AddRange(latitudePuzzles);
             state.ParameterPuzzles.AddRange(parameterPuzzles);
@@ -58,7 +58,7 @@ namespace KardashevAscent.Simulation.Game
             state.RoughSurveys.Sort();
             foreach (var mo in measureOrders)
                 state.MeasureOrders.Add(new MeasureOrderRecord { Parameter = mo.Parameter, Tile = mo.Tile });
-            foreach (var mo in miningOrders)
+            foreach (var mo in orders.Mining)
                 state.MiningOrders.Add(new MiningOrderRecord { Tile = mo.Tile, Material = mo.Material });
             foreach (Material m in Resources.Materials.All)
                 if (Materials[m] > 0.0)
@@ -79,7 +79,7 @@ namespace KardashevAscent.Simulation.Game
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.ChargingStation });
             foreach (var c in relays)
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.Relay });
-            foreach (var c in researchStations)
+            foreach (var c in research.Stations)
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.ResearchStation });
             foreach (var kv in refineryModules)
                 state.Buildings.Add(new BuildingRecord { Tile = kv.Key.Tile, Slot = kv.Key.Slot, Type = kv.Value });
@@ -149,7 +149,7 @@ namespace KardashevAscent.Simulation.Game
                 RemoveBuilding(key.Tile, key.Slot);
             foreach (var key in new List<(int Tile, int Slot)>(relays))
                 RemoveBuilding(key.Tile, key.Slot);
-            foreach (var key in new List<(int Tile, int Slot)>(researchStations))
+            foreach (var key in new List<(int Tile, int Slot)>(research.Stations))
                 RemoveBuilding(key.Tile, key.Slot);
             foreach (var key in new List<(int Tile, int Slot)>(refineryModules.Keys))
                 RemoveBuilding(key.Tile, key.Slot);
@@ -204,8 +204,7 @@ namespace KardashevAscent.Simulation.Game
                     if (r != null) mined.Add((r.Tile, r.Material, r.Kg));
             Deposits.SetMined(mined);
             Materials.Clear();
-            surveyOrders.Clear();
-            miningOrders.Clear();
+            orders.Clear();
             fieldWork.Clear();
             Parameters.Restore(state.MeasuredParameters);   // version 18
             Parameters.RestoreRough(state.RoughParameters);   // version 20
@@ -255,14 +254,14 @@ namespace KardashevAscent.Simulation.Game
                     Materials.Add(m, kg);
             if (state.SurveyOrders != null)
                 foreach (int tile in state.SurveyOrders)
-                    if (tile >= 0 && tile < TileCount && !Deposits.IsSurveyed(tile) && !surveyOrders.Contains(tile))
-                        surveyOrders.Add(tile);
+                    if (tile >= 0 && tile < TileCount && !Deposits.IsSurveyed(tile) && !orders.HasSurvey(tile))
+                        orders.AddSurvey(tile);
             if (state.MiningOrders != null)
                 foreach (MiningOrderRecord o in state.MiningOrders)
                     if (o.Tile >= 0 && o.Tile < TileCount && Deposits.IsKnown(o.Tile, o.Material) && Deposits.GradeOf(o.Tile, o.Material) > 0.0
                         && !Deposits.IsExhausted(o.Tile, o.Material)
-                        && !miningOrders.Contains((o.Tile, o.Material)))
-                        miningOrders.Add((o.Tile, o.Material));
+                        && !orders.HasMining(o.Tile, o.Material))
+                        orders.AddMining(o.Tile, o.Material);
             if (state.FieldWork != null)
                 foreach (FieldWorkRecord f in state.FieldWork)
                     fieldWork[new WorkTask(f.Kind, f.Tile, f.Slot)] = Math.Max(0.0, f.Hours);
@@ -345,7 +344,7 @@ namespace KardashevAscent.Simulation.Game
                 if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
                     return;
                 if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(BuildingType.ResearchStation), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r), BuildTimes.Hours(BuildingType.ResearchStation));
-                researchStations.Add((r.Tile, r.Slot));
+                research.Stations.Add((r.Tile, r.Slot));
             }
             else if (r.Type == BuildingType.Relay)
             {

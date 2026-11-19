@@ -102,7 +102,7 @@ namespace KardashevAscent.Simulation.Game
             : workshops.Contains((tileId, slot)) ? BuildingType.Workshop
             : stations.Contains((tileId, slot)) ? BuildingType.ChargingStation
             : relays.Contains((tileId, slot)) ? BuildingType.Relay
-            : researchStations.Contains((tileId, slot)) ? BuildingType.ResearchStation
+            : research.Stations.Contains((tileId, slot)) ? BuildingType.ResearchStation
             : refineryModules.TryGetValue((tileId, slot), out BuildingType module) ? module
             : BuildingType.None;
 
@@ -147,10 +147,10 @@ namespace KardashevAscent.Simulation.Game
                 RefreshNetwork();
                 return true;
             }
-            if (researchStations.Contains((tileId, slot)))
+            if (research.Stations.Contains((tileId, slot)))
             {
                 Dismantle(tileId, slot, BuildingType.ResearchStation);
-                researchStations.Remove((tileId, slot));
+                research.Stations.Remove((tileId, slot));
                 Vacate(tileId, slot);
                 return true;
             }

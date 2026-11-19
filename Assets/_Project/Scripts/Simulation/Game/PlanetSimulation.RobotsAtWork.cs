@@ -33,14 +33,14 @@ namespace KardashevAscent.Simulation.Game
                 tasks.Add(new WorkTask(TaskKind.Salvage, salvageOrders[k].Tile, salvageOrders[k].Slot, k));
             for (int k = 0; k < adjustOrders.Count; k++)
                 tasks.Add(new WorkTask(TaskKind.Adjust, adjustOrders[k].Tile, adjustOrders[k].Slot, k));
-            for (int k = 0; k < surveyOrders.Count; k++)
-                tasks.Add(new WorkTask(TaskKind.Survey, surveyOrders[k], -1, k));
+            for (int k = 0; k < orders.Survey.Count; k++)
+                tasks.Add(new WorkTask(TaskKind.Survey, orders.Survey[k], -1, k));
             for (int k = 0; k < measureOrders.Count; k++)
                 tasks.Add(new WorkTask(TaskKind.Measure, measureOrders[k].Tile, (int)measureOrders[k].Parameter, k));
-            for (int k = 0; k < experimentOrders.Count; k++)
-                tasks.Add(new WorkTask(TaskKind.Experiment, experimentOrders[k].Tile, (int)experimentOrders[k].Kind, k));
-            for (int k = 0; k < miningOrders.Count; k++)
-                tasks.Add(new WorkTask(TaskKind.Mine, miningOrders[k].Tile, (int)miningOrders[k].Material, k));
+            for (int k = 0; k < research.Orders.Count; k++)
+                tasks.Add(new WorkTask(TaskKind.Experiment, research.Orders[k].Tile, (int)research.Orders[k].Kind, k));
+            for (int k = 0; k < orders.Mining.Count; k++)
+                tasks.Add(new WorkTask(TaskKind.Mine, orders.Mining[k].Tile, (int)orders.Mining[k].Material, k));
             AddPassageTasks(tasks);
             List<(int Tile, int Slot)> shops = FinishedWorkshops();
             for (int k = 0; k < Math.Min(jobs.Count, shops.Count); k++)

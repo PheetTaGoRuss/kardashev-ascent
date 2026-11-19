@@ -17,9 +17,7 @@ namespace KardashevAscent.Simulation.Game
     /// </summary>
     public sealed partial class PlanetSimulation
     {
-        readonly HashSet<(int Tile, int Slot)> researchStations = new HashSet<(int, int)>();
-        readonly HashSet<ExperimentKind> knownExperiments = new HashSet<ExperimentKind>();
-        readonly List<(ExperimentKind Kind, int Tile)> experimentOrders = new List<(ExperimentKind, int)>();
+        readonly ResearchBook research = new ResearchBook();
         public event Action<ExperimentKind> ExperimentDone;
 
         /// <summary>Earth's standard gravity, m/s² (CGPM 1901: 9.806 65), for planets with no recorded gravity.</summary>
@@ -42,7 +40,7 @@ namespace KardashevAscent.Simulation.Game
             if (!CanPlace(BuildingType.ResearchStation, tileId, slot))
                 return false;
             StartSite(tileId, slot, BuildBill(BuildingType.ResearchStation), BuildTimes.Hours(BuildingType.ResearchStation));
-            researchStations.Add((tileId, slot));
+            research.Stations.Add((tileId, slot));
             Occupy(tileId, FootprintFor(BuildingType.ResearchStation, tileId, slot));
             Settle((tileId, slot));
             return true;
@@ -55,7 +53,7 @@ namespace KardashevAscent.Simulation.Game
         public int SurveyedStationTile(int preferTile)
         {
             int any = -1;
-            foreach (var s in researchStations)
+            foreach (var s in research.Stations)
             {
                 if (Build.QueueCount > 0 && Build.IsQueued(s.Tile, s.Slot)) continue;
                 if (!Deposits.IsSurveyed(s.Tile)) continue;
@@ -69,7 +67,7 @@ namespace KardashevAscent.Simulation.Game
         public int FinishedStationTile(int preferTile)
         {
             int any = -1;
-            foreach (var s in researchStations)
+            foreach (var s in research.Stations)
             {
                 if (Build.QueueCount > 0 && Build.IsQueued(s.Tile, s.Slot))
                     continue;
@@ -100,8 +98,8 @@ namespace KardashevAscent.Simulation.Game
 
         // ---- experiments ----
 
-        public bool IsExperimentKnown(ExperimentKind kind) => knownExperiments.Contains(kind);
-        public bool IsExperimentOrdered(ExperimentKind kind) => experimentOrders.Exists(o => o.Kind == kind);
+        public bool IsExperimentKnown(ExperimentKind kind) => research.Known.Contains(kind);
+        public bool IsExperimentOrdered(ExperimentKind kind) => research.Orders.Exists(o => o.Kind == kind);
 
         /// <summary>Why an experiment can't be ordered now, or null when it can.</summary>
         public string ExperimentBlocker(ExperimentKind kind)
@@ -122,18 +120,18 @@ namespace KardashevAscent.Simulation.Game
         {
             if (ExperimentBlocker(kind) != null || IsExperimentOrdered(kind))
                 return false;
-            experimentOrders.Add((kind, SurveyedStationTile(preferTile < 0 ? BaseTileId : preferTile)));
+            research.Orders.Add((kind, SurveyedStationTile(preferTile < 0 ? BaseTileId : preferTile)));
             Settle(null);
             return true;
         }
 
         public bool CancelExperiment(ExperimentKind kind)
         {
-            int i = experimentOrders.FindIndex(o => o.Kind == kind);
+            int i = research.Orders.FindIndex(o => o.Kind == kind);
             if (i < 0)
                 return false;
-            WorkTask t = ExperimentTask(kind, experimentOrders[i].Tile);
-            experimentOrders.RemoveAt(i);
+            WorkTask t = ExperimentTask(kind, research.Orders[i].Tile);
+            research.Orders.RemoveAt(i);
             Workforce.Tasks.MarkCancelled(t);
             fieldWork.Remove(t);
             Settle(null);
@@ -144,8 +142,8 @@ namespace KardashevAscent.Simulation.Game
         {
             if (IsExperimentKnown(kind))
                 return 1.0;
-            int i = experimentOrders.FindIndex(o => o.Kind == kind);
-            return i >= 0 && fieldWork.TryGetValue(ExperimentTask(kind, experimentOrders[i].Tile), out double h)
+            int i = research.Orders.FindIndex(o => o.Kind == kind);
+            return i >= 0 && fieldWork.TryGetValue(ExperimentTask(kind, research.Orders[i].Tile), out double h)
                 ? Math.Min(1.0, h / Experiments.WorkHours(kind)) : 0.0;
         }
 
@@ -154,21 +152,21 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Hours of robot work on experiments: finished ones become knowledge; a robot that leaves restarts it.</summary>
         void AdvanceExperiments()
         {
-            foreach (var o in experimentOrders)
+            foreach (var o in research.Orders)
             {
                 WorkTask t = ExperimentTask(o.Kind, o.Tile);
                 if (fieldWork.ContainsKey(t) && !Workforce.IsWorkedOnSite(t))
                     fieldWork.Remove(t);
             }
-            foreach (var o in experimentOrders.ToArray())
+            foreach (var o in research.Orders.ToArray())
             {
                 WorkTask t = ExperimentTask(o.Kind, o.Tile);
                 if (!fieldWork.TryGetValue(t, out double h) || h < Experiments.WorkHours(o.Kind) - 1e-9)
                     continue;
                 fieldWork.Remove(t);
-                experimentOrders.Remove(o);
+                research.Orders.Remove(o);
                 Workforce.Release(t);
-                knownExperiments.Add(o.Kind);
+                research.Known.Add(o.Kind);
                 if (o.Kind == ExperimentKind.SeismicSurvey) Deposits.DeepScanned = true;
                 ExperimentDone?.Invoke(o.Kind);
             }
@@ -324,7 +322,7 @@ namespace KardashevAscent.Simulation.Game
             {
                 if (!CanPlace(BuildingType.ResearchStation, tileId, s))
                     continue;
-                researchStations.Add((tileId, s));
+                research.Stations.Add((tileId, s));
                 Occupy(tileId, FootprintFor(BuildingType.ResearchStation, tileId, s));
                 return;
             }
@@ -332,7 +330,7 @@ namespace KardashevAscent.Simulation.Game
 
         internal void LearnExperimentForTests(ExperimentKind kind)
         {
-            knownExperiments.Add(kind);
+            research.Known.Add(kind);
             if (kind == ExperimentKind.SeismicSurvey) Deposits.DeepScanned = true;
         }
 
@@ -340,26 +338,26 @@ namespace KardashevAscent.Simulation.Game
 
         void CaptureResearch(SimulationState state)
         {
-            foreach (ExperimentKind k in knownExperiments)
+            foreach (ExperimentKind k in research.Known)
                 state.KnownExperiments.Add((int)k);
             state.KnownExperiments.Sort();
-            foreach (var o in experimentOrders)
+            foreach (var o in research.Orders)
                 state.ExperimentOrders.Add(new ExperimentOrderRecord { Kind = o.Kind, Tile = o.Tile });
         }
 
         void RestoreResearch(SimulationState state)
         {
-            knownExperiments.Clear();
-            experimentOrders.Clear();
+            research.Known.Clear();
+            research.Orders.Clear();
             if (state.KnownExperiments != null)   // version 29
                 foreach (int k in state.KnownExperiments)
                     if (Enum.IsDefined(typeof(ExperimentKind), k))
-                        knownExperiments.Add((ExperimentKind)k);
+                        research.Known.Add((ExperimentKind)k);
             if (state.ExperimentOrders != null)
                 foreach (ExperimentOrderRecord o in state.ExperimentOrders)
-                    if (o.Tile >= 0 && o.Tile < TileCount && !knownExperiments.Contains(o.Kind) && !IsExperimentOrdered(o.Kind))
-                        experimentOrders.Add((o.Kind, o.Tile));
-            Deposits.DeepScanned = knownExperiments.Contains(ExperimentKind.SeismicSurvey);
+                    if (o.Tile >= 0 && o.Tile < TileCount && !research.Known.Contains(o.Kind) && !IsExperimentOrdered(o.Kind))
+                        research.Orders.Add((o.Kind, o.Tile));
+            Deposits.DeepScanned = research.Known.Contains(ExperimentKind.SeismicSurvey);
         }
     }
 }
