@@ -149,7 +149,7 @@ namespace KardashevAscent.Presentation.Game
             ShowMenuGuide(false);
             if (phase == GamePhase.MainMenu) PlayIntro();
             Show(pauseMenu, false);
-            Show(landingBanner, phase == GamePhase.Landing);
+            Show(landingBanner, phase == GamePhase.Landing && !KardashevAscent.Presentation.UI.SystemTabs.AnyOpen);   // out of the way while a system window is open
             Show(setupPanel, phase == GamePhase.Setup);
             if (phase != GamePhase.Playing)
             {
@@ -394,7 +394,7 @@ namespace KardashevAscent.Presentation.Game
             landingBanner.AddToClassList("panel");
             landingBanner.pickingMode = PickingMode.Ignore;
             landingBanner.style.position = Position.Absolute;
-            landingBanner.style.top = 96;
+            landingBanner.style.bottom = 36;   // at the bottom edge, clear of the tab bar and the system windows
             landingBanner.style.left = new Length(50, LengthUnit.Percent);
             landingBanner.style.translate = new Translate(new Length(-50, LengthUnit.Percent), 0);
             landingBanner.style.paddingLeft = landingBanner.style.paddingRight = 14;
