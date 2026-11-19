@@ -22,6 +22,9 @@ namespace KardashevAscent.Simulation.Game
                 Grid.Battery.SetStored(Grid.Battery.CapacityWh);
         }
 
+        /// <summary>Set the milestone count (tests about what milestones unlock).</summary>
+        internal void SetMilestonesForTests(int milestones) => MilestonesReached = milestones;
+
         public void DebugAddMaterials(double kg)
         {
             if (kg <= 0.0) return;

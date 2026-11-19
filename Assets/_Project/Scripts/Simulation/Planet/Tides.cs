@@ -121,6 +121,47 @@ namespace KardashevAscent.Simulation.Planet
             return peakMs * Math.Abs(Math.Sin(Math.PI * timeHours / tidePeriodHours));
         }
 
+        // ---- tidal barrage (director 2026-11-19) ----
+
+        /// <summary>Basin behind one barrage, m2 (La Rance's is about 22 km2). A tile is far bigger than a real basin, so this is a fixed game rule. TBD.</summary>
+        public const double BarrageBasinM2 = 22e6;
+
+        /// <summary>Share of one emptying's energy the plant turns into electricity. About 0.3 puts La Rance's 8 m range at about 420 GWh a year (real: about 500, two-way). TBD.</summary>
+        public const double BarragePlantShare = 0.3;
+
+        /// <summary>The milestone level at which a barrage opens (a late source). TBD.</summary>
+        public const int BarrageMilestone = 3;
+
+        /// <summary>The smallest local tidal range a barrage is worth building on, m (La Rance works at about 8). TBD.</summary>
+        public const double BarrageMinRangeM = 4.0;
+
+        /// <summary>How much of the tile's tidal range a built barrage takes away (a basin's tide weakens behind a dam). TBD.</summary>
+        public const double BarrageRangeDrop = 0.25;
+
+        /// <summary>The share of land around a tile that makes it a bay (2 of 6 neighbours). TBD.</summary>
+        public const double BarrageMinLandShare = 0.33;
+
+        /// <summary>One-way (ebb) generation: it starts this far into the tide cycle after high water and runs for the next share of the cycle (La Rance generates about 5 of 12.4 hours). TBD.</summary>
+        public const double BarrageGenStart = 0.10, BarrageGenLength = 0.40;
+
+        /// <summary>Energy of one emptying of a barrage basin, J: 1/2 rho g A h^2 times the plant share.</summary>
+        public static double BarrageEnergyPerTideJ(double basinM2, double rangeM, double gravityMs2, double plantShare = BarragePlantShare) =>
+            basinM2 <= 0.0 || rangeM <= 0.0 || gravityMs2 <= 0.0 ? 0.0 : 0.5 * RhoSeaWater * gravityMs2 * basinM2 * rangeM * rangeM * plantShare;
+
+        /// <summary>
+        /// Barrage power at a point in the tide cycle, W: a half-sine pulse over the generation window holding the whole
+        /// emptying's energy (peak = pi E / (2 window)), zero outside it. <paramref name="cycleFraction"/> is time since high water over the cycle.
+        /// </summary>
+        public static double BarragePowerW(double energyPerTideJ, double tidePeriodHours, double cycleFraction)
+        {
+            if (energyPerTideJ <= 0.0 || tidePeriodHours <= 0.0 || double.IsInfinity(tidePeriodHours)) return 0.0;
+            double f = cycleFraction - Math.Floor(cycleFraction);
+            double x = (f - BarrageGenStart) / BarrageGenLength;
+            if (x < 0.0 || x > 1.0) return 0.0;
+            double windowS = BarrageGenLength * tidePeriodHours * 3600.0;
+            return Math.PI * energyPerTideJ / (2.0 * windowS) * Math.Sin(Math.PI * x);
+        }
+
         /// <summary>Electric power of free-flow rotors in a stream, W: 1/2 * rho * A * v^3 * Cp each, zero below the cut-in speed.</summary>
         public static double TurbinePowerW(double streamMs, int turbines = 1)
         {

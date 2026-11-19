@@ -71,6 +71,8 @@ namespace KardashevAscent.Simulation.Game
                 GenerationW = ComputeGeneration() + RtgW;   // during a step, the next step counts it (keeps the step's books balanced)
             if (relays.Contains((tileId, slot)))
                 RefreshNetwork();
+            if (barrages.Contains((tileId, slot)))
+                RefreshBarrageBlocks();
             if (raise)
                 BuildingCompleted?.Invoke(tileId, slot);
         }

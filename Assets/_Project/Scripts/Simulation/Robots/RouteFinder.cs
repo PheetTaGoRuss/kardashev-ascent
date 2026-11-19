@@ -29,25 +29,39 @@ namespace KardashevAscent.Simulation.Robots
         readonly Dictionary<int, (double[] Hours, int[] Previous)> cache = new Dictionary<int, (double[], int[])>();
         /// <summary>Barrier tiles the colony has opened (tunnel, blasting, bridge); shared with <see cref="Amphibious"/>.</summary>
         readonly HashSet<int> opened;
+        /// <summary>Water tiles dammed by a barrage: boats can reach their edge but not cross them. Shared with <see cref="Amphibious"/>.</summary>
+        readonly HashSet<int> dammed;
 
         /// <param name="onWater">Routes for a robot with a boat module: open water can be crossed too.</param>
         public RouteFinder(HexSphere sphere, PlanetSurface surface, double gravityMs2 = EarthGravity, bool onWater = false)
-            : this(sphere, surface, gravityMs2, onWater, new HashSet<int>()) { }
+            : this(sphere, surface, gravityMs2, onWater, new HashSet<int>(), new HashSet<int>()) { }
 
-        RouteFinder(HexSphere sphere, PlanetSurface surface, double gravityMs2, bool onWater, HashSet<int> opened)
+        RouteFinder(HexSphere sphere, PlanetSurface surface, double gravityMs2, bool onWater, HashSet<int> opened, HashSet<int> dammed)
         {
             this.sphere = sphere ?? throw new ArgumentNullException(nameof(sphere));
             this.surface = surface ?? throw new ArgumentNullException(nameof(surface));
             GravityMs2 = gravityMs2 > 0.0 ? gravityMs2 : EarthGravity;
             OnWater = onWater;
             this.opened = opened;
+            this.dammed = dammed;
         }
 
         /// <summary>
         /// True when robots can drive across this tile. A barrier (mountain, canyon: <see cref="Terrains.IsBarrier"/>)
         /// only once it is opened; robots can still drive up to one, onto its edge, to work there.
         /// </summary>
-        public bool IsPassable(int tile) => !Terrains.IsBarrier(surface.Terrain[tile]) || opened.Contains(tile);
+        public bool IsPassable(int tile) => !dammed.Contains(tile) && (!Terrains.IsBarrier(surface.Terrain[tile]) || opened.Contains(tile));
+
+        /// <summary>Dam (or free) a water tile: boats stop crossing it. Routes are worked out again.</summary>
+        public void SetDammed(int tile, bool on)
+        {
+            bool changed = on ? dammed.Add(tile) : dammed.Remove(tile);
+            if (!changed) return;
+            cache.Clear();
+            amphibious?.cache.Clear();
+        }
+
+        public bool IsDammed(int tile) => dammed.Contains(tile);
 
         /// <summary>Open (or close) a barrier tile for driving across it. Routes are worked out again.</summary>
         public void SetOpened(int tile, bool open)
@@ -70,7 +84,7 @@ namespace KardashevAscent.Simulation.Robots
 
         /// <summary>The same planet's routes for a robot that can go on water (made once, then kept).</summary>
         public RouteFinder Amphibious() =>
-            OnWater ? this : amphibious ?? (amphibious = new RouteFinder(sphere, surface, GravityMs2, true, opened));
+            OnWater ? this : amphibious ?? (amphibious = new RouteFinder(sphere, surface, GravityMs2, true, opened, dammed));
 
         /// <summary>
         /// Hours to cross a tile of open water with a boat module (game rule, TBD): shallow sea 1.5 flat tiles, deep

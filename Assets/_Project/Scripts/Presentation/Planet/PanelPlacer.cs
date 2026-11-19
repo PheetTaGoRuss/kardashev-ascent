@@ -46,6 +46,8 @@ namespace KardashevAscent.Presentation.Planet
         TidalTurbine,
         /// <summary>Wave-energy converter line on shallow sea (director 2026-11-19).</summary>
         WaveConverter,
+        /// <summary>Tidal barrage across a bay (director 2026-11-19).</summary>
+        TidalBarrage,
     }
 
     [RequireComponent(typeof(PlanetView))]
@@ -121,6 +123,7 @@ namespace KardashevAscent.Presentation.Planet
                 case BuildingType.Electrolyser: return new Color32(230, 110, 70, a);
                 case BuildingType.TidalTurbine: return new Color32(40, 190, 170, a);
                 case BuildingType.WaveConverter: return new Color32(90, 150, 235, a);
+                case BuildingType.TidalBarrage: return new Color32(150, 160, 175, a);
                 default: return new Color32(160, 160, 160, a);
             }
         }
@@ -150,13 +153,14 @@ namespace KardashevAscent.Presentation.Planet
             : m == BuildMode.AluminaPlant ? BuildingType.AluminaPlant
             : m == BuildMode.Electrolyser ? BuildingType.Electrolyser
             : m == BuildMode.TidalTurbine ? BuildingType.TidalTurbine
-            : m == BuildMode.WaveConverter ? BuildingType.WaveConverter : BuildingType.SolarPanel;
+            : m == BuildMode.WaveConverter ? BuildingType.WaveConverter
+            : m == BuildMode.TidalBarrage ? BuildingType.TidalBarrage : BuildingType.SolarPanel;
 
         /// <summary>Panels aside, every building is a block on its slots (battery yard, Workshop, stations, refinery modules).</summary>
         static bool IsBlock(BuildingType t) =>
             t == BuildingType.Battery || t == BuildingType.Workshop || t == BuildingType.ChargingStation || t == BuildingType.Relay
             || t == BuildingType.ResearchStation || t == BuildingType.AluminaPlant || t == BuildingType.Electrolyser
-            || t == BuildingType.TidalTurbine || t == BuildingType.WaveConverter;
+            || t == BuildingType.TidalTurbine || t == BuildingType.WaveConverter || t == BuildingType.TidalBarrage;
 
         /// <summary>The slot a building covering this one is keyed by (its anchor), or the slot itself when empty.</summary>
         int Anchor(int t, int s)
@@ -419,13 +423,19 @@ namespace KardashevAscent.Presentation.Planet
             string what = type == BuildingType.Workshop ? "Workshop" : type == BuildingType.ChargingStation ? "Charger"
                         : type == BuildingType.Relay ? "Relay" : type == BuildingType.ResearchStation ? "Research"
                         : type == BuildingType.AluminaPlant ? "Alumina plant" : type == BuildingType.Electrolyser ? "Electrolysis cell"
-                        : type == BuildingType.TidalTurbine ? "Tidal turbine" : type == BuildingType.WaveConverter ? "Wave converter" : "Battery";
+                        : type == BuildingType.TidalTurbine ? "Tidal turbine" : type == BuildingType.WaveConverter ? "Wave converter" : type == BuildingType.TidalBarrage ? "Tidal barrage" : "Battery";
             if (!constructionSite && (type == BuildingType.AluminaPlant || type == BuildingType.Electrolyser))
             {
                 var module = new BatteryVisual($"{what} {t}.{s}", transform, cellMaterial, frameMaterial);
                 // Pale for the alumina kiln and tanks, hot orange for the electrolysis pots.
                 module.SetTint(type == BuildingType.AluminaPlant ? new Color(0.88f, 0.88f, 0.84f) : new Color(0.92f, 0.45f, 0.26f));
                 return module;
+            }
+            if (!constructionSite && type == BuildingType.TidalBarrage)
+            {
+                var dam = new BatteryVisual($"{what} {t}.{s}", transform, frameMaterial, frameMaterial);
+                dam.SetTint(new Color(0.62f, 0.65f, 0.70f));   // a grey concrete dam
+                return dam;
             }
             if (!constructionSite && type == BuildingType.WaveConverter)
             {
@@ -740,7 +750,8 @@ namespace KardashevAscent.Presentation.Planet
                      : mode == BuildMode.AluminaPlant ? BuildMode.Electrolyser
                      : mode == BuildMode.Electrolyser ? BuildMode.FloatingSolar
                      : mode == BuildMode.FloatingSolar ? BuildMode.TidalTurbine
-                     : mode == BuildMode.TidalTurbine ? BuildMode.WaveConverter : BuildMode.SolarPanel;
+                     : mode == BuildMode.TidalTurbine ? BuildMode.WaveConverter
+                     : mode == BuildMode.WaveConverter ? BuildMode.TidalBarrage : BuildMode.SolarPanel;
 
             if (dragging)
             {
@@ -780,12 +791,13 @@ namespace KardashevAscent.Presentation.Planet
                     string why = simulation.RefineryBlocker(TypeOf(mode), tile, slot);
                     if (why != null) preview = new PanelPreview(false, why, 0, 0, 0, 0);
                 }
-                if (mode == BuildMode.TidalTurbine || mode == BuildMode.WaveConverter)
+                if (mode == BuildMode.TidalTurbine || mode == BuildMode.WaveConverter || mode == BuildMode.TidalBarrage)
                 {
                     // Not a panel: the land-panel preview does not apply. The tide gauge / wave buoy gates it.
                     BuildingType sea = TypeOf(mode);
                     string unknown = simulation.KnowledgeBlocker(sea);
                     preview = unknown != null ? new PanelPreview(false, unknown, 0, 0, 0, 0)
+                        : mode == BuildMode.TidalBarrage && simulation.BarrageBlocker(tile) != null ? new PanelPreview(false, simulation.BarrageBlocker(tile), 0, 0, 0, 0)
                         : slot >= 0 && !simulation.CanPlace(sea, tile, slot) ? new PanelPreview(false, "A tidal turbine or wave converter stands on a free slot of a shallow-sea tile.", 0, 0, 0, 0)
                         : new PanelPreview(true, "", 0, 0, 0, 0);
                 }
@@ -1158,6 +1170,7 @@ namespace KardashevAscent.Presentation.Planet
                       : mode == BuildMode.ResearchStation ? simulation.PlaceResearchStation(tile, s)
                       : mode == BuildMode.TidalTurbine ? simulation.PlaceTidalTurbine(tile, s)
                       : mode == BuildMode.WaveConverter ? simulation.PlaceWaveConverter(tile, s)
+                      : mode == BuildMode.TidalBarrage ? simulation.PlaceBarrage(tile, s)
                       : mode == BuildMode.Relay ? simulation.PlaceRelay(tile, s) : simulation.PlaceChargingStation(tile, s)))
                     return false;
                 BatteryVisual yard = MakeBattery(tile, s, simulation.IsUnderConstruction(tile, s));
