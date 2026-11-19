@@ -89,6 +89,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | EN-08b | Edit angle: drag rings around a panel to turn its tilt and facing; saved angle layouts with the player's name and note, the slot and the tile's latitude and longitude | CONFIRMED (director's request, 2026-11-13) | chat 2026-11-13 | Tested; seen working in Play mode | `Presentation/UI/AngleEditor.cs`, `Game/AnglePreset.cs` |
 | EN-09 | Waste heat warming the planet | FUTURE | V; model from PR #23 | Tested as a library; not in play | `Climate/WasteHeat.cs` |
 | EN-10 | Power distribution and transmission losses | FUTURE | V | Not started | — |
+| EN-14 | Tidal and wave energy (moon data, tide range per coast tile, turbine and wave converter buildings, tide gauge and wave buoy experiments) | PROPOSED (director chose it first, OQ-11) | - | Designed | `docs/design/tidal-wave-energy.md` |
 | EN-11 | Nuclear, geothermal, tidal, wave, ocean thermal, floating solar, advanced sources | FUTURE | V | Not started; several have checked numbers in the physics report | — |
 | EN-12 | Thermal management and waste-heat recovery | FUTURE | V | Not started | — |
 | EN-13 | Planetary energy engineering, stellar collection, megastructures | FUTURE | V | Not started | — |
