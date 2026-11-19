@@ -44,7 +44,7 @@ And where the game does not yet follow the principle:
 - Robot charge, condition and position are always known exactly and instantly.
 - There is no report, no inbox, no record of when something was learned.
 
-How much of the permanent interface stays is the director's decision (open question OQ-1). Until it is made, new features follow section 5 and existing panels are left alone.
+The director decided OQ-1 on 2026-11-20: keep the existing panels, and new features follow section 5, until the director wants to add or change something. Existing panels are left alone.
 
 ## 4. Observation record (proposed)
 
