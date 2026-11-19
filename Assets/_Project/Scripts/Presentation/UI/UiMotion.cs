@@ -5,7 +5,7 @@ using UnityEngine.UIElements;
 namespace KardashevAscent.Presentation.UI
 {
     /// <summary>
-    /// Smooth interface motion. Every element with the "panel" class (windows, cards, hint boxes) fades and slides in
+    /// Smooth interface motion. Every element with the "panel" class (windows, cards, hint boxes) fades in and grows a touch
     /// when it appears, and the screens that go through <see cref="Show"/> fade out as well. It watches the UI documents
     /// itself, so panels need no code of their own. Sets itself up after the scene loads.
     /// </summary>
@@ -13,7 +13,7 @@ namespace KardashevAscent.Presentation.UI
     {
         const float InSeconds = 0.22f;
         const float OutSeconds = 0.18f;
-        const float SlidePx = 10f;
+        const float PopScale = 0.965f;   // panels grow from this to full size: a scale, so the layout and centring are never touched
         const float ScanEvery = 0f;   // every frame: a panel that just closed is shown again for its fade-out within one frame
 
         readonly Dictionary<VisualElement, bool> seen = new Dictionary<VisualElement, bool>();
@@ -62,19 +62,19 @@ namespace KardashevAscent.Presentation.UI
         static bool IsShown(VisualElement e) =>
             e.resolvedStyle.display != DisplayStyle.None && !float.IsNaN(e.layout.width) && e.layout.width > 0f && e.layout.height > 0f;
 
-        /// <summary>Fade an element in and slide it up a little. Safe to call on any element.</summary>
+        /// <summary>Fade an element in and grow it a touch. Safe to call on any element.</summary>
         public static void FadeIn(VisualElement e)
         {
-            e.style.transitionProperty = new List<StylePropertyName> { new StylePropertyName("opacity"), new StylePropertyName("translate") };
+            e.style.transitionProperty = new List<StylePropertyName> { new StylePropertyName("opacity"), new StylePropertyName("scale") };
             e.style.transitionDuration = new List<TimeValue> { new TimeValue(0f, TimeUnit.Second) };
             e.style.opacity = 0f;
-            e.style.translate = new Translate(0f, SlidePx);
+            e.style.scale = new Scale(new Vector3(PopScale, PopScale, 1f));
             e.schedule.Execute(() =>
             {
                 e.style.transitionDuration = new List<TimeValue> { new TimeValue(InSeconds, TimeUnit.Second) };
                 e.style.transitionTimingFunction = new List<EasingFunction> { new EasingFunction(EasingMode.EaseOutCubic) };
                 e.style.opacity = 1f;
-                e.style.translate = new Translate(0f, 0f);
+                e.style.scale = new Scale(Vector3.one);
             }).StartingIn(16);
         }
 
@@ -83,21 +83,21 @@ namespace KardashevAscent.Presentation.UI
             fading.Add(e);
             StyleEnum<DisplayStyle> displayBefore = e.style.display;
             e.style.display = DisplayStyle.Flex;   // inline style beats the class that hid it
-            e.style.transitionProperty = new List<StylePropertyName> { new StylePropertyName("opacity"), new StylePropertyName("translate") };
+            e.style.transitionProperty = new List<StylePropertyName> { new StylePropertyName("opacity"), new StylePropertyName("scale") };
             e.style.transitionDuration = new List<TimeValue> { new TimeValue(0f, TimeUnit.Second) };
             e.style.opacity = 1f;
-            e.style.translate = new Translate(0f, 0f);
+            e.style.scale = new Scale(Vector3.one);
             e.schedule.Execute(() =>
             {
                 e.style.transitionDuration = new List<TimeValue> { new TimeValue(OutSeconds, TimeUnit.Second) };
                 e.style.opacity = 0f;
-                e.style.translate = new Translate(0f, SlidePx * 0.5f);
+                e.style.scale = new Scale(new Vector3(PopScale, PopScale, 1f));
             }).StartingIn(16);
             e.schedule.Execute(() =>
             {
                 e.style.display = displayBefore;   // back to what it was: the class, or an inline switch-off
                 e.style.opacity = StyleKeyword.Null;
-                e.style.translate = StyleKeyword.Null;
+                e.style.scale = new Scale(Vector3.one);
                 seen[e] = false;
                 fading.Remove(e);
             }).StartingIn((long)(OutSeconds * 1000f) + 60);

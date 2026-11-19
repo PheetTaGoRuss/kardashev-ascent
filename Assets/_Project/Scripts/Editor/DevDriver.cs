@@ -231,6 +231,9 @@ namespace KardashevAscent.EditorTools
                         panel.Open = true;
                         return true;
                     }
+                case "orbit":
+                    UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.OrbitView>().Open = argument != "off";
+                    return true;
                 case "refresh":
                     // Import changed files and recompile without the editor being in front.
                     AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);

@@ -32,6 +32,9 @@ namespace KardashevAscent.Simulation.Game
 
         double YearLengthHours { get; }
 
+        /// <summary>Tilt of the spin axis against the orbit, radians.</summary>
+        double ObliquityRad { get; }
+
         /// <summary>Unit vector from the planet's centre toward the star, in the planet frame.</summary>
         Vector3 StarDirection { get; }
 
