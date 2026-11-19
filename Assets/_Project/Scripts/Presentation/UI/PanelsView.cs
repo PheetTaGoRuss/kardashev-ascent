@@ -41,7 +41,7 @@ namespace KardashevAscent.Presentation.UI
         Label siteProgress;
         string plannerCostShape, siteNeedsShape, buildInfoShape;
         Slider tilt, facing;
-        Button bestButton, placeButton, removeAllButton, reangleButton, modePanel, modeBattery, modeWorkshop, modeStation, modeRelay, modeFloating, modeTidal, modeResearch,
+        Button bestButton, placeButton, removeAllButton, reangleButton, modePanel, modeBattery, modeWorkshop, modeStation, modeRelay, modeFloating, modeTidal, modeWave, modeResearch,
                modeAlumina, modeElectrolyser;
         // Build bar categories and the (i) descriptions.
         readonly System.Collections.Generic.Dictionary<BuildMode, (VisualElement Item, Button Info)> buildItems =
@@ -131,7 +131,7 @@ namespace KardashevAscent.Presentation.UI
             foreach (var (mode, key) in new[] { (BuildMode.SolarPanel, "panel"), (BuildMode.FloatingSolar, "floating"), (BuildMode.Battery, "battery"),
                                                 (BuildMode.Workshop, "workshop"), (BuildMode.ChargingStation, "station"), (BuildMode.Relay, "relay"),
                                                 (BuildMode.ResearchStation, "research"), (BuildMode.AluminaPlant, "alumina"),
-                                                (BuildMode.Electrolyser, "electrolyser"), (BuildMode.TidalTurbine, "tidal") })
+                                                (BuildMode.Electrolyser, "electrolyser"), (BuildMode.TidalTurbine, "tidal"), (BuildMode.WaveConverter, "wave") })
             {
                 VisualElement item = root.Q("item-" + key);
                 Button info = root.Q<Button>("info-" + key);
@@ -150,6 +150,10 @@ namespace KardashevAscent.Presentation.UI
             if (modeTidal != null)
                 modeTidal.clicked += () => { if (placer != null) placer.Mode = BuildMode.TidalTurbine; };
             DragFrom(modeTidal, BuildMode.TidalTurbine);
+            modeWave = root.Q<Button>("mode-wave");
+            if (modeWave != null)
+                modeWave.clicked += () => { if (placer != null) placer.Mode = BuildMode.WaveConverter; };
+            DragFrom(modeWave, BuildMode.WaveConverter);
             hoverText = root.Q<Label>("hover-text");
             siteTitle = root.Q<Label>("site-title");
             siteText = root.Q<Label>("site-text");
@@ -319,6 +323,7 @@ namespace KardashevAscent.Presentation.UI
                 NameButton(modeResearch, "Research Station", BuildMode.ResearchStation);
                 NameButton(modeFloating, "Floating solar", BuildMode.FloatingSolar);
                 NameButton(modeTidal, "Tidal turbine", BuildMode.TidalTurbine);
+                NameButton(modeWave, "Wave converter", BuildMode.WaveConverter);
                 NameButton(modeAlumina, "Alumina plant", BuildMode.AluminaPlant);
                 NameButton(modeElectrolyser, "Electrolysis cell", BuildMode.Electrolyser);
                 if (buildHint != null)
@@ -340,6 +345,7 @@ namespace KardashevAscent.Presentation.UI
             modePanel.EnableInClassList("selected", panelMode && (!siteOpen || placer.Mode == BuildMode.SolarPanel));
             modeFloating?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.FloatingSolar);
             modeTidal?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.TidalTurbine);
+            modeWave?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.WaveConverter);
             modeBattery.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.Battery);
             modeWorkshop?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.Workshop);
             modeStation?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.ChargingStation);
@@ -484,7 +490,7 @@ namespace KardashevAscent.Presentation.UI
             bool moduleMode = placer.Mode == BuildMode.AluminaPlant || placer.Mode == BuildMode.Electrolyser;
             string thing = panelMode ? "panel" : workshopMode ? "Workshop" : stationMode ? "charging station" : relayMode ? "relay"
                          : researchMode ? "Research Station" : placer.Mode == BuildMode.AluminaPlant ? "Alumina plant"
-                         : placer.Mode == BuildMode.Electrolyser ? "Electrolysis cell" : placer.Mode == BuildMode.TidalTurbine ? "tidal turbine" : "battery yard";
+                         : placer.Mode == BuildMode.Electrolyser ? "Electrolysis cell" : placer.Mode == BuildMode.TidalTurbine ? "tidal turbine" : placer.Mode == BuildMode.WaveConverter ? "wave converter" : "battery yard";
             int selected = 0, empty = 0, withPanels = 0, withBatteries = 0;
             if (multi)
             {
@@ -510,6 +516,7 @@ namespace KardashevAscent.Presentation.UI
                 placeButton.text = $"Place {thing} (P)";
             }
             batteryText.text = moduleMode ? "Refinery module · must touch a Robot Workshop"
+                : placer.Mode == BuildMode.WaveConverter ? "Power from the waves · none in a calm, shut down in a storm · needs the wave buoy"
                 : placer.Mode == BuildMode.TidalTurbine ? "Power from the tide · none at slack water · needs the tide gauge"
                 : researchMode ? "Measures & experiments · Research (T)"
                 : relayMode ? $"Network +{KardashevAscent.Simulation.Robots.ColonyNetwork.RangeTiles} tiles · needs grid power"

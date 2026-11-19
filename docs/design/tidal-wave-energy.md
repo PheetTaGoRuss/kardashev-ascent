@@ -1,6 +1,6 @@
 # Tidal and wave energy
 
-Status: **PROPOSED**. The game director chose tidal and wave energy as the next energy source after solar (open question OQ-11, answered 2026-11-18). Nothing here is built, and every number marked TBD is a placeholder for tuning, not a claim.
+Status: **PROPOSED**. Free-flow tidal turbines and wave converter lines are built (EN-15, EN-16); the barrage is not. The game director chose tidal and wave energy as the next energy source after solar (open question OQ-11, answered 2026-11-18). Nothing here is built, and every number marked TBD is a placeholder for tuning, not a claim.
 
 ## What it must do in the game
 

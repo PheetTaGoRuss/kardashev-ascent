@@ -110,7 +110,7 @@ namespace KardashevAscent.Simulation.Game
                 total += floatingPanels.Contains(pair.Key) ? power * (1.0 + FloatingCoolingGain) : power;
             }
             // Designed for the cautious end of whatever the colony hasn't measured yet (director 2026-11-14).
-            return (total > 0.0 ? total * SolarDesignShare : total) + TidalPowerW();
+            return (total > 0.0 ? total * SolarDesignShare : total) + TidalPowerW() + WavePowerW();
         }
 
         /// <summary>One panel's power under the star right now (sun up), with the light and temperature along the way.</summary>
