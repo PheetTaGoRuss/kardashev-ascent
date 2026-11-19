@@ -45,6 +45,7 @@ namespace KardashevAscent.Simulation.Game
             { BuildingType.FloatingSolar, new BuildingDefinition(BuildingType.FloatingSolar, "floating solar", 1) },
             { BuildingType.ResearchStation, new BuildingDefinition(BuildingType.ResearchStation, "Research Station", BuildingFootprints.ResearchStation, BuildCosts.ResearchStation) },
             { BuildingType.AluminaPlant, new BuildingDefinition(BuildingType.AluminaPlant, "Alumina plant", BuildingFootprints.RefineryModule, BuildCosts.AluminaPlant) },
+            { BuildingType.WaveConverter, new BuildingDefinition(BuildingType.WaveConverter, "wave converter", BuildingFootprints.WaveConverter, BuildCosts.WaveConverter) },
             { BuildingType.TidalTurbine, new BuildingDefinition(BuildingType.TidalTurbine, "tidal turbine", BuildingFootprints.TidalTurbine, BuildCosts.TidalTurbine) },
             { BuildingType.Electrolyser, new BuildingDefinition(BuildingType.Electrolyser, "Electrolysis cell", BuildingFootprints.RefineryModule, BuildCosts.Electrolyser) },
         };

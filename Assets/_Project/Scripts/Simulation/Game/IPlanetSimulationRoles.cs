@@ -543,6 +543,22 @@ namespace KardashevAscent.Simulation.Game
         bool PlaceTidalTurbine(int tileId, int slot);
     }
 
+    /// <summary>Sea waves and wave-energy converters (director 2026-11-19).</summary>
+    public interface IWavePower
+    {
+        /// <summary>Significant wave height at this sea tile now, m (zero on land and where there is no air).</summary>
+        double WaveHeightAtM(int tileId);
+
+        /// <summary>Mean significant wave height at this sea tile, m (without the weather swing).</summary>
+        double MeanWaveHeightAtM(int tileId);
+
+        /// <summary>Electric power all finished wave converters give now, W.</summary>
+        double WavePowerW();
+
+        /// <summary>Put a wave-converter line on a shallow-sea tile.</summary>
+        bool PlaceWaveConverter(int tileId, int slot);
+    }
+
     /// <summary>Testing switches and shortcuts (the debug panel). Not saved.</summary>
     public interface IDebugTools
     {

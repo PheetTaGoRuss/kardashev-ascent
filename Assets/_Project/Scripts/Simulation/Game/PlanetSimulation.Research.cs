@@ -215,6 +215,16 @@ namespace KardashevAscent.Simulation.Game
                         ? "Water can't be liquid here: the air is below water's triple point (0.61 kPa), so ice turns straight to vapour."
                         : $"Water boils at {boil:0.#} °C here.";
                 }
+                case ExperimentKind.WaveBuoy:
+                {
+                    double bestH = 0.0;
+                    for (int t = 0; t < TileCount; t++)
+                        if (GetTile(t).Terrain == TerrainType.ShallowOcean) bestH = Math.Max(bestH, MeanWaveHeightAtM(t));
+                    if (bestH <= 0.0) return "No waves: this world has no air to blow over the sea.";
+                    double period = Waves.EnergyPeriodShare * Waves.PeakPeriodS(Waves.WindMs(Math.PI / 4.0), SurfaceGravityMs2);
+                    double kw = Waves.LinePowerW(bestH, period, SurfaceGravityMs2) / 1000.0;
+                    return $"The roughest shallow sea averages {bestH:0.#} m waves; a converter line makes about {kw:0} kW there (a line needs {Waves.CutInHeightM:0.#} m and shuts down above {Waves.SurvivalHeightM:0} m).";
+                }
                 case ExperimentKind.TideGauge:
                 {
                     double best = 0.0;
@@ -266,6 +276,8 @@ namespace KardashevAscent.Simulation.Game
         {
             if (Debug.UnlockAll)
                 return null;
+            if (type == BuildingType.WaveConverter && !IsExperimentKnown(ExperimentKind.WaveBuoy))
+                return "Wave converters need to know the sea state here: run the wave buoy experiment.";
             if (type == BuildingType.TidalTurbine && !IsExperimentKnown(ExperimentKind.TideGauge))
                 return "Tidal turbines need to know the tide here: run the tide gauge experiment.";
             if (type == BuildingType.FloatingSolar)
