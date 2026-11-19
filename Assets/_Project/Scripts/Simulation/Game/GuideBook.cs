@@ -286,6 +286,7 @@ namespace KardashevAscent.Simulation.Game
                 { "Charging station", "Robots can only recharge at a charger (or a battery yard): build one first. On the landing tile the lander's RTG feeds it." },
                 { "Relay", "Extends the colony network; needs grid power." },
                 { "Research station", "Where robots measure the planet and run experiments." },
+                { "Tidal turbine", "A free-flow rotor on shallow sea. Power follows the tide: none at slack water, most at mid-tide. Coasts with land around them funnel the tide and give the strongest stream. Needs a boat robot and a moon." },
             };
             foreach (var (name, bill) in Bills())
             {

@@ -42,6 +42,8 @@ namespace KardashevAscent.Presentation.Planet
         AluminaPlant,
         /// <summary>Refinery module: electrolysis. Next to a Workshop.</summary>
         Electrolyser,
+        /// <summary>Free-flow tidal turbine on shallow sea (director 2026-11-19).</summary>
+        TidalTurbine,
     }
 
     [RequireComponent(typeof(PlanetView))]
@@ -115,6 +117,7 @@ namespace KardashevAscent.Presentation.Planet
                 case BuildingType.ResearchStation: return new Color32(170, 120, 230, a);
                 case BuildingType.AluminaPlant: return new Color32(225, 225, 215, a);
                 case BuildingType.Electrolyser: return new Color32(230, 110, 70, a);
+                case BuildingType.TidalTurbine: return new Color32(40, 190, 170, a);
                 default: return new Color32(160, 160, 160, a);
             }
         }
@@ -142,12 +145,14 @@ namespace KardashevAscent.Presentation.Planet
             : m == BuildMode.Relay ? BuildingType.Relay
             : m == BuildMode.ResearchStation ? BuildingType.ResearchStation
             : m == BuildMode.AluminaPlant ? BuildingType.AluminaPlant
-            : m == BuildMode.Electrolyser ? BuildingType.Electrolyser : BuildingType.SolarPanel;
+            : m == BuildMode.Electrolyser ? BuildingType.Electrolyser
+            : m == BuildMode.TidalTurbine ? BuildingType.TidalTurbine : BuildingType.SolarPanel;
 
         /// <summary>Panels aside, every building is a block on its slots (battery yard, Workshop, stations, refinery modules).</summary>
         static bool IsBlock(BuildingType t) =>
             t == BuildingType.Battery || t == BuildingType.Workshop || t == BuildingType.ChargingStation || t == BuildingType.Relay
-            || t == BuildingType.ResearchStation || t == BuildingType.AluminaPlant || t == BuildingType.Electrolyser;
+            || t == BuildingType.ResearchStation || t == BuildingType.AluminaPlant || t == BuildingType.Electrolyser
+            || t == BuildingType.TidalTurbine;
 
         /// <summary>The slot a building covering this one is keyed by (its anchor), or the slot itself when empty.</summary>
         int Anchor(int t, int s)
@@ -409,13 +414,20 @@ namespace KardashevAscent.Presentation.Planet
             BuildingType type = simulation != null ? simulation.GetBuilding(t, s) : BuildingType.Battery;
             string what = type == BuildingType.Workshop ? "Workshop" : type == BuildingType.ChargingStation ? "Charger"
                         : type == BuildingType.Relay ? "Relay" : type == BuildingType.ResearchStation ? "Research"
-                        : type == BuildingType.AluminaPlant ? "Alumina plant" : type == BuildingType.Electrolyser ? "Electrolysis cell" : "Battery";
+                        : type == BuildingType.AluminaPlant ? "Alumina plant" : type == BuildingType.Electrolyser ? "Electrolysis cell"
+                        : type == BuildingType.TidalTurbine ? "Tidal turbine" : "Battery";
             if (!constructionSite && (type == BuildingType.AluminaPlant || type == BuildingType.Electrolyser))
             {
                 var module = new BatteryVisual($"{what} {t}.{s}", transform, cellMaterial, frameMaterial);
                 // Pale for the alumina kiln and tanks, hot orange for the electrolysis pots.
                 module.SetTint(type == BuildingType.AluminaPlant ? new Color(0.88f, 0.88f, 0.84f) : new Color(0.92f, 0.45f, 0.26f));
                 return module;
+            }
+            if (!constructionSite && type == BuildingType.TidalTurbine)
+            {
+                var turbine = new BatteryVisual($"{what} {t}.{s}", transform, cellMaterial, frameMaterial);
+                turbine.SetTint(new Color(0.16f, 0.75f, 0.68f));   // a teal housing standing in the water
+                return turbine;
             }
             if (!constructionSite && type == BuildingType.ResearchStation)
             {
@@ -716,7 +728,8 @@ namespace KardashevAscent.Presentation.Planet
                      : mode == BuildMode.Relay ? BuildMode.ResearchStation
                      : mode == BuildMode.ResearchStation ? BuildMode.AluminaPlant
                      : mode == BuildMode.AluminaPlant ? BuildMode.Electrolyser
-                     : mode == BuildMode.Electrolyser ? BuildMode.FloatingSolar : BuildMode.SolarPanel;
+                     : mode == BuildMode.Electrolyser ? BuildMode.FloatingSolar
+                     : mode == BuildMode.FloatingSolar ? BuildMode.TidalTurbine : BuildMode.SolarPanel;
 
             if (dragging)
             {
@@ -755,6 +768,14 @@ namespace KardashevAscent.Presentation.Planet
                 {
                     string why = simulation.RefineryBlocker(TypeOf(mode), tile, slot);
                     if (why != null) preview = new PanelPreview(false, why, 0, 0, 0, 0);
+                }
+                if (mode == BuildMode.TidalTurbine)
+                {
+                    // Not a panel: the land-panel preview does not apply. The tide gauge gates it.
+                    string unknown = simulation.KnowledgeBlocker(BuildingType.TidalTurbine);
+                    preview = unknown != null ? new PanelPreview(false, unknown, 0, 0, 0, 0)
+                        : slot >= 0 && !simulation.CanPlace(BuildingType.TidalTurbine, tile, slot) ? new PanelPreview(false, "A tidal turbine stands on a free slot of a shallow-sea tile.", 0, 0, 0, 0)
+                        : new PanelPreview(true, "", 0, 0, 0, 0);
                 }
                 previewDirty = false;
                 lastPreviewTime = Time.unscaledTime;
@@ -1033,6 +1054,31 @@ namespace KardashevAscent.Presentation.Planet
             return done;
         }
 
+        /// <summary>
+        /// Panels at the planned angles until the open site's panels would make about <paramref name="powerW"/> on average
+        /// over a year (with a margin for the battery's losses), counting the panels already there. Returns how many it
+        /// placed. Used by the setup tutorial's "Skip" so the colony does not start in a brownout: on a rich-terrain tile
+        /// one panel is a small slot, far below the base demand.
+        /// </summary>
+        public int AutoPlacePanelsFor(double powerW)
+        {
+            if (simulation == null || tile < 0 || siteView.Site == null || powerW <= 0.0)
+                return 0;
+            PanelPreview one = simulation.PreviewPanel(tile, tiltDeg * Mathf.Deg2Rad, azimuthDeg * Mathf.Deg2Rad);
+            double meanW = one.CanPlace ? one.EnergyPerYearWh / 8766.0 : 0.0;   // average over a year, night included
+            if (!(meanW > 0.0))
+                return 0;
+            int want = Mathf.Clamp(Mathf.CeilToInt((float)(1.3 * powerW / meanW)), 0, 60) - simulation.PanelCount(tile);
+            BuildMode was = mode;
+            mode = BuildMode.SolarPanel;
+            int placed = 0;
+            for (int s = 0; s < simulation.SlotCount(tile) && placed < want; s++)
+                if (!Occupied(s) && simulation.CanPlace(BuildingType.SolarPanel, tile, s) && PlaceAt(s))
+                    placed++;
+            mode = was;
+            return placed;
+        }
+
         /// <summary>Remove whatever stands in the selected slot.</summary>
         public bool Remove() => RemoveAt(slot);
 
@@ -1098,6 +1144,7 @@ namespace KardashevAscent.Presentation.Planet
                       : mode == BuildMode.AluminaPlant || mode == BuildMode.Electrolyser ? simulation.PlaceRefinery(TypeOf(mode), tile, s)
                       : mode == BuildMode.Workshop ? simulation.PlaceWorkshop(tile, s)
                       : mode == BuildMode.ResearchStation ? simulation.PlaceResearchStation(tile, s)
+                      : mode == BuildMode.TidalTurbine ? simulation.PlaceTidalTurbine(tile, s)
                       : mode == BuildMode.Relay ? simulation.PlaceRelay(tile, s) : simulation.PlaceChargingStation(tile, s)))
                     return false;
                 BatteryVisual yard = MakeBattery(tile, s, simulation.IsUnderConstruction(tile, s));

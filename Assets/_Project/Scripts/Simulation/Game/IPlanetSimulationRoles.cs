@@ -518,6 +518,31 @@ namespace KardashevAscent.Simulation.Game
         bool ApplyAnglePreset(int id, int tileId, int slot);
     }
 
+    /// <summary>Tides and free-flow tidal power (director 2026-11-19).</summary>
+    public interface ITidalPower
+    {
+        /// <summary>The world's moon (generated from its seed), or a moon that does not exist when there is none.</summary>
+        Planet.Moon Moon { get; }
+
+        /// <summary>Hours between two high tides.</summary>
+        double TidePeriodHours { get; }
+
+        /// <summary>Tidal range (high minus low) at this tile, m: the open-ocean range times how much the coast funnels it.</summary>
+        double TidalRangeAtM(int tileId);
+
+        /// <summary>Peak tidal stream speed at this tile, m/s.</summary>
+        double PeakStreamAtMs(int tileId);
+
+        /// <summary>Stream speed at this tile now, m/s.</summary>
+        double StreamAtMs(int tileId);
+
+        /// <summary>Electric power all finished tidal turbines give now, W.</summary>
+        double TidalPowerW();
+
+        /// <summary>Put a free-flow tidal turbine on a shallow-sea tile.</summary>
+        bool PlaceTidalTurbine(int tileId, int slot);
+    }
+
     /// <summary>Testing switches and shortcuts (the debug panel). Not saved.</summary>
     public interface IDebugTools
     {

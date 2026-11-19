@@ -179,7 +179,7 @@ namespace KardashevAscent.EditorTools
                 {
                     var sim = Runner()?.Simulation;
                     if (sim != null)
-                        Log($"STATUS t={sim.TimeHours:0}h gen={sim.GenerationW:0}W demand={sim.DemandW:0}W battery={sim.BatteryStoredWh / 1e6:0.0}MWh brownout={sim.IsBrownout} K={sim.PlanetK:0.000} milestones={sim.MilestonesReached} iron={sim.Materials[KardashevAscent.Simulation.Resources.Material.Iron]:0}kg queue={sim.ConstructionQueueCount} robots={sim.Workforce.Robots.Count}");
+                        Log($"STATUS t={sim.TimeHours:0}h gen={sim.GenerationW:0}W demand={sim.DemandW:0}W battery={sim.BatteryStoredWh / 1e6:0.0}MWh brownout={sim.IsBrownout} K={sim.PlanetK:0.000} milestones={sim.MilestonesReached} iron={sim.Materials[KardashevAscent.Simulation.Resources.Material.Iron]:0}kg queue={sim.ConstructionQueueCount} robots={sim.Workforce.Robots.Count} tidal={sim.TidalPowerW():0}W period={sim.TidePeriodHours:0.0}h moonM={sim.Moon.MassRatio:0.0000} moonD={sim.Moon.DistanceRadii:0}");
                     return true;
                 }
                 case "select":
@@ -215,6 +215,50 @@ namespace KardashevAscent.EditorTools
                         if (sim.GetTile(t).Terrain == kind) { picker.Select(t); Log("terrain tile " + t); break; }
                     return true;
                 }
+                case "experiment":
+                {
+                    // experiment TideGauge: order it at the station, and log what the order said and what is known.
+                    var sim = Runner()?.Simulation;
+                    var kind = (Simulation.Planet.ExperimentKind)Enum.Parse(typeof(Simulation.Planet.ExperimentKind), argument);
+                    if (sim != null)
+                        Log($"experiment {kind}: blocker={sim.ExperimentBlocker(kind) ?? "none"} ordered={sim.OrderExperiment(kind)} known={sim.IsExperimentKnown(kind)} result={sim.ExperimentResult(kind) ?? "-"}");
+                    return true;
+                }
+                case "robots":
+                {
+                    var sim = Runner()?.Simulation;
+                    if (sim != null)
+                        foreach (var r in sim.Workforce.Robots)
+                            Log($"ROBOT {r.Id} {r.Kind} tile={r.Tile} activity={r.Activity} task={(r.Task.HasValue ? r.Task.Value.Kind + "@" + r.Task.Value.Tile : "-")} battery={r.Battery.StoredWh:0}Wh stranded={r.IsStranded} charger={r.ChargerExists} connected={r.Connected} cond={r.Condition:0.00} program={sim.Workforce.EffectiveProgram(r)} surveyPriority={sim.Workforce.ProgramPriority(r, KardashevAscent.Simulation.Robots.TaskKind.Survey)} buildPriority={sim.Workforce.ProgramPriority(r, KardashevAscent.Simulation.Robots.TaskKind.Build)} available={r.Available} shutdown={r.IsShutDown} milestones={sim.MilestonesReached}");
+                    return true;
+                }
+                case "survey":
+                {
+                    var sim = Runner()?.Simulation;
+                    if (sim != null) Log($"survey base tile {sim.BaseTileId}: ordered={sim.OrderSurvey(sim.BaseTileId)} surveyed={sim.Deposits.IsSurveyed(sim.BaseTileId)}");
+                    return true;
+                }
+                case "known":
+                {
+                    var sim = Runner()?.Simulation;
+                    var kind = (Simulation.Planet.ExperimentKind)Enum.Parse(typeof(Simulation.Planet.ExperimentKind), argument);
+                    if (sim != null)
+                        Log($"known {kind}={sim.IsExperimentKnown(kind)} station={sim.HasResearchStation} turbineBlocker={sim.KnowledgeBlocker(Simulation.Game.BuildingType.TidalTurbine) ?? "none"} result={sim.ExperimentResult(kind) ?? "-"}");
+                    return true;
+                }
+                case "tide":
+                {
+                    // tide: open the site of the shallow-sea tile with the strongest tide.
+                    var sim = Runner()?.Simulation;
+                    var picker = UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.TilePicker>();
+                    int best = -1;
+                    double most = -1.0;
+                    for (int t = 0; sim != null && t < sim.TileCount; t++)
+                        if (sim.GetTile(t).Terrain == Simulation.Planet.TerrainType.ShallowOcean && sim.TidalRangeAtM(t) > most) { most = sim.TidalRangeAtM(t); best = t; }
+                    if (best >= 0 && picker != null) picker.Select(best);
+                    Log("tide tile " + best + " range " + most);
+                    return true;
+                }
                 case "mode":
                     UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.PanelPlacer>().Mode =
                         (Presentation.Planet.BuildMode)Enum.Parse(typeof(Presentation.Planet.BuildMode), argument);
@@ -228,6 +272,8 @@ namespace KardashevAscent.EditorTools
                         else if (argument == "material") tools.Debug.InfiniteMaterials = true;
                         else if (argument == "unlock") tools.Debug.UnlockAll = true;
                         else if (argument == "battery") tools.Debug.FullBattery = true;
+                        else if (argument == "tides") tools.Debug.StrongTides = true;
+                        else if (argument == "surveyall") tools.DebugSurveyAll();
                         panel.Open = true;
                         return true;
                     }

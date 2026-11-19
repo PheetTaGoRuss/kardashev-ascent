@@ -13,7 +13,7 @@ namespace KardashevAscent.Simulation.Game
     /// Units: SI except time (hours) and energy (Wh). Angles in radians.
     /// Directions use the planet frame described in <see cref="PlanetFrame"/>.
     /// </summary>
-    public interface IPlanetSimulation : IPlanetReadout, IEnergyReadout, IConstructionReadout, IBuildingCommands, IRobotCommands, IResourceCommands, IManufacturingCommands, ISolarAdvice, IResearchCommands, IPassageCommands, IAnglePresets, IDebugTools, ISimulationSave, ISimulationEvents
+    public interface IPlanetSimulation : IPlanetReadout, IEnergyReadout, IConstructionReadout, IBuildingCommands, IRobotCommands, IResourceCommands, IManufacturingCommands, ISolarAdvice, IResearchCommands, IPassageCommands, IAnglePresets, IDebugTools, ITidalPower, ISimulationSave, ISimulationEvents
     {
         /// <summary>Advance the simulation by <paramref name="hours"/> of game time.</summary>
         void Tick(double hours);
@@ -41,6 +41,8 @@ namespace KardashevAscent.Simulation.Game
         AluminaPlant,
         /// <summary>Refinery module: electrolysis (aluminium, high-purity aluminium, sodium). Next to a Workshop.</summary>
         Electrolyser,
+        /// <summary>Free-flow tidal turbine on shallow sea (director 2026-11-19: free-flow first): power follows the tide cycle.</summary>
+        TidalTurbine,
     }
 
     /// <summary>Static facts about one tile.</summary>

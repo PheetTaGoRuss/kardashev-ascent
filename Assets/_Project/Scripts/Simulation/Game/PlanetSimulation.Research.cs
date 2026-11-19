@@ -215,6 +215,15 @@ namespace KardashevAscent.Simulation.Game
                         ? "Water can't be liquid here: the air is below water's triple point (0.61 kPa), so ice turns straight to vapour."
                         : $"Water boils at {boil:0.#} °C here.";
                 }
+                case ExperimentKind.TideGauge:
+                {
+                    double best = 0.0;
+                    for (int t = 0; t < TileCount; t++)
+                        if (GetTile(t).Terrain == TerrainType.ShallowOcean) best = Math.Max(best, TidalRangeAtM(t));
+                    double open = Tides.EquilibriumRangeM(Moon, planetRadiusM);
+                    return open <= 0.0 ? "No tide: this world has no moon."
+                        : $"Open-sea tide {open:0.##} m, high tide every {TidePeriodHours:0.#} h. The coast that funnels it most reaches {best:0.#} m (a rotor needs {Tides.CutInMs / Tides.PeakMsPerMetreOfRange:0.#} m or more).";
+                }
                 case ExperimentKind.SeismicSurvey:
                 {
                     int deep = 0;
@@ -255,6 +264,10 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Why the colony may not build this yet (what it still has to find out), or null.</summary>
         public string KnowledgeBlocker(BuildingType type)
         {
+            if (Debug.UnlockAll)
+                return null;
+            if (type == BuildingType.TidalTurbine && !IsExperimentKnown(ExperimentKind.TideGauge))
+                return "Tidal turbines need to know the tide here: run the tide gauge experiment.";
             if (type == BuildingType.FloatingSolar)
             {
                 bool? liquid = KnownWaterStaysLiquid;

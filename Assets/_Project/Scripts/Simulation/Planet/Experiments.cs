@@ -6,7 +6,7 @@ namespace KardashevAscent.Simulation.Planet
     /// The experiments a Research Station runs to learn what is safe and doable on this planet (director 2026-11-14).
     /// Saved as integers: append new members at the end only.
     /// </summary>
-    public enum ExperimentKind { AirPressure, BoilingPoint, SurfaceTemperature, Gravity, SeismicSurvey }
+    public enum ExperimentKind { AirPressure, BoilingPoint, SurfaceTemperature, Gravity, SeismicSurvey, TideGauge }
 
     /// <summary>
     /// The physics behind each experiment, and what each one needs. Sources are in
@@ -15,7 +15,7 @@ namespace KardashevAscent.Simulation.Planet
     public static class Experiments
     {
         public static readonly ExperimentKind[] All =
-            { ExperimentKind.AirPressure, ExperimentKind.BoilingPoint, ExperimentKind.SurfaceTemperature, ExperimentKind.Gravity, ExperimentKind.SeismicSurvey };
+            { ExperimentKind.AirPressure, ExperimentKind.BoilingPoint, ExperimentKind.SurfaceTemperature, ExperimentKind.Gravity, ExperimentKind.SeismicSurvey, ExperimentKind.TideGauge };
 
         /// <summary>Standard atmosphere at sea level, Pa (ISO 2533 / US Standard Atmosphere 1976).</summary>
         public const double StandardPressurePa = 101_325.0;
@@ -40,6 +40,7 @@ namespace KardashevAscent.Simulation.Planet
                 case ExperimentKind.BoilingPoint: return "Water boiling point";
                 case ExperimentKind.SurfaceTemperature: return "Surface temperature";
                 case ExperimentKind.SeismicSurvey: return "Seismic survey";
+                case ExperimentKind.TideGauge: return "Tide gauge";
                 default: return "Gravity";
             }
         }
@@ -52,6 +53,7 @@ namespace KardashevAscent.Simulation.Planet
                 case ExperimentKind.AirPressure: return "A barometer reading of the air's weight. Needed before water can be boiled.";
                 case ExperimentKind.BoilingPoint: return "Heat water in the lab at this air pressure. Says whether water stays liquid here: floating builds, cooling, steam.";
                 case ExperimentKind.SurfaceTemperature: return "Log the ground's coldest and warmest months. Says whether batteries and machines are safe here.";
+                case ExperimentKind.TideGauge: return "Log the sea level through whole tide cycles on the shore. Says how high the tide runs on this world, how often, and how much a bay can funnel it. Needed before tidal turbines.";
                 case ExperimentKind.SeismicSurvey: return "Thump the ground and time the echoes from deep rock layers (a reflection survey, as oil and mining geologists do). Finds deep ore: rare earths in mountains, canyons and caves.";
                 default: return "Time a 1 m pendulum's swing. Gravity sets how hard robots work to drive and how tall things can stand.";
             }
@@ -66,6 +68,7 @@ namespace KardashevAscent.Simulation.Planet
                 case ExperimentKind.BoilingPoint: return 8.0;
                 case ExperimentKind.SurfaceTemperature: return 24.0;
                 case ExperimentKind.SeismicSurvey: return 16.0;
+                case ExperimentKind.TideGauge: return 20.0;
                 default: return 4.0;
             }
         }
@@ -78,6 +81,7 @@ namespace KardashevAscent.Simulation.Planet
         public static ExperimentKind? Needs(ExperimentKind k) =>
             k == ExperimentKind.BoilingPoint ? ExperimentKind.AirPressure
             : k == ExperimentKind.SeismicSurvey ? ExperimentKind.Gravity
+            : k == ExperimentKind.TideGauge ? ExperimentKind.Gravity
             : (ExperimentKind?)null;
 
         /// <summary>

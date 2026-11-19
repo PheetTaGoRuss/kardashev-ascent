@@ -13,7 +13,7 @@ namespace KardashevAscent.Presentation.UI
         public enum Category { Power, Stations, Industry }
 
         public static Category CategoryOf(BuildMode m) =>
-            m == BuildMode.SolarPanel || m == BuildMode.FloatingSolar || m == BuildMode.Battery ? Category.Power
+            m == BuildMode.SolarPanel || m == BuildMode.FloatingSolar || m == BuildMode.Battery || m == BuildMode.TidalTurbine ? Category.Power
             : m == BuildMode.Workshop || m == BuildMode.AluminaPlant || m == BuildMode.Electrolyser ? Category.Industry
             : Category.Stations;
 
@@ -29,6 +29,7 @@ namespace KardashevAscent.Presentation.UI
                 case BuildMode.ResearchStation: return "Research Station";
                 case BuildMode.AluminaPlant: return "Alumina plant";
                 case BuildMode.Electrolyser: return "Electrolysis cell";
+                case BuildMode.TidalTurbine: return "Tidal turbine";
                 default: return "Network relay";
             }
         }
@@ -46,6 +47,9 @@ namespace KardashevAscent.Presentation.UI
                     break;
                 case BuildMode.FloatingSolar:
                     what = "A panel on shallow sea, kept cooler by the water. Built by a boat robot.";
+                    break;
+                case BuildMode.TidalTurbine:
+                    what = Short(BuildingType.TidalTurbine);
                     break;
                 case BuildMode.Battery:
                     what = $"Stores {Format.Energy(placer.BatteryUnitWh)} for the night. Robots can charge here.";
@@ -84,6 +88,7 @@ namespace KardashevAscent.Presentation.UI
                 case BuildingType.Workshop: return "Builds robots and upgrades. Refinery modules attach to its sides.";
                 case BuildingType.ChargingStation: return "Charges robots from the grid near their work.";
                 case BuildingType.Relay: return "Extends the robot network; needs grid power.";
+                case BuildingType.TidalTurbine: return "A free-flow rotor on shallow sea. Power follows the tide: none at slack water. Coasts with land around them give the strongest stream. Built by a boat robot.";
                 case BuildingType.ResearchStation: return "Measurements and experiments (Research, T).";
                 case BuildingType.AluminaPlant:
                     return "Refinery module: sinters anorthosite or rock and leaches out alumina (step 1 of aluminium). One batch at a time, 3–4 days each. Must touch a Workshop.";
