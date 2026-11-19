@@ -102,6 +102,7 @@ namespace KardashevAscent.Simulation.Game
             : workshops.Contains((tileId, slot)) ? BuildingType.Workshop
             : stations.Contains((tileId, slot)) ? BuildingType.ChargingStation
             : relays.Contains((tileId, slot)) ? BuildingType.Relay
+            : tidalTurbines.Contains((tileId, slot)) ? BuildingType.TidalTurbine
             : research.Stations.Contains((tileId, slot)) ? BuildingType.ResearchStation
             : refineryModules.TryGetValue((tileId, slot), out BuildingType module) ? module
             : BuildingType.None;
@@ -145,6 +146,13 @@ namespace KardashevAscent.Simulation.Game
                 relays.Remove((tileId, slot));
                 Vacate(tileId, slot);
                 RefreshNetwork();
+                return true;
+            }
+            if (tidalTurbines.Contains((tileId, slot)))
+            {
+                Dismantle(tileId, slot, BuildingType.TidalTurbine);
+                tidalTurbines.Remove((tileId, slot));
+                Vacate(tileId, slot);
                 return true;
             }
             if (research.Stations.Contains((tileId, slot)))

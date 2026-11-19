@@ -83,6 +83,10 @@ namespace KardashevAscent.Simulation.Resources
         public static readonly MaterialBill ResearchStation = new MaterialBill()
             .Add(Material.Iron, 200.0).Add(Material.Rock, 100.0).Add(Material.Copper, 25.0);
 
+        /// <summary>Free-flow tidal turbine: a rotor, nacelle, tower and a seabed mount (game rule, TBD).</summary>
+        public static readonly MaterialBill TidalTurbine = new MaterialBill()
+            .Add(Material.Iron, 1200.0).Add(Material.Rock, 400.0).Add(Material.Copper, 90.0);
+
         /// <summary>Alumina plant: a kiln, leaching tanks and a precipitator (game rule, TBD).</summary>
         public static readonly MaterialBill AluminaPlant = new MaterialBill()
             .Add(Material.Iron, 400.0).Add(Material.Rock, 200.0).Add(Material.Copper, 15.0);

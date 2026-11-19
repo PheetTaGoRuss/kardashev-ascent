@@ -35,7 +35,9 @@ namespace KardashevAscent.Simulation.Game
             if (tileId < 0 || tileId >= TileCount || slot < 0 || slot >= SlotCount(tileId))
                 return false;
             TerrainType ground = GetTile(tileId).Terrain;
-            if (type == BuildingType.FloatingSolar ? !Terrains.AllowsFloating(ground) : !Terrains.IsBuildableLand(ground))
+            if (type == BuildingType.FloatingSolar ? !Terrains.AllowsFloating(ground)
+                : type == BuildingType.TidalTurbine ? ground != TerrainType.ShallowOcean
+                : !Terrains.IsBuildableLand(ground))
                 return false;
             if (!restoringState && !IsOpenGround(tileId))
                 return false;   // a mountain or canyon must be opened first (director 2026-11-15)
