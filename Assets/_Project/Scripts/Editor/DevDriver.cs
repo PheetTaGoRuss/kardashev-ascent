@@ -179,7 +179,7 @@ namespace KardashevAscent.EditorTools
                 {
                     var sim = Runner()?.Simulation;
                     if (sim != null)
-                        Log($"STATUS t={sim.TimeHours:0}h gen={sim.GenerationW:0}W demand={sim.DemandW:0}W battery={sim.BatteryStoredWh / 1e6:0.0}MWh brownout={sim.IsBrownout} K={sim.PlanetK:0.000} milestones={sim.MilestonesReached} iron={sim.Materials[KardashevAscent.Simulation.Resources.Material.Iron]:0}kg queue={sim.ConstructionQueueCount} robots={sim.Workforce.Robots.Count} tidal={sim.TidalPowerW():0}W waves={sim.WavePowerW():0}W period={sim.TidePeriodHours:0.0}h moonM={sim.Moon.MassRatio:0.0000} moonD={sim.Moon.DistanceRadii:0}");
+                        Log($"STATUS t={sim.TimeHours:0}h gen={sim.GenerationW:0}W demand={sim.DemandW:0}W battery={sim.BatteryStoredWh / 1e6:0.0}MWh brownout={sim.IsBrownout} K={sim.PlanetK:0.000} milestones={sim.MilestonesReached} iron={sim.Materials[KardashevAscent.Simulation.Resources.Material.Iron]:0}kg queue={sim.ConstructionQueueCount} robots={sim.Workforce.Robots.Count} tidal={sim.TidalPowerW():0}W waves={sim.WavePowerW():0}W barrage={sim.BarragePowerW():0}W period={sim.TidePeriodHours:0.0}h moonM={sim.Moon.MassRatio:0.0000} moonD={sim.Moon.DistanceRadii:0}");
                     return true;
                 }
                 case "select":
@@ -244,6 +244,18 @@ namespace KardashevAscent.EditorTools
                     var kind = (Simulation.Planet.ExperimentKind)Enum.Parse(typeof(Simulation.Planet.ExperimentKind), argument);
                     if (sim != null)
                         Log($"known {kind}={sim.IsExperimentKnown(kind)} station={sim.HasResearchStation} turbineBlocker={sim.KnowledgeBlocker(Simulation.Game.BuildingType.TidalTurbine) ?? "none"} result={sim.ExperimentResult(kind) ?? "-"}");
+                    return true;
+                }
+                case "bay":
+                {
+                    // bay: open the site of a shallow-sea tile that can hold a barrage.
+                    var sim = Runner()?.Simulation;
+                    var picker = UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.TilePicker>();
+                    int found = -1;
+                    for (int t = 0; sim != null && t < sim.TileCount && found < 0; t++)
+                        if (sim.BarrageBlocker(t) == null) found = t;
+                    if (found >= 0 && picker != null) picker.Select(found);
+                    Log("bay tile " + found);
                     return true;
                 }
                 case "wave":

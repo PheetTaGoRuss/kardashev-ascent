@@ -1,6 +1,6 @@
 # Tidal barrage
 
-Status: **PROPOSED**. Written 2026-11-19 as the last part of the tidal and wave energy proposal (`tidal-wave-energy.md`). The game director chose free-flow turbines first (built, EN-15) and left the barrage for later. Nothing here is built. Every number marked TBD is a placeholder for tuning, not a claim.
+Status: **PROPOSED**, built 2026-11-19 (EN-17) after the game director chose "build it, with effects": several slots across a channel, coast effects kept, one-way generation, milestone gate (3), basin survey experiment. The numbers below are the ones in the code. Every number marked TBD is a placeholder for tuning, not a claim.
 
 ## What it is, and why it comes after free-flow
 
