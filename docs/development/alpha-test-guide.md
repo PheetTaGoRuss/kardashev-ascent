@@ -21,7 +21,7 @@ What to try in the first playable build, and what is known to be rough. Checked 
 | 6c | Click a shallow-sea tile (blue, near a coast), pick **Floating solar** in the build bar and drop it on a slot | It costs 1.5 times a land panel, needs no robot, and makes a little more power; wetland and shallow sea only |
 | 7 | Press `G`, then `U` | Robots and the Workshop: order a robot, refine aluminium (leaves slag) |
 
-Other keys: `V` sky view, `M` light map, `F10` god mode (shows hidden ground), `F5` / `F9` save and load, `H` hide help.
+Other keys: `V` sky view, `M` light map, `F10` debug panel (free building, unlimited materials, unlock all, god-view ground maps), `F5` / `F9` save and load, `H` hide help.
 
 ## Known rough edges
 

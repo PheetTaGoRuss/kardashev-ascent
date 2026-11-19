@@ -148,6 +148,7 @@ namespace KardashevAscent.Simulation.Game
 
         void StepCore(double dt)
         {
+            ApplyDebugOptions();
             TimeHours += dt;
             UpdateStar();
 

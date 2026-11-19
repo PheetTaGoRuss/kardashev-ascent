@@ -120,7 +120,7 @@ namespace KardashevAscent.Simulation.Game
                     continue;   // still driving there
                 if (!crews.TryGetValue(t, out List<double> crew))
                     crews[t] = crew = new List<double>();
-                crew.Add(RobotCatalog.Productivity(r, t.Kind, MilestonesReached));
+                crew.Add(RobotCatalog.Productivity(r, t.Kind, UnlockLevel));
             }
             double workshopW = 0.0;
             foreach (var kv in crews)

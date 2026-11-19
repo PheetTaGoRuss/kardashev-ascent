@@ -7,7 +7,7 @@ using Mat = KardashevAscent.Simulation.Resources.Material;
 namespace KardashevAscent.Presentation.Planet
 {
     /// <summary>
-    /// Testing aid (god mode). F10 cycles off → copper → lithium → iron → water → off. While on, every tile's ground
+    /// Testing aid (god mode), now part of the debug panel (F10): the panel picks the material map. While on, every tile's ground
     /// shows as if surveyed (view only: the save is not changed) and the planet is coloured by that material's grade:
     /// dark = none, bright = rich. It sets itself up after the scene loads, so no scene changes are needed.
     /// </summary>
@@ -48,11 +48,17 @@ namespace KardashevAscent.Presentation.Planet
                 runner.SimulationCreated -= Repaint;
         }
 
-        void Update()
+        /// <summary>The material map now shown (-1: off). Set it through <see cref="SetMap"/>.</summary>
+        public int MapIndex => index;
+
+        public static string MapName(int i) => i < 0 ? "Off" : Materials.Name(Cycle[i]);
+
+        public static int MapCount => Cycle.Length;
+
+        /// <summary>Show the ground map of one material (0..MapCount-1) on every tile, or -1 to turn it off. Driven by the debug panel (F10).</summary>
+        public void SetMap(int i)
         {
-            if (!ScreenInput.KeyDown(KeyCode.F10))
-                return;
-            index = index + 1 >= Cycle.Length ? -1 : index + 1;
+            index = i < 0 || i >= Cycle.Length ? -1 : i;
             Active = index >= 0;
             if (Active)
                 Repaint();
@@ -101,7 +107,7 @@ namespace KardashevAscent.Presentation.Planet
             style ??= new GUIStyle(GUI.skin.box) { fontSize = 14, alignment = TextAnchor.MiddleCenter };
             string what = Materials.Name(Cycle[index]);
             GUI.Box(new Rect(Screen.width / 2f - 260f, Screen.height - 150f, 520f, 28f),
-                    $"GOD MODE · {what} map: {tiles} tiles · every tile shows as surveyed · F10: next", style);
+                    $"GOD MODE · {what} map: {tiles} tiles · every tile shows as surveyed · F10 panel: change", style);
         }
     }
 }
