@@ -86,6 +86,13 @@ namespace KardashevAscent.Simulation.Tests.Planet
         }
 
         [Test]
+        public void Turbine_HoldsItsRating_AboveTheRatedSpeed()
+        {
+            Assert.AreEqual(Tides.TurbinePowerW(Tides.RatedMs), Tides.TurbinePowerW(5.0), 1e-6);
+            Assert.Less(Tides.TurbinePowerW(Tides.RatedMs), 3.0e6, "one rotor is a few MW at most");
+        }
+
+        [Test]
         public void Stream_SlacksTwicePerCycle_AndPeaksBetween()
         {
             double period = 12.42, peak = 2.5;

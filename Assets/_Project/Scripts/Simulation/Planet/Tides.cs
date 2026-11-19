@@ -41,10 +41,13 @@ namespace KardashevAscent.Simulation.Planet
         /// <summary>Rotor swept area of one free-flow turbine, m2 (a 22 m rotor). TBD.</summary>
         public const double RotorAreaM2 = 380.0;
 
-        /// <summary>Peak stream speed per metre of local tidal range, m/s per m (game rule: a 5 m range gives about 2.5 m/s). TBD.</summary>
-        public const double PeakMsPerMetreOfRange = 0.5;
+        /// <summary>Peak stream speed per metre of local tidal range, m/s per m (game rule: strong channels run about 1 m/s per metre, e.g. a 4 m range with a 5 m/s stream in the Pentland Firth). TBD.</summary>
+        public const double PeakMsPerMetreOfRange = 1.0;
 
         public const double MaxPeakMs = 5.0;
+
+        /// <summary>Rated stream speed, m/s: above it the rotor sheds power and holds its rating (real rotors rate at about 3 m/s, e.g. a 1.2 MW SeaGen at 2.4 m/s). TBD.</summary>
+        public const double RatedMs = 3.0;
 
         /// <summary>
         /// A generated moon from the world's seed: mass ratio 0.002 to 0.02 (Earth's Moon is 0.0123) and distance 25 to 90
@@ -116,7 +119,8 @@ namespace KardashevAscent.Simulation.Planet
         public static double TurbinePowerW(double streamMs, int turbines = 1)
         {
             if (streamMs < CutInMs || turbines <= 0) return 0.0;
-            return 0.5 * RhoSeaWater * RotorAreaM2 * streamMs * streamMs * streamMs * TurbineCp * turbines;
+            double v = Math.Min(streamMs, RatedMs);
+            return 0.5 * RhoSeaWater * RotorAreaM2 * v * v * v * TurbineCp * turbines;
         }
     }
 }

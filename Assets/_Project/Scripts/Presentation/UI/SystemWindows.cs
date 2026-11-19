@@ -44,14 +44,15 @@ namespace KardashevAscent.Presentation.UI
 
         protected override void RefreshBody(IPlanetSimulation sim)
         {
-            double solar = sim.GenerationW - sim.RtgW;
+            double tidal = sim.TidalPowerW();
+            double solar = sim.GenerationW - sim.RtgW - tidal;
             now.text = (sim.IsBrownout ? "BROWNOUT · " : "") +
                        $"Making {Format.Power(sim.GenerationW)} · need {Format.Power(sim.DemandW)}";
             if (nowTip != null)
                 nowTip.Text = $"Colony target {Format.Power(sim.DemandTargetW)}: demand grows toward it after a full day without " +
                               "brownout. A brownout is when power made plus the battery can't meet demand; growth stops until it ends.";
             now.EnableInClassList("message", sim.IsBrownout);
-            sources.text = $"Solar {Format.Power(System.Math.Max(0.0, solar))} · RTG {Format.Power(sim.RtgW)} · wasted {Format.Power(sim.CurtailedW)}";
+            sources.text = $"Solar {Format.Power(System.Math.Max(0.0, solar))} · " + (tidal > 0.0 ? $"Tidal {Format.Power(tidal)} · " : "") + $"RTG {Format.Power(sim.RtgW)} · wasted {Format.Power(sim.CurtailedW)}";
             uses.text = $"Colony {Format.Power(sim.DemandW)} · workshop {Format.Power(sim.WorkshopPowerW)} · charging {Format.Power(sim.RobotChargingW)}";
             double share = sim.BatteryCapacityWh > 0.0 ? sim.BatteryStoredWh / sim.BatteryCapacityWh : 0.0;
             string flow = sim.BatteryPowerW > 1.0 ? $"charging {Format.Power(sim.BatteryPowerW)}"

@@ -7,7 +7,7 @@ namespace KardashevAscent.Simulation.Game
     /// </summary>
     public sealed class DebugOptions
     {
-        bool freeBuilding, infiniteMaterials, unlockAll, fullBattery;
+        bool freeBuilding, infiniteMaterials, unlockAll, fullBattery, strongTides;
 
         /// <summary>Buildings cost no materials and no robot time: they stand as soon as they are placed.</summary>
         public bool FreeBuilding { get => freeBuilding; set { freeBuilding = value; Touch(value); } }
@@ -21,10 +21,13 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>The colony battery is kept full.</summary>
         public bool FullBattery { get => fullBattery; set { fullBattery = value; Touch(value); } }
 
+        /// <summary>Every coast has eight times the tide (to try tidal turbines on a world whose moon is weak).</summary>
+        public bool StrongTides { get => strongTides; set { strongTides = value; Touch(value); } }
+
         /// <summary>A switch was on at some time this session.</summary>
         public bool EverUsed { get; private set; }
 
-        public bool AnyOn => freeBuilding || infiniteMaterials || unlockAll || fullBattery;
+        public bool AnyOn => freeBuilding || infiniteMaterials || unlockAll || fullBattery || strongTides;
 
         /// <summary>The milestone level the unlock rules see when <see cref="UnlockAll"/> is on.</summary>
         public const int AllUnlockedLevel = 10;

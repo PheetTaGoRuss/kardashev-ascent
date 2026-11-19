@@ -70,6 +70,7 @@ namespace KardashevAscent.Presentation.Planet
             d.InfiniteMaterials = GUILayout.Toggle(d.InfiniteMaterials, " Unlimited materials");
             d.UnlockAll = GUILayout.Toggle(d.UnlockAll, " Unlock everything");
             d.FullBattery = GUILayout.Toggle(d.FullBattery, " Battery always full");
+            d.StrongTides = GUILayout.Toggle(d.StrongTides, " Strong tides (x8)");
             GUILayout.Space(6f);
             GUILayout.Label("Shortcuts");
             GUILayout.BeginHorizontal();

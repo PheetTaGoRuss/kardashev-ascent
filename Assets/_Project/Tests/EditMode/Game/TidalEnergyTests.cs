@@ -83,7 +83,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             }
             Assert.Greater(max, 0.0, "the turbine makes power at the peak");
             Assert.AreEqual(0.0, min, 1e-9, "and none at slack water");
-            Assert.LessOrEqual(max, Tides.TurbinePowerW(Tides.MaxPeakMs) * 1.0001);
+            Assert.LessOrEqual(max, Tides.TurbinePowerW(Tides.RatedMs) * 1.0001);
         }
 
         [Test]

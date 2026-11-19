@@ -179,7 +179,7 @@ namespace KardashevAscent.EditorTools
                 {
                     var sim = Runner()?.Simulation;
                     if (sim != null)
-                        Log($"STATUS t={sim.TimeHours:0}h gen={sim.GenerationW:0}W demand={sim.DemandW:0}W battery={sim.BatteryStoredWh / 1e6:0.0}MWh brownout={sim.IsBrownout} K={sim.PlanetK:0.000} milestones={sim.MilestonesReached} iron={sim.Materials[KardashevAscent.Simulation.Resources.Material.Iron]:0}kg queue={sim.ConstructionQueueCount} robots={sim.Workforce.Robots.Count}");
+                        Log($"STATUS t={sim.TimeHours:0}h gen={sim.GenerationW:0}W demand={sim.DemandW:0}W battery={sim.BatteryStoredWh / 1e6:0.0}MWh brownout={sim.IsBrownout} K={sim.PlanetK:0.000} milestones={sim.MilestonesReached} iron={sim.Materials[KardashevAscent.Simulation.Resources.Material.Iron]:0}kg queue={sim.ConstructionQueueCount} robots={sim.Workforce.Robots.Count} tidal={sim.TidalPowerW():0}W period={sim.TidePeriodHours:0.0}h moonM={sim.Moon.MassRatio:0.0000} moonD={sim.Moon.DistanceRadii:0}");
                     return true;
                 }
                 case "select":
@@ -215,6 +215,19 @@ namespace KardashevAscent.EditorTools
                         if (sim.GetTile(t).Terrain == kind) { picker.Select(t); Log("terrain tile " + t); break; }
                     return true;
                 }
+                case "tide":
+                {
+                    // tide: open the site of the shallow-sea tile with the strongest tide.
+                    var sim = Runner()?.Simulation;
+                    var picker = UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.TilePicker>();
+                    int best = -1;
+                    double most = -1.0;
+                    for (int t = 0; sim != null && t < sim.TileCount; t++)
+                        if (sim.GetTile(t).Terrain == Simulation.Planet.TerrainType.ShallowOcean && sim.TidalRangeAtM(t) > most) { most = sim.TidalRangeAtM(t); best = t; }
+                    if (best >= 0 && picker != null) picker.Select(best);
+                    Log("tide tile " + best + " range " + most);
+                    return true;
+                }
                 case "mode":
                     UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.PanelPlacer>().Mode =
                         (Presentation.Planet.BuildMode)Enum.Parse(typeof(Presentation.Planet.BuildMode), argument);
@@ -228,6 +241,7 @@ namespace KardashevAscent.EditorTools
                         else if (argument == "material") tools.Debug.InfiniteMaterials = true;
                         else if (argument == "unlock") tools.Debug.UnlockAll = true;
                         else if (argument == "battery") tools.Debug.FullBattery = true;
+                        else if (argument == "tides") tools.Debug.StrongTides = true;
                         panel.Open = true;
                         return true;
                     }
