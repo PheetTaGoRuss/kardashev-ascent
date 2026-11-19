@@ -12,7 +12,7 @@ namespace KardashevAscent.Presentation.UI
     /// Edit a solar panel's angles by dragging rings around it, and keep named angle layouts.
     /// <list type="bullet">
     /// <item>The rings appear over the selected slot while <b>Edit angle</b> is on. Red turns the tilt (X), green turns
-    /// the facing (Y). Blue (Z, roll) is drawn for orientation only: rolling a flat panel does not change its power.</item>
+    /// the facing (Y). There is no roll ring: twisting a flat panel about its own axis does not change its power.</item>
     /// <item>The rings only move the tilt and facing sliders of the open panel box, so every number, preview and
     /// "send a robot to turn it" rule stays as it was.</item>
     /// <item><b>Angle layouts</b>: save the angles with a name and a note. The saved layout also records the slot and
@@ -24,7 +24,7 @@ namespace KardashevAscent.Presentation.UI
     public sealed class AngleEditor : MonoBehaviour
     {
         const float Box = 260f;
-        static readonly Color Red = new Color(1f, 0.38f, 0.34f), Green = new Color(0.36f, 0.86f, 0.5f), Blue = new Color(0.4f, 0.62f, 1f);
+        static readonly Color Red = new Color(1f, 0.38f, 0.34f), Green = new Color(0.36f, 0.86f, 0.5f);
 
         /// <summary>One ring: its look and its size on screen. Facing and tilt rings are flattened circles seen at an angle.</summary>
         readonly struct Ring
@@ -39,7 +39,6 @@ namespace KardashevAscent.Presentation.UI
         {
             new Ring("Y", 112f, 40f, Green),   // facing: turns about the vertical
             new Ring("X", 40f, 112f, Red),     // tilt: turns about the east-west line
-            new Ring("Z", 92f, 92f, Blue),     // roll: no effect on the power of a flat panel
         };
 
         SimulationRunner runner;
@@ -158,7 +157,7 @@ namespace KardashevAscent.Presentation.UI
                 Ring ring = Rings[r];
                 bool live = r == dragRing || (dragRing < 0 && r == hoverRing);
                 Color color = ring.Color;
-                color.a = ring.Axis == "Z" ? (live ? 0.7f : 0.35f) : (live ? 1f : 0.75f);
+                color.a = live ? 1f : 0.75f;
                 p.strokeColor = color;
                 p.lineWidth = live ? 6f : 3.5f;
                 p.BeginPath();
@@ -524,7 +523,7 @@ namespace KardashevAscent.Presentation.UI
                     Vector2 at = RuntimePanelUtils.CameraTransformWorldToPanel(gizmo.panel, world, cam);
                     gizmo.style.left = at.x - Box * 0.5f;
                     gizmo.style.top = at.y - Box * 0.5f;
-                    gizmoLabel.text = $"β {tilt:0}°   γ {facing:0}° {Compass(facing)}   ·   red: tilt · green: facing · blue: roll (no effect)";
+                    gizmoLabel.text = $"β {tilt:0}°   γ {facing:0}° {Compass(facing)}   ·   red: tilt · green: facing";
                     show = true;
                     gizmo.MarkDirtyRepaint();
                 }
