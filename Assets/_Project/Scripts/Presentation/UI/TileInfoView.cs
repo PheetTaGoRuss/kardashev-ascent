@@ -430,6 +430,16 @@ namespace KardashevAscent.Presentation.UI
                 AddGroundButton(on ? $"Stop mining {Materials.Name(m).ToLowerInvariant()}" : $"Mine {Materials.Name(m).ToLowerInvariant()}", on,
                                 () => { if (sim.IsMiningOrdered(tile, material)) sim.CancelMining(tile, material); else sim.OrderMining(tile, material); groundShape = null; });
             }
+            // A mining or survey order out of a robot's one-charge range is never worked: say so (balance pass 2026-11-20).
+            string reach = groundActions.childCount > 0 ? sim.WorkReachProblem(tile) : null;
+            if (reach != null)
+            {
+                var warn = new Label(reach);
+                warn.style.whiteSpace = WhiteSpace.Normal;
+                warn.style.color = new Color(1f, 0.47f, 0.41f);
+                warn.style.marginTop = 4;
+                groundActions.Add(warn);
+            }
         }
 
         void AddGroundButton(string text, bool on, Action onClick)

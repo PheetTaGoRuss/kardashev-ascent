@@ -305,6 +305,9 @@ namespace KardashevAscent.Simulation.Game
     /// <summary>The ground and the materials: surveys, mining and what is on hand.</summary>
     public interface IResourceCommands
     {
+        /// <summary>Why robots cannot work on this tile from the nearest charger (too far for one charge), or null.</summary>
+        string WorkReachProblem(int tileId);
+
         /// <summary>What lies in each tile's ground, and which tiles are surveyed (only those are shown to the player).</summary>
         Resources.DepositMap Deposits { get; }
 

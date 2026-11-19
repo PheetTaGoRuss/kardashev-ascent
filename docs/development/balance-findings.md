@@ -28,6 +28,10 @@ Robots can only work as far from a charger as one battery lasts (80 % out and ba
 2. **Make copper commoner near the base** (raise `CopperShare`, or guarantee one copper tile within a few tiles of the landing site). Changes world generation, so saved worlds look different.
 3. **Reduce the copper in robots** (40 kg each) so the lander cargo goes further.
 
+## Done after the first pass: the range hint
+
+The tile panel now says why an order can never be worked (`PlanetSimulation.WorkReachProblem`, shown under the mining and survey buttons): "Out of range: N h of driving from the nearest charger, and a robot can go M h out and back on one charge. Build a charging station nearer." Measured on Viridia (2446 land tiles) after landing with the standard essentials: **32 land tiles in range (1.3 %), 2080 out of range, 334 cut off by water or a barrier**. So with one charger a colony can reach a radius of about three tiles. That is a deliberate frontier, but it makes the forward charger the player's first real decision. **Decided 2026-11-20 (director): keep the radius of about three tiles.** A first-steps hint (step 5 of 6) introduces the forward charger and is done once a second charger stands. Not tuned: robot battery, drive power and hop time as such. Earlier open question, now answered: whether the radius is right (it follows from robot battery 2.4 kWh, drive power 50 W and the hop time per tile; none is tuned), and a tutorial step that introduces forward chargers.
+
 ## Not yet balanced
 
 A smarter bot that builds forward chargers and relays is needed before tuning mining rates, robot costs and build times. Until then those numbers stay as placeholders.

@@ -232,6 +232,22 @@ namespace KardashevAscent.EditorTools
                             Log($"ROBOT {r.Id} {r.Kind} tile={r.Tile} activity={r.Activity} task={(r.Task.HasValue ? r.Task.Value.Kind + "@" + r.Task.Value.Tile : "-")} battery={r.Battery.StoredWh:0}Wh stranded={r.IsStranded} charger={r.ChargerExists} connected={r.Connected} cond={r.Condition:0.00} program={sim.Workforce.EffectiveProgram(r)} surveyPriority={sim.Workforce.ProgramPriority(r, KardashevAscent.Simulation.Robots.TaskKind.Survey)} buildPriority={sim.Workforce.ProgramPriority(r, KardashevAscent.Simulation.Robots.TaskKind.Build)} available={r.Available} shutdown={r.IsShutDown} milestones={sim.MilestonesReached}");
                     return true;
                 }
+                case "reach":
+                {
+                    var sim = Runner()?.Simulation;
+                    int inRange = 0, far = 0, cut = 0, land = 0;
+                    for (int t = 0; sim != null && t < sim.TileCount; t++)
+                    {
+                        if (sim.GetTile(t).IsWater) continue;
+                        land++;
+                        string why = sim.WorkReachProblem(t);
+                        if (why == null) inRange++;
+                        else if (why.StartsWith("Out of range")) far++;
+                        else cut++;
+                    }
+                    Log($"REACH land={land} inRange={inRange} outOfRange={far} cutOff={cut} base={sim?.BaseTileId}");
+                    return true;
+                }
                 case "survey":
                 {
                     var sim = Runner()?.Simulation;
