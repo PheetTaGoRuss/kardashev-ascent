@@ -26,7 +26,7 @@ A tile in the game is huge. On a frequency-12 planet one tile is hundreds of tho
 2. **The building.** One building, **Tidal barrage**, covering several slots in a row across the water (TBD, 3 slots), on shallow-sea slots next to land. Built by boat-hull robots, like the other sea buildings.
 3. **Output.** Rated power from a game-rule basin (TBD, 22 km², La Rance-like) and the tile's range: energy per tide = ½ ρ g A h² times a plant share (TBD, 0.3), turned into power over the tide cycle. At 5 m range that is about 160 GWh a year per barrage (an average near 19 MW), and at La Rance's 8 m about 420 GWh (near 48 MW, against La Rance's real average of about 57 MW, which also generates on the incoming tide). The peak is several times the average. Output follows the tide cycle already in the simulation: peaks after high and low tide, near zero at mid-tide (two-way generation would be a later option).
 4. **Cost and time.** Much more than a turbine: a great deal of rock and iron, and a long robot build (TBD, about ten times a turbine). A new bill with no new material, because the game has no cement.
-5. **Unlock.** After the tide gauge, and gated by a milestone level (TBD) so it arrives late, like the larger solar tiers.
+5. **Unlock.** After the tide gauge, and gated by milestone 1 (10 MW) after the balance pass (a barrage gives tens of MW, so a later gate would make it pointless).
 6. **Research.** A **basin survey** experiment at the research station (needs the tide gauge) that reports a bay's real basin and range. Without it the player only sees the tile's range.
 
 ## Effects on the coast (the part that needs a decision)

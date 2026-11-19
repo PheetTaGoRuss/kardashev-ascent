@@ -129,8 +129,8 @@ namespace KardashevAscent.Simulation.Planet
         /// <summary>Share of one emptying's energy the plant turns into electricity. About 0.3 puts La Rance's 8 m range at about 420 GWh a year (real: about 500, two-way). TBD.</summary>
         public const double BarragePlantShare = 0.3;
 
-        /// <summary>The milestone level at which a barrage opens (a late source). TBD.</summary>
-        public const int BarrageMilestone = 3;
+        /// <summary>The milestone at which a barrage opens: each milestone is ten times the power of the last, and a barrage gives tens of MW, so it matters from milestone 1 (10 MW) and is lost in the noise by milestone 3 (1 GW). Balance pass 2026-11-20.</summary>
+        public const int BarrageMilestone = 1;
 
         /// <summary>The smallest local tidal range a barrage is worth building on, m (La Rance works at about 8). TBD.</summary>
         public const double BarrageMinRangeM = 4.0;
