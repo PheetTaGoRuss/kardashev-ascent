@@ -60,7 +60,7 @@ The order inside one sub-step is documented in [`system-interactions.md`](system
 - **Host.** `SimulationRunner` builds the simulation for a `PlanetDNA` asset and raises `SimulationCreated`; views subscribe and re-read.
 - **Views.** One MonoBehaviour per panel or visual, each holding a UI Toolkit document or scene objects. Views poll the interface and listen to its events.
 - **Scene.** `Editor/MainSceneSetup.cs` creates and wires every object. Scene and prefab files are never edited as text.
-- **Persistence.** `IPlanetSimulation.CaptureState()` returns a `SimulationState` (plain serialisable classes, version 16). `SaveGameController` writes it as JSON with `JsonUtility`. `RestoreState` fills missing fields of older versions with defaults.
+- **Persistence.** `IPlanetSimulation.CaptureState()` returns a `SimulationState` (plain serialisable classes; `SimulationState.CurrentVersion` is the version). `SaveGameController` writes it as JSON with `JsonUtility`. `RestoreState` fills missing fields of older versions with defaults.
 - **Data.** Planets are the only content in data files; see [`data-architecture.md`](data-architecture.md).
 
 ## 4. Architecture rules

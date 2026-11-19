@@ -96,14 +96,8 @@ namespace KardashevAscent.Simulation.Game
                     Kind = j.Kind, RobotKind = j.RobotKind, SodiumBattery = j.SodiumBattery, AluminiumWiring = j.AluminiumWiring,
                     RobotId = j.RobotId, Module = j.Module, Output = j.Output, OutputKg = j.OutputKg, DoneHours = j.DoneHours,
                 });
-            foreach (AnglePreset preset in anglePresets)
-                state.AnglePresets.Add(new AnglePreset
-                {
-                    Id = preset.Id, Name = preset.Name, Note = preset.Note, TileId = preset.TileId, Slot = preset.Slot,
-                    LatitudeDeg = preset.LatitudeDeg, LongitudeDeg = preset.LongitudeDeg, TiltDeg = preset.TiltDeg,
-                    FacingDeg = preset.FacingDeg, SavedHours = preset.SavedHours,
-                });
-            state.NextAnglePresetId = nextAnglePresetId;
+            anglePresets.Capture(state.AnglePresets, out int nextPresetId);
+            state.NextAnglePresetId = nextPresetId;
             foreach (IndustrialReport report in IndustrialReports)
                 state.IndustrialReports.Add(new IndustrialReport
                 {
@@ -295,11 +289,7 @@ namespace KardashevAscent.Simulation.Game
                     jobs.Add(j);
                 }
             industrialReports.Restore(state.IndustrialReports);
-            anglePresets.Clear();
-            foreach (AnglePreset p in state.AnglePresets ?? new System.Collections.Generic.List<AnglePreset>())
-                if (p != null) anglePresets.Add(p);
-            nextAnglePresetId = Math.Max(state.NextAnglePresetId, 1);
-            foreach (AnglePreset p in anglePresets) nextAnglePresetId = Math.Max(nextAnglePresetId, p.Id + 1);
+            anglePresets.Restore(state.AnglePresets, state.NextAnglePresetId);
             Workforce.GroupCapacity = Math.Max(Workforce.GroupCapacity, RobotTech.GroupCapacity(MilestonesReached));
             Workforce.Movement = CurrentMovement();
             Workforce.Milestones = MilestonesReached;
