@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using KardashevAscent.Presentation.CameraControl;
 using KardashevAscent.Presentation.Planet;
 using KardashevAscent.Simulation.Game;
@@ -46,8 +47,9 @@ namespace KardashevAscent.Presentation.UI
         // Build bar categories and the (i) descriptions.
         readonly System.Collections.Generic.Dictionary<BuildMode, (VisualElement Item, Button Info)> buildItems =
             new System.Collections.Generic.Dictionary<BuildMode, (VisualElement, Button)>();
-        Button catPower, catStations, catIndustry;
-        BuildInfo.Category buildCategory = BuildInfo.Category.Power;
+        readonly Dictionary<BuildInfo.Category, Button> catButtons = new Dictionary<BuildInfo.Category, Button>();
+        BuildInfo.Category buildCategory = BuildInfo.Category.Solar;
+        bool previewsMade;
         VisualElement buildInfo;
         Label buildInfoTitle, buildInfoText;
         BuildMode? infoShown;
@@ -107,12 +109,25 @@ namespace KardashevAscent.Presentation.UI
             if (modeElectrolyser != null)
                 modeElectrolyser.clicked += () => { if (placer != null) placer.Mode = BuildMode.Electrolyser; };
             DragFrom(modeElectrolyser, BuildMode.Electrolyser);
-            catPower = root.Q<Button>("cat-power");
-            catStations = root.Q<Button>("cat-stations");
-            if (catPower != null) catPower.clicked += () => buildCategory = BuildInfo.Category.Power;
-            if (catStations != null) catStations.clicked += () => buildCategory = BuildInfo.Category.Stations;
-            catIndustry = root.Q<Button>("cat-industry");
-            if (catIndustry != null) catIndustry.clicked += () => buildCategory = BuildInfo.Category.Industry;
+            VisualElement tabsRow = root.Q(className: "build-tabs");
+            if (tabsRow != null)
+            {
+                tabsRow.Clear();
+                // the category bar slides sideways when the window is narrow (director 2026-11-20)
+                var slide = new ScrollView(ScrollViewMode.Horizontal) { verticalScrollerVisibility = ScrollerVisibility.Hidden, horizontalScrollerVisibility = ScrollerVisibility.Hidden };
+                slide.AddToClassList("build-slide");
+                tabsRow.Add(slide);
+                VisualElement chips = slide.contentContainer;
+                chips.style.flexDirection = FlexDirection.Row;
+                foreach (BuildInfo.Category c in System.Enum.GetValues(typeof(BuildInfo.Category)))
+                {
+                    BuildInfo.Category cat = c;
+                    var chip = new Button(() => buildCategory = cat) { text = BuildInfo.Label(cat) };
+                    chip.AddToClassList("tab");
+                    chips.Add(chip);
+                    catButtons[cat] = chip;
+                }
+            }
             buildInfo = root.Q("build-info");
             // The inspect boxes and the building info card drag like the calculator (director 2026-11-14); the
             // inspect boxes move their whole column together.
@@ -307,9 +322,18 @@ namespace KardashevAscent.Presentation.UI
                     if (!userPickedTab) buildCategory = BuildInfo.CategoryOf(placer.Mode);
                 }
                 lastModeSeen = placer.Mode;
-                catPower?.EnableInClassList("selected", buildCategory == BuildInfo.Category.Power);
-                catStations?.EnableInClassList("selected", buildCategory == BuildInfo.Category.Stations);
-                catIndustry?.EnableInClassList("selected", buildCategory == BuildInfo.Category.Industry);
+                foreach (var cb in catButtons)
+                    cb.Value.EnableInClassList("selected", buildCategory == cb.Key);
+                if (!previewsMade && placer.LitMaterial != null)
+                {
+                    previewsMade = true;
+                    foreach (var kv in buildItems)
+                    {
+                        var img = new Image { image = ModelPreview.Of(PanelPlacer.TypeOf(kv.Key), placer.LitMaterial), scaleMode = ScaleMode.ScaleToFit };
+                        img.AddToClassList("build-preview");
+                        kv.Value.Item.Insert(0, img);
+                    }
+                }
                 foreach (var kv in buildItems)
                 {
                     kv.Value.Item.style.display = BuildInfo.CategoryOf(kv.Key) == buildCategory ? DisplayStyle.Flex : DisplayStyle.None;

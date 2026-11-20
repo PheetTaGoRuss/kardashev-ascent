@@ -24,8 +24,28 @@ namespace KardashevAscent.Presentation.Planet
         readonly List<Vector3> linkPositions = new List<Vector3>();
         readonly List<Vector3> linkUps = new List<Vector3>();
 
-        public BatteryVisual(string name, Transform planet, Material body, Material top)
+        readonly KardashevAscent.Simulation.Game.BuildingType? model;
+        readonly List<(Renderer Renderer, Color Colour)> modelParts = new List<(Renderer, Color)>();
+
+        /// <summary>A building with its own detailed model (<see cref="BuildingModels"/>), each part keeping its colour.</summary>
+        public BatteryVisual(string name, Transform planet, Material lit, KardashevAscent.Simulation.Game.BuildingType model)
+            : this(name, planet, lit, lit, model)
         {
+        }
+
+        BatteryVisual(string name, Transform planet, Material body, Material top, KardashevAscent.Simulation.Game.BuildingType? model)
+            : this(name, planet, body, top, model, true)
+        {
+        }
+
+        public BatteryVisual(string name, Transform planet, Material body, Material top)
+            : this(name, planet, body, top, null, true)
+        {
+        }
+
+        BatteryVisual(string name, Transform planet, Material body, Material top, KardashevAscent.Simulation.Game.BuildingType? model, bool unused)
+        {
+            this.model = model;
             this.name = name;
             this.planet = planet;
             this.body = body;
@@ -38,12 +58,27 @@ namespace KardashevAscent.Presentation.Planet
         {
             var root = new GameObject(modules.Count == 0 ? name : $"{name} ({modules.Count + 1})") { hideFlags = HideFlags.DontSave };
             root.transform.SetParent(planet, false);
-            Part(root, "Pad", body, new Vector3(0f, 0.01f, 0f), new Vector3(0.9f, 0.02f, 0.75f));
-            for (int i = -1; i <= 1; i++)
+            if (model.HasValue)
             {
-                float x = i * 0.28f;
-                Part(root, "Container", body, new Vector3(x, 0.1f, 0f), new Vector3(0.22f, 0.16f, 0.6f));
-                Part(root, "Vents", top, new Vector3(x, 0.185f, 0f), new Vector3(0.18f, 0.012f, 0.52f));
+                var parts = new List<(Renderer Renderer, Color Colour)>();
+                BuildingModels.Build(root, model.Value, body, parts);
+                foreach (var (r, colour) in parts)
+                {
+                    var own = new MaterialPropertyBlock();
+                    own.SetColor("_Color", colour);
+                    r.SetPropertyBlock(own);
+                    modelParts.Add((r, colour));
+                }
+            }
+            else
+            {
+                Part(root, "Pad", body, new Vector3(0f, 0.01f, 0f), new Vector3(0.9f, 0.02f, 0.75f));
+                for (int i = -1; i <= 1; i++)
+                {
+                    float x = i * 0.28f;
+                    Part(root, "Container", body, new Vector3(x, 0.1f, 0f), new Vector3(0.22f, 0.16f, 0.6f));
+                    Part(root, "Vents", top, new Vector3(x, 0.185f, 0f), new Vector3(0.18f, 0.012f, 0.52f));
+                }
             }
             foreach (Renderer r in root.GetComponentsInChildren<Renderer>())
             {

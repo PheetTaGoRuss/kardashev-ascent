@@ -61,6 +61,8 @@ namespace KardashevAscent.Presentation.Planet
         [SerializeField] SiteView siteView;
         [SerializeField] SaveGameController saveGame;
         [SerializeField] Material frameMaterial;
+        /// <summary>The lit material the building models are drawn with (the palette previews use it too).</summary>
+        public Material LitMaterial => frameMaterial;
         [SerializeField] Material cellMaterial;
         [Tooltip("See-through material for the placement preview (KardashevAscent/GhostTint).")]
         [SerializeField] Material ghostMaterial;
@@ -150,7 +152,7 @@ namespace KardashevAscent.Presentation.Planet
         /// <summary>True for the two panel modes (they share the tilt and facing controls).</summary>
         public static bool IsPanel(BuildMode m) => m == BuildMode.SolarPanel || m == BuildMode.FloatingSolar;
 
-        static BuildingType TypeOf(BuildMode m) =>
+        public static BuildingType TypeOf(BuildMode m) =>
             m == BuildMode.FloatingSolar ? BuildingType.FloatingSolar :
             m == BuildMode.Battery ? BuildingType.Battery : m == BuildMode.Workshop ? BuildingType.Workshop
             : m == BuildMode.ChargingStation ? BuildingType.ChargingStation
@@ -433,6 +435,8 @@ namespace KardashevAscent.Presentation.Planet
                         : type == BuildingType.Relay ? "Relay" : type == BuildingType.ResearchStation ? "Research"
                         : type == BuildingType.AluminaPlant ? "Alumina plant" : type == BuildingType.Electrolyser ? "Electrolysis cell"
                         : type == BuildingType.TidalTurbine ? "Tidal turbine" : type == BuildingType.WaveConverter ? "Wave converter" : type == BuildingType.TidalBarrage ? "Tidal barrage" : type == BuildingType.PowerLine ? "Power line" : type == BuildingType.HighVoltageLine ? "High-voltage line" : "Battery";
+            if (!constructionSite)
+                return new BatteryVisual($"{what} {t}.{s}", transform, frameMaterial, type);   // its own detailed model
             if (!constructionSite && (type == BuildingType.AluminaPlant || type == BuildingType.Electrolyser))
             {
                 var module = new BatteryVisual($"{what} {t}.{s}", transform, cellMaterial, frameMaterial);

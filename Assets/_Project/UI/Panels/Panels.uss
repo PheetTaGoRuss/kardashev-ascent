@@ -73,3 +73,7 @@
 .box .caption { font-size: 13px; }
 .box .heading { font-size: 12px; }
 .bottom-left { width: 390px; }
+
+.build-slide { max-width: 640px; }
+.build-preview { width: 44px; height: 44px; margin-right: 4px; border-radius: 6px; }
+.build-item { padding: 2px 4px; border-radius: 8px; background-color: rgba(255,255,255,0.04); }
