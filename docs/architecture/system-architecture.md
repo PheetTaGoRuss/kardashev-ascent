@@ -39,6 +39,7 @@ Four assemblies are enough today. Do not add an assembly for a category (data, p
 | `Climate` | Cloud factor, waste heat | none |
 | `Energy` | Battery, RTG, power grid, colony demand, `BuildCosts` | none |
 | `Solar` | Light from star to panel: orbit, sun position, atmosphere, panel, yield, spectra, sky knowledge, measurement puzzles | none |
+| `Electrical` | Electrical graph: nodes, cables, devices, terminals, compatibility checks, deterministic connected networks (no power flow yet) | none |
 | `Planet` | Hex sphere, terrain, building slots, planet records, planet chemistry, the light-potential map | `Civilization`, `Solar` |
 | `Resources` | Materials, deposits, material stock, industry, the survey puzzle | `Planet`, `Solar` |
 | `Logistics` | Stock per place (`InventoryBook`), the haul ledger, haul energy physics (new, mission operations P1) | `Resources` |

@@ -16,12 +16,13 @@ ALLOWED = {
     'Climate': set(),
     'Energy': set(),
     'Solar': set(),
+    'Electrical': set(),
     'Planet': {'Civilization', 'Solar'},
     'Resources': {'Planet', 'Solar'},
     'Logistics': {'Resources'},
     'Robots': {'Energy', 'Logistics', 'Planet', 'Resources'},
     'Operations': {'Resources', 'Robots'},
-    'Game': {'Civilization', 'Climate', 'Energy', 'Logistics', 'Operations', 'Planet', 'Resources', 'Robots', 'Solar'},
+    'Game': {'Civilization', 'Climate', 'Electrical', 'Energy', 'Logistics', 'Operations', 'Planet', 'Resources', 'Robots', 'Solar'},
 }
 NAMES = '|'.join(ALLOWED)
 

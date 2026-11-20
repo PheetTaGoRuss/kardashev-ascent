@@ -636,6 +636,22 @@ namespace KardashevAscent.Simulation.Game
         bool IsPlantPaused(int tileId, int slot);
     }
 
+    /// <summary>
+    /// The electrical networks the finished power lines form (electrical redesign, stage 1; read model only). The lander's network feeds
+    /// the single power bus; a tile on another network is connected to its neighbours but not on the main grid.
+    /// </summary>
+    public interface IElectricalNetworks
+    {
+        /// <summary>How many separate networks the finished lines form.</summary>
+        int ElectricalNetworkCount { get; }
+
+        /// <summary>Tiles on the lander's network, in tile order.</summary>
+        System.Collections.Generic.IReadOnlyCollection<int> LanderNetworkTiles();
+
+        /// <summary>The tile has a line end and is on a network separate from the lander's.</summary>
+        bool IsOnElectricalIsland(int tileId);
+    }
+
     public interface IWiredGrid
     {
         /// <summary>When on, generators make power only on tiles wired to the lander tile, and stations and storage can only be built there. Off in old saves and tests.</summary>
