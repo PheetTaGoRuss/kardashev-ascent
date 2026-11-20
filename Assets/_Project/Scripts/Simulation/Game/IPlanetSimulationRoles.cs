@@ -561,6 +561,12 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Generator buildings (panels, turbines, wave lines, barrages) standing off the grid.</summary>
         int GeneratorsOffGrid { get; }
 
+        /// <summary>Share of a generator's power that reaches the lander tile (less for each tile of line out).</summary>
+        double GridEfficiency(int tileId);
+
+        /// <summary>Power lost in the lines now, W.</summary>
+        double TransmissionLossW { get; }
+
         /// <summary>Put a power line on a tile (one slot).</summary>
         bool PlacePowerLine(int tileId, int slot);
     }

@@ -62,14 +62,18 @@ namespace KardashevAscent.Simulation.Game
         {
             if (tidalTurbines.Count == 0)
                 return 0.0;
-            double total = 0.0;
+            double total = 0.0, lost = 0.0;
             foreach (var key in tidalTurbines)
             {
                 if (Build.QueueCount > 0 && Build.IsQueued(key.Tile, key.Slot))
                     continue;
                 if (!IsPowered(key.Tile)) continue;
-                total += Tides.TurbinePowerW(StreamAtMs(key.Tile));
+                double raw = Tides.TurbinePowerW(StreamAtMs(key.Tile));
+                double efficiency = GridEfficiency(key.Tile);
+                total += raw * efficiency;
+                lost += raw * (1.0 - efficiency);
             }
+            tidalLossW = lost;
             return Math.Min(total, Tides.PlanetCeilingW(Moon));
         }
 

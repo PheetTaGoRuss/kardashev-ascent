@@ -54,7 +54,7 @@ namespace KardashevAscent.Presentation.UI
                 nowTip.Text = $"Colony target {Format.Power(sim.DemandTargetW)}: demand grows toward it after a full day without " +
                               "brownout. A brownout is when power made plus the battery can't meet demand; growth stops until it ends.";
             now.EnableInClassList("message", sim.IsBrownout);
-            sources.text = $"Solar {Format.Power(System.Math.Max(0.0, solar))} · " + (tidal > 0.0 ? $"Tidal {Format.Power(tidal)} · " : "") + (waves > 0.0 ? $"Waves {Format.Power(waves)} · " : "") + (barrage > 0.0 ? $"Barrage {Format.Power(barrage)} · " : "") + (sim.GeneratorsOffGrid > 0 ? $"{sim.GeneratorsOffGrid} off grid · " : "") + $"RTG {Format.Power(sim.RtgW)} · wasted {Format.Power(sim.CurtailedW)}";
+            sources.text = $"Solar {Format.Power(System.Math.Max(0.0, solar))} · " + (tidal > 0.0 ? $"Tidal {Format.Power(tidal)} · " : "") + (waves > 0.0 ? $"Waves {Format.Power(waves)} · " : "") + (barrage > 0.0 ? $"Barrage {Format.Power(barrage)} · " : "") + (sim.GeneratorsOffGrid > 0 ? $"{sim.GeneratorsOffGrid} off grid · " : "") + (sim.TransmissionLossW > 1.0 ? $"lines lose {Format.Power(sim.TransmissionLossW)} · " : "") + $"RTG {Format.Power(sim.RtgW)} · wasted {Format.Power(sim.CurtailedW)}";
             uses.text = $"Colony {Format.Power(sim.DemandW)} · workshop {Format.Power(sim.WorkshopPowerW)} · charging {Format.Power(sim.RobotChargingW)}";
             double share = sim.BatteryCapacityWh > 0.0 ? sim.BatteryStoredWh / sim.BatteryCapacityWh : 0.0;
             string flow = sim.BatteryPowerW > 1.0 ? $"charging {Format.Power(sim.BatteryPowerW)}"

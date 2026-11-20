@@ -42,14 +42,18 @@ namespace KardashevAscent.Simulation.Game
         {
             if (waveConverters.Count == 0)
                 return 0.0;
-            double total = 0.0;
+            double total = 0.0, lost = 0.0;
             foreach (var key in waveConverters)
             {
                 if (Build.QueueCount > 0 && Build.IsQueued(key.Tile, key.Slot))
                     continue;
                 if (!IsPowered(key.Tile)) continue;
-                total += Waves.LinePowerW(WaveHeightAtM(key.Tile), EnergyPeriodAt(key.Tile), SurfaceGravityMs2);
+                double raw = Waves.LinePowerW(WaveHeightAtM(key.Tile), EnergyPeriodAt(key.Tile), SurfaceGravityMs2);
+                double efficiency = GridEfficiency(key.Tile);
+                total += raw * efficiency;
+                lost += raw * (1.0 - efficiency);
             }
+            waveLossW = lost;
             return total;
         }
 
