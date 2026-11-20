@@ -9,6 +9,7 @@ One specification per game system: what it should do, what has been decided, and
 | Robotic workforce, v1 (phases 1–4, movement) | [`robotic-workforce.md`](robotic-workforce.md) | Built |
 | Robotic workforce, v2 (stages A–H) | [`robotic-workforce-v2-audit.md`](robotic-workforce-v2-audit.md) | Stages A–D built; E in progress on a branch; F–H not started |
 | Solar measurements and research puzzles | `solar-measurements.md` | On branch `feature/building-footprints`, not on `main` |
+| Mission operations: flight rules, logistics, flowsheet | [`mission-operations.md`](mission-operations.md) | Shape confirmed 2026-11-20; P0 spec only, nothing built |
 | Simulation and Presentation contract | [`../simulation-interface.md`](../simulation-interface.md) (Thai) | Needs updating |
 | Solar model | `docs/physics/physics-verification.md` and `docs/physics/notes/solar_model.md` | Built and verified |
 

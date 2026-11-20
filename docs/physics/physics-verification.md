@@ -669,3 +669,59 @@ Unit test (`SkyNotebookTests`): เงาให้ h ตรงกับตำแ
 ผลตรวจครั้งนี้บอกว่าความเสี่ยงหลักของเกมไม่ได้อยู่ที่สูตร เพราะเรขาคณิตและฟิสิกส์ของแผงผ่านการเทียบกับ pvlib ระดับ $10^{-4}$° แล้ว ความเสี่ยงอยู่ที่ *ค่าตั้งต้นกับกรณีขอบที่ทำให้เรื่องผิดไปแบบเงียบ ๆ* ค่า $k$ ที่สูงเกินทำให้แสงกระเจิงพองขึ้น 60 % ดาวล็อกไทดัลทำให้ได้ NaN ค่า $f_{spec}$ ที่คงที่ซ่อนว่าซิลิคอนเสียประสิทธิภาพครึ่งหนึ่งใต้ดาว M และ NOCT ในสุญญากาศให้อุณหภูมิเซลล์ที่ไม่มีความหมาย ทั้งสี่เรื่องนี้แก้ได้ในวันแรก ๆ และเพิ่มเทสต์จากตารางข้างบนได้ทันที เรื่องเหล่านี้สำคัญกว่าการปรับสูตรให้ละเอียดขึ้น เพราะดาวที่น่าสนใจที่สุดในเกม คือ Proxima b, TRAPPIST-1e และ Kepler-16b ล้วนเป็นกรณีขอบทั้งหมด
 
 ในแง่การสอน การแก้ไขส่วนใหญ่ทำให้เกมดีขึ้น ทั้งการแสดง absolute K คู่กับ planetary completion %, การแยกพลังงานที่ส่องถึงผิวดาวอยู่แล้ว (PV, ลม) ออกจากพลังงานที่สร้างความร้อนใหม่ (fission, fusion), การบอกว่า BIF เป็นหลักฐานของมหาสมุทรที่ไร้ออกซิเจน และการติดป้าย `nasa`/`derived`/`assumed` ให้ทุกค่า แต่ละข้อเปลี่ยนจาก "ข้อเท็จจริงที่ผิดเล็กน้อย" เป็นกลไกเกมที่ผู้เล่นได้เรียนวิธีคิดของนักวิทยาศาสตร์ ซึ่งตรงกับเป้าหมายของ NASA Space Apps มากกว่าการทำตัวเลขให้แม่นขึ้นอีกหนึ่งตำแหน่งทศนิยม
+
+## Mission operations: sources (added 20 Nov 2026, design phase P0)
+
+For `docs/design/mission-operations.md`. Labels as above. **Every figure marked [recalled] is from standard references the author knows but did not re-read in this session; check it against the cited source before the phase that uses it (P1 for drive and payload, P2 for chemistry).** Nothing here is built yet.
+
+### Light time to Earth (MO-01)
+
+One-way light time in years equals the distance in light-years: $t = d_{pc} 	imes 3.26156$ [derived; 1 pc = 3.26156 ly, IAU]. Proxima Centauri b at 1.30 pc gives 4.24 ly, so a round trip is about 8.5 years [derived]. `distancePc` comes from `sy_dist` of the NASA Exoplanet Archive.
+
+| Test | Input | Expected | tol |
+| --- | --- | --- | --- |
+| Light time | 1.30 pc | 4.24 ly one way, 8.48 yr round trip | 0.01 |
+
+### Drive power with cargo (MO-04)
+
+The rolling-resistance power of the existing model is $P_0 = C_{rr}\, m_r\, g_\oplus\, v/\eta$ [general physics]. With cargo of mass $m_c$ on a world of gravity $g$:
+
+$$P = P_{base}\,rac{g}{g_\oplus}\,rac{m_r + m_c}{m_r}$$
+
+With $m_c = 0$ this equals `DrivePowerW` today, so `BaseDrivePowerW` (50 W, placeholder D4) stays the calibration and existing tests do not change [derived]. $m_r$ defaults to Perseverance's 1 025 kg [recalled]. Climbing: $E = (m_r + m_c)\, g\, \max(0,\Delta h)/\eta$, no regeneration downhill (an assumption). `PlanetSurface.Elevation` is dimensionless; the metres per unit is a game rule, TBD (Q5), and the climb term ships off.
+
+Payload base: the Apollo lunar roving vehicle was rated for about 490 kg of payload on a vehicle of about 210 kg [recalled, NASA]; to verify before P1.
+
+| Test | Input | Expected | tol |
+| --- | --- | --- | --- |
+| Empty robot | $m_c = 0$, any $g$ | same as today | exact |
+| Gravity | full haul at 2 $g_\oplus$ vs 1 $g_\oplus$ | rolling energy x 2 | 1e-9 |
+| Cargo | $m_c = m_r$ | power x 2 | 1e-9 |
+
+### Stoichiometry and enthalpy of the refinery chain (MO-06, MO-08)
+
+Masses per kg of product [derived from atomic masses Al 26.982, Na 22.990, O 15.999, Cl 35.45]:
+
+| Process | Reaction | Per kg of product |
+| --- | --- | --- |
+| Hall-Heroult, inert anode | $2Al_2O_3 	o 4Al + 3O_2$ | 1.889 kg alumina in, 0.890 kg $O_2$ out per kg Al |
+| Downs cell | $2NaCl 	o 2Na + Cl_2$ | 2.542 kg NaCl in, 1.542 kg $Cl_2$ out per kg Na |
+
+Reaction enthalpy from standard formation enthalpies [recalled; NIST-JANAF, CRC Handbook]: $\Delta H_f(Al_2O_3) = -1675.7$ kJ/mol, so splitting it costs 837.9 kJ per mol of Al, 31.06 MJ per kg of Al, **8.63 kWh/kg**; $\Delta H_f(NaCl) = -411.2$ kJ/mol, so 17.9 MJ per kg of Na, **4.97 kWh/kg**. The repo's electricity figures (13.5 kWh/kg Al, 10 kWh/kg Na) are above these, as they must be; the difference is waste heat: $E_{elec} = \Delta H\, n + Q_{waste}$. A recipe whose sourced energy is below its $\Delta H$ is wrong and its test fails.
+
+**Anode question (open, Q3).** Industrial Hall-Heroult cells use carbon anodes and emit CO2, consuming about 0.4 kg of carbon per kg of Al (stoichiometric about 0.33; the rest is anode loss) [recalled; to verify]. Oxygen is the product only of an inert-anode cell, an emerging technology, so the process is labelled **speculative** (emerging technology) until the director decides.
+
+| Test | Input | Expected | tol |
+| --- | --- | --- | --- |
+| Mass balance | each process, 1 batch | inputs = outputs + byproducts + vented | 1e-9 kg |
+| Oxygen yield | 1 kg Al, inert anode | 0.890 kg | 0.005 |
+| Chlorine yield | 1 kg Na | 1.542 kg | 0.005 |
+| Energy floor | electricity per kg | at least the enthalpy above | exact |
+
+### Gas storage (MO-05)
+
+$n = pV/(ZRT)$ and density $ho = pM/(ZRT)$, $R = 8.314$ J/(mol K) [established]. Example (ideal gas, $Z = 1$): oxygen at 20 MPa and 293 K is about 263 kg/m3 [calculation; a real tank is denser per the compressibility factor, $Z$ about 0.95, to verify]. Chlorine is liquefied at room temperature under about 7 bar and is stored as a liquid in a sealed store [recalled; to verify]. Tank capacities are a game rule, TBD.
+
+### Slag as aggregate (MO-09)
+
+Blast-furnace slag is used as aggregate and cement replacement in concrete (ASTM C989 for ground slag, EN 12620 for aggregates) [recalled; cite before P2]. The 1 : 1 mass substitution for rock in building bills is a game rule, TBD.
