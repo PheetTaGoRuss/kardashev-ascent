@@ -140,7 +140,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | RB-11 | Component tiers and assembly (manufacturing v2) | CONFIRMED as scope | spec v2 stage F | Designed | same |
 | RB-12 | Robot inspection view, task monitor, group presets | CONFIRMED as scope | spec v2 stage G | Designed | same |
 | RB-13 | Aggregate simulation and performance budget | CONFIRMED as scope | spec v2 stage H | Designed | same |
-| RB-14 | Transport robots and logistics | FUTURE | workforce spec §11; OQ-8 | Not started | — |
+| RB-14 | Transport robots and logistics | FUTURE | workforce spec §11; OQ-8 | Not started | — (see MO-03 (mission operations, 2026-11-20)) |
 | RB-15 | Robot rescue | FUTURE | workforce spec §12 | Not started | — |
 | RB-17 | The lander brings three General robots (was one) | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Tested; seen in Play mode | `Robots/Workforce.cs` |
 | RB-18 | Boat hull module: the robot crosses open water (shallow sea 1.5, deep ocean 2 flat tiles per hop, TBD) and builds floating solar; available from the start | CONFIRMED (director 2026-11-14); numbers PROPOSED | chat 2026-11-14 | Tested; ordered and fitted in Play mode | `Robots/RouteFinder.cs`, `Manufacturing.cs` |
@@ -158,12 +158,12 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | RS-03 | Copper deposits near seas and in high ground | CONFIRMED | PR #60 | Tested | `DepositMap.cs` |
 | RS-04 | Mining into one colony stock | CONFIRMED | PR #52 | Tested | orchestrator |
 | RS-05 | Robot Workshop: robots, upgrades, substitute materials. Refining conserves mass: leftover rock is slag (PROPOSED addition, not yet approved) | CONFIRMED | PR #52 | Tested; placeholder recipes | `Robots/Manufacturing.cs` |
-| RS-06 | Industrial production foundation: phases, storage classes, production blockers | Unknown: no decision recorded in the repository | — | In progress (uncommitted, seen locally 2026-11-12) | `Resources/IndustrialProduction.cs` in the main checkout |
+| RS-06 | Industrial production foundation: phases, storage classes, production blockers | Unknown: no decision recorded in the repository | — | In progress (uncommitted, seen locally 2026-11-12) | `Resources/IndustrialProduction.cs` in the main checkout (see MO-07 (wired by the mission operations design, 2026-11-20)) |
 | RS-12 | Calculation puzzles are occasional: a survey or measurement comes back as a puzzle 25 % of the time (TBD; a stable roll from tile, kind and hour); otherwise the robot works the result out exactly | CONFIRMED (director 2026-11-14); 25 % PROPOSED | chat 2026-11-14 | Tested | `Game/PlanetSimulation.Findings.cs` (`RollPuzzle`) |
 | RS-13 | Research always ends in its own unique puzzle | FUTURE (director 2026-11-14) | chat 2026-11-14 | Not started | — |
 | RS-07 | Deposit depletion; purity | FUTURE | V | Not started | — |
-| RS-08 | Storage and logistics | FUTURE | V | Not started | — |
-| RS-09 | Chemical processing, production chains, byproducts, waste, recycling | FUTURE | V | Not started | — |
+| RS-08 | Storage and logistics | FUTURE | V | Not started | — (see MO-02, MO-05 (mission operations, 2026-11-20)) |
+| RS-09 | Chemical processing, production chains, byproducts, waste, recycling | FUTURE | V | Not started | — (see MO-06, MO-08 (mission operations, 2026-11-20)) |
 | RS-10 | Environmental effects of industry | FUTURE | V | Not started | — |
 | RS-11 | Water infrastructure (all topics) | FUTURE | V | Not started | — |
 
@@ -205,6 +205,26 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | UI-11 | Sky view measuring as puzzles from real instruments: δ from tilt and orbit position (sin δ = sin ε · sin λ); the sun from a 1 m stick's shadow (h = arctan(stick / shadow), A_s = shadow bearing ± 180°); latitude from the noon sun (φ = 90° − h + δ) or the celestial pole with a quadrant (φ = 90° − reading); answers within 1° (sun direction 2°); a five-step first-time tutorial (? reopens) | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Tested; seen in Play mode | `Simulation/Solar/SkyNotebook.cs`, `Presentation/UI/SkyPanelView.cs` |
 | UI-11a | A tile's latitude and longitude stay hidden (tile panel, sun path, map hover, saved layouts) until the colony measures a latitude; then the map gives every tile's | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Implemented; checked in Play mode | `UI/TileInfoView.cs`, `Planet/TilePicker.cs`, `UI/AngleEditor.cs` |
 | UI-07 | Build bar in categories (Power, Stations) with an (i) description per building | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/UI/BuildInfo.cs`, `PanelsView.cs` |
+
+### 2.8 Mission operations
+
+| ID | Feature | Design | Basis | Implementation | Where |
+| --- | --- | --- | --- | --- | --- |
+| MO-01 | Light-lag doctrine banner from `distancePc` (one-way light time to Earth) | CONFIRMED (director 2026-11-20) | director brief 2026-11-20 | Designed | `docs/design/mission-operations.md` |
+| MO-02 | Inventories per place; a site draws from its own tile; save migration to the lander depot | CONFIRMED; capacities PROPOSED, TBD | director brief 2026-11-20 | Designed | same |
+| MO-03 | Haul task and demand-driven planner; Transport robots get work (closes the "no work" of RB-14) | CONFIRMED; payload PROPOSED | director brief 2026-11-20 | Designed | same |
+| MO-04 | Haul energy: payload term calibrated to today's drive power; climb term off by default | CONFIRMED; scale PROPOSED | director brief 2026-11-20 | Designed | same |
+| MO-05 | Storage yard, sealed store, gas tank | CONFIRMED; numbers PROPOSED | director brief 2026-11-20 | Designed | same |
+| MO-06 | Processes with named byproducts; `Oxygen` and `Chlorine` materials; vent or store | CONFIRMED | director brief 2026-11-20 | Designed | same |
+| MO-07 | Plant buffers and blockers wired from `IndustrialProduction` (answers OQ-10 and RS-06) | CONFIRMED | director brief 2026-11-20 | Designed | same |
+| MO-08 | Heat ledger per process (readout only) | CONFIRMED | director brief 2026-11-20 | Designed | same |
+| MO-09 | Slag replaces rock in building bills 1 : 1 | PROPOSED | director brief 2026-11-20 | Designed | same |
+| MO-10 | Rulebook: typed conditions on known state, responses, rationale, cooldown | CONFIRMED | director brief 2026-11-20 | Designed | same |
+| MO-11 | Rulebook versions synced over the colony network; cut-off robots keep their version | CONFIRMED | director brief 2026-11-20 | Designed | same |
+| MO-12 | Step 7a "rules evaluate" in the sub-step order | CONFIRMED | director brief 2026-11-20 | Designed | same |
+| MO-13 | Operations log in the observation-record shape (first part of IN-04) | CONFIRMED | director brief 2026-11-20 | Designed | same |
+| MO-14 | Starter rulebook v1 (three rules with rationales) | PROPOSED (rule numbers TBD) | director brief 2026-11-20 | Designed | same |
+| MO-15 | Operations window, haul lanes, Flowsheet Sankey | CONFIRMED | director brief 2026-11-20 | Designed | same |
 
 ## 3. Decisions approved by the director
 
@@ -251,6 +271,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | 2026-11-12 | Game vision and the ten design pillars | [`../game/game-vision.md`](../game/game-vision.md) |
 | 2026-11-12 | The player learns through observations and reports; minimal permanent interface | vision; [`../architecture/information-architecture.md`](../architecture/information-architecture.md) |
 | 2026-11-12 | Four design statuses and six implementation statuses; the director has final authority | this registry |
+| 2026-11-20 | Mission operations: flight rules (versioned rulebook synced over the colony network), logistics (inventories per place, hauls, haul energy) and flowsheet (processes with named byproducts, buffers, heat ledger) approved in shape; every number stays PROPOSED / TBD | MO-01 to MO-15, `docs/design/mission-operations.md` |
 
 ## 4. Rejected
 
@@ -273,7 +294,7 @@ Each needs the director. Until answered, the listed default applies and work tha
 | OQ-7 | Which buildings need staff (workforce Q2)? | Blocks staffing for panels, battery yards and mine sites | Only the Workshop |
 | OQ-8 | Transport robots before logistics exists (workforce Q3)? | A robot kind with no task | Locked |
 | OQ-9 | What destroys a robot (workforce Q4)? | Needed for "unsynchronised data is lost" | Robots cannot be destroyed |
-| OQ-10 | Is the uncommitted industrial-production work approved, and what is its specification? | It starts the industry system with no recorded design | Not on `main`; treat as unapproved |
+| OQ-10 | Is the uncommitted industrial-production work approved, and what is its specification? | It starts the industry system with no recorded design | Not on `main`; treat as unapproved (Answered in design 2026-11-20: wired as MO-07; see docs/design/mission-operations.md) |
 | OQ-11 | ~~Which second energy source comes first?~~ **Answered by the director, 2026-11-18: tidal and wave power** (water energy; fits floating solar and the sea). Registered as EN-11 direction, not yet designed | Order of the energy roadmap | Design tidal and wave power next; needs the environment model for tides first (roadmap phase 3) |
 | OQ-12 | Balance values for every `TBD` placeholder: the director supplies them, or approves a balancing pass? | Placeholders shape play today | **Delegated 2026-11-20 (director: "you can balance yourself till find the best point for playing"):** the assistant runs balance passes and logs them in [balance-findings.md](balance-findings.md); values stay marked TBD until the director signs them off ([list of every placeholder](balance-placeholders.md)) |
 | OQ-13 | Is the original design document to be added to the repository? | The physics report reviews a document that is not here | Not available |
