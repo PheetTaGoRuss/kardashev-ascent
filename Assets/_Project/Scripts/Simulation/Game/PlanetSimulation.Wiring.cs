@@ -14,16 +14,17 @@ namespace KardashevAscent.Simulation.Game
     /// </summary>
     public sealed partial class PlanetSimulation
     {
-        readonly HashSet<(int Tile, int Slot)> powerLines = new HashSet<(int, int)>();
-        readonly HashSet<(int Tile, int Slot)> highVoltageLines = new HashSet<(int, int)>();
-        readonly Dictionary<(int Tile, int Slot), int> linkTargets = new Dictionary<(int, int), int>();   // a line building: the tile it links its own tile to
+        readonly WireBook wireBook = new WireBook();   // the wires and the wired buildings (architecture step M1)
+        HashSet<(int Tile, int Slot)> powerLines => wireBook.PowerLines;
+        HashSet<(int Tile, int Slot)> highVoltageLines => wireBook.HighVoltageLines;
+        Dictionary<(int Tile, int Slot), int> linkTargets => wireBook.LinkTargets;
         readonly HashSet<int> poweredTiles = new HashSet<int>();
         readonly Dictionary<(int, int), double> edgeCapacity = new Dictionary<(int, int), double>();
         readonly Dictionary<int, int> lineHops = new Dictionary<int, int>();      // tiles of line from the lander tile
         readonly Dictionary<int, int> lineParent = new Dictionary<int, int>();    // the tile toward the lander tile
         double wiringStamp = double.NaN;
         /// <summary>Buildings the player has wired to their tile's grid (director 2026-11-20: nothing is wired automatically).</summary>
-        readonly HashSet<(int Tile, int Slot)> wiredBuildings = new HashSet<(int, int)>();
+        HashSet<(int Tile, int Slot)> wiredBuildings => wireBook.WiredBuildings;
 
         // the last flow: raw power per tile and source, what each tile's line carries, and how much of its power gets through
         readonly Dictionary<int, double> rawPanels = new Dictionary<int, double>();
@@ -354,27 +355,20 @@ namespace KardashevAscent.Simulation.Game
 
         public bool HasHighVoltageLine(int tileId)
         {
-            foreach (var key in highVoltageLines)
-                if ((key.Tile == tileId || (linkTargets.TryGetValue(key, out int to) && to == tileId)) && HasFinishedLine(key)) return true;
-            return false;
+            return wireBook.TouchesTile(tileId, true, HasFinishedLine);
         }
 
         /// <summary>A wire touches this tile (finished only, or a site too).</summary>
         public bool HasLineOn(int tileId, bool finishedOnly)
         {
-            foreach (var key in powerLines)
-                if ((key.Tile == tileId || (linkTargets.TryGetValue(key, out int to) && to == tileId)) && (!finishedOnly || HasFinishedLine(key))) return true;
-            foreach (var key in highVoltageLines)
-                if ((key.Tile == tileId || (linkTargets.TryGetValue(key, out int to) && to == tileId)) && (!finishedOnly || HasFinishedLine(key))) return true;
-            return false;
+            Func<(int Tile, int Slot), bool> counts = key => !finishedOnly || HasFinishedLine(key);
+            return wireBook.TouchesTile(tileId, false, counts) || wireBook.TouchesTile(tileId, true, counts);
         }
 
         /// <summary>The two tiles are linked (a wire between them, finished or a site). One per tier.</summary>
         bool Linked(int a, int b, bool highVoltage)
         {
-            foreach (var key in highVoltage ? highVoltageLines : powerLines)
-                if (linkTargets.TryGetValue(key, out int to) && ((key.Tile == a && to == b) || (key.Tile == b && to == a))) return true;
-            return false;
+            return wireBook.Linked(a, b, highVoltage);
         }
 
         public int GeneratorsOffGrid
