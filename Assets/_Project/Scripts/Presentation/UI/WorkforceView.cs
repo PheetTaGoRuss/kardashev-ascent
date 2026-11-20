@@ -409,7 +409,11 @@ namespace KardashevAscent.Presentation.UI
 
             IReadOnlyList<WorkTask> open = sim.OpenWork();
             if (open.Count == 0)
-                tasksHolder.Add(MakeLabel("No open tasks: place buildings, mark salvage (Del), order surveys or mining (tile panel) or Workshop jobs.", "robot-line"));
+            {
+                Label none = MakeLabel("No open tasks.", "robot-line");
+                none.tooltip = "Place buildings, mark salvage (Del), order surveys or mining (tile panel) or Workshop jobs.";
+                tasksHolder.Add(none);
+            }
             foreach (WorkTask t in open)
             {
                 WorkTask task = t;
@@ -610,7 +614,7 @@ namespace KardashevAscent.Presentation.UI
             // --- vitals: battery, health, condition ---
             var gauges = new VisualElement();
             gauges.style.flexDirection = FlexDirection.Row;
-            gauges.style.marginTop = 3;
+            gauges.style.marginTop = 2;
             gauges.Add(Gauge("B", "Battery charge", out System.Action<double> setBattery));
             gauges.Add(Gauge("H", "Battery health", out System.Action<double> setHealth));
             gauges.Add(Gauge("C", "Condition (repaired at the lander below 30 %)", out System.Action<double> setCondition));
@@ -694,7 +698,7 @@ namespace KardashevAscent.Presentation.UI
                 Button order = new Button(() => Order(sim, sim.OrderUpgrade(id, module), $"{RobotTech.ModuleName(module)} ordered for R{id}.")) { text = symbol };
                 order.style.width = 22; order.style.height = 22; order.style.minWidth = 22;
                 order.style.paddingLeft = order.style.paddingRight = order.style.paddingTop = order.style.paddingBottom = 0;
-                order.style.marginLeft = 0; order.style.marginRight = 3;
+                order.style.marginLeft = 0; order.style.marginRight = 3; order.style.marginTop = order.style.marginBottom = 0;
                 order.style.fontSize = 11;
                 order.style.backgroundColor = new Color(0f, 0f, 0f, 0f);
                 order.style.color = locked ? UiPalette.Muted : colour;
@@ -746,6 +750,7 @@ namespace KardashevAscent.Presentation.UI
             b.style.paddingLeft = b.style.paddingRight = 0;
             b.style.marginLeft = 0;
             b.style.marginRight = 4;
+            b.style.marginTop = b.style.marginBottom = 0;
             b.tooltip = tip;
             if (on) b.AddToClassList("selected");
             return b;
