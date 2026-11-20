@@ -45,10 +45,10 @@ namespace KardashevAscent.Simulation.Game
         public const double LineLossPerHop = 0.02;
 
         /// <summary>What one tile of power line (copper cable) can carry, W (about a 33 kV line). Game rule, TBD.</summary>
-        public const double LineCapacityPlainW = 20e6;
+        public const double LineCapacityPlainW = PlainLineVolts * PlainLineRatingA;
 
         /// <summary>What one tile of high-voltage line can carry, W (about a 500 kV line). Game rule, TBD.</summary>
-        public const double LineCapacityHighW = 1e9;
+        public const double LineCapacityHighW = HighLineVolts * HighLineRatingA;
 
         /// <summary>The milestone at which the high-voltage line opens. TBD.</summary>
         public const int HighVoltageMilestone = 1;
@@ -153,6 +153,7 @@ namespace KardashevAscent.Simulation.Game
             lineParent.Clear();
             // The wires are links between neighbouring tiles (director 2026-11-20: "connect from tile to tile"); finished links only.
             edgeCapacity.Clear();
+            highEdges.Clear();
             var adjacent = new Dictionary<int, List<int>>();
             void AddLink(int a, int b, double capacity)
             {
@@ -164,7 +165,7 @@ namespace KardashevAscent.Simulation.Game
                 edgeCapacity[edge] = edgeCapacity.TryGetValue(edge, out double c) ? Math.Max(c, capacity) : capacity;
             }
             foreach (var key in powerLines) if (HasFinishedLine(key) && linkTargets.TryGetValue(key, out int to)) AddLink(key.Tile, to, LineCapacityPlainW);
-            foreach (var key in highVoltageLines) if (HasFinishedLine(key) && linkTargets.TryGetValue(key, out int to)) AddLink(key.Tile, to, LineCapacityHighW);
+            foreach (var key in highVoltageLines) if (HasFinishedLine(key) && linkTargets.TryGetValue(key, out int to)) { AddLink(key.Tile, to, LineCapacityHighW); highEdges.Add((Math.Min(key.Tile, to), Math.Max(key.Tile, to))); }
             var queue = new Queue<int>();
             poweredTiles.Add(BaseTileId);
             lineHops[BaseTileId] = 0;
@@ -243,48 +244,12 @@ namespace KardashevAscent.Simulation.Game
                 return flowDelivered;
             }
 
-            // bottom-up: deepest tiles first
-            var order = new List<int>(poweredTiles);
-            order.Sort((a, b) => lineHops[b].CompareTo(lineHops[a]));
-            var carriedUncapped = new Dictionary<int, double>();
-            var clip = new Dictionary<int, double>();
-            var carried = new Dictionary<int, double>();
-            double noClipDelivered = 0.0;
-            foreach (int t in order)
-            {
-                double sum = own.TryGetValue(t, out double mine) ? mine : 0.0;
-                foreach (int nb in Sphere.Neighbors[t])
-                    if (lineParent.TryGetValue(nb, out int parent) && parent == t && carried.TryGetValue(nb, out double fromChild))
-                        sum += fromChild * (1.0 - LineLossPerHop);
-                carriedUncapped[t] = sum;
-                double capacity = LineCapacityW(t);
-                double ratio = sum > capacity ? capacity / sum : 1.0;
-                clip[t] = ratio;
-                carried[t] = sum * ratio;
-                if (ratio < 1.0) overloadedTiles.Add(t);
-                tileFlow[t] = carried[t];
-            }
-            // top-down: the share of each tile's own power that reaches the lander tile
-            var byDepth = new List<int>(poweredTiles);
-            byDepth.Sort((a, b) => lineHops[a].CompareTo(lineHops[b]));
-            var through = new Dictionary<int, double>();
-            foreach (int t in byDepth)
-            {
-                double f = clip[t];
-                if (lineParent[t] >= 0)
-                    f *= (1.0 - LineLossPerHop) * through[lineParent[t]];
-                through[t] = t == BaseTileId ? 1.0 : f;
-                // the lander tile has no line to clip: its own power is delivered whole
-                tileFactor[t] = t == BaseTileId ? 1.0 : f;
-                noClipDelivered += (own.TryGetValue(t, out double m) ? m : 0.0) * Math.Pow(1.0 - LineLossPerHop, lineHops[t]);
-            }
-            // `through` above carries the clip of every tile on the path, so the factor of a tile's own power is clip[t] times the path to the lander tile
-            double delivered = 0.0;
-            foreach (int t in byDepth)
-                delivered += (own.TryGetValue(t, out double m) ? m : 0.0) * tileFactor[t];
+            // The lander network solved as an electrical network (stage 3, see PlanetSimulation.PhysicalFlow.cs).
+            var solved = SolvePhysicalFlow(own);
+            double delivered = solved.Delivered;
             flowDelivered = delivered;
-            flowLoss = Math.Max(0.0, rawOnGrid - noClipDelivered);
-            flowOverload = Math.Max(0.0, noClipDelivered - delivered);
+            flowLoss = solved.Loss;
+            flowOverload = solved.Curtailed;
             flowStamp = TimeHours;
             flowDirty = false;
             return delivered;
@@ -296,7 +261,9 @@ namespace KardashevAscent.Simulation.Game
             if (!WiredGrid)
                 return 1.0;
             EnsureFlow();
-            return tileFactor.TryGetValue(tileId, out double f) ? f : 0.0;
+            if (tileFactor.TryGetValue(tileId, out double f)) return f;
+            if (!poweredTiles.Contains(tileId)) return 0.0;
+            return tileFactor[tileId] = ProbeEfficiency(tileId);
         }
 
         double Delivered(Dictionary<int, double> raw)

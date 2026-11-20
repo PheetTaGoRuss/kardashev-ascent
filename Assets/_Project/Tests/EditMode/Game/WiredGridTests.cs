@@ -146,9 +146,13 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.IsTrue(sim.PlacePowerLine(b, 0, a));
             sim.Tick(0.1);
             Assert.AreEqual(1.0, sim.GridEfficiency(sim.BaseTileId), 1e-12);
-            Assert.AreEqual(1.0 - PlanetSimulation.LineLossPerHop, sim.GridEfficiency(a), 1e-12);
-            double two = (1.0 - PlanetSimulation.LineLossPerHop) * (1.0 - PlanetSimulation.LineLossPerHop);
-            Assert.AreEqual(two, sim.GridEfficiency(b), 1e-12);
+            // Electrical stage 3: the loss comes from cable resistance (I2R), not a flat 2 % a hop. At the 1 MW probe a tile of plain
+            // line loses about 1 %, and a second tile loses more than the first.
+            double one = sim.GridEfficiency(a), two = sim.GridEfficiency(b);
+            Assert.Less(one, 1.0);
+            Assert.Greater(one, 0.97);
+            Assert.Less(two, one);
+            Assert.Greater(two, 0.95);
             Assert.AreEqual(0.0, sim.GridEfficiency(Enumerable.Range(0, sim.TileCount).First(t => !sim.IsPowered(t))), "off the grid: nothing arrives");
             Assert.AreEqual(1.0, new PlanetSimulation(Sphere, Surface, Earthlike).GridEfficiency(a), "not wired: no losses");
         }
@@ -200,6 +204,30 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.LessOrEqual(sim.LineFlowW(a), PlanetSimulation.LineCapacityPlainW * 1.0001, "the line carries no more than its rating");
             Assert.Greater(sim.OverloadLossW, 1e6, "the rest is lost");
             Assert.IsTrue(double.IsPositiveInfinity(sim.LineCapacityW(sim.BaseTileId)), "the lander tile has no line to overload");
+        }
+
+        [Test]
+        public void Curtailment_StopsAtTheRating_NotBelow()
+        {
+            var sim = Wired();
+            int a = OverloadedLineTile(sim);
+            RunToNoon(sim, () => sim.IsLineOverloaded(a));
+            Assert.IsTrue(sim.IsLineOverloaded(a));
+            Assert.GreaterOrEqual(sim.LineFlowW(a), PlanetSimulation.LineCapacityPlainW * 0.95, "generators are cut back just enough, not more");
+            Assert.Greater(sim.TransmissionLossW, 0.0, "the cable's I2R loss is counted");
+        }
+
+        [Test]
+        public void ThePhysicalFlow_IsTheSameInTwoIdenticalRuns()
+        {
+            double Run()
+            {
+                var sim = Wired();
+                int a = OverloadedLineTile(sim);
+                RunToNoon(sim, () => sim.IsLineOverloaded(a));
+                return sim.LineFlowW(a) + sim.TransmissionLossW + sim.OverloadLossW;
+            }
+            Assert.AreEqual(Run(), Run());
         }
 
         [Test]
