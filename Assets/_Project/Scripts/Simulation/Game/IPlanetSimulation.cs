@@ -51,6 +51,12 @@ namespace KardashevAscent.Simulation.Game
         PowerLine,
         /// <summary>High-voltage line: the same wiring with a far higher capacity (opens at milestone 1).</summary>
         HighVoltageLine,
+        /// <summary>Storage yard: bulk solids (mission operations, MO-05).</summary>
+        StorageYard,
+        /// <summary>Sealed store: liquids and hazardous solids such as sodium and lithium.</summary>
+        SealedStore,
+        /// <summary>Gas tank: pressurised gas such as oxygen.</summary>
+        GasTank,
     }
 
     /// <summary>Static facts about one tile.</summary>

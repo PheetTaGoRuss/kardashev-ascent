@@ -36,8 +36,11 @@ namespace KardashevAscent.Simulation.Logistics
     {
         readonly Dictionary<PlaceId, MaterialStock> stocks = new Dictionary<PlaceId, MaterialStock>();
 
-        /// <summary>Total kg a place can hold, or null for no limit. Open piles, yards and tanks decide this.</summary>
+        /// <summary>Total kg a place can hold, or null for no limit.</summary>
         public Func<PlaceId, double?> Capacity { get; set; }
+
+        /// <summary>Kg a place can hold of one storage class (bulk solid, sealed liquid, gas, hazardous), or null for no limit: piles, yards, stores and tanks decide this.</summary>
+        public Func<PlaceId, StorageClass, double?> ClassCapacity { get; set; }
 
         /// <summary>Use an existing stock as this place (the lander depot is the colony's old single stock).</summary>
         public MaterialStock Adopt(PlaceId place, MaterialStock stock)
@@ -97,11 +100,31 @@ namespace KardashevAscent.Simulation.Logistics
             return cap.HasValue ? Math.Max(0.0, cap.Value - MassAt(place)) : double.PositiveInfinity;
         }
 
+        /// <summary>Kg of the materials of one storage class a place holds.</summary>
+        public double MassAt(PlaceId place, StorageClass storageClass)
+        {
+            if (!stocks.TryGetValue(place, out MaterialStock s)) return 0.0;
+            double t = 0.0;
+            foreach (Material m in Materials.All)
+                if (MaterialCatalog.PropertiesOf(m).StorageClass == storageClass) t += s[m];
+            return t;
+        }
+
+        /// <summary>Kg of this material a place has room for: the total limit and the limit of its storage class both count.</summary>
+        public double FreeFor(PlaceId place, Material m)
+        {
+            double free = FreeAt(place);
+            StorageClass cls = MaterialCatalog.PropertiesOf(m).StorageClass;
+            double? cap = ClassCapacity?.Invoke(place, cls);
+            if (cap.HasValue) free = Math.Min(free, Math.Max(0.0, cap.Value - MassAt(place, cls)));
+            return free;
+        }
+
         /// <summary>Add to a place, up to what is free there. Returns what went in; the rest is not added.</summary>
         public double Add(PlaceId place, Material m, double kg)
         {
             if (kg < 0.0) throw new ArgumentOutOfRangeException(nameof(kg));
-            double put = Math.Min(kg, FreeAt(place));
+            double put = Math.Min(kg, FreeFor(place, m));
             if (put > 0.0) StockOf(place).Add(m, put);
             return put;
         }
@@ -110,7 +133,7 @@ namespace KardashevAscent.Simulation.Logistics
         public double Move(PlaceId from, PlaceId to, Material m, double kg)
         {
             if (!stocks.TryGetValue(from, out MaterialStock src)) return 0.0;
-            double moved = Math.Min(Math.Min(kg, src[m]), FreeAt(to));
+            double moved = Math.Min(Math.Min(kg, src[m]), FreeFor(to, m));
             if (moved <= 0.0) return 0.0;
             src.Take(m, moved);
             StockOf(to).Add(m, moved);

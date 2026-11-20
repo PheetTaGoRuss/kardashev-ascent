@@ -17,20 +17,13 @@ namespace KardashevAscent.Simulation.Game
         readonly LogisticsLedger haulLedger = new LogisticsLedger();
 
         /// <summary>
-        /// How much a tile's open pile holds, kg: no limit yet. Game rule, TBD (open question Q1); storage yards and
-        /// tanks will set their own limits.
+        /// How much bulk solid a tile's open pile holds, kg: no limit yet. Game rule, TBD (open question Q1). Storage
+        /// yards, sealed stores and gas tanks add their own room, class by class (<see cref="StorageCapacityKg"/>).
         /// </summary>
         public double OpenPileCapacityKg { get; set; } = double.PositiveInfinity;
 
         /// <summary>Stock per place instead of one colony stock. New missions turn it on once hauls exist; old saves keep it off.</summary>
         public bool LogisticsEnabled { get; set; }
-
-        double? PlaceCapacityKg(PlaceId place)
-        {
-            if (place.Kind == PlaceKind.Depot && !double.IsPositiveInfinity(OpenPileCapacityKg))
-                return OpenPileCapacityKg;
-            return null;
-        }
 
         /// <summary>The stock that serves a tile: the lander depot when logistics is off, else the depot on that tile.</summary>
         MaterialStock StockAt(int tileId) =>

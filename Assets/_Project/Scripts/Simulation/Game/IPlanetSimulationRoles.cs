@@ -331,6 +331,15 @@ namespace KardashevAscent.Simulation.Game
 
         double StockTarget(int tileId, Resources.Material material);
 
+        /// <summary>Build a storage yard, sealed store or gas tank on a slot.</summary>
+        bool PlaceStorage(BuildingType type, int tileId, int slot);
+
+        /// <summary>What a tile's depot can hold of one storage class, kg (infinity at the lander).</summary>
+        double StorageCapacityKg(int tileId, Resources.StorageClass storageClass);
+
+        /// <summary>Kg of a material a tile's depot has room for now.</summary>
+        double RoomAt(int tileId, Resources.Material material);
+
         IReadOnlyList<(int Tile, Resources.Material Material, double Kg)> StockTargets();
 
         /// <summary>Hauls under way: id, from, to, material, kg, loaded, and the carrier once loaded.</summary>
