@@ -294,6 +294,17 @@ namespace KardashevAscent.Simulation.Tests.Game
         }
 
         [Test]
+        public void TheGuideBook_HasOperationsPages_BuiltFromTheGamesOwnRules()
+        {
+            var pages = GuideBook.All().Where(p => p.Category == GuideBook.Operations).ToList();
+            Assert.AreEqual(4, pages.Count, "flight rules, hauling, byproducts, heat ledger");
+            Assert.IsTrue(pages.Any(p => p.Mentions("rationale")));
+            Assert.IsTrue(pages.Any(p => p.Mentions("chlorine")));
+            Assert.IsTrue(pages.Any(p => p.Mentions("waste heat")));
+            foreach (GuidePage p in pages) Assert.IsFalse(string.IsNullOrEmpty(p.Summary), p.Title);
+        }
+
+        [Test]
         public void AnOldSave_GetsTheStarterRulebookOnLoad()
         {
             var sim = Make();

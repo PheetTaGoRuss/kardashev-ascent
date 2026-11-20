@@ -265,6 +265,8 @@ namespace KardashevAscent.Presentation.UI
                 Row(r, "Stars in system", r.flags.circumbinary ? $"{r.star.count}, the planet orbits two" : $"{r.star.count}; the others are far away", "star.count");
             if (r.star.distancePc > 0.0)
                 Row(r, "Distance", $"{r.star.distancePc:0.###} pc ({r.star.distancePc * GalacticCoordinates.LightYearsPerParsec:0.#} light years)", "star.distancePc");
+            if (r.star.distancePc > 0.0)
+                Row(r, "Light from Earth", $"{KardashevAscent.Simulation.Logistics.HaulPhysics.LightYearsFromParsecs(r.star.distancePc):0.##} years one way: a question and its answer take {2.0 * KardashevAscent.Simulation.Logistics.HaulPhysics.LightYearsFromParsecs(r.star.distancePc):0.#} years, so the colony runs on its rulebook", "star.distancePc");
 
             Section("ORBIT");
             Row(r, "Distance", $"{r.solar.semiMajorAxisM / AuM:0.####} AU", "solar.semiMajorAxisM");

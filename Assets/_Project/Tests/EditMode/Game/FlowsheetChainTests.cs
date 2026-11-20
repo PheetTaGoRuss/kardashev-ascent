@@ -79,6 +79,14 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.AreEqual(before, Mass(sim), 1e-6, "mass in = mass out over the whole run");
             Assert.Greater(sim.HaulTotals.KgMoved, 150.0, "robots hauled the ore and the metal");
             Assert.Greater(sim.IndustrialWasteHeatKWh, 90.0, "the heat of both steps was counted");
+            FlowsheetSnapshot snap = sim.FlowsheetSnapshot();
+            Assert.GreaterOrEqual(snap.Processes.Count, 1, "the last week holds the electrolysis (the alumina step is more than a week old by now)");
+            foreach (ProcessFlow p in snap.Processes)
+                Assert.AreEqual(100.0, p.ClosurePct, 0.01, p.Name + " closes in mass");
+            Assert.AreEqual(100.0, snap.ClosurePct, 0.01, "mass in = mass out across the whole flowsheet");
+            Assert.Greater(snap.Hauled.Sum(h => h.Kg), 15.0, "the aluminium haul is in the week");
+            Assert.AreEqual(Refining.Of(RefineProcess.Aluminium).VentedKg, snap.Processes.First(p => p.Process == RefineProcess.Aluminium).VentedKg, 1e-6);
+            Assert.AreEqual(snap.WasteHeatKWh, sim.IndustrialWasteHeatKWh, 1e-9);
         }
 
         /// <summary>Mass inside running batches (taken from the buffers, not yet made).</summary>

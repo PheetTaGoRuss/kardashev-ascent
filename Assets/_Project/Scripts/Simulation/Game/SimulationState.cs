@@ -9,7 +9,7 @@ namespace KardashevAscent.Simulation.Game
     public sealed class SimulationState
     {
         /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished. 7 added robots; 8 their batteries and condition; 9 resources; 10 the Workshop; 11 programs (facility, ranking, queue); 12 movement; 13 critical damage (stage A); 14 reservations and tasks to go back to (stage B); 15 battery ageing by depth, maintenance rules (stage D); 16 building footprints. 23 industry reports. 29 experiments. 30 survey puzzles answered one material at a time. 31 stand-ins (aluminium, sodium) in building bills. 32 deposits run out (what was mined from each). 33 mountains and canyons opened (tunnel, blast, bridge). 34 refinery modules, batches, queue and auto targets.</summary>
-        public const int CurrentVersion = 41;
+        public const int CurrentVersion = 42;
 
         /// <summary>Wired grid (version 35): generators and stations need power lines to the lander tile. Older saves are not wired.</summary>
         public bool WiredGrid;
@@ -107,6 +107,8 @@ namespace KardashevAscent.Simulation.Game
         public List<PausedPlantRecord> PausedPlants = new List<PausedPlantRecord>();
         public List<Operations.OperationRecord> OperationsLog = new List<Operations.OperationRecord>();
         public int NextOperationId = 1;
+        /// <summary>42: the last week of mass flows (mined, hauled, plants) for the Flowsheet view.</summary>
+        public List<Logistics.FlowEntry> FlowEntries = new List<Logistics.FlowEntry>();
         public List<FieldWorkRecord> FieldWork = new List<FieldWorkRecord>();
         /// <summary>Workshop jobs in order (version 10).</summary>
         public List<Robots.JobRecord> Jobs = new List<Robots.JobRecord>();

@@ -48,6 +48,7 @@ namespace KardashevAscent.Presentation.UI
         readonly System.Collections.Generic.Dictionary<BuildMode, (VisualElement Item, Button Info)> buildItems =
             new System.Collections.Generic.Dictionary<BuildMode, (VisualElement, Button)>();
         readonly Dictionary<BuildInfo.Category, Button> catButtons = new Dictionary<BuildInfo.Category, Button>();
+        readonly Dictionary<BuildMode, (Button Button, string Label)> storageButtons = new Dictionary<BuildMode, (Button, string)>();
         BuildInfo.Category buildCategory = BuildInfo.Category.Solar;
         bool previewsMade;
         VisualElement buildInfo;
@@ -177,6 +178,27 @@ namespace KardashevAscent.Presentation.UI
             if (modeLine != null)
                 modeLine.clicked += () => { if (placer != null) placer.Mode = BuildMode.PowerLine; };
             DragFrom(modeLine, BuildMode.PowerLine);
+            // The storage buildings (mission operations MO-05): buttons made in code, in the Storage group.
+            VisualElement itemRow = root.Q("item-battery")?.parent;
+            foreach (var (smode, slabel) in new[] { (BuildMode.StorageYard, "Storage yard"), (BuildMode.SealedStore, "Sealed store"), (BuildMode.GasTank, "Gas tank") })
+            {
+                if (itemRow == null) break;
+                BuildMode sm = smode;
+                var sitem = new VisualElement();
+                sitem.AddToClassList("build-item");
+                var sb = new Button(() => { if (placer != null) placer.Mode = sm; }) { text = slabel };
+                sb.AddToClassList("action-button");
+                sb.AddToClassList("mode");
+                var sinfo = new Button { text = "i", tooltip = "What it does" };
+                sinfo.AddToClassList("info-button");
+                sinfo.clicked += () => infoShown = infoShown == sm ? (BuildMode?)null : sm;
+                sitem.Add(sb);
+                sitem.Add(sinfo);
+                itemRow.Add(sitem);
+                buildItems[sm] = (sitem, sinfo);
+                DragFrom(sb, sm);
+                storageButtons[sm] = (sb, slabel);
+            }
             modeHv = root.Q<Button>("mode-hv");
             if (modeHv != null)
                 modeHv.clicked += () => { if (placer != null) placer.Mode = BuildMode.HighVoltageLine; };
@@ -363,6 +385,7 @@ namespace KardashevAscent.Presentation.UI
                 NameButton(modeBarrage, "Tidal barrage", BuildMode.TidalBarrage);
                 NameButton(modeLine, "Power line", BuildMode.PowerLine);
                 NameButton(modeHv, "High-voltage line", BuildMode.HighVoltageLine);
+                foreach (var sk in storageButtons) NameButton(sk.Value.Button, sk.Value.Label, sk.Key);
                 NameButton(modeAlumina, "Alumina plant", BuildMode.AluminaPlant);
                 NameButton(modeElectrolyser, "Electrolysis cell", BuildMode.Electrolyser);
                 if (buildHint != null)
@@ -388,6 +411,7 @@ namespace KardashevAscent.Presentation.UI
             modeBarrage?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.TidalBarrage);
             modeLine?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.PowerLine);
             modeHv?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.HighVoltageLine);
+            foreach (var sk in storageButtons) sk.Value.Button.EnableInClassList("selected", siteOpen && placer.Mode == sk.Key);
             modeBattery.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.Battery);
             modeWorkshop?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.Workshop);
             modeStation?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.ChargingStation);
@@ -532,7 +556,7 @@ namespace KardashevAscent.Presentation.UI
             bool moduleMode = placer.Mode == BuildMode.AluminaPlant || placer.Mode == BuildMode.Electrolyser;
             string thing = panelMode ? "panel" : workshopMode ? "Workshop" : stationMode ? "charging station" : relayMode ? "relay"
                          : researchMode ? "Research Station" : placer.Mode == BuildMode.AluminaPlant ? "Alumina plant"
-                         : placer.Mode == BuildMode.Electrolyser ? "Electrolysis cell" : placer.Mode == BuildMode.TidalTurbine ? "tidal turbine" : placer.Mode == BuildMode.WaveConverter ? "wave converter" : placer.Mode == BuildMode.TidalBarrage ? "tidal barrage" : placer.Mode == BuildMode.PowerLine ? "power line" : placer.Mode == BuildMode.HighVoltageLine ? "high-voltage line" : "battery yard";
+                         : placer.Mode == BuildMode.Electrolyser ? "Electrolysis cell" : placer.Mode == BuildMode.TidalTurbine ? "tidal turbine" : placer.Mode == BuildMode.WaveConverter ? "wave converter" : placer.Mode == BuildMode.TidalBarrage ? "tidal barrage" : placer.Mode == BuildMode.PowerLine ? "power line" : placer.Mode == BuildMode.HighVoltageLine ? "high-voltage line" : PanelPlacer.IsStorageMode(placer.Mode) ? BuildInfo.Title(placer.Mode).ToLowerInvariant() : "battery yard";
             int selected = 0, empty = 0, withPanels = 0, withBatteries = 0;
             if (multi)
             {
@@ -558,6 +582,7 @@ namespace KardashevAscent.Presentation.UI
                 placeButton.text = $"Place {thing} (P)";
             }
             batteryText.text = moduleMode ? "Refinery module · must touch a Robot Workshop"
+                : PanelPlacer.IsStorageMode(placer.Mode) ? "Storage · each class of material needs its own store away from the lander"
                 : placer.Mode == BuildMode.HighVoltageLine ? "50 times the capacity of a power line · opens at milestone 1"
                 : placer.Mode == BuildMode.PowerLine ? "Wires this tile into the grid · chains reach out from the lander tile"
                 : placer.Mode == BuildMode.TidalBarrage ? "A dam across a bay · power once a tide · weakens the tide, stops boats · needs the basin survey"

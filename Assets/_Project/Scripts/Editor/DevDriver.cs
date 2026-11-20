@@ -282,6 +282,53 @@ namespace KardashevAscent.EditorTools
                     if (goal >= 0 && picker != null) picker.Select(goal);
                     return true;
                 }
+                case "flows":
+                {
+                    var sim = Runner()?.Simulation;
+                    if (sim == null) return true;
+                    var snap = sim.FlowsheetSnapshot(7);
+                    Log($"flows t={sim.TimeHours:0} processes={snap.Processes.Count} in={snap.TotalInKg:0.0} out={snap.TotalOutKg:0.0} heat={snap.WasteHeatKWh:0.0} blocked={snap.Blocked.Count}");
+                    return true;
+                }
+                case "refine":
+                {
+                    // refine: free-build a Workshop, an Alumina plant and an Electrolysis cell at the base, give them ore and salt, queue batches
+                    var sim = Runner()?.Simulation as Simulation.Game.PlanetSimulation;
+                    if (sim == null) return true;
+                    int t = sim.BaseTileId;
+                    sim.Debug.FreeBuilding = true;
+                    for (int slot = 0; slot < sim.SlotCount(t); slot++)
+                        if (sim.GetBuilding(t, slot) == Simulation.Game.BuildingType.None && sim.PlaceWorkshop(t, slot)) break;
+                    foreach (var type in new[] { Simulation.Game.BuildingType.AluminaPlant, Simulation.Game.BuildingType.Electrolyser })
+                        for (int slot = 0; slot < sim.SlotCount(t); slot++)
+                            if (sim.GetBuilding(t, slot) == Simulation.Game.BuildingType.None && sim.RefineryBlocker(type, t, slot) == null) { sim.PlaceRefinery(type, t, slot); break; }
+                    sim.Debug.FreeBuilding = false;
+                    sim.WireAllBuildings();
+                    sim.Materials.Add(Simulation.Resources.Material.Anorthosite, 600.0);
+                    sim.Materials.Add(Simulation.Resources.Material.Salt, 200.0);
+                    sim.OrderRefine(Simulation.Resources.RefineProcess.AluminaFromAnorthosite);
+                    sim.OrderRefine(Simulation.Resources.RefineProcess.Aluminium);
+                    sim.OrderRefine(Simulation.Resources.RefineProcess.SodiumFromSalt);
+                    Log("refine set up");
+                    return true;
+                }
+                case "target":
+                {
+                    // target <tile|neighbour> <Material> <kg>: a stock target at a depot ("n" = the first land neighbour of the base)
+                    string[] w = argument.Split(' ');
+                    var sim = Runner()?.Simulation;
+                    if (sim == null) return true;
+                    int tile = w[0] == "n" ? 0 : int.Parse(w[0]);
+                    if (w[0] == "n")
+                    {
+                        var sphere = UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.PlanetView>().Sphere;
+                        foreach (int nb in sphere.Neighbors[sim.BaseTileId])
+                            if (!sim.GetTile(nb).IsWater) { tile = nb; break; }
+                    }
+                    sim.SetStockTarget(tile, (Simulation.Resources.Material)Enum.Parse(typeof(Simulation.Resources.Material), w[1]), double.Parse(w[2], System.Globalization.CultureInfo.InvariantCulture));
+                    Log("target tile " + tile);
+                    return true;
+                }
                 case "survey":
                 {
                     var sim = Runner()?.Simulation;

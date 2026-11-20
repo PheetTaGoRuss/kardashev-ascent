@@ -52,6 +52,10 @@ namespace KardashevAscent.Presentation.Planet
         PowerLine,
         /// <summary>High-voltage line: far higher capacity (opens at milestone 1).</summary>
         HighVoltageLine,
+        /// <summary>Storage yard for bulk solids (mission operations MO-05).</summary>
+        StorageYard,
+        SealedStore,
+        GasTank,
     }
 
     [RequireComponent(typeof(PlanetView))]
@@ -132,6 +136,9 @@ namespace KardashevAscent.Presentation.Planet
                 case BuildingType.TidalBarrage: return new Color32(150, 160, 175, a);
                 case BuildingType.PowerLine: return new Color32(235, 200, 70, a);
                 case BuildingType.HighVoltageLine: return new Color32(235, 120, 60, a);
+                case BuildingType.StorageYard: return new Color32(170, 150, 110, a);
+                case BuildingType.SealedStore: return new Color32(190, 90, 90, a);
+                case BuildingType.GasTank: return new Color32(110, 190, 210, a);
                 default: return new Color32(160, 160, 160, a);
             }
         }
@@ -151,6 +158,8 @@ namespace KardashevAscent.Presentation.Planet
 
         /// <summary>True for the two panel modes (they share the tilt and facing controls).</summary>
         /// <summary>The power-line modes wire a building to the grid (dropped on it, even though a building stands there).</summary>
+        public static bool IsStorageMode(BuildMode m) => m == BuildMode.StorageYard || m == BuildMode.SealedStore || m == BuildMode.GasTank;
+
         public static bool IsWireMode(BuildMode m) => m == BuildMode.PowerLine || m == BuildMode.HighVoltageLine;
 
         public static bool IsPanel(BuildMode m) => m == BuildMode.SolarPanel || m == BuildMode.FloatingSolar;
@@ -167,14 +176,18 @@ namespace KardashevAscent.Presentation.Planet
             : m == BuildMode.WaveConverter ? BuildingType.WaveConverter
             : m == BuildMode.TidalBarrage ? BuildingType.TidalBarrage
             : m == BuildMode.PowerLine ? BuildingType.PowerLine
-            : m == BuildMode.HighVoltageLine ? BuildingType.HighVoltageLine : BuildingType.SolarPanel;
+            : m == BuildMode.HighVoltageLine ? BuildingType.HighVoltageLine
+            : m == BuildMode.StorageYard ? BuildingType.StorageYard
+            : m == BuildMode.SealedStore ? BuildingType.SealedStore
+            : m == BuildMode.GasTank ? BuildingType.GasTank : BuildingType.SolarPanel;
 
         /// <summary>Panels aside, every building is a block on its slots (battery yard, Workshop, stations, refinery modules).</summary>
         static bool IsBlock(BuildingType t) =>
             t == BuildingType.Battery || t == BuildingType.Workshop || t == BuildingType.ChargingStation || t == BuildingType.Relay
             || t == BuildingType.ResearchStation || t == BuildingType.AluminaPlant || t == BuildingType.Electrolyser
             || t == BuildingType.TidalTurbine || t == BuildingType.WaveConverter || t == BuildingType.TidalBarrage
-            || t == BuildingType.PowerLine || t == BuildingType.HighVoltageLine;
+            || t == BuildingType.PowerLine || t == BuildingType.HighVoltageLine
+            || t == BuildingType.StorageYard || t == BuildingType.SealedStore || t == BuildingType.GasTank;
 
         /// <summary>The slot a building covering this one is keyed by (its anchor), or the slot itself when empty.</summary>
         int Anchor(int t, int s)
@@ -451,7 +464,7 @@ namespace KardashevAscent.Presentation.Planet
             string what = type == BuildingType.Workshop ? "Workshop" : type == BuildingType.ChargingStation ? "Charger"
                         : type == BuildingType.Relay ? "Relay" : type == BuildingType.ResearchStation ? "Research"
                         : type == BuildingType.AluminaPlant ? "Alumina plant" : type == BuildingType.Electrolyser ? "Electrolysis cell"
-                        : type == BuildingType.TidalTurbine ? "Tidal turbine" : type == BuildingType.WaveConverter ? "Wave converter" : type == BuildingType.TidalBarrage ? "Tidal barrage" : type == BuildingType.PowerLine ? "Power line" : type == BuildingType.HighVoltageLine ? "High-voltage line" : "Battery";
+                        : type == BuildingType.TidalTurbine ? "Tidal turbine" : type == BuildingType.WaveConverter ? "Wave converter" : type == BuildingType.TidalBarrage ? "Tidal barrage" : type == BuildingType.PowerLine ? "Power line" : type == BuildingType.HighVoltageLine ? "High-voltage line" : type == BuildingType.StorageYard ? "Storage yard" : type == BuildingType.SealedStore ? "Sealed store" : type == BuildingType.GasTank ? "Gas tank" : "Battery";
             if (!constructionSite)
                 return new BatteryVisual($"{what} {t}.{s}", transform, frameMaterial, type);   // its own detailed model
             if (!constructionSite && (type == BuildingType.AluminaPlant || type == BuildingType.Electrolyser))
@@ -795,7 +808,10 @@ namespace KardashevAscent.Presentation.Planet
                      : mode == BuildMode.TidalTurbine ? BuildMode.WaveConverter
                      : mode == BuildMode.WaveConverter ? BuildMode.TidalBarrage
                      : mode == BuildMode.TidalBarrage ? BuildMode.PowerLine
-                     : mode == BuildMode.PowerLine ? BuildMode.HighVoltageLine : BuildMode.SolarPanel;
+                     : mode == BuildMode.PowerLine ? BuildMode.HighVoltageLine
+                     : mode == BuildMode.HighVoltageLine ? BuildMode.StorageYard
+                     : mode == BuildMode.StorageYard ? BuildMode.SealedStore
+                     : mode == BuildMode.SealedStore ? BuildMode.GasTank : BuildMode.SolarPanel;
 
             if (dragging)
             {
@@ -852,6 +868,10 @@ namespace KardashevAscent.Presentation.Planet
                         : simulation.IsBuildingWired(tile, slot) ? new PanelPreview(false, "Already wired.", 0, 0, 0, 0)
                         : new PanelPreview(true, "", 0, 0, 0, 0);
                 }
+                else if (IsStorageMode(mode))
+                    preview = slot >= 0 && !simulation.CanPlace(TypeOf(mode), tile, slot)
+                        ? new PanelPreview(false, "A store stands on free slots of open land.", 0, 0, 0, 0)
+                        : new PanelPreview(true, "", 0, 0, 0, 0);
                 else if (mode == BuildMode.TidalTurbine || mode == BuildMode.WaveConverter || mode == BuildMode.TidalBarrage)
                 {
                     // Not a panel: the land-panel preview does not apply. The tide gauge / wave buoy gates it.
@@ -1242,6 +1262,7 @@ namespace KardashevAscent.Presentation.Planet
                       : mode == BuildMode.WaveConverter ? simulation.PlaceWaveConverter(tile, s)
                       : mode == BuildMode.TidalBarrage ? simulation.PlaceBarrage(tile, s)
                       : mode == BuildMode.PowerLine || mode == BuildMode.HighVoltageLine ? false   // wires are run tile to tile with the wire tool, not placed in a site
+                      : IsStorageMode(mode) ? simulation.PlaceStorage(TypeOf(mode), tile, s)
                       : mode == BuildMode.Relay ? simulation.PlaceRelay(tile, s) : simulation.PlaceChargingStation(tile, s)))
                     return false;
                 BatteryVisual yard = MakeBattery(tile, s, simulation.IsUnderConstruction(tile, s));

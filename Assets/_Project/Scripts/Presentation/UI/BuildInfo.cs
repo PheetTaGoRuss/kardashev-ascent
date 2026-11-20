@@ -17,6 +17,7 @@ namespace KardashevAscent.Presentation.UI
             : m == BuildMode.TidalTurbine || m == BuildMode.WaveConverter || m == BuildMode.TidalBarrage ? Category.Sea
             : m == BuildMode.Battery ? Category.Storage
             : m == BuildMode.PowerLine || m == BuildMode.HighVoltageLine ? Category.Grid
+            : PanelPlacer.IsStorageMode(m) ? Category.Storage
             : m == BuildMode.Workshop || m == BuildMode.AluminaPlant || m == BuildMode.Electrolyser ? Category.Industry
             : Category.Stations;
 
@@ -51,6 +52,9 @@ namespace KardashevAscent.Presentation.UI
                 case BuildMode.TidalBarrage: return "Tidal barrage";
                 case BuildMode.PowerLine: return "Power line";
                 case BuildMode.HighVoltageLine: return "High-voltage line";
+                case BuildMode.StorageYard: return "Storage yard";
+                case BuildMode.SealedStore: return "Sealed store";
+                case BuildMode.GasTank: return "Gas tank";
                 default: return "Network relay";
             }
         }
@@ -83,6 +87,15 @@ namespace KardashevAscent.Presentation.UI
                     break;
                 case BuildMode.HighVoltageLine:
                     what = Short(BuildingType.HighVoltageLine);
+                    break;
+                case BuildMode.StorageYard:
+                    what = Short(BuildingType.StorageYard);
+                    break;
+                case BuildMode.SealedStore:
+                    what = Short(BuildingType.SealedStore);
+                    break;
+                case BuildMode.GasTank:
+                    what = Short(BuildingType.GasTank);
                     break;
                 case BuildMode.Battery:
                     what = $"Stores {Format.Energy(placer.BatteryUnitWh)} for the night. Robots can charge here.";
@@ -121,6 +134,9 @@ namespace KardashevAscent.Presentation.UI
                 case BuildingType.Workshop: return "Builds robots and upgrades. Refinery modules attach to its sides.";
                 case BuildingType.ChargingStation: return "Charges robots from the grid near their work.";
                 case BuildingType.Relay: return "Extends the robot network; needs grid power.";
+                case BuildingType.StorageYard: return "Holds bulk solids (ore, rock, metals) on a tile: 100 t. A tile away from the lander keeps its stock in its own depot; robots haul between depots.";
+                case BuildingType.SealedStore: return "Holds liquids and hazardous solids such as sodium and lithium: 20 t. Without one a tile cannot keep them.";
+                case BuildingType.GasTank: return "Holds pressurised gas such as the oxygen and chlorine a refinery gives off: about 2.8 t at 20 MPa. A full tank stops a plant that stores its gas.";
                 case BuildingType.HighVoltageLine: return "Same wiring as a power line, 50 times the capacity (1 GW against 20 MW). Opens at milestone 1. Build one on a tile whose power line is red.";
                 case BuildingType.PowerLine: return "Wires a tile into the grid. Chains of tiles with lines carry power from the lander tile; generators off the grid make nothing, and stations and storage go where the grid reaches.";
                 case BuildingType.TidalBarrage: return "A dam across a bay with 4 m or more of tide: the tide fills the basin and runs out through turbines once a tide. Big power, a late big build; it weakens the tide behind it and stops boats crossing.";
