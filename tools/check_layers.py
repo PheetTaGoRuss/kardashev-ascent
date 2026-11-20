@@ -17,6 +17,7 @@ ALLOWED = {
     'Energy': set(),
     'Solar': set(),
     'Electrical': set(),
+    'Circuits': {'Electrical'},
     'Planet': {'Civilization', 'Solar'},
     'Resources': {'Planet', 'Solar'},
     'Logistics': {'Resources'},

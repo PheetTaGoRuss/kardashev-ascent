@@ -133,7 +133,7 @@ namespace KardashevAscent.Simulation.Electrical
                 if (a >= 0 && br.B == slack) gs[a] += c;
                 if (b >= 0 && br.A == slack) gs[b] += c;
             }
-            double[,] chol = Cholesky(g, m);
+            double[,] chol = DenseSpd.Factor(g, m);
             if (chol == null)
             {
                 r.Diagnostics.Add("Part of the network is not connected to the slack node, so its voltage is undefined.");
@@ -152,7 +152,7 @@ namespace KardashevAscent.Simulation.Electrical
                     if (v[f] <= 0.0) { r.Diagnostics.Add("Voltage collapse: the load is beyond what the line can carry."); return r; }
                     rhs[f] = injectionW[i] / v[f] + gs[f] * slackVoltageV;
                 }
-                var next = CholeskySolve(chol, rhs, m);
+                var next = DenseSpd.Solve(chol, rhs, m);
                 double change = 0.0;
                 for (int i = 0; i < m; i++) change = Math.Max(change, Math.Abs(next[i] - v[i]) / slackVoltageV);
                 v = next;
@@ -180,8 +180,12 @@ namespace KardashevAscent.Simulation.Electrical
             r.SlackPowerW = slackCurrent * slackVoltageV;
             return r;
         }
+    }
 
-        static double[,] Cholesky(double[,] a, int n)
+    /// <summary>Dense Cholesky solver for symmetric positive-definite systems (the conductance matrices of nodal analysis). Used by the grid flow and the circuit solver.</summary>
+    public static class DenseSpd
+    {
+        public static double[,] Factor(double[,] a, int n)
         {
             var l = new double[n, n];
             for (int i = 0; i < n; i++)
@@ -199,7 +203,7 @@ namespace KardashevAscent.Simulation.Electrical
             return l;
         }
 
-        static double[] CholeskySolve(double[,] l, double[] b, int n)
+        public static double[] Solve(double[,] l, double[] b, int n)
         {
             var y = new double[n];
             for (int i = 0; i < n; i++)
