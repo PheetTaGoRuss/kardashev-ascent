@@ -35,7 +35,8 @@ namespace KardashevAscent.Simulation.Game
             if (tileId < 0 || tileId >= TileCount || slot < 0 || slot >= SlotCount(tileId))
                 return false;
             TerrainType ground = GetTile(tileId).Terrain;
-            if (type == BuildingType.FloatingSolar ? !Terrains.AllowsFloating(ground)
+            if (type == BuildingType.PowerLine ? !(Terrains.IsBuildableLand(ground) || ground == TerrainType.ShallowOcean)
+                : type == BuildingType.FloatingSolar ? !Terrains.AllowsFloating(ground)
                 : type == BuildingType.TidalTurbine || type == BuildingType.WaveConverter || type == BuildingType.TidalBarrage ? ground != TerrainType.ShallowOcean
                 : !Terrains.IsBuildableLand(ground))
                 return false;
@@ -45,6 +46,8 @@ namespace KardashevAscent.Simulation.Game
                 return false;   // the colony doesn't know enough yet (director 2026-11-14)
             foreach (int s in FootprintFor(type, tileId, slot))
                 if (GetBuilding(tileId, s) != BuildingType.None) return false;
+            if (!restoringState && WiredGrid && NeedsPower(type) && !IsPowered(tileId))
+                return false;   // wired grid: stations and storage go where the grid reaches
             if (!restoringState && type == BuildingType.TidalBarrage && BarrageBlocker(tileId) != null)
                 return false;   // a barrage needs a bay with a big tide, and only one per tile
             if (!restoringState && RefineryBlocker(type, tileId, slot) != null)

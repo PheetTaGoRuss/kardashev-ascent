@@ -64,3 +64,7 @@ A bot variant that scans every in-range tile and builds a forward charger whenev
 ## Not yet balanced
 
 A smarter bot that builds forward chargers and relays is needed before tuning mining rates, robot costs and build times. Until then those numbers stay as placeholders.
+
+## Wired grid (2026-11-20): effect on the balance runs
+
+New missions are wired (`SimulationRunner`): generators off the grid make nothing and stations and storage only go where power lines reach. The balance bot (`BalanceBot`) predates it, so its runs describe the unwired game; the simulation tests leave `WiredGrid` off. A line costs 15 Cu, 30 Fe and 20 rock (TBD) and is built by a robot, so the forward-charger chain now needs a line chain first. Expect the early expansion to be slower than the bot shows; re-tune once the bot lays lines.

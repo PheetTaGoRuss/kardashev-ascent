@@ -546,6 +546,25 @@ namespace KardashevAscent.Simulation.Game
         bool PlaceTidalTurbine(int tileId, int slot);
     }
 
+    /// <summary>The wired grid (director 2026-11-20): generators and stations must be connected to the lander by power lines.</summary>
+    public interface IWiredGrid
+    {
+        /// <summary>When on, generators make power only on tiles wired to the lander tile, and stations and storage can only be built there. Off in old saves and tests.</summary>
+        bool WiredGrid { get; set; }
+
+        /// <summary>The tile is on the grid: the lander tile, or a tile with a finished power line joined to it through neighbouring wired tiles. Always true when the grid is not wired.</summary>
+        bool IsPowered(int tileId);
+
+        /// <summary>How many tiles are on the grid.</summary>
+        int PoweredTileCount { get; }
+
+        /// <summary>Generator buildings (panels, turbines, wave lines, barrages) standing off the grid.</summary>
+        int GeneratorsOffGrid { get; }
+
+        /// <summary>Put a power line on a tile (one slot).</summary>
+        bool PlacePowerLine(int tileId, int slot);
+    }
+
     /// <summary>Tidal barrage (director 2026-11-19).</summary>
     public interface ITidalBarrage
     {

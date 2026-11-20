@@ -95,6 +95,10 @@ namespace KardashevAscent.Simulation.Resources
         public static readonly MaterialBill TidalBarrage = new MaterialBill()
             .Add(Material.Iron, 12000.0).Add(Material.Rock, 20000.0).Add(Material.Copper, 800.0);
 
+        /// <summary>Power line: poles, cable and a switch box for one tile (game rule, TBD; copper-heavy).</summary>
+        public static readonly MaterialBill PowerLine = new MaterialBill()
+            .Add(Material.Copper, 15.0).Add(Material.Iron, 30.0).Add(Material.Rock, 20.0);
+
         /// <summary>Alumina plant: a kiln, leaching tanks and a precipitator (game rule, TBD).</summary>
         public static readonly MaterialBill AluminaPlant = new MaterialBill()
             .Add(Material.Iron, 400.0).Add(Material.Rock, 200.0).Add(Material.Copper, 15.0);

@@ -100,6 +100,8 @@ namespace KardashevAscent.Simulation.Game
             {
                 if (Build.QueueCount > 0 && Build.IsQueued(pair.Key.Tile, pair.Key.Slot))
                     continue;   // a site makes nothing until it is finished
+                if (!IsPowered(pair.Key.Tile))
+                    continue;   // wired grid: a panel off the grid makes nothing the colony can use
                 Double3 sun = SunAt(pair.Key.Tile);
                 if (sun.Up <= 0.0)
                     continue;

@@ -13,7 +13,7 @@ namespace KardashevAscent.Simulation.Game
     /// Units: SI except time (hours) and energy (Wh). Angles in radians.
     /// Directions use the planet frame described in <see cref="PlanetFrame"/>.
     /// </summary>
-    public interface IPlanetSimulation : IPlanetReadout, IEnergyReadout, IConstructionReadout, IBuildingCommands, IRobotCommands, IResourceCommands, IManufacturingCommands, ISolarAdvice, IResearchCommands, IPassageCommands, IAnglePresets, IDebugTools, ITidalPower, IWavePower, ITidalBarrage, ISimulationSave, ISimulationEvents
+    public interface IPlanetSimulation : IPlanetReadout, IEnergyReadout, IConstructionReadout, IBuildingCommands, IRobotCommands, IResourceCommands, IManufacturingCommands, ISolarAdvice, IResearchCommands, IPassageCommands, IAnglePresets, IDebugTools, ITidalPower, IWavePower, ITidalBarrage, IWiredGrid, ISimulationSave, ISimulationEvents
     {
         /// <summary>Advance the simulation by <paramref name="hours"/> of game time.</summary>
         void Tick(double hours);
@@ -47,6 +47,8 @@ namespace KardashevAscent.Simulation.Game
         WaveConverter,
         /// <summary>Tidal barrage across a bay (director 2026-11-19): a late, big tidal source that changes the coast.</summary>
         TidalBarrage,
+        /// <summary>Power line (director 2026-11-20, wired grid): wires a tile into the colony grid; chains of tiles with lines carry power from the lander tile.</summary>
+        PowerLine,
     }
 
     /// <summary>Static facts about one tile.</summary>

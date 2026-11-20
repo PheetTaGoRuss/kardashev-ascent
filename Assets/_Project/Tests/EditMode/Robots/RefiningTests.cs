@@ -168,7 +168,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             a.SetAutoRefine(RefineProcess.PureAluminium, 5.0);
             Run(a, 10.0);
             SimulationState state = a.CaptureState();
-            Assert.AreEqual(34, state.Version);
+            Assert.AreEqual(SimulationState.CurrentVersion, state.Version);
             var b = WithWorkshop();
             Assert.IsTrue(b.RestoreState(state));
             Assert.AreEqual(BuildingType.Electrolyser, b.GetBuilding(b.BaseTileId, touching[0]));
