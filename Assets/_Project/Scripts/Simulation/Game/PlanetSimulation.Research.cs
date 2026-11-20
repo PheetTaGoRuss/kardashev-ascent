@@ -56,6 +56,7 @@ namespace KardashevAscent.Simulation.Game
             foreach (var s in research.Stations)
             {
                 if (Build.QueueCount > 0 && Build.IsQueued(s.Tile, s.Slot)) continue;
+                if (!WiredOrOff(s)) continue;   // an unwired station has no power
                 if (!Deposits.IsSurveyed(s.Tile)) continue;
                 if (s.Tile == preferTile) return s.Tile;
                 if (any < 0 || s.Tile < any) any = s.Tile;
@@ -71,6 +72,8 @@ namespace KardashevAscent.Simulation.Game
             {
                 if (Build.QueueCount > 0 && Build.IsQueued(s.Tile, s.Slot))
                     continue;
+                if (!WiredOrOff(s))
+                    continue;   // an unwired station has no power
                 if (s.Tile == preferTile)
                     return s.Tile;
                 if (any < 0 || s.Tile < any)
