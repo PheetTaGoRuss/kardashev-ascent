@@ -42,7 +42,7 @@ Four assemblies are enough today. Do not add an assembly for a category (data, p
 | `Planet` | Hex sphere, terrain, building slots, planet records, planet chemistry, the light-potential map | `Civilization`, `Solar` |
 | `Resources` | Materials, deposits, material stock, industry, the survey puzzle | `Planet`, `Solar` |
 | `Logistics` | Stock per place (`InventoryBook`), the haul ledger, haul energy physics (new, mission operations P1) | `Resources` |
-| `Robots` | Robots, groups, tasks, scheduling, upkeep, movement, manufacturing, colony network | `Energy`, `Planet`, `Resources` |
+| `Robots` | Robots, groups, tasks, scheduling, upkeep, movement, manufacturing, colony network | `Energy`, `Logistics`, `Planet`, `Resources` |
 | `Game` | The interface, the orchestrator, construction, save state, panel tiers, history | all of the above |
 
 The dependency order has no cycles. `tools/check_layers.py` enforces it and CI runs it; to allow a new dependency, change the table in that script and this one in the same pull request.

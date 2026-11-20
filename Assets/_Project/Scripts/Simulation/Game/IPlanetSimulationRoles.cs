@@ -326,6 +326,16 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Kg moved, kg-km and the energy of hauling so far.</summary>
         (double KgMoved, double KgKm, double Wh) HaulTotals { get; }
 
+        /// <summary>Keep at least this much of a material in a tile's depot: hauls are made until it is met. Zero removes the target.</summary>
+        bool SetStockTarget(int tileId, Resources.Material material, double kg);
+
+        double StockTarget(int tileId, Resources.Material material);
+
+        IReadOnlyList<(int Tile, Resources.Material Material, double Kg)> StockTargets();
+
+        /// <summary>Hauls under way: id, from, to, material, kg, loaded, and the carrier once loaded.</summary>
+        IReadOnlyList<(int Id, int From, int To, Resources.Material Material, double Kg, bool Loaded, int RobotId)> HaulOrders();
+
         /// <summary>Ask a robot to survey a land tile's ground. False if it is water, surveyed or already ordered.</summary>
         bool OrderSurvey(int tileId);
         bool IsSurveyOrdered(int tileId);

@@ -65,6 +65,7 @@ namespace KardashevAscent.Simulation.Game
                 if (Materials[m] > 0.0)
                     state.MaterialsKg.Add(new MaterialRecord { Material = m, Kg = Materials[m] });
             CaptureLogistics(state);
+            CaptureHauls(state);
             foreach (var kv in fieldWork)
                 state.FieldWork.Add(new FieldWorkRecord { Kind = kv.Key.Kind, Tile = kv.Key.Tile, Slot = kv.Key.Slot, Hours = kv.Value });
             foreach (var w in wiredBuildings)
@@ -284,6 +285,7 @@ namespace KardashevAscent.Simulation.Game
                 foreach (MaterialRecord m in state.MaterialsKg)
                     Materials.Set(m.Material, m.Kg);
             RestoreLogistics(state);
+            RestoreHauls(state);
             // Before version 26 the colony built from parts; it gets the lander's cargo of materials instead (game rule).
             if (state.Version < 26)
                 foreach (var (m, kg) in BuildCosts.LanderCargo.Items())

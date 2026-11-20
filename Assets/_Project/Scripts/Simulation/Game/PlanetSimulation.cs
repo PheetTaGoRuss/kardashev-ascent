@@ -177,7 +177,10 @@ namespace KardashevAscent.Simulation.Game
             Network.SetPowered(!Grid.IsBrownout);
             Workforce.UpdateConnections(dt);
             DeliverHeldFindings();
+            haulLedger.RecordEnergy(Upkeep.HaulDriveWh);   // what driving with cargo aboard cost
+            Upkeep.HaulDriveWh = 0.0;
             AdvanceFieldWork(dt);
+            PlanHauls();
             Settle(null);
             // Used power: what reached the loads (the Workshop's included) or went into the battery; curtailed power is not used.
             KardashevPowerW = grid.ServedW + grid.ChargeW + RobotChargingW + networkServedW;

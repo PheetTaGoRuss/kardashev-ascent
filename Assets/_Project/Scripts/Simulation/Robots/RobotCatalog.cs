@@ -130,6 +130,11 @@ namespace KardashevAscent.Simulation.Robots
             new Capability(RobotKind.General, TaskKind.Excavate),
             new Capability(RobotKind.Construction, TaskKind.Excavate),
             new Capability(RobotKind.Mining, TaskKind.Excavate),
+            // Hauling (mission operations): Transport robots are the specialists; General robots haul at the normal rate, builders and miners at half (game rule, TBD).
+            new Capability(RobotKind.Transport, TaskKind.Haul),
+            new Capability(RobotKind.General, TaskKind.Haul),
+            new Capability(RobotKind.Construction, TaskKind.Haul, 0.5),
+            new Capability(RobotKind.Mining, TaskKind.Haul, 0.5),
 
             // Secondary capabilities, unlocked by research (milestones, D8). TBD.
             new Capability(RobotKind.Mining, TaskKind.Salvage, 0.5, 4, true),
@@ -146,6 +151,7 @@ namespace KardashevAscent.Simulation.Robots
             switch (task)
             {
                 case TaskKind.Mine: return RobotAttribute.MiningPower;
+                case TaskKind.Haul: return RobotAttribute.Speed;   // loading and unloading go as fast as the robot moves
                 case TaskKind.Survey:
                 case TaskKind.Measure:
                 case TaskKind.Experiment: return RobotAttribute.SensorQuality;

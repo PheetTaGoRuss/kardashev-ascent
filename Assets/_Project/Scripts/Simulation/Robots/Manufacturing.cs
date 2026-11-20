@@ -85,7 +85,7 @@ namespace KardashevAscent.Simulation.Robots
     {
         // ---- Unlocks by milestone (TBD) ----
 
-        /// <summary>Milestone that unlocks making each robot kind. Transport stays locked: transportation is deferred (spec §11).</summary>
+        /// <summary>Milestone that unlocks making each robot kind. Transport robots (the haulers) unlock at milestone 2 with the Maintenance kind (game rule, TBD).</summary>
         public static int UnlockMilestone(RobotKind kind)
         {
             switch (kind)
@@ -94,7 +94,8 @@ namespace KardashevAscent.Simulation.Robots
                 case RobotKind.Construction:
                 case RobotKind.Mining:
                 case RobotKind.Research: return 1;
-                case RobotKind.Maintenance: return 2;
+                case RobotKind.Maintenance:
+                case RobotKind.Transport: return 2;
                 default: return int.MaxValue;
             }
         }

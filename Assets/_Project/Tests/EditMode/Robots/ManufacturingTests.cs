@@ -109,7 +109,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         }
 
         [Test]
-        public void SpecialisedRobots_UnlockByMilestone_TransportNever()
+        public void SpecialisedRobots_UnlockByMilestone_TransportWithMaintenance()
         {
             var sim = WithWorkshop();
             Stock(sim, 5000.0);
@@ -117,8 +117,9 @@ namespace KardashevAscent.Simulation.Tests.Robots
             Unlock(sim, 1);
             Assert.IsNull(sim.OrderRobot(RobotKind.Mining));
             StringAssert.Contains("milestone 2", sim.OrderRobot(RobotKind.Maintenance));
+            StringAssert.Contains("milestone 2", sim.OrderRobot(RobotKind.Transport));
             Unlock(sim, 10);
-            StringAssert.Contains("not available", sim.OrderRobot(RobotKind.Transport));
+            Assert.IsNull(sim.OrderRobot(RobotKind.Transport));
         }
 
         [Test]

@@ -365,6 +365,11 @@ namespace KardashevAscent.Presentation.UI
                     return $"Experiment: {KardashevAscent.Simulation.Planet.Experiments.Name((KardashevAscent.Simulation.Planet.ExperimentKind)t.Slot).ToLowerInvariant()} · Research Station, tile {t.Tile}";
                 case TaskKind.Excavate:
                     return $"{KardashevAscent.Simulation.Resources.Passages.Name((KardashevAscent.Simulation.Resources.PassageKind)t.Slot)} · tile {t.Tile} ({sim.PassageProgress(t.Tile) * 100.0:0} %)";
+                case TaskKind.Haul:
+                    foreach (var h in sim.HaulOrders())
+                        if (h.Id == t.Slot / 2)
+                            return $"Haul {h.Kg:0} kg {Materials.Name(h.Material).ToLowerInvariant()}: {(t.Slot % 2 == 0 ? $"load at tile {h.From}" : $"deliver to tile {h.To}")}";
+                    return "Haul";
                 default: return t.ToString();
             }
         }

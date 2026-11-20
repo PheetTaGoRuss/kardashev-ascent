@@ -30,7 +30,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             Assert.IsFalse(RobotCatalog.CanDo(RobotKind.Mining, TaskKind.Salvage, 0));
             Assert.IsFalse(RobotCatalog.CanDo(RobotKind.Research, TaskKind.Build, 0));
             foreach (TaskKind t in (TaskKind[])Enum.GetValues(typeof(TaskKind)))
-                Assert.IsFalse(RobotCatalog.CanDo(RobotKind.Transport, t, 10), "Transport waits for logistics");
+                Assert.AreEqual(t == TaskKind.Haul, RobotCatalog.CanDo(RobotKind.Transport, t, 10), "Transport robots haul, and nothing else");
         }
 
         [Test]
