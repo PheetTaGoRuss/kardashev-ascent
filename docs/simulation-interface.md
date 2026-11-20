@@ -125,3 +125,13 @@ slot 0 อยู่กลาง เลขเพิ่มทีละวง แ�
 - เซฟ: `SimulationState.History` และช่อง `History*` (เซฟเก่าเริ่มประวัติว่าง) ช่วงที่กำลังสะสมอยู่ไม่ถูกเซฟ
 - หน้าจอ `ColonyView` (กด C): ความต้องการและเป้า สถานะการโต (โต / ถูกรั้งไว้เพราะ brownout / ถึงเป้าแล้ว) ส่วนของความต้องการที่ได้รับ กราฟ 7 วัน (ผลิต ต้องการ แบต % แถบ brownout) พลังงานตั้งแต่ลงจอด และสิ่งก่อสร้างแยกตามช่อง
   เพิ่มเข้าฉากด้วย Kardashev Ascent ▸ Set Up Scene
+
+## Mission operations interfaces (added 20 November 2026, English)
+
+New role interfaces on `IPlanetSimulation` (read models; no live objects cross the boundary):
+
+- **Logistics** (`IResourceCommands`): `LogisticsEnabled`, `KgAt(tile, material)`, `TotalKg(material)`, `HaulTotals`, `SetStockTarget`, `StockTarget`, `StockTargets()`, `HaulOrders()`, `Holdings()`, `PlaceStorage(type, tile, slot)`, `StorageCapacityKg(tile, class)`, `RoomAt(tile, material)`. `Materials` through the interface is the colony-wide sum when logistics is on.
+- **Flowsheet** (`IFlowsheetCommands`): `SetByproductPolicy`, `ByproductPolicyOf`, `PlantReportAt`, `VentedKg`, `IndustrialWasteHeatW`, `IndustrialWasteHeatKWh`, `FlowsheetSnapshot(days)`.
+- **Flight rules** (`IRulebookCommands`): `RulebookVersion`, `RulebookHistory`, `PublishRulebook(rules, note)`, `InstallStarterRulebook`, `RobotRulebookVersion`, `PlantRulebookVersion`, `RulebookUplink()`, `OperationsLog`, `IsPlantPaused`.
+
+The sub-step order gains step 7a (rules evaluate) and haul planning; see `docs/architecture/system-interactions.md` section 3. Save version 42 (see the comments in `SimulationState`).

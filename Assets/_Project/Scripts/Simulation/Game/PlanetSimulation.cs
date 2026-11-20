@@ -184,7 +184,10 @@ namespace KardashevAscent.Simulation.Game
             PlanHauls();
             Settle(null);
             // Used power: what reached the loads (the Workshop's included) or went into the battery; curtailed power is not used.
-            KardashevPowerW = grid.ServedW + grid.ChargeW + RobotChargingW + networkServedW;
+            // What the priority loads took beyond the network and the robots' critical charging is the Workshop's, the refineries'
+            // and the colony computing's: power used all the same (found by the 60-day energy-closure runs, mission operations P5).
+            double industrialServedW = Math.Max(0.0, grid.PriorityServedW - networkServedW - Upkeep.CriticalRequestW);
+            KardashevPowerW = grid.ServedW + grid.ChargeW + RobotChargingW + networkServedW + industrialServedW;
             // Milestones are judged on a whole day's average, so a sunny noon doesn't count.
             dayEnergyWh += KardashevPowerW * dt;
             dayHours += dt;
