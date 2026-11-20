@@ -77,6 +77,7 @@ namespace KardashevAscent.Presentation.Game
         Button continueButton, loadButton;
         Label menuMessage, pauseMessage;
         bool pauseOpen;
+        Button saveButton;
         bool idleLastFrame;
         ClockSpeed speedBeforePause = ClockSpeed.HourPerSecond;
 
@@ -316,14 +317,14 @@ namespace KardashevAscent.Presentation.Game
                 else if (settingsScreen != null && settingsScreen.style.display == DisplayStyle.Flex) ShowSettings(false);
                 else if (creditsScreen != null && creditsScreen.style.display == DisplayStyle.Flex) ShowCredits(false);
                 else if (pauseOpen) ClosePause();
-                else if (IsPlaying && idleLastFrame) OpenPause();
+                else if ((IsPlaying || Phase == GamePhase.Landing) && idleLastFrame) OpenPause();
             }
         }
 
         /// <summary>Esc opens the pause menu only when it had nothing else to close (judged last frame, before the others act).</summary>
         void LateUpdate()
         {
-            idleLastFrame = IsPlaying && !pauseOpen
+            idleLastFrame = (IsPlaying || Phase == GamePhase.Landing) && !pauseOpen
                 && (picker == null || picker.SelectedTile < 0)
                 && (siteView == null || siteView.Site == null)
                 && (chooser == null || !chooser.Visible)
@@ -336,6 +337,7 @@ namespace KardashevAscent.Presentation.Game
             Pause();
             bool hasSave = saveGame != null && saveGame.HasSave;
             loadButton.SetEnabled(hasSave);
+            saveButton?.SetEnabled(Phase != GamePhase.Landing);   // nothing to save before the colony lands
             pauseMessage.text = "";
             Show(pauseMenu, true);
         }
@@ -344,7 +346,7 @@ namespace KardashevAscent.Presentation.Game
         {
             pauseOpen = false;
             Show(pauseMenu, false);
-            if (!InSetup)
+            if (!InSetup && Phase != GamePhase.Landing)
                 runner?.SetSpeed(speedBeforePause != ClockSpeed.Paused ? speedBeforePause : ClockSpeed.HourPerSecond);
         }
 
@@ -370,7 +372,8 @@ namespace KardashevAscent.Presentation.Game
             ptitle.style.unityTextAlign = TextAnchor.MiddleCenter; ptitle.style.marginBottom = 10;
             pbox.Add(ptitle);
             pbox.Add(MenuButton("Resume (Esc)", ClosePause, primary: true));
-            pbox.Add(MenuButton("Save", () => { saveGame?.Save(); pauseMessage.text = saveGame != null ? saveGame.Message : ""; loadButton.SetEnabled(saveGame != null && saveGame.HasSave); }));
+            saveButton = MenuButton("Save", () => { saveGame?.Save(); pauseMessage.text = saveGame != null ? saveGame.Message : ""; loadButton.SetEnabled(saveGame != null && saveGame.HasSave); });
+            pbox.Add(saveButton);
             loadButton = MenuButton("Load", () => saveGame?.Load());
             pbox.Add(loadButton);
             pbox.Add(MenuButton("Guide book (J)", () => { ClosePause(); SystemTabs.Toggle("guide"); }));
@@ -409,6 +412,12 @@ namespace KardashevAscent.Presentation.Game
                                "and the colony can't move afterwards. M shows where sunlight is best; L picks another planet.");
             lb.AddToClassList("body"); lb.style.whiteSpace = WhiteSpace.Normal; lb.style.maxWidth = 520;
             landingBanner.Add(lb);
+            // Settings and the menu are open before landing too (director 2026-11-20).
+            var lbMenu = new Button(OpenPause) { text = "⚙  Settings and menu (Esc)" };
+            lbMenu.AddToClassList("small-button");
+            lbMenu.style.marginTop = 6;
+            lbMenu.style.alignSelf = Align.FlexStart;
+            landingBanner.Add(lbMenu);
             root.Add(landingBanner);
 
             setupPanel = new VisualElement();

@@ -253,6 +253,12 @@ namespace KardashevAscent.Presentation.UI
             solvedText = Text();
             solvedText.AddToClassList("good");
 
+            // Experiments as a research tree (director 2026-11-15): survey the station's tile, then each experiment
+            // after the one it needs.
+            Heading("EXPERIMENTS · WHAT'S SAFE HERE");   // first: the experiments are what the player acts on (director 2026-11-20: could not find the tide gauge below the values)
+            tree = new ResearchTreeView(ToggleExperiment, ToggleStationSurvey);
+            Body.Add(tree);
+
             Heading("VALUES");
             foreach (SolarParameter p in (SolarParameter[])System.Enum.GetValues(typeof(SolarParameter)))
             {
@@ -291,11 +297,6 @@ namespace KardashevAscent.Presentation.UI
                 buttons[p] = b;
             }
 
-            // Experiments as a research tree (director 2026-11-15): survey the station's tile, then each experiment
-            // after the one it needs.
-            Heading("EXPERIMENTS · WHAT'S SAFE HERE");
-            tree = new ResearchTreeView(ToggleExperiment, ToggleStationSurvey);
-            Body.Add(tree);
         }
 
         ResearchTreeView tree;

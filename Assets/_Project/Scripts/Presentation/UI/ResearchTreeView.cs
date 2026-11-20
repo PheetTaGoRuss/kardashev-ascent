@@ -14,7 +14,7 @@ namespace KardashevAscent.Presentation.UI
     /// </summary>
     public sealed class ResearchTreeView : VisualElement
     {
-        const float NodeW = 186f, NodeH = 104f, ColGap = 26f, RowGap = 12f;
+        const float NodeW = 146f, NodeH = 92f, ColGap = 12f, RowGap = 8f;
 
         sealed class Node
         {
@@ -40,25 +40,36 @@ namespace KardashevAscent.Presentation.UI
             style.marginTop = 6;
             style.marginBottom = 6;
 
-            root = Add(null, 0, 1, null);
-            // Depth 1: what needs only the survey; depth 2: what needs one of those (Experiments.Needs).
-            int row = 0;
-            var placed = new Dictionary<ExperimentKind, Node>();
+            root = Add(null, 0, 0, null);
+            // The tree grows to the right: each experiment sits one column right of the one it needs (Experiments.Needs), and
+            // every node gets its own row (four experiments needing Gravity or the tide gauge used to be drawn on top of each other).
+            int rows = 0, maxCol = 1;
             foreach (ExperimentKind k in Experiments.All)
                 if (!Experiments.Needs(k).HasValue)
-                    placed[k] = Add(k, 1, row++, root);
-            int rows = row;
-            foreach (ExperimentKind k in Experiments.All)
-            {
-                ExperimentKind? need = Experiments.Needs(k);
-                if (need.HasValue && placed.TryGetValue(need.Value, out Node parent))
-                    placed[k] = Add(k, 2, parent.Row, parent);
-            }
+                    rows = Layout(k, 1, rows, root, ref maxCol) + 1;
             root.Row = 0;
             root.Box.style.top = (rows * (NodeH + RowGap) - RowGap - NodeH) * 0.5f;
             style.height = rows * (NodeH + RowGap) - RowGap;
-            style.width = 3 * NodeW + 2 * ColGap;
+            style.width = (maxCol + 1) * NodeW + maxCol * ColGap;
             generateVisualContent += DrawLinks;
+        }
+
+        /// <summary>Place an experiment and, to its right, the ones that need it. Returns the last row used.</summary>
+        int Layout(ExperimentKind kind, int col, int row, Node parent, ref int maxCol)
+        {
+            Node node = Add(kind, col, row, parent);
+            maxCol = Math.Max(maxCol, col);
+            int last = row;
+            bool first = true;
+            foreach (ExperimentKind child in Experiments.All)
+            {
+                ExperimentKind? need = Experiments.Needs(child);
+                if (!need.HasValue || need.Value != kind)
+                    continue;
+                last = Layout(child, col + 1, first ? row : last + 1, node, ref maxCol);
+                first = false;
+            }
+            return last;
         }
 
         Node Add(ExperimentKind? kind, int col, int row, Node parent)
