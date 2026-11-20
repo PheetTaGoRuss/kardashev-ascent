@@ -740,3 +740,14 @@ Per batch $E_{elec} = \Delta H\, n + Q_{waste}$ with $\Delta H\, n$ = reaction e
 ### Slag as aggregate (MO-09)
 
 Blast-furnace slag is used as aggregate and cement replacement in concrete (ASTM C989 for ground slag, EN 12620 for aggregates) [recalled; not searched yet]. The 1 : 1 mass substitution for rock in building bills is a game rule, TBD.
+
+## Electrical cables and DC flow (electrical redesign, stage 2)
+
+Code: `Simulation/Electrical/CablePhysics.cs`; tests `CablePhysicsTests`.
+
+- Resistance of a conductor: $R = ho L / A$ in SI units (mm2 converted explicitly), with $ho(T) = ho_{20}[1 + lpha (T - 20)]$. A loop with a return conductor counts the conductors in the loop.
+- Copper: IACS $ho_{20} = 1.7241	imes10^{-8}\ \Omega\,$m, $lpha_{20} = 0.00393\ $/K, density 8890 kg/m3 [verified: ASTM B193 table of 100 % IACS copper, copper.org fact sheet (8.89 g/cm3)].
+- Aluminium: density 2703 kg/m3 [verified: NBS handbook tables]. $ho_{20} = 1.7241	imes10^{-8} / 0.61 = 2.8264	imes10^{-8}\ \Omega\,$m uses 61 % IACS [estimated from the ratio; the IEC 60889 text was not read]. $lpha_{20} = 0.00403\ $/K [recalled; TBD, tables list 0.0041].
+- Conductor mass $m = d L A n$ (test: one 500 mm2 copper conductor over 300 km is 1.33e6 kg).
+- Tile-span sanity table (one 500 mm2 Cu conductor, 300 km, R = 10.34 ohm): 1 MW at 33 kV loses 0.95 %, 20 MW at 33 kV loses 19 %, 1 GW at 500 kV loses 4.1 %, and 1 kV can deliver at most $V^2/4R$ = 24 kW [tested].
+- DC nodal flow: $G V = I$ with $I_k = P_k / V_k$ (fixed power injections), one slack node, dense Cholesky. Tests: two-node analytic answer, series and parallel reduction, KCL, current split by conductance in a loop, energy balance injected = delivered + $\sum I^2 R$, 100 identical runs and branch-order independence, collapse near $V^2/4R$ reported (no NaN), unreachable node diagnosed.
