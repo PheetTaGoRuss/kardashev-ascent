@@ -57,6 +57,10 @@ Two bot fixes that showed up as game findings: the bot kept mining an exhausted 
 
 Reading: materials no longer limit the first two milestones. Beyond that growth needs more land, which means more forward chargers, relays and a wider crew; that is the intended expansion loop, and the bot does not play it. Next balance work needs a bot that expands outward (a charger chain with panel sites on each new tile); until then milestone 3 and later cannot be judged.
 
+## Pass 4 (2026-11-20): an expanding bot, tried and set aside
+
+A bot variant that scans every in-range tile and builds a forward charger whenever it is out of room (or its ore is out of range) did get past the 12-tile limit (milestone 2 around day 190, 170 MW demand by day 480), but its policy was poor: it placed a charger roughly every day (47 by day 50, 108 by day 450), which ate rock and left 65 sites queued and stuck. That is a bot policy problem, not a game one, so it was not merged. What it does show: with expansion the colony keeps growing past 100 MW, so milestone 3 (1 GW) is a matter of playing the expansion well, not a wall. A fair test needs a bot that plans a charger chain once per direction and builds panels on each new tile before extending again; worth doing only if the director asks for a tuned late game.
+
 ## Not yet balanced
 
 A smarter bot that builds forward chargers and relays is needed before tuning mining rates, robot costs and build times. Until then those numbers stay as placeholders.
