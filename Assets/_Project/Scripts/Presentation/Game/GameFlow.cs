@@ -234,6 +234,18 @@ namespace KardashevAscent.Presentation.Game
                 if (!done && next < 0) next = i;
                 list += (done ? "✓ " : next == i ? "▶ " : "· ") + Essentials[i].Name + " — " + Essentials[i].Why + "\n";
             }
+            // The last step: nothing is wired for you, so wire what you built (director 2026-11-20).
+            int unwired = 0;
+            if (next < 0 && runner != null && runner.Simulation != null && runner.Simulation.WiredGrid)
+                foreach (var w in runner.Simulation.UnwiredBuildings())
+                    if (w.Tile == setupTile) unwired++;
+            if (next < 0 && unwired > 0)
+            {
+                setupSteps.text = list + "▶ Wire them — nothing makes or uses power until a wire joins it to the grid";
+                setupNow.text = $"Step {Essentials.Length + 1}/{Essentials.Length + 1}: Grid ► drag a Power line onto each building marked IN or OUT ({unwired} left).";
+                setupNow.style.color = StyleKeyword.Null;
+                return;
+            }
             setupSteps.text = list.TrimEnd('\n');
             if (next < 0)
             {
