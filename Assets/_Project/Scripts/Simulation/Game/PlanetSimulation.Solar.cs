@@ -92,32 +92,7 @@ namespace KardashevAscent.Simulation.Game
                 Orbit.Distance(planet.SemiMajorAxis, planet.Eccentricity, nu));
         }
 
-        double ComputeGeneration()
-        {
-            double total = 0.0, lost = 0.0;
-            double meanAnomaly = CurrentMeanAnomaly();
-            foreach (var pair in panels)
-            {
-                if (Build.QueueCount > 0 && Build.IsQueued(pair.Key.Tile, pair.Key.Slot))
-                    continue;   // a site makes nothing until it is finished
-                if (!IsPowered(pair.Key.Tile))
-                    continue;   // wired grid: a panel off the grid makes nothing the colony can use
-                Double3 sun = SunAt(pair.Key.Tile);
-                if (sun.Up <= 0.0)
-                    continue;
-                PanelParams p = InSeason(MakePanel(pair.Key.Tile, pair.Value.Tilt, pair.Value.Azimuth,
-                                                   CloudFactor(pair.Key.Tile, meanAnomaly), pair.Value.Area), pair.Key.Tile, meanAnomaly);
-                double power = PanelPowerNow(p, sun, AirTemperatureAt(pair.Key.Tile, meanAnomaly), OpticalDepthAt(pair.Key.Tile, meanAnomaly),
-                                             out _, out _, out _, out _);
-                double raw = floatingPanels.Contains(pair.Key) ? power * (1.0 + FloatingCoolingGain) : power;
-                double efficiency = GridEfficiency(pair.Key.Tile);   // wired grid: the lines lose some on the way
-                total += raw * efficiency;
-                lost += raw * (1.0 - efficiency);
-            }
-            panelLossW = lost * SolarDesignShare;
-            // Designed for the cautious end of whatever the colony hasn't measured yet (director 2026-11-14).
-            return (total > 0.0 ? total * SolarDesignShare : total) + TidalPowerW() + WavePowerW() + BarragePowerW();
-        }
+        double ComputeGeneration() => ComputeFlow();   // raw power per tile by source, then the flow to the lander tile (Wiring)
 
         /// <summary>One panel's power under the star right now (sun up), with the light and temperature along the way.</summary>
         double PanelPowerNow(in PanelParams p, Double3 sun, double airTemperatureC, double opticalDepth,

@@ -49,6 +49,8 @@ namespace KardashevAscent.Simulation.Game
         TidalBarrage,
         /// <summary>Power line (director 2026-11-20, wired grid): wires a tile into the colony grid; chains of tiles with lines carry power from the lander tile.</summary>
         PowerLine,
+        /// <summary>High-voltage line: the same wiring with a far higher capacity (opens at milestone 1).</summary>
+        HighVoltageLine,
     }
 
     /// <summary>Static facts about one tile.</summary>

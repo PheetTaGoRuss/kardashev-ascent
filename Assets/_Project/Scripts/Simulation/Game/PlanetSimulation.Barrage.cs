@@ -39,29 +39,6 @@ namespace KardashevAscent.Simulation.Game
             return null;
         }
 
-        /// <summary>Finished barrages only, one emptying per tide, ebb generation. Capped by the planet's tidal ceiling.</summary>
-        public double BarragePowerW()
-        {
-            if (barrages.Count == 0)
-                return 0.0;
-            double period = TidePeriodHours;
-            double fraction = period > 0.0 && !double.IsInfinity(period) ? TimeHours / period : 0.0;
-            double total = 0.0, lost = 0.0;
-            foreach (var key in barrages)
-            {
-                if (Build.QueueCount > 0 && Build.IsQueued(key.Tile, key.Slot))
-                    continue;
-                if (!IsPowered(key.Tile)) continue;
-                double energy = Tides.BarrageEnergyPerTideJ(Tides.BarrageBasinM2, TidalRangeBaseM(key.Tile), SurfaceGravityMs2);
-                double raw = Tides.BarragePowerW(energy, period, fraction);
-                double efficiency = GridEfficiency(key.Tile);
-                total += raw * efficiency;
-                lost += raw * (1.0 - efficiency);
-            }
-            barrageLossW = lost;
-            return Math.Min(total, Tides.PlanetCeilingW(Moon));
-        }
-
         public bool PlaceBarrage(int tileId, int slot)
         {
             if (!CanPlace(BuildingType.TidalBarrage, tileId, slot))

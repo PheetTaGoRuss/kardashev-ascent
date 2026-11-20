@@ -37,26 +37,6 @@ namespace KardashevAscent.Simulation.Game
 
         double EnergyPeriodAt(int tileId) => Waves.EnergyPeriodShare * Waves.PeakPeriodS(WindAt(tileId), SurfaceGravityMs2);
 
-        /// <summary>Finished converter lines only.</summary>
-        public double WavePowerW()
-        {
-            if (waveConverters.Count == 0)
-                return 0.0;
-            double total = 0.0, lost = 0.0;
-            foreach (var key in waveConverters)
-            {
-                if (Build.QueueCount > 0 && Build.IsQueued(key.Tile, key.Slot))
-                    continue;
-                if (!IsPowered(key.Tile)) continue;
-                double raw = Waves.LinePowerW(WaveHeightAtM(key.Tile), EnergyPeriodAt(key.Tile), SurfaceGravityMs2);
-                double efficiency = GridEfficiency(key.Tile);
-                total += raw * efficiency;
-                lost += raw * (1.0 - efficiency);
-            }
-            waveLossW = lost;
-            return total;
-        }
-
         public bool PlaceWaveConverter(int tileId, int slot)
         {
             if (!CanPlace(BuildingType.WaveConverter, tileId, slot))

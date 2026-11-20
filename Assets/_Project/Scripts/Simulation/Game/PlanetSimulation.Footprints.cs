@@ -35,7 +35,7 @@ namespace KardashevAscent.Simulation.Game
             if (tileId < 0 || tileId >= TileCount || slot < 0 || slot >= SlotCount(tileId))
                 return false;
             TerrainType ground = GetTile(tileId).Terrain;
-            if (type == BuildingType.PowerLine ? !(Terrains.IsBuildableLand(ground) || ground == TerrainType.ShallowOcean)
+            if (type == BuildingType.PowerLine || type == BuildingType.HighVoltageLine ? !(Terrains.IsBuildableLand(ground) || ground == TerrainType.ShallowOcean)
                 : type == BuildingType.FloatingSolar ? !Terrains.AllowsFloating(ground)
                 : type == BuildingType.TidalTurbine || type == BuildingType.WaveConverter || type == BuildingType.TidalBarrage ? ground != TerrainType.ShallowOcean
                 : !Terrains.IsBuildableLand(ground))

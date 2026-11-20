@@ -57,26 +57,6 @@ namespace KardashevAscent.Simulation.Game
 
         public double StreamAtMs(int tileId) => Tides.StreamMs(PeakStreamAtMs(tileId), TimeHours, TidePeriodHours);
 
-        /// <summary>Finished turbines only. Capped by what the whole planet's tides can give.</summary>
-        public double TidalPowerW()
-        {
-            if (tidalTurbines.Count == 0)
-                return 0.0;
-            double total = 0.0, lost = 0.0;
-            foreach (var key in tidalTurbines)
-            {
-                if (Build.QueueCount > 0 && Build.IsQueued(key.Tile, key.Slot))
-                    continue;
-                if (!IsPowered(key.Tile)) continue;
-                double raw = Tides.TurbinePowerW(StreamAtMs(key.Tile));
-                double efficiency = GridEfficiency(key.Tile);
-                total += raw * efficiency;
-                lost += raw * (1.0 - efficiency);
-            }
-            tidalLossW = lost;
-            return Math.Min(total, Tides.PlanetCeilingW(Moon));
-        }
-
         public bool PlaceTidalTurbine(int tileId, int slot)
         {
             if (!CanPlace(BuildingType.TidalTurbine, tileId, slot))

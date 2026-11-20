@@ -50,6 +50,8 @@ namespace KardashevAscent.Presentation.Planet
         TidalBarrage,
         /// <summary>Power line: wires a tile into the colony grid (director 2026-11-20).</summary>
         PowerLine,
+        /// <summary>High-voltage line: far higher capacity (opens at milestone 1).</summary>
+        HighVoltageLine,
     }
 
     [RequireComponent(typeof(PlanetView))]
@@ -127,6 +129,7 @@ namespace KardashevAscent.Presentation.Planet
                 case BuildingType.WaveConverter: return new Color32(90, 150, 235, a);
                 case BuildingType.TidalBarrage: return new Color32(150, 160, 175, a);
                 case BuildingType.PowerLine: return new Color32(235, 200, 70, a);
+                case BuildingType.HighVoltageLine: return new Color32(235, 120, 60, a);
                 default: return new Color32(160, 160, 160, a);
             }
         }
@@ -158,14 +161,15 @@ namespace KardashevAscent.Presentation.Planet
             : m == BuildMode.TidalTurbine ? BuildingType.TidalTurbine
             : m == BuildMode.WaveConverter ? BuildingType.WaveConverter
             : m == BuildMode.TidalBarrage ? BuildingType.TidalBarrage
-            : m == BuildMode.PowerLine ? BuildingType.PowerLine : BuildingType.SolarPanel;
+            : m == BuildMode.PowerLine ? BuildingType.PowerLine
+            : m == BuildMode.HighVoltageLine ? BuildingType.HighVoltageLine : BuildingType.SolarPanel;
 
         /// <summary>Panels aside, every building is a block on its slots (battery yard, Workshop, stations, refinery modules).</summary>
         static bool IsBlock(BuildingType t) =>
             t == BuildingType.Battery || t == BuildingType.Workshop || t == BuildingType.ChargingStation || t == BuildingType.Relay
             || t == BuildingType.ResearchStation || t == BuildingType.AluminaPlant || t == BuildingType.Electrolyser
             || t == BuildingType.TidalTurbine || t == BuildingType.WaveConverter || t == BuildingType.TidalBarrage
-            || t == BuildingType.PowerLine;
+            || t == BuildingType.PowerLine || t == BuildingType.HighVoltageLine;
 
         /// <summary>The slot a building covering this one is keyed by (its anchor), or the slot itself when empty.</summary>
         int Anchor(int t, int s)
@@ -428,13 +432,19 @@ namespace KardashevAscent.Presentation.Planet
             string what = type == BuildingType.Workshop ? "Workshop" : type == BuildingType.ChargingStation ? "Charger"
                         : type == BuildingType.Relay ? "Relay" : type == BuildingType.ResearchStation ? "Research"
                         : type == BuildingType.AluminaPlant ? "Alumina plant" : type == BuildingType.Electrolyser ? "Electrolysis cell"
-                        : type == BuildingType.TidalTurbine ? "Tidal turbine" : type == BuildingType.WaveConverter ? "Wave converter" : type == BuildingType.TidalBarrage ? "Tidal barrage" : type == BuildingType.PowerLine ? "Power line" : "Battery";
+                        : type == BuildingType.TidalTurbine ? "Tidal turbine" : type == BuildingType.WaveConverter ? "Wave converter" : type == BuildingType.TidalBarrage ? "Tidal barrage" : type == BuildingType.PowerLine ? "Power line" : type == BuildingType.HighVoltageLine ? "High-voltage line" : "Battery";
             if (!constructionSite && (type == BuildingType.AluminaPlant || type == BuildingType.Electrolyser))
             {
                 var module = new BatteryVisual($"{what} {t}.{s}", transform, cellMaterial, frameMaterial);
                 // Pale for the alumina kiln and tanks, hot orange for the electrolysis pots.
                 module.SetTint(type == BuildingType.AluminaPlant ? new Color(0.88f, 0.88f, 0.84f) : new Color(0.92f, 0.45f, 0.26f));
                 return module;
+            }
+            if (!constructionSite && type == BuildingType.HighVoltageLine)
+            {
+                var tower = new BatteryVisual($"{what} {t}.{s}", transform, frameMaterial, frameMaterial);
+                tower.SetTint(new Color(0.95f, 0.50f, 0.25f));   // an orange tower and transformer
+                return tower;
             }
             if (!constructionSite && type == BuildingType.PowerLine)
             {
@@ -763,7 +773,8 @@ namespace KardashevAscent.Presentation.Planet
                      : mode == BuildMode.FloatingSolar ? BuildMode.TidalTurbine
                      : mode == BuildMode.TidalTurbine ? BuildMode.WaveConverter
                      : mode == BuildMode.WaveConverter ? BuildMode.TidalBarrage
-                     : mode == BuildMode.TidalBarrage ? BuildMode.PowerLine : BuildMode.SolarPanel;
+                     : mode == BuildMode.TidalBarrage ? BuildMode.PowerLine
+                     : mode == BuildMode.PowerLine ? BuildMode.HighVoltageLine : BuildMode.SolarPanel;
 
             if (dragging)
             {
@@ -807,8 +818,10 @@ namespace KardashevAscent.Presentation.Planet
                     && (mode == BuildMode.Battery || mode == BuildMode.Workshop || mode == BuildMode.ChargingStation || mode == BuildMode.Relay
                         || mode == BuildMode.ResearchStation || mode == BuildMode.AluminaPlant || mode == BuildMode.Electrolyser))
                     preview = new PanelPreview(false, "No power on this tile: run power lines to it from the lander tile (Power group, Power line).", 0, 0, 0, 0);
-                else if (mode == BuildMode.PowerLine)
-                    preview = slot >= 0 && !simulation.CanPlace(BuildingType.PowerLine, tile, slot)
+                else if (mode == BuildMode.HighVoltageLine && simulation.KnowledgeBlocker(BuildingType.HighVoltageLine) != null)
+                    preview = new PanelPreview(false, simulation.KnowledgeBlocker(BuildingType.HighVoltageLine), 0, 0, 0, 0);
+                else if (mode == BuildMode.PowerLine || mode == BuildMode.HighVoltageLine)
+                    preview = slot >= 0 && !simulation.CanPlace(TypeOf(mode), tile, slot)
                         ? new PanelPreview(false, "A power line stands on a free slot of a land or shallow-sea tile.", 0, 0, 0, 0)
                         : new PanelPreview(true, "", 0, 0, 0, 0);
                 else if (mode == BuildMode.TidalTurbine || mode == BuildMode.WaveConverter || mode == BuildMode.TidalBarrage)
@@ -1192,6 +1205,7 @@ namespace KardashevAscent.Presentation.Planet
                       : mode == BuildMode.WaveConverter ? simulation.PlaceWaveConverter(tile, s)
                       : mode == BuildMode.TidalBarrage ? simulation.PlaceBarrage(tile, s)
                       : mode == BuildMode.PowerLine ? simulation.PlacePowerLine(tile, s)
+                      : mode == BuildMode.HighVoltageLine ? simulation.PlaceHighVoltageLine(tile, s)
                       : mode == BuildMode.Relay ? simulation.PlaceRelay(tile, s) : simulation.PlaceChargingStation(tile, s)))
                     return false;
                 BatteryVisual yard = MakeBattery(tile, s, simulation.IsUnderConstruction(tile, s));

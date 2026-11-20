@@ -564,8 +564,29 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Share of a generator's power that reaches the lander tile (less for each tile of line out).</summary>
         double GridEfficiency(int tileId);
 
-        /// <summary>Power lost in the lines now, W.</summary>
+        /// <summary>Power lost to resistance in the lines now, W.</summary>
         double TransmissionLossW { get; }
+
+        /// <summary>Power the lines are too thin to carry now, W.</summary>
+        double OverloadLossW { get; }
+
+        /// <summary>What this tile's line carries now, W.</summary>
+        double LineFlowW(int tileId);
+
+        /// <summary>What this tile's line can carry, W (infinite on the lander tile).</summary>
+        double LineCapacityW(int tileId);
+
+        /// <summary>The line on this tile carries more than it can: power beyond it is lost.</summary>
+        bool IsLineOverloaded(int tileId);
+
+        /// <summary>Tiles with a power line (finished or a site), for drawing the wires.</summary>
+        System.Collections.Generic.IEnumerable<int> LineTiles();
+
+        /// <summary>A line is on this tile (finished only, or a site too).</summary>
+        bool HasLineOn(int tileId, bool finishedOnly);
+
+        /// <summary>Put a high-voltage line on a tile (one slot; opens at milestone 1).</summary>
+        bool PlaceHighVoltageLine(int tileId, int slot);
 
         /// <summary>Put a power line on a tile (one slot).</summary>
         bool PlacePowerLine(int tileId, int slot);

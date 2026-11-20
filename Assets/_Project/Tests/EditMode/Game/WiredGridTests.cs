@@ -165,6 +165,82 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.AreEqual(0.0, home.TransmissionLossW, 1e-9, "a panel on the lander tile loses nothing");
         }
 
+        /// <summary>Wire a tile next to the lander and cover its slots with panels, so the line out of it has more to carry than a plain line can.</summary>
+        static int OverloadedLineTile(PlanetSimulation sim)
+        {
+            int a = Sphere.Neighbors[sim.BaseTileId].First(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
+            Assert.IsTrue(sim.PlacePowerLine(a, 0));
+            int placed = 0;
+            for (int slot = 1; slot < sim.SlotCount(a) && placed < 45; slot++)
+                if (sim.PlacePanel(a, slot, 0.35, Math.PI)) placed++;
+            Assert.GreaterOrEqual(placed, 30);
+            return a;
+        }
+
+        static void RunToNoon(PlanetSimulation sim, Func<bool> done)
+        {
+            for (int i = 0; i < 48 && !done(); i++) sim.Tick(1.0);
+        }
+
+        [Test]
+        public void ATooThinLine_OverloadsAndCurtailsWhatIsBeyondIt()
+        {
+            var sim = Wired();
+            int a = OverloadedLineTile(sim);
+            RunToNoon(sim, () => sim.IsLineOverloaded(a));
+            Assert.IsTrue(sim.IsLineOverloaded(a), "forty panels are more than a plain line carries");
+            Assert.AreEqual(PlanetSimulation.LineCapacityPlainW, sim.LineCapacityW(a), 1e-6);
+            Assert.LessOrEqual(sim.LineFlowW(a), PlanetSimulation.LineCapacityPlainW * 1.0001, "the line carries no more than its rating");
+            Assert.Greater(sim.OverloadLossW, 1e6, "the rest is lost");
+            Assert.IsTrue(double.IsPositiveInfinity(sim.LineCapacityW(sim.BaseTileId)), "the lander tile has no line to overload");
+        }
+
+        [Test]
+        public void AHighVoltageLine_CarriesWhatThePlainLineCannot()
+        {
+            var sim = Wired();
+            sim.SetMilestonesForTests(PlanetSimulation.HighVoltageMilestone);
+            int a = OverloadedLineTile(sim);
+            RunToNoon(sim, () => sim.IsLineOverloaded(a));
+            Assert.IsTrue(sim.IsLineOverloaded(a));
+            double plainDelivered = sim.GenerationW;
+            Assert.IsTrue(sim.PlaceHighVoltageLine(a, 50));
+            sim.Tick(0.1);
+            Assert.AreEqual(PlanetSimulation.LineCapacityHighW, sim.LineCapacityW(a), 1e-6);
+            Assert.IsFalse(sim.IsLineOverloaded(a), "the high-voltage line carries it");
+            Assert.AreEqual(0.0, sim.OverloadLossW, 1e-6);
+            Assert.Greater(sim.GenerationW, plainDelivered, "more power reaches the lander tile");
+        }
+
+        [Test]
+        public void TheHighVoltageLine_OpensAtAMilestone_AndTheDebugUnlockSkipsIt()
+        {
+            var sim = Wired();
+            StringAssert.Contains("milestone", sim.KnowledgeBlocker(BuildingType.HighVoltageLine));
+            sim.SetMilestonesForTests(PlanetSimulation.HighVoltageMilestone);
+            Assert.IsNull(sim.KnowledgeBlocker(BuildingType.HighVoltageLine));
+            var other = Wired();
+            other.Debug.UnlockAll = true;
+            Assert.IsNull(other.KnowledgeBlocker(BuildingType.HighVoltageLine));
+        }
+
+        [Test]
+        public void SaveAndLoad_KeepsAHighVoltageLine()
+        {
+            var sim = Wired();
+            sim.SetMilestonesForTests(PlanetSimulation.HighVoltageMilestone);
+            int a = Sphere.Neighbors[sim.BaseTileId].First(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
+            Assert.IsTrue(sim.PlacePowerLine(a, 0));
+            Assert.IsTrue(sim.PlaceHighVoltageLine(a, 1));
+            sim.Tick(0.1);
+            var other = new PlanetSimulation(Sphere, Surface, Earthlike);
+            Assert.IsTrue(other.RestoreState(sim.CaptureState()));
+            other.Tick(0.1);
+            Assert.AreEqual(BuildingType.HighVoltageLine, other.GetBuilding(a, 1));
+            Assert.AreEqual(PlanetSimulation.LineCapacityHighW, other.LineCapacityW(a), 1e-6);
+            Assert.Contains(a, other.LineTiles().ToList());
+        }
+
         [Test]
         public void AnOldSave_IsNotWired()
         {
