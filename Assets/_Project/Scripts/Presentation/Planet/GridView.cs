@@ -98,9 +98,10 @@ namespace KardashevAscent.Presentation.Planet
                 wire.SetPosition(1, pb);
                 wire.gameObject.SetActive(true);
             }
-            // a pole at every wired tile, so a single wire is still seen from far away
+            // a pole at every wired tile, so a single wire is still seen from far away (not while a site is open: it would tower over it)
             foreach (int t in nodes)
             {
+                if (siteView != null && siteView.Site != null) break;
                 LineRenderer pole = Get(planetWires, used++, WidthAt(TilePoint(t, Lift), 0.010f, 0.006f, 0.05f));
                 bool powered = sim.IsPowered(t);
                 Color c = !powered ? Dead : sim.IsLineOverloaded(t) ? Full : Free;

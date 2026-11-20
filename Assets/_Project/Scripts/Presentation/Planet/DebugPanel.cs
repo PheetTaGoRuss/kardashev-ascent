@@ -20,7 +20,7 @@ namespace KardashevAscent.Presentation.Planet
 
         /// <summary>Whether the panel is showing (the F10 key toggles it).</summary>
         public bool Open { get => open; set => open = value; }
-        Rect window = new Rect(20f, 80f, 270f, 10f);
+        Rect window = new Rect(20f, 140f, 270f, 10f);
         GUIStyle badge;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -52,7 +52,7 @@ namespace KardashevAscent.Presentation.Planet
             if (tools.Debug.EverUsed || GodMode.Active)
             {
                 badge ??= new GUIStyle(GUI.skin.box) { fontSize = 12, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-                GUI.Box(new Rect(Screen.width - 150f, 8f, 140f, 22f), tools.Debug.AnyOn || GodMode.Active ? "DEBUG MODE" : "DEBUG USED", badge);
+                GUI.Box(new Rect(Screen.width - 152f, Screen.height - 34f, 140f, 22f), tools.Debug.AnyOn || GodMode.Active ? "DEBUG MODE" : "DEBUG USED", badge);
             }
             if (open)
             {

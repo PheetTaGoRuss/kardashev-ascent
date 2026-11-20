@@ -293,6 +293,7 @@ namespace KardashevAscent.Presentation.Game
         void Update()
         {
             AnimateMenu();
+            if (setupPanel != null) setupPanel.style.top = KardashevAscent.Presentation.UI.UiLayout.WindowTop;   // under the tabs, wherever the top bar ends
             if (Phase == GamePhase.Setup && Time.unscaledTime >= nextSetupRefresh)
             {
                 nextSetupRefresh = Time.unscaledTime + 0.25f;

@@ -218,20 +218,35 @@ namespace KardashevAscent.Presentation.UI
             {
                 var m = sim.Materials;
                 // Every material the colony holds (director 2026-11-20: "all resources I have"); the four basics always show, red when short.
+                // the four basics, then the other materials held, at most eight chips so the top bar stays two rows (the rest on hover)
                 var shown = new System.Collections.Generic.List<KardashevAscent.Simulation.Resources.Material>(StockShown);
+                var more = new System.Collections.Generic.List<KardashevAscent.Simulation.Resources.Material>();
                 string shape = "";
                 foreach (var material in KardashevAscent.Simulation.Resources.Materials.All)
                 {
                     if (System.Array.IndexOf(StockShown, material) < 0 && m[material] > 0.0)
-                        shown.Add(material);
+                    {
+                        if (shown.Count < 8) shown.Add(material); else more.Add(material);
+                    }
                     shape += Mass(m[material]) + "|";
                 }
                 if (shape != stockShape)
                 {
                     stockShape = shape;
                     MaterialChips.FillStock(stockChips, m, shown.ToArray(), 14f);
-                    stockChips.style.flexWrap = Wrap.Wrap;   // a second row when many materials are held
-                    stockChips.style.maxWidth = 330;
+                    if (more.Count > 0)
+                    {
+                        string rest = "";
+                        foreach (var material in more) rest += (rest.Length > 0 ? " · " : "") + $"{KardashevAscent.Simulation.Resources.Materials.Name(material)} {MaterialChips.Kg(m[material])}";
+                        var overflow = new Label($"+{more.Count}");
+                        overflow.style.color = UiPalette.Muted;
+                        overflow.style.fontSize = 12;
+                        overflow.style.marginLeft = 4;
+                        overflow.tooltip = rest;
+                        stockChips.Add(overflow);
+                    }
+                    stockChips.style.flexWrap = Wrap.Wrap;   // eight chips make two rows of four
+                    stockChips.style.maxWidth = 340;
                 }
                 int sites = sim.ConstructionQueueCount;
                 bool shortOf = !sim.ConstructionShortfall.IsEmpty;
