@@ -338,6 +338,18 @@ namespace KardashevAscent.Simulation.Tests.Game
         }
 
         [Test]
+        public void AnUnwiredWorkshop_DoesNotCount_UntilWired()
+        {
+            var sim = Wired();
+            sim.Debug.UnlockAll = true;
+            Assert.IsTrue(sim.PlaceWorkshop(sim.BaseTileId, 0));
+            sim.Tick(200.0);
+            Assert.AreEqual(0, sim.WorkshopCount, "no power to it yet");
+            Assert.IsTrue(sim.PlaceBuildingWire(sim.BaseTileId, 0));
+            Assert.AreEqual(1, sim.WorkshopCount);
+        }
+
+        [Test]
         public void BuildingWires_SurviveSaveAndLoad()
         {
             var sim = Wired();

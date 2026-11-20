@@ -33,7 +33,7 @@ namespace KardashevAscent.Simulation.Game
                 return;
             var live = new List<int>();
             foreach (var r in relays)
-                if (!Build.IsQueued(r.Tile, r.Slot))
+                if (!Build.IsQueued(r.Tile, r.Slot) && WiredOrOff(r))   // an unwired relay has no power
                     live.Add(r.Tile);
             Network.SetRelays(live);
             Network.SetPowered(!Grid.IsBrownout);
