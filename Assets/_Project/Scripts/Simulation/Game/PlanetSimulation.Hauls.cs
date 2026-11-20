@@ -88,6 +88,8 @@ namespace KardashevAscent.Simulation.Game
             foreach (var k in keys)
             {
                 double lack = wanted[k] - StockAt(k.Tile)[k.Material] - haulBook.InFlightTo(k.Tile, k.Material);
+                // Only what the depot has room for: a haul into a full store would leave the robot with its cargo.
+                lack = Math.Min(lack, RoomAt(k.Tile, k.Material) - haulBook.InFlightTo(k.Tile, k.Material));
                 if (lack > 1e-6) demands.Add(new HaulDemand(k.Tile, k.Material, lack));
             }
             if (demands.Count == 0)

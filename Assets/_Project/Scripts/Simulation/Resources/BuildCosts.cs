@@ -103,6 +103,18 @@ namespace KardashevAscent.Simulation.Resources
         public static readonly MaterialBill HighVoltageLine = new MaterialBill()
             .Add(Material.Copper, 60.0).Add(Material.Iron, 120.0).Add(Material.Rock, 60.0);
 
+        /// <summary>Storage yard: a levelled, fenced hardstanding with a gantry (game rule, TBD).</summary>
+        public static readonly MaterialBill StorageYard = new MaterialBill()
+            .Add(Material.Iron, 150.0).Add(Material.Rock, 300.0);
+
+        /// <summary>Sealed store: a lined, closed vessel for liquids and reactive metals (game rule, TBD).</summary>
+        public static readonly MaterialBill SealedStore = new MaterialBill()
+            .Add(Material.Iron, 250.0).Add(Material.Rock, 100.0).Add(Material.Copper, 10.0);
+
+        /// <summary>Gas tank: a pressure vessel with valves and piping (game rule, TBD).</summary>
+        public static readonly MaterialBill GasTank = new MaterialBill()
+            .Add(Material.Iron, 400.0).Add(Material.Rock, 50.0).Add(Material.Copper, 15.0);
+
         /// <summary>Alumina plant: a kiln, leaching tanks and a precipitator (game rule, TBD).</summary>
         public static readonly MaterialBill AluminaPlant = new MaterialBill()
             .Add(Material.Iron, 400.0).Add(Material.Rock, 200.0).Add(Material.Copper, 15.0);

@@ -50,6 +50,9 @@ namespace KardashevAscent.Simulation.Game
             { BuildingType.TidalBarrage, new BuildingDefinition(BuildingType.TidalBarrage, "tidal barrage", BuildingFootprints.TidalBarrage, BuildCosts.TidalBarrage) },
             { BuildingType.WaveConverter, new BuildingDefinition(BuildingType.WaveConverter, "wave converter", BuildingFootprints.WaveConverter, BuildCosts.WaveConverter) },
             { BuildingType.TidalTurbine, new BuildingDefinition(BuildingType.TidalTurbine, "tidal turbine", BuildingFootprints.TidalTurbine, BuildCosts.TidalTurbine) },
+            { BuildingType.StorageYard, new BuildingDefinition(BuildingType.StorageYard, "storage yard", BuildingFootprints.StorageYard, BuildCosts.StorageYard) },
+            { BuildingType.SealedStore, new BuildingDefinition(BuildingType.SealedStore, "sealed store", BuildingFootprints.SealedStore, BuildCosts.SealedStore) },
+            { BuildingType.GasTank, new BuildingDefinition(BuildingType.GasTank, "gas tank", BuildingFootprints.GasTank, BuildCosts.GasTank) },
             { BuildingType.Electrolyser, new BuildingDefinition(BuildingType.Electrolyser, "Electrolysis cell", BuildingFootprints.RefineryModule, BuildCosts.Electrolyser) },
         };
 

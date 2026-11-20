@@ -109,6 +109,7 @@ namespace KardashevAscent.Simulation.Game
             : highVoltageLines.Contains((tileId, slot)) ? BuildingType.HighVoltageLine
             : research.Stations.Contains((tileId, slot)) ? BuildingType.ResearchStation
             : refineryModules.TryGetValue((tileId, slot), out BuildingType module) ? module
+            : storageBuildings.TryGetValue((tileId, slot), out BuildingType store) ? store
             : BuildingType.None;
 
         public bool PlaceBattery(int tileId, int slot)
@@ -203,6 +204,8 @@ namespace KardashevAscent.Simulation.Game
                 Vacate(tileId, slot);
                 return true;
             }
+            if (RemoveStorage(tileId, slot))
+                return true;
             if (RemoveRefinery(tileId, slot))
                 return true;
             if (stations.Contains((tileId, slot)))

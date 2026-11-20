@@ -99,6 +99,7 @@ namespace KardashevAscent.Simulation.Game
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.ResearchStation });
             foreach (var kv in refineryModules)
                 state.Buildings.Add(new BuildingRecord { Tile = kv.Key.Tile, Slot = kv.Key.Slot, Type = kv.Value });
+            CaptureStorage(state);
             foreach (BuildingRecord r in state.Buildings)
                 r.StandIns = StandInsAt(r.Tile, r.Slot);
             CaptureResearch(state);
@@ -178,6 +179,8 @@ namespace KardashevAscent.Simulation.Game
             foreach (var key in new List<(int Tile, int Slot)>(research.Stations))
                 RemoveBuilding(key.Tile, key.Slot);
             foreach (var key in new List<(int Tile, int Slot)>(refineryModules.Keys))
+                RemoveBuilding(key.Tile, key.Slot);
+            foreach (var key in new List<(int Tile, int Slot)>(storageBuildings.Keys))
                 RemoveBuilding(key.Tile, key.Slot);
             TimeHours = state.TimeHours;
             MilestonesReached = Math.Max(0, Math.Min(10, state.MilestonesReached));
@@ -369,6 +372,13 @@ namespace KardashevAscent.Simulation.Game
                     return;
                 if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(BuildingType.ChargingStation), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r), BuildTimes.Hours(BuildingType.ChargingStation));
                 stations.Add((r.Tile, r.Slot));
+            }
+            else if (IsStorage(r.Type))
+            {
+                if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
+                    return;
+                if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(r.Type), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r), BuildTimes.Hours(r.Type));
+                storageBuildings[(r.Tile, r.Slot)] = r.Type;
             }
             else if (IsRefinery(r.Type))
             {

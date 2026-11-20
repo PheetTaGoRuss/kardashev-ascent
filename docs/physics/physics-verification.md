@@ -720,7 +720,12 @@ Reaction enthalpy from standard formation enthalpies [recalled; NIST-JANAF, CRC 
 
 ### Gas storage (MO-05)
 
-$n = pV/(ZRT)$ and density $\rho = pM/(ZRT)$, $R = 8.314$ J/(mol K) [established]. Example (ideal gas, $Z = 1$): oxygen at 20 MPa and 293 K is about 263 kg/m3 [calculation; a real tank is denser per the compressibility factor, $Z$ about 0.95, to verify]. Chlorine is liquefied at room temperature under about 7 bar and is stored as a liquid in a sealed store [recalled; to verify]. Tank capacities are a game rule, TBD.
+$n = pV/(ZRT)$ and density $\rho = pM/(ZRT)$, $R = 8.314$ J/(mol K) [established]. Example (ideal gas, $Z = 1$): oxygen at 20 MPa and 293 K is about 263 kg/m3 [calculation; a real tank is denser per the compressibility factor, $Z$ about 0.95, to verify]. Chlorine is liquefied at room temperature under about 7 bar and is stored as a liquid in a sealed store [recalled; to verify]. The game tank is 10 m3 at 20 MPa and 293.15 K, quoted for oxygen with Z = 0.95: 2 763 kg (built in `StorageSpecs.TankCapacityKg`; the volume and pressure are game rules, TBD). The yard (100 t) and sealed store (20 t) capacities are game rules, TBD.
+
+| Test | Input | Expected | tol |
+| --- | --- | --- | --- |
+| Gas mass | 1 m3 O2, 20 MPa, 293.15 K, Z = 1 | 262.5 kg | 0.5 |
+| Tank | 10 m3, Z = 0.95 | 2 763 kg | 5 |
 
 ### Slag as aggregate (MO-09)
 

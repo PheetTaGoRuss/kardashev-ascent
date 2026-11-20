@@ -184,7 +184,7 @@ namespace KardashevAscent.Simulation.Game
             BaseTileId = baseTileId >= 0 ? baseTileId : PickBaseTile();
             Workforce.Reset(BaseTileId);
             inventories.Adopt(PlaceId.Depot(BaseTileId), Materials);   // the lander depot is the colony's old single stock
-            inventories.Capacity = PlaceCapacityKg;
+            inventories.ClassCapacity = ClassCapacityKg;
             Upkeep.CargoKgOf = r => inventories.MassAt(PlaceId.Cargo(r.Id));   // cargo loads the drive
             // The lander's cargo: materials for the first buildings (game rule, TBD).
             foreach (var (m, kg) in BuildCosts.LanderCargo.Items())
