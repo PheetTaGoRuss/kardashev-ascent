@@ -13,6 +13,23 @@ namespace KardashevAscent.Simulation.Game
     {
         readonly HashSet<(int Tile, int Slot)> powerLines = new HashSet<(int, int)>();
         readonly HashSet<int> poweredTiles = new HashSet<int>();
+        readonly Dictionary<int, int> lineHops = new Dictionary<int, int>();   // tiles of line from the lander tile
+        double panelLossW, tidalLossW, waveLossW, barrageLossW;
+
+        /// <summary>Share of a generator's power lost for every tile of line between it and the lander tile (resistive losses; real lines lose a few percent per thousand km and a tile is hundreds of km). Game rule, TBD (EN-10).</summary>
+        public const double LineLossPerHop = 0.02;
+
+        /// <summary>Share of a generator's power that reaches the lander tile: 1 on the lander tile, less for each tile of line out. Always 1 when the grid is not wired.</summary>
+        public double GridEfficiency(int tileId)
+        {
+            if (!WiredGrid)
+                return 1.0;
+            EnsureWiring();
+            return lineHops.TryGetValue(tileId, out int hops) ? Math.Pow(1.0 - LineLossPerHop, hops) : 0.0;
+        }
+
+        /// <summary>Power the lines lose between the generators and the lander tile now, W.</summary>
+        public double TransmissionLossW => panelLossW + tidalLossW + waveLossW + barrageLossW;
         double wiringStamp = double.NaN;
 
         /// <summary>Wired grid on or off (new missions turn it on; old saves and the simulation tests leave it off).</summary>
@@ -47,19 +64,24 @@ namespace KardashevAscent.Simulation.Game
                 return;
             wiringStamp = TimeHours;
             poweredTiles.Clear();
+            lineHops.Clear();
             var lined = new HashSet<int>();
             foreach (var key in powerLines)
                 if (!(Build.QueueCount > 0 && Build.IsQueued(key.Tile, key.Slot)))
                     lined.Add(key.Tile);
             var queue = new Queue<int>();
             poweredTiles.Add(BaseTileId);
+            lineHops[BaseTileId] = 0;
             queue.Enqueue(BaseTileId);
             while (queue.Count > 0)
             {
                 int t = queue.Dequeue();
                 foreach (int nb in Sphere.Neighbors[t])
                     if (lined.Contains(nb) && poweredTiles.Add(nb))
+                    {
+                        lineHops[nb] = lineHops[t] + 1;
                         queue.Enqueue(nb);
+                    }
             }
         }
 

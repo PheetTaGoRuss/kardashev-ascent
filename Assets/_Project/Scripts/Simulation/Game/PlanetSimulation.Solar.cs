@@ -94,7 +94,7 @@ namespace KardashevAscent.Simulation.Game
 
         double ComputeGeneration()
         {
-            double total = 0.0;
+            double total = 0.0, lost = 0.0;
             double meanAnomaly = CurrentMeanAnomaly();
             foreach (var pair in panels)
             {
@@ -109,8 +109,12 @@ namespace KardashevAscent.Simulation.Game
                                                    CloudFactor(pair.Key.Tile, meanAnomaly), pair.Value.Area), pair.Key.Tile, meanAnomaly);
                 double power = PanelPowerNow(p, sun, AirTemperatureAt(pair.Key.Tile, meanAnomaly), OpticalDepthAt(pair.Key.Tile, meanAnomaly),
                                              out _, out _, out _, out _);
-                total += floatingPanels.Contains(pair.Key) ? power * (1.0 + FloatingCoolingGain) : power;
+                double raw = floatingPanels.Contains(pair.Key) ? power * (1.0 + FloatingCoolingGain) : power;
+                double efficiency = GridEfficiency(pair.Key.Tile);   // wired grid: the lines lose some on the way
+                total += raw * efficiency;
+                lost += raw * (1.0 - efficiency);
             }
+            panelLossW = lost * SolarDesignShare;
             // Designed for the cautious end of whatever the colony hasn't measured yet (director 2026-11-14).
             return (total > 0.0 ? total * SolarDesignShare : total) + TidalPowerW() + WavePowerW() + BarragePowerW();
         }

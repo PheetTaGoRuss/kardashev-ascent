@@ -133,6 +133,39 @@ namespace KardashevAscent.Simulation.Tests.Game
         }
 
         [Test]
+        public void EachTileOfLine_LosesAShareOfThePower()
+        {
+            var sim = Wired();
+            int a = Sphere.Neighbors[sim.BaseTileId].First(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
+            int b = Sphere.Neighbors[a].First(n => n != sim.BaseTileId && !Sphere.Neighbors[sim.BaseTileId].Contains(n) && !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
+            Assert.IsTrue(sim.PlacePowerLine(a, 0));
+            Assert.IsTrue(sim.PlacePowerLine(b, 0));
+            sim.Tick(0.1);
+            Assert.AreEqual(1.0, sim.GridEfficiency(sim.BaseTileId), 1e-12);
+            Assert.AreEqual(1.0 - PlanetSimulation.LineLossPerHop, sim.GridEfficiency(a), 1e-12);
+            double two = (1.0 - PlanetSimulation.LineLossPerHop) * (1.0 - PlanetSimulation.LineLossPerHop);
+            Assert.AreEqual(two, sim.GridEfficiency(b), 1e-12);
+            Assert.AreEqual(0.0, sim.GridEfficiency(Enumerable.Range(0, sim.TileCount).First(t => !sim.IsPowered(t))), "off the grid: nothing arrives");
+            Assert.AreEqual(1.0, new PlanetSimulation(Sphere, Surface, Earthlike).GridEfficiency(a), "not wired: no losses");
+        }
+
+        [Test]
+        public void AFarPanel_ReportsItsLineLoss_AndMakesLessThanAnIdenticalOneAtHome()
+        {
+            var sim = Wired();
+            int a = Sphere.Neighbors[sim.BaseTileId].First(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
+            Assert.IsTrue(sim.PlacePowerLine(a, 0));
+            Assert.IsTrue(sim.PlacePanel(a, 1, 0.35, Math.PI));
+            double lossSeen = 0.0;
+            for (int i = 0; i < 48; i++) { sim.Tick(1.0); lossSeen = Math.Max(lossSeen, sim.TransmissionLossW); }
+            Assert.Greater(lossSeen, 0.0, "the lines lose something while the panel makes power");
+            var home = Wired();
+            Assert.IsTrue(home.PlacePanel(home.BaseTileId, 1, 0.35, Math.PI));
+            for (int i = 0; i < 48; i++) home.Tick(1.0);
+            Assert.AreEqual(0.0, home.TransmissionLossW, 1e-9, "a panel on the lander tile loses nothing");
+        }
+
+        [Test]
         public void AnOldSave_IsNotWired()
         {
             var sim = new PlanetSimulation(Sphere, Surface, Earthlike);

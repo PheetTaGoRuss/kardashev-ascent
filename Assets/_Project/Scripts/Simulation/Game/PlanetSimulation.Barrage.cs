@@ -46,15 +46,19 @@ namespace KardashevAscent.Simulation.Game
                 return 0.0;
             double period = TidePeriodHours;
             double fraction = period > 0.0 && !double.IsInfinity(period) ? TimeHours / period : 0.0;
-            double total = 0.0;
+            double total = 0.0, lost = 0.0;
             foreach (var key in barrages)
             {
                 if (Build.QueueCount > 0 && Build.IsQueued(key.Tile, key.Slot))
                     continue;
                 if (!IsPowered(key.Tile)) continue;
                 double energy = Tides.BarrageEnergyPerTideJ(Tides.BarrageBasinM2, TidalRangeBaseM(key.Tile), SurfaceGravityMs2);
-                total += Tides.BarragePowerW(energy, period, fraction);
+                double raw = Tides.BarragePowerW(energy, period, fraction);
+                double efficiency = GridEfficiency(key.Tile);
+                total += raw * efficiency;
+                lost += raw * (1.0 - efficiency);
             }
+            barrageLossW = lost;
             return Math.Min(total, Tides.PlanetCeilingW(Moon));
         }
 
