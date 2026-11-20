@@ -179,7 +179,7 @@ namespace KardashevAscent.Simulation.Game
             foreach (RefineryKind kind in new[] { RefineryKind.AluminaPlant, RefineryKind.Electrolyser })
                 foreach (var m in FinishedModules(kind))
                 {
-                    if (batches.ContainsKey(m)) continue;
+                    if (batches.ContainsKey(m) || pausedPlants.Contains(m)) continue;   // a paused plant starts nothing
                     FlushOutputs(m);
                     var candidates = new List<(RefineProcess Process, int QueueIndex)>();
                     for (int i = 0; i < refineQueue.Count; i++)
@@ -237,7 +237,7 @@ namespace KardashevAscent.Simulation.Game
             {
                 var b = batches[key];
                 RefineRecipe r = Refining.Of(b.Process);
-                if (!powered) continue;
+                if (!powered || pausedPlants.Contains(key)) continue;
                 powerW += r.PowerW;
                 heatW += r.WasteHeatW;
                 industrialWasteHeatKWh += r.WasteHeatW * dt / 1000.0;
