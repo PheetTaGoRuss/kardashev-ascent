@@ -106,6 +106,7 @@ namespace KardashevAscent.Simulation.Game
             : waveConverters.Contains((tileId, slot)) ? BuildingType.WaveConverter
             : barrages.Contains((tileId, slot)) ? BuildingType.TidalBarrage
             : powerLines.Contains((tileId, slot)) ? BuildingType.PowerLine
+            : highVoltageLines.Contains((tileId, slot)) ? BuildingType.HighVoltageLine
             : research.Stations.Contains((tileId, slot)) ? BuildingType.ResearchStation
             : refineryModules.TryGetValue((tileId, slot), out BuildingType module) ? module
             : BuildingType.None;
@@ -133,6 +134,7 @@ namespace KardashevAscent.Simulation.Game
 
         public bool RemoveBuilding(int tileId, int slot)
         {
+            flowDirty = true;   // a removed generator or line changes the flow
             slot = A(tileId, slot);
             if (RemovePanel(tileId, slot))
                 return true;
@@ -151,12 +153,22 @@ namespace KardashevAscent.Simulation.Game
                 RefreshNetwork();
                 return true;
             }
+            if (highVoltageLines.Contains((tileId, slot)))
+            {
+                Dismantle(tileId, slot, BuildingType.HighVoltageLine);
+                highVoltageLines.Remove((tileId, slot));
+                Vacate(tileId, slot);
+                wiringStamp = double.NaN;
+                flowDirty = true;
+                return true;
+            }
             if (powerLines.Contains((tileId, slot)))
             {
                 Dismantle(tileId, slot, BuildingType.PowerLine);
                 powerLines.Remove((tileId, slot));
                 Vacate(tileId, slot);
                 wiringStamp = double.NaN;
+                flowDirty = true;
                 return true;
             }
             if (barrages.Contains((tileId, slot)))

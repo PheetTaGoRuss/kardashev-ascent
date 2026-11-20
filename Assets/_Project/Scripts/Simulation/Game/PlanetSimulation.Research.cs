@@ -286,6 +286,8 @@ namespace KardashevAscent.Simulation.Game
         {
             if (Debug.UnlockAll)
                 return null;
+            if (type == BuildingType.HighVoltageLine && UnlockLevel < HighVoltageMilestone)
+                return $"High-voltage lines open at milestone {HighVoltageMilestone}.";
             if (type == BuildingType.TidalBarrage)
             {
                 if (!IsExperimentKnown(ExperimentKind.BasinSurvey))

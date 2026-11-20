@@ -73,8 +73,11 @@ namespace KardashevAscent.Simulation.Game
                 RefreshNetwork();
             if (barrages.Contains((tileId, slot)))
                 RefreshBarrageBlocks();
-            if (powerLines.Contains((tileId, slot)))
+            if (powerLines.Contains((tileId, slot)) || highVoltageLines.Contains((tileId, slot)))
+            {
                 wiringStamp = double.NaN;
+                flowDirty = true;
+            }
             if (raise)
                 BuildingCompleted?.Invoke(tileId, slot);
         }

@@ -19,6 +19,7 @@ namespace KardashevAscent.Simulation.Game
         public const int WaveConverter = 1;
         public const int TidalBarrage = 3;
         public const int PowerLine = 1;
+        public const int HighVoltageLine = 1;
 
         public static int SlotsFor(BuildingType type, int panelTier)
         {

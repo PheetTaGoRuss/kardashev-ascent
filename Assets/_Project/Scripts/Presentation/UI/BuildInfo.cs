@@ -13,7 +13,7 @@ namespace KardashevAscent.Presentation.UI
         public enum Category { Power, Stations, Industry }
 
         public static Category CategoryOf(BuildMode m) =>
-            m == BuildMode.SolarPanel || m == BuildMode.FloatingSolar || m == BuildMode.Battery || m == BuildMode.TidalTurbine || m == BuildMode.WaveConverter || m == BuildMode.TidalBarrage || m == BuildMode.PowerLine ? Category.Power
+            m == BuildMode.SolarPanel || m == BuildMode.FloatingSolar || m == BuildMode.Battery || m == BuildMode.TidalTurbine || m == BuildMode.WaveConverter || m == BuildMode.TidalBarrage || m == BuildMode.PowerLine || m == BuildMode.HighVoltageLine ? Category.Power
             : m == BuildMode.Workshop || m == BuildMode.AluminaPlant || m == BuildMode.Electrolyser ? Category.Industry
             : Category.Stations;
 
@@ -33,6 +33,7 @@ namespace KardashevAscent.Presentation.UI
                 case BuildMode.WaveConverter: return "Wave converter";
                 case BuildMode.TidalBarrage: return "Tidal barrage";
                 case BuildMode.PowerLine: return "Power line";
+                case BuildMode.HighVoltageLine: return "High-voltage line";
                 default: return "Network relay";
             }
         }
@@ -62,6 +63,9 @@ namespace KardashevAscent.Presentation.UI
                     break;
                 case BuildMode.PowerLine:
                     what = Short(BuildingType.PowerLine);
+                    break;
+                case BuildMode.HighVoltageLine:
+                    what = Short(BuildingType.HighVoltageLine);
                     break;
                 case BuildMode.Battery:
                     what = $"Stores {Format.Energy(placer.BatteryUnitWh)} for the night. Robots can charge here.";
@@ -100,6 +104,7 @@ namespace KardashevAscent.Presentation.UI
                 case BuildingType.Workshop: return "Builds robots and upgrades. Refinery modules attach to its sides.";
                 case BuildingType.ChargingStation: return "Charges robots from the grid near their work.";
                 case BuildingType.Relay: return "Extends the robot network; needs grid power.";
+                case BuildingType.HighVoltageLine: return "Same wiring as a power line, 50 times the capacity (1 GW against 20 MW). Opens at milestone 1. Build one on a tile whose power line is red.";
                 case BuildingType.PowerLine: return "Wires a tile into the grid. Chains of tiles with lines carry power from the lander tile; generators off the grid make nothing, and stations and storage go where the grid reaches.";
                 case BuildingType.TidalBarrage: return "A dam across a bay with 4 m or more of tide: the tide fills the basin and runs out through turbines once a tide. Big power, a late big build; it weakens the tide behind it and stops boats crossing.";
                 case BuildingType.WaveConverter: return "A floating line of hinged floats on shallow sea. Power follows the waves: none in a calm, a cap in a good sea, shut down in a storm. Built by a boat robot.";
