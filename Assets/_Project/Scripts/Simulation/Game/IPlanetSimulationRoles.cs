@@ -699,6 +699,9 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Opens or closes a switch or button of an installed circuit.</summary>
         bool SetCircuitSwitch(int tileId, int slot, int componentId, bool closed);
 
+        /// <summary>The finished charging stations, in tile order.</summary>
+        System.Collections.Generic.IEnumerable<(int Tile, int Slot)> ChargingStations();
+
         /// <summary>The installed circuit of a station, or null.</summary>
         StationCircuitView StationCircuit(int tileId, int slot);
     }

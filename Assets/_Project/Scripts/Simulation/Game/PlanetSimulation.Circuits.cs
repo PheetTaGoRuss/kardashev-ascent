@@ -90,6 +90,9 @@ namespace KardashevAscent.Simulation.Game
             return true;
         }
 
+        public IEnumerable<(int Tile, int Slot)> ChargingStations() =>
+            stations.Where(k => !Build.IsQueued(k.Tile, k.Slot)).OrderBy(k => k.Tile).ThenBy(k => k.Slot).ToList();
+
         public StationCircuitView StationCircuit(int tileId, int slot)
         {
             var key = (tileId, slot);
