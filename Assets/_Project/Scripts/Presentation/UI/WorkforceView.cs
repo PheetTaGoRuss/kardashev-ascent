@@ -148,12 +148,12 @@ namespace KardashevAscent.Presentation.UI
             foreach (Robot r in w.Robots)
             {
                 if (taskLabels.TryGetValue(r.Id, out Label l))
-                    l.text = TaskText(sim, r);
-                if (vitalLabels.TryGetValue(r.Id, out Label v))
                 {
-                    v.text = ShortVitals(r);
-                    v.tooltip = Vitals(r);   // the full numbers on hover
+                    l.text = ShortTask(sim, r);
+                    l.tooltip = TaskText(sim, r);   // the full wording on hover
                 }
+                if (gaugeUpdaters.TryGetValue(r.Id, out System.Action<Robot> update))
+                    update(r);
             }
         }
 
@@ -185,6 +185,7 @@ namespace KardashevAscent.Presentation.UI
             groupsHolder.Clear();
             taskLabels.Clear();
             vitalLabels.Clear();
+            gaugeUpdaters.Clear();
             foreach (RobotGroup g in w.Groups)
             {
                 if (g.Count == 0 && g.Automatic)
@@ -445,6 +446,10 @@ namespace KardashevAscent.Presentation.UI
                 tasksHolder.Add(row);
             }
 
+            // The history is a folded section (director 2026-11-20: less text on screen).
+            var history = new Foldout { text = "Recent activity", value = openHistory };
+            history.RegisterValueChangedCallback(e => { if (e.target == history) openHistory = e.newValue; });
+            tasksHolder.Add(history);
             int finished = w.Tasks.Finished.Count;
             if (finished > 0)
             {
@@ -454,7 +459,7 @@ namespace KardashevAscent.Presentation.UI
                     TaskRecord f = w.Tasks.Finished[i];
                     done += (done.Length > 0 ? " · " : "Recently: ") + $"{Describe(sim, f.Task)} {StateName(f.State).ToLowerInvariant()}";
                 }
-                tasksHolder.Add(MakeLabel(done, "robot-line"));
+                history.Add(MakeLabel(done, "robot-line"));
             }
             if (w.Changes.Count > 0)
             {
@@ -467,7 +472,7 @@ namespace KardashevAscent.Presentation.UI
                 }
                 Label l = MakeLabel(log, "robot-line");
                 l.AddToClassList("muted");
-                tasksHolder.Add(l);
+                history.Add(l);
             }
         }
 
@@ -480,86 +485,270 @@ namespace KardashevAscent.Presentation.UI
             }
         }
 
+        // ---- the robot card (director 2026-11-20: separate upgrade and command, symbols, less text) ----
+
+        bool openHistory;
+        readonly Dictionary<int, System.Action<Robot>> gaugeUpdaters = new Dictionary<int, System.Action<Robot>>();
+
+        /// <summary>A small coloured square with a short symbol, like the material icons in the Manufacturing window.</summary>
+        static Label Square(string symbol, Color fill, Color text, float size = 22f)
+        {
+            var l = new Label(symbol);
+            l.style.width = size;
+            l.style.height = size;
+            l.style.minWidth = size;
+            l.style.unityTextAlign = TextAnchor.MiddleCenter;
+            l.style.fontSize = size >= 22f ? 12 : 10;
+            l.style.unityFontStyleAndWeight = FontStyle.Bold;
+            l.style.backgroundColor = fill;
+            l.style.color = text;
+            l.style.marginRight = 3;
+            l.style.paddingLeft = l.style.paddingRight = 0;
+            return l;
+        }
+
+        /// <summary>A gauge: a symbol, a thin bar and the percentage. Returns the row and a function that sets it.</summary>
+        static VisualElement Gauge(string symbol, string tip, out System.Action<double> set)
+        {
+            var row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.alignItems = Align.Center;
+            row.style.marginRight = 8;
+            row.tooltip = tip;
+            row.Add(Square(symbol, new Color(1f, 1f, 1f, 0.10f), UiPalette.Muted, 16f));
+            var track = new VisualElement();
+            track.style.width = 40;
+            track.style.height = 6;
+            track.style.backgroundColor = new Color(1f, 1f, 1f, 0.12f);
+            var fill = new VisualElement();
+            fill.style.height = 6;
+            track.Add(fill);
+            row.Add(track);
+            var value = new Label("");
+            value.style.fontSize = 10;
+            value.style.color = UiPalette.Muted;
+            value.style.marginLeft = 3;
+            row.Add(value);
+            set = share =>
+            {
+                share = System.Math.Max(0.0, System.Math.Min(1.0, share));
+                fill.style.width = (float)(40.0 * share);
+                fill.style.backgroundColor = share < 0.2 ? UiPalette.Critical : share < 0.5 ? UiPalette.Warning : UiPalette.Good;
+                value.text = $"{share * 100.0:0}";
+            };
+            return row;
+        }
+
+        static (string Symbol, Color Colour) ModuleLook(RobotModule m)
+        {
+            switch (m)
+            {
+                case RobotModule.BigBattery: return ("B+", new Color(0.55f, 0.85f, 0.62f));
+                case RobotModule.FastDrive: return ("»", new Color(1.00f, 0.78f, 0.36f));
+                case RobotModule.Shielding: return ("Sh", new Color(0.78f, 0.70f, 0.95f));
+                case RobotModule.ThermalInsulation: return ("Th", new Color(0.95f, 0.60f, 0.45f));
+                case RobotModule.Processor: return ("P", new Color(0.47f, 0.75f, 1.00f));
+                case RobotModule.AdvancedProcessor: return ("P+", new Color(0.47f, 0.85f, 1.00f));
+                case RobotModule.Boat: return ("~", new Color(0.45f, 0.72f, 0.95f));
+                default: return ("?", UiPalette.Muted);
+            }
+        }
+
+        static (string Symbol, Color Colour) KindLook(RobotKind k)
+        {
+            string name = k.ToString();
+            Color c = k == RobotKind.General ? new Color(1.00f, 0.78f, 0.36f)
+                    : k == RobotKind.Mining ? new Color(0.85f, 0.50f, 0.28f)
+                    : k == RobotKind.Research ? new Color(0.47f, 0.75f, 1.00f)
+                    : new Color(0.62f, 0.66f, 0.72f);
+            return (name.Substring(0, 1), c);
+        }
+
+        static string ProgramLetter(OperatingProgram p) => p == OperatingProgram.Priority ? "P" : p == OperatingProgram.Facility ? "F" : p == OperatingProgram.Demand ? "D" : "Q";
+
+        /// <summary>A short line on what the robot is doing (the full wording is on hover).</summary>
+        static string ShortTask(IPlanetSimulation sim, Robot r)
+        {
+            if (r.IsStranded) return "stranded: battery empty";
+            if (r.ManualTarget.HasValue) return $"→ tile {r.ManualTarget.Value} · {r.HopsLeft} to go";
+            string what = DoingText(sim, r);
+            return r.IsTravelling ? $"→ tile {r.Destination} · {r.HopsLeft} to go · {what}" : what;
+        }
+
         VisualElement MakeRobot(IPlanetSimulation sim, Workforce w, Robot r)
         {
             var row = new VisualElement();
             row.AddToClassList("robot");
             row.EnableInClassList("working", r.State == RobotState.Working);
-            row.Add(MakeLabel($"{r.Name} · {r.Kind} · {r.State}{(r.OnTemporaryTask ? " (temporary task)" : "")}", "robot-name"));
-            Label task = MakeLabel(TaskText(sim, r), "robot-line");
+
+            // --- identity and state ---
+            var head = new VisualElement();
+            head.style.flexDirection = FlexDirection.Row;
+            head.style.alignItems = Align.Center;
+            var (kindSymbol, kindColour) = KindLook(r.Kind);
+            Label kindIcon = Square(kindSymbol, kindColour, UiPalette.OnAccent, 24f);
+            kindIcon.tooltip = $"{r.Kind} robot";
+            head.Add(kindIcon);
+            head.Add(MakeLabel(r.Name, "robot-name"));
+            Color stateColour = r.State == RobotState.Working ? UiPalette.Good : r.IsShutDown || r.IsStranded ? UiPalette.Critical : UiPalette.Muted;
+            var dot = new Label("●");
+            dot.style.color = stateColour;
+            dot.style.marginLeft = 6;
+            dot.style.marginRight = 4;
+            dot.tooltip = r.State.ToString() + (r.OnTemporaryTask ? " (temporary task)" : "");
+            head.Add(dot);
+            Label task = MakeLabel(ShortTask(sim, r), "robot-line");
+            task.style.flexGrow = 1;
+            task.style.flexShrink = 1;
+            task.style.whiteSpace = WhiteSpace.NoWrap;
+            task.style.overflow = Overflow.Hidden;
+            task.tooltip = TaskText(sim, r);
             taskLabels[r.Id] = task;
-            row.Add(task);
-            var own = new List<string>();
-            foreach (TaskKind k in Kinds)
-            {
-                TaskPriority? p = r.PriorityOverride(k);
-                if (p.HasValue) own.Add($"{KindName(k)} {p.Value}");
-            }
-            if (r.ProgramOverride.HasValue) own.Add($"program {r.ProgramOverride.Value}");
-            if (r.ReservedTask.HasValue) own.Add($"reserved for: {Describe(sim, r.ReservedTask.Value)}");
-            if (r.ResumeTask.HasValue) own.Add($"goes back to: {Describe(sim, r.ResumeTask.Value)}");
-            if (own.Count > 0)
-                row.Add(MakeLabel("Own settings: " + string.Join(", ", own), "robot-line"));
-            Label vitals = MakeLabel(Vitals(r), "robot-line");
-            vitals.AddToClassList("muted");
-            vitalLabels[r.Id] = vitals;
-            row.Add(vitals);
+            head.Add(task);
+            row.Add(head);
 
-            var upgrades = new VisualElement();
-            upgrades.AddToClassList("button-row");
-            string have = "";
-            foreach (RobotModule m in new[] { RobotModule.BigBattery, RobotModule.FastDrive, RobotModule.Shielding, RobotModule.ThermalInsulation,
-                                              RobotModule.Processor, RobotModule.AdvancedProcessor, RobotModule.Boat })
+            // --- vitals: battery, health, condition ---
+            var gauges = new VisualElement();
+            gauges.style.flexDirection = FlexDirection.Row;
+            gauges.style.marginTop = 3;
+            gauges.Add(Gauge("B", "Battery charge", out System.Action<double> setBattery));
+            gauges.Add(Gauge("H", "Battery health", out System.Action<double> setHealth));
+            gauges.Add(Gauge("C", "Condition (repaired at the lander below 30 %)", out System.Action<double> setCondition));
+            gaugeUpdaters[r.Id] = rr =>
             {
-                if (r.Has(m))
-                {
-                    have += (have.Length > 0 ? ", " : "") + RobotTech.ModuleName(m).ToLowerInvariant();
-                    continue;
-                }
-                if (m == RobotModule.AdvancedProcessor && !r.Has(RobotModule.Processor))
-                    continue;
-                if (sim.MilestonesReached < RobotTech.UnlockMilestone(m))
-                    continue;
-                RobotModule module = m;
-                int id = r.Id;
-                upgrades.Add(MakeButton("+ " + RobotTech.ModuleName(m), () => Order(sim, sim.OrderUpgrade(id, module), $"{RobotTech.ModuleName(module)} ordered for R{id}.")));
-            }
-            if (r.SodiumBattery || have.Length > 0)
-                row.Add(MakeLabel((r.SodiumBattery ? "Na-ion battery" + (have.Length > 0 ? " · " : "") : "") + have, "robot-line"));
-            if (upgrades.childCount > 0)
-                row.Add(upgrades);
+                setBattery(rr.Battery.StateOfCharge);
+                setHealth(rr.Battery.Health);
+                setCondition(rr.Condition);
+                gauges.tooltip = Vitals(rr);
+            };
+            gaugeUpdaters[r.Id](r);
+            row.Add(gauges);
 
-            var manage = new VisualElement();
-            manage.AddToClassList("button-row");
+            // --- COMMAND: what the robot does (move, send, program) ---
             int robotId = r.Id;
+            var command = ZoneRow("▶", "Commands: where the robot works", UiPalette.Cool);
             RobotGroup next = NextGroupFor(w, r);
             if (next != null)
-                manage.Add(MakeButton($"Move to {next.Name}", () =>
+                command.Add(IconButton("↔", $"Move to {next.Name}", false, () =>
                 {
                     if (!w.MoveRobot(robotId, next.Id)) workshopMessage.text = $"{next.Name} is full.";
                     Changed(sim);
                 }));
-            OperatingProgram? ownProgram = r.ProgramOverride;
-            OperatingProgram? nextOwn = !ownProgram.HasValue ? OperatingProgram.Priority
-                : ownProgram.Value == OperatingProgram.TaskQueue ? (OperatingProgram?)null : ownProgram.Value + 1;
             int selectedTile = picker != null ? picker.SelectedTile : -1;
             if (selectedTile >= 0 && selectedTile != r.Tile && !r.IsShutDown && r.Activity == RobotActivity.None)
             {
                 double hours = sim.DriveHours(r.Tile, selectedTile);
                 if (!double.IsInfinity(hours))
-                    manage.Add(MakeButton($"Send to tile {selectedTile} ({hours:0} h)", () =>
+                    command.Add(IconButton("→", $"Send to the selected tile {selectedTile} ({hours:0} h of driving)", false, () =>
                     {
                         workshopMessage.text = sim.SendRobot(robotId, selectedTile) ? $"{r.Name} is driving to tile {selectedTile}." : "It can't go there now.";
                         Changed(sim);
                     }));
             }
-            manage.Add(MakeButton(ownProgram.HasValue ? $"Own program: {ownProgram.Value}" : "Program: group's", () =>
+            OperatingProgram? ownProgram = r.ProgramOverride;
+            OperatingProgram? nextOwn = !ownProgram.HasValue ? OperatingProgram.Priority
+                : ownProgram.Value == OperatingProgram.TaskQueue ? (OperatingProgram?)null : ownProgram.Value + 1;
+            OperatingProgram shown = ownProgram ?? w.EffectiveProgram(r);
+            command.Add(IconButton(ProgramLetter(shown),
+                ownProgram.HasValue ? $"Own program: {ownProgram.Value} (click: next; after the last, back to the group's)" : $"Program: the group's ({shown}). Click to give this robot its own",
+                ownProgram.HasValue, () =>
+                {
+                    w.SetRobotProgramOverride(robotId, nextOwn);
+                    Changed(sim);
+                }));
+            if (r.ReservedTask.HasValue || r.ResumeTask.HasValue)
             {
-                w.SetRobotProgramOverride(robotId, nextOwn);
-                Changed(sim);
-            }));
-            row.Add(manage);
+                string own = (r.ReservedTask.HasValue ? $"reserved for: {Describe(sim, r.ReservedTask.Value)}" : "") +
+                             (r.ReservedTask.HasValue && r.ResumeTask.HasValue ? " · " : "") +
+                             (r.ResumeTask.HasValue ? $"goes back to: {Describe(sim, r.ResumeTask.Value)}" : "");
+                Label flag = Square("*", new Color(1f, 1f, 1f, 0.10f), UiPalette.Accent, 22f);
+                flag.tooltip = own;
+                command.Add(flag);
+            }
+
+            // --- UPGRADE: what the robot is made of (modules, battery) ---
+            var upgrade = ZoneRow("▲", "Upgrades: filled = installed, outlined = order it at the Workshop", UiPalette.Good);
+            if (r.SodiumBattery)
+            {
+                Label na = Square("Na", new Color(0.95f, 0.85f, 0.40f), UiPalette.OnAccent, 22f);
+                na.tooltip = "Sodium-ion battery";
+                upgrade.Add(na);
+            }
+            foreach (RobotModule m in new[] { RobotModule.BigBattery, RobotModule.FastDrive, RobotModule.Shielding, RobotModule.ThermalInsulation,
+                                              RobotModule.Processor, RobotModule.AdvancedProcessor, RobotModule.Boat })
+            {
+                var (symbol, colour) = ModuleLook(m);
+                string name = RobotTech.ModuleName(m);
+                if (r.Has(m))
+                {
+                    Label have = Square(symbol, colour, UiPalette.OnAccent, 22f);
+                    have.tooltip = $"{name}: installed";
+                    upgrade.Add(have);
+                    continue;
+                }
+                if (m == RobotModule.AdvancedProcessor && !r.Has(RobotModule.Processor))
+                    continue;
+                bool locked = sim.MilestonesReached < RobotTech.UnlockMilestone(m);
+                RobotModule module = m;
+                int id = r.Id;
+                Button order = new Button(() => Order(sim, sim.OrderUpgrade(id, module), $"{RobotTech.ModuleName(module)} ordered for R{id}.")) { text = symbol };
+                order.style.width = 22; order.style.height = 22; order.style.minWidth = 22;
+                order.style.paddingLeft = order.style.paddingRight = order.style.paddingTop = order.style.paddingBottom = 0;
+                order.style.marginLeft = 0; order.style.marginRight = 3;
+                order.style.fontSize = 11;
+                order.style.backgroundColor = new Color(0f, 0f, 0f, 0f);
+                order.style.color = locked ? UiPalette.Muted : colour;
+                order.style.borderTopWidth = order.style.borderBottomWidth = order.style.borderLeftWidth = order.style.borderRightWidth = 1;
+                order.style.borderTopColor = order.style.borderBottomColor = order.style.borderLeftColor = order.style.borderRightColor = locked ? UiPalette.Border : colour;
+                order.tooltip = locked ? $"{name}: opens at milestone {RobotTech.UnlockMilestone(m)}" : $"Order {name} (Workshop job)";
+                order.SetEnabled(!locked);
+                upgrade.Add(order);
+            }
+            // commands on the left, upgrades on the right: two zones in one row
+            var zones = new VisualElement();
+            zones.style.flexDirection = FlexDirection.Row;
+            zones.style.flexWrap = Wrap.Wrap;
+            zones.style.justifyContent = Justify.SpaceBetween;
+            zones.style.marginTop = 4;
+            zones.style.paddingTop = 3;
+            zones.style.borderTopWidth = 1;
+            zones.style.borderTopColor = new Color(1f, 1f, 1f, 0.08f);
+            zones.Add(command);
+            zones.Add(upgrade);
+            row.Add(zones);
             return row;
+        }
+
+        /// <summary>A row with a small caption symbol on the left: one for commands, one for upgrades.</summary>
+        static VisualElement ZoneRow(string caption, string tip, Color colour)
+        {
+            var zone = new VisualElement();
+            zone.style.flexDirection = FlexDirection.Row;
+            zone.style.alignItems = Align.Center;
+            zone.style.marginRight = 8;
+            var c = new Label(caption);
+            c.style.width = 16;
+            c.style.color = colour;
+            c.style.fontSize = 11;
+            c.tooltip = tip;
+            zone.Add(c);
+            return zone;
+        }
+
+        /// <summary>A square icon button; "on" paints it amber (a setting that differs from the default).</summary>
+        static Button IconButton(string symbol, string tip, bool on, Action onClick)
+        {
+            var b = new Button(onClick) { text = symbol };
+            b.AddToClassList("small-button");
+            b.style.width = 24;
+            b.style.height = 22;
+            b.style.minWidth = 24;
+            b.style.paddingLeft = b.style.paddingRight = 0;
+            b.style.marginLeft = 0;
+            b.style.marginRight = 4;
+            b.tooltip = tip;
+            if (on) b.AddToClassList("selected");
+            return b;
         }
 
         /// <summary>The next group this robot could join: manual groups, or the automatic group of its kind.</summary>

@@ -217,13 +217,21 @@ namespace KardashevAscent.Presentation.UI
             if (buildStock != null)
             {
                 var m = sim.Materials;
-                string shape = $"{Mass(m[KardashevAscent.Simulation.Resources.Material.Iron])}|{Mass(m[KardashevAscent.Simulation.Resources.Material.Copper])}|" +
-                               $"{Mass(m[KardashevAscent.Simulation.Resources.Material.Lithium])}|{Mass(m[KardashevAscent.Simulation.Resources.Material.Rock])}";
+                // Every material the colony holds (director 2026-11-20: "all resources I have"); the four basics always show, red when short.
+                var shown = new System.Collections.Generic.List<KardashevAscent.Simulation.Resources.Material>(StockShown);
+                string shape = "";
+                foreach (var material in KardashevAscent.Simulation.Resources.Materials.All)
+                {
+                    if (System.Array.IndexOf(StockShown, material) < 0 && m[material] > 0.0)
+                        shown.Add(material);
+                    shape += Mass(m[material]) + "|";
+                }
                 if (shape != stockShape)
                 {
                     stockShape = shape;
-                    MaterialChips.FillStock(stockChips, m, StockShown, 15f);
-                    stockChips.style.flexWrap = Wrap.NoWrap;   // one row: a taller bar would cover the windows below it
+                    MaterialChips.FillStock(stockChips, m, shown.ToArray(), 14f);
+                    stockChips.style.flexWrap = Wrap.Wrap;   // a second row when many materials are held
+                    stockChips.style.maxWidth = 330;
                 }
                 int sites = sim.ConstructionQueueCount;
                 bool shortOf = !sim.ConstructionShortfall.IsEmpty;
