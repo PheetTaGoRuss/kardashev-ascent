@@ -640,6 +640,27 @@ namespace KardashevAscent.Simulation.Game
     /// The electrical networks the finished power lines form (electrical redesign, stage 1; read model only). The lander's network feeds
     /// the single power bus; a tile on another network is connected to its neighbours but not on the main grid.
     /// </summary>
+    /// <summary>
+    /// Part of the five separate states of a building's power (connected, compatible, operational, receiving power, receiving enough).
+    /// This reports the first three plus "on the main grid"; operational and "receiving enough" come from other systems.
+    /// </summary>
+    public readonly struct BuildingElectricalState
+    {
+        public readonly bool HasTerminal;
+        public readonly Electrical.TerminalRole Role;
+        /// <summary>The terminal is connected to a node.</summary>
+        public readonly bool Connected;
+        /// <summary>The terminal's kind and class fit the node it is connected to.</summary>
+        public readonly bool Compatible;
+        /// <summary>It is on the lander's network, the one the single power bus serves.</summary>
+        public readonly bool OnMainGrid;
+
+        public BuildingElectricalState(bool hasTerminal, Electrical.TerminalRole role, bool connected, bool compatible, bool onMainGrid)
+        {
+            HasTerminal = hasTerminal; Role = role; Connected = connected; Compatible = compatible; OnMainGrid = onMainGrid;
+        }
+    }
+
     public interface IElectricalNetworks
     {
         /// <summary>How many separate networks the finished lines form.</summary>
@@ -650,6 +671,9 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>The tile has a line end and is on a network separate from the lander's.</summary>
         bool IsOnElectricalIsland(int tileId);
+
+        /// <summary>The state of a building's electrical terminal (none when it is not wired or has no terminal).</summary>
+        BuildingElectricalState BuildingElectrical(int tileId, int slot);
     }
 
     public interface IWiredGrid
