@@ -37,3 +37,9 @@ A circuit does nothing until a host reads it through a defined interface; the ci
 The example in the brief, a temperature sensor starting a cooling motor, needs a building thermal model that does not exist (only the planet climate `WasteHeat` does), so it is out of reach for now.
 
 Recommendation: option 1, with ports `power` (the supply side) and `enable` (the control contact).
+
+## Gate G4 decided: the charging station (director, 2026-11-20)
+
+Built: the station host. A station with an installed circuit charges robots only while the circuit's `enable` port is high (voltage at that pin at or above half the highest source voltage, game rule TBD); without a circuit it behaves as before. Host spec (game rule, TBD): 12 parts, a 16 x 12 board, required port `enable`. Saved from version 44 (library, installed circuits with state, battery charge and fault history). Commands: `ICircuitCommands`.
+
+Still open: install as a robot task (it is instant now, and costs nothing), grid power for the circuit's own supply (not counted yet), and the 2D editor (W-40). A circuit with a battery needs recharging or replacing when the battery runs down; there is no recharge rule yet (question for the director).

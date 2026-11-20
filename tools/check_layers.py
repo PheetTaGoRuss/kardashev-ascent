@@ -23,7 +23,7 @@ ALLOWED = {
     'Logistics': {'Resources'},
     'Robots': {'Energy', 'Logistics', 'Planet', 'Resources'},
     'Operations': {'Resources', 'Robots'},
-    'Game': {'Civilization', 'Climate', 'Electrical', 'Energy', 'Logistics', 'Operations', 'Planet', 'Resources', 'Robots', 'Solar'},
+    'Game': {'Circuits', 'Civilization', 'Climate', 'Electrical', 'Energy', 'Logistics', 'Operations', 'Planet', 'Resources', 'Robots', 'Solar'},
 }
 NAMES = '|'.join(ALLOWED)
 
