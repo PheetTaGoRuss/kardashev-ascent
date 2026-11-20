@@ -123,3 +123,15 @@ Today's model against the physical solver, one generator at the end of a chain o
 | high 500 kV | 1 GW | 1 | 980 MW | 962 MW, 1923 A | 3.8 % |
 
 What it shows: at about 1 MW the two models agree. At 20 MW a plain line loses 14 to 29 %, not 2 % a hop, and high voltage loses far less than today's flat 2 %. Today's 20 MW clip corresponds to a current rating of about 600 A at 33 kV; a 1000 A rating would let a plain line carry about 35 MW. Nothing in gameplay uses these numbers yet.
+
+## Gate G0(d): the cable build bill (director decision needed)
+
+Today a power line costs 15 Cu, 30 Fe, 20 rock per tile. One 500 mm2 copper conductor over a 300 km tile weighs 1.33 million kg; CO-03a (real mass x 1 % on site) would give **13,335 kg of copper** per tile, about 890 times today's bill. Aluminium for the same resistance weighs about half (4,054 kg Al x 1 % at equal resistance would be 6,700 kg).
+
+| Option | One plain tile | Effect |
+|---|---|---|
+| A. Real mass x 1 % (CO-03a as written) | about 13.3 t Cu | Honest, but a line to the next tile needs more copper than the early colony will mine; makes aluminium and the refining chain matter at once |
+| B. Real mass x a smaller share (for example 0.01 %) | about 133 kg Cu | Metal still scales with area, length and material, but a line stays affordable; the share is a new game rule to tune |
+| C. Keep the flat bill; use the physics only for advice and salvage | 15 Cu | Nothing changes in play; cable choice shows in loss only |
+
+Recommendation: C now, then B once mining output is known, so the share can be tuned to a number of days of mining. The advice function and the mass formula are built and tested either way.
