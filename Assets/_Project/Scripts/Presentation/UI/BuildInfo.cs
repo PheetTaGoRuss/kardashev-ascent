@@ -10,12 +10,29 @@ namespace KardashevAscent.Presentation.UI
     /// </summary>
     public static class BuildInfo
     {
-        public enum Category { Power, Stations, Industry }
+        public enum Category { Solar, Sea, Storage, Stations, Industry, Grid }
 
         public static Category CategoryOf(BuildMode m) =>
-            m == BuildMode.SolarPanel || m == BuildMode.FloatingSolar || m == BuildMode.Battery || m == BuildMode.TidalTurbine || m == BuildMode.WaveConverter || m == BuildMode.TidalBarrage || m == BuildMode.PowerLine || m == BuildMode.HighVoltageLine ? Category.Power
+            m == BuildMode.SolarPanel || m == BuildMode.FloatingSolar ? Category.Solar
+            : m == BuildMode.TidalTurbine || m == BuildMode.WaveConverter || m == BuildMode.TidalBarrage ? Category.Sea
+            : m == BuildMode.Battery ? Category.Storage
+            : m == BuildMode.PowerLine || m == BuildMode.HighVoltageLine ? Category.Grid
             : m == BuildMode.Workshop || m == BuildMode.AluminaPlant || m == BuildMode.Electrolyser ? Category.Industry
             : Category.Stations;
+
+        /// <summary>The symbol and name on a category chip.</summary>
+        public static string Label(Category c)
+        {
+            switch (c)
+            {
+                case Category.Solar: return "☀ Solar";
+                case Category.Sea: return "≋ Sea";
+                case Category.Storage: return "▣ Storage";
+                case Category.Stations: return "⌖ Stations";
+                case Category.Industry: return "⚙ Industry";
+                default: return "ϟ Grid";
+            }
+        }
 
         public static string Title(BuildMode m)
         {
