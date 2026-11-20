@@ -16,7 +16,9 @@ namespace KardashevAscent.Simulation.Game
     {
         readonly HashSet<(int Tile, int Slot)> powerLines = new HashSet<(int, int)>();
         readonly HashSet<(int Tile, int Slot)> highVoltageLines = new HashSet<(int, int)>();
+        readonly Dictionary<(int Tile, int Slot), int> linkTargets = new Dictionary<(int, int), int>();   // a line building: the tile it links its own tile to
         readonly HashSet<int> poweredTiles = new HashSet<int>();
+        readonly Dictionary<(int, int), double> edgeCapacity = new Dictionary<(int, int), double>();
         readonly Dictionary<int, int> lineHops = new Dictionary<int, int>();      // tiles of line from the lander tile
         readonly Dictionary<int, int> lineParent = new Dictionary<int, int>();    // the tile toward the lander tile
         double wiringStamp = double.NaN;
@@ -82,9 +84,20 @@ namespace KardashevAscent.Simulation.Game
             poweredTiles.Clear();
             lineHops.Clear();
             lineParent.Clear();
-            var lined = new HashSet<int>();
-            foreach (var key in powerLines) if (HasFinishedLine(key)) lined.Add(key.Tile);
-            foreach (var key in highVoltageLines) if (HasFinishedLine(key)) lined.Add(key.Tile);
+            // The wires are links between neighbouring tiles (director 2026-11-20: "connect from tile to tile"); finished links only.
+            edgeCapacity.Clear();
+            var adjacent = new Dictionary<int, List<int>>();
+            void AddLink(int a, int b, double capacity)
+            {
+                if (!adjacent.TryGetValue(a, out List<int> la)) adjacent[a] = la = new List<int>();
+                if (!adjacent.TryGetValue(b, out List<int> lb)) adjacent[b] = lb = new List<int>();
+                if (!la.Contains(b)) la.Add(b);
+                if (!lb.Contains(a)) lb.Add(a);
+                var edge = (Math.Min(a, b), Math.Max(a, b));
+                edgeCapacity[edge] = edgeCapacity.TryGetValue(edge, out double c) ? Math.Max(c, capacity) : capacity;
+            }
+            foreach (var key in powerLines) if (HasFinishedLine(key) && linkTargets.TryGetValue(key, out int to)) AddLink(key.Tile, to, LineCapacityPlainW);
+            foreach (var key in highVoltageLines) if (HasFinishedLine(key) && linkTargets.TryGetValue(key, out int to)) AddLink(key.Tile, to, LineCapacityHighW);
             var queue = new Queue<int>();
             poweredTiles.Add(BaseTileId);
             lineHops[BaseTileId] = 0;
@@ -93,8 +106,9 @@ namespace KardashevAscent.Simulation.Game
             while (queue.Count > 0)
             {
                 int t = queue.Dequeue();
-                foreach (int nb in Sphere.Neighbors[t])
-                    if (lined.Contains(nb) && poweredTiles.Add(nb))
+                if (!adjacent.TryGetValue(t, out List<int> next)) continue;
+                foreach (int nb in next)
+                    if (poweredTiles.Add(nb))
                     {
                         lineHops[nb] = lineHops[t] + 1;
                         lineParent[nb] = t;
@@ -103,15 +117,15 @@ namespace KardashevAscent.Simulation.Game
             }
         }
 
-        /// <summary>What a tile's line can carry now, W: the high-voltage line if one is finished there, else the plain line; the lander tile has no limit.</summary>
+        /// <summary>What the wire from this tile toward the lander tile can carry now, W: the high-voltage link if one is finished there, else the plain link; the lander tile has no limit.</summary>
         public double LineCapacityW(int tileId)
         {
             if (tileId == BaseTileId)
                 return double.PositiveInfinity;
-            foreach (var key in highVoltageLines)
-                if (key.Tile == tileId && HasFinishedLine(key))
-                    return LineCapacityHighW;
-            return LineCapacityPlainW;
+            EnsureWiring();
+            if (!lineParent.TryGetValue(tileId, out int parent) || parent < 0)
+                return LineCapacityPlainW;
+            return edgeCapacity.TryGetValue((Math.Min(tileId, parent), Math.Max(tileId, parent)), out double c) ? c : LineCapacityPlainW;
         }
 
         // ---- the flow ----
@@ -247,25 +261,53 @@ namespace KardashevAscent.Simulation.Game
             return overloadedTiles.Contains(tileId);
         }
 
-        /// <summary>Tiles that have a power line (finished or not), for drawing the wires.</summary>
+        /// <summary>Tiles that a wire touches (finished or a site).</summary>
         public IEnumerable<int> LineTiles()
         {
             var seen = new HashSet<int>();
-            foreach (var key in powerLines) if (seen.Add(key.Tile)) yield return key.Tile;
-            foreach (var key in highVoltageLines) if (seen.Add(key.Tile)) yield return key.Tile;
+            foreach (var key in powerLines)
+            {
+                if (seen.Add(key.Tile)) yield return key.Tile;
+                if (linkTargets.TryGetValue(key, out int to) && seen.Add(to)) yield return to;
+            }
+            foreach (var key in highVoltageLines)
+            {
+                if (seen.Add(key.Tile)) yield return key.Tile;
+                if (linkTargets.TryGetValue(key, out int to) && seen.Add(to)) yield return to;
+            }
+        }
+
+        /// <summary>Every wire, tile to tile: the two tiles, whether it is finished, and whether it is high voltage.</summary>
+        public IEnumerable<(int From, int To, bool Built, bool HighVoltage)> WireLinks()
+        {
+            foreach (var key in powerLines)
+                if (linkTargets.TryGetValue(key, out int to)) yield return (key.Tile, to, HasFinishedLine(key), false);
+            foreach (var key in highVoltageLines)
+                if (linkTargets.TryGetValue(key, out int to)) yield return (key.Tile, to, HasFinishedLine(key), true);
         }
 
         public bool HasHighVoltageLine(int tileId)
         {
             foreach (var key in highVoltageLines)
-                if (key.Tile == tileId && HasFinishedLine(key)) return true;
+                if ((key.Tile == tileId || (linkTargets.TryGetValue(key, out int to) && to == tileId)) && HasFinishedLine(key)) return true;
             return false;
         }
 
+        /// <summary>A wire touches this tile (finished only, or a site too).</summary>
         public bool HasLineOn(int tileId, bool finishedOnly)
         {
-            foreach (var key in powerLines) if (key.Tile == tileId && (!finishedOnly || HasFinishedLine(key))) return true;
-            foreach (var key in highVoltageLines) if (key.Tile == tileId && (!finishedOnly || HasFinishedLine(key))) return true;
+            foreach (var key in powerLines)
+                if ((key.Tile == tileId || (linkTargets.TryGetValue(key, out int to) && to == tileId)) && (!finishedOnly || HasFinishedLine(key))) return true;
+            foreach (var key in highVoltageLines)
+                if ((key.Tile == tileId || (linkTargets.TryGetValue(key, out int to) && to == tileId)) && (!finishedOnly || HasFinishedLine(key))) return true;
+            return false;
+        }
+
+        /// <summary>The two tiles are linked (a wire between them, finished or a site). One per tier.</summary>
+        bool Linked(int a, int b, bool highVoltage)
+        {
+            foreach (var key in highVoltage ? highVoltageLines : powerLines)
+                if (linkTargets.TryGetValue(key, out int to) && ((key.Tile == a && to == b) || (key.Tile == b && to == a))) return true;
             return false;
         }
 
@@ -284,12 +326,14 @@ namespace KardashevAscent.Simulation.Game
             }
         }
 
-        public bool PlacePowerLine(int tileId, int slot)
+        /// <summary>A wire from this tile to a neighbouring one, built on a slot of this tile (director 2026-11-20: tile to tile).</summary>
+        public bool PlacePowerLine(int tileId, int slot, int targetTile)
         {
-            if (!CanPlace(BuildingType.PowerLine, tileId, slot))
+            if (!CanLink(tileId, targetTile, false) || !CanPlace(BuildingType.PowerLine, tileId, slot))
                 return false;
             StartSite(tileId, slot, BuildBill(BuildingType.PowerLine), BuildTimes.Hours(BuildingType.PowerLine));
             powerLines.Add((tileId, slot));
+            linkTargets[(tileId, slot)] = targetTile;
             Occupy(tileId, FootprintFor(BuildingType.PowerLine, tileId, slot));
             wiringStamp = double.NaN;
             flowDirty = true;
@@ -297,17 +341,62 @@ namespace KardashevAscent.Simulation.Game
             return true;
         }
 
-        public bool PlaceHighVoltageLine(int tileId, int slot)
+        public bool PlaceHighVoltageLine(int tileId, int slot, int targetTile)
         {
-            if (!CanPlace(BuildingType.HighVoltageLine, tileId, slot))
+            if (!CanLink(tileId, targetTile, true) || !CanPlace(BuildingType.HighVoltageLine, tileId, slot))
                 return false;
             StartSite(tileId, slot, BuildBill(BuildingType.HighVoltageLine), BuildTimes.Hours(BuildingType.HighVoltageLine));
             highVoltageLines.Add((tileId, slot));
+            linkTargets[(tileId, slot)] = targetTile;
             Occupy(tileId, FootprintFor(BuildingType.HighVoltageLine, tileId, slot));
             wiringStamp = double.NaN;
             flowDirty = true;
             Settle((tileId, slot));
             return true;
+        }
+
+        /// <summary>Two neighbouring tiles a wire could join: both land or shallow sea, no wire of this tier between them yet.</summary>
+        bool CanLink(int a, int b, bool highVoltage)
+        {
+            if (a < 0 || a >= TileCount || b < 0 || b >= TileCount || a == b || Array.IndexOf(Sphere.Neighbors[a], b) < 0)
+                return false;
+            bool Wirable(int t) { TerrainType g = GetTile(t).Terrain; return Terrains.IsBuildableLand(g) || g == TerrainType.ShallowOcean; }
+            return Wirable(a) && Wirable(b) && !Linked(a, b, highVoltage);
+        }
+
+        /// <summary>
+        /// Run a wire from one tile to a neighbouring one, on whichever end is on the grid (so a robot can reach it), else on the first.
+        /// The tool on the planet calls this tile after tile to draw a path. Returns false with the reason in <see cref="WireProblem"/>.
+        /// </summary>
+        public bool PlaceWire(int fromTile, int toTile, bool highVoltage)
+        {
+            WireProblem = null;
+            if (!CanLink(fromTile, toTile, highVoltage))
+            {
+                WireProblem = LinkReason(fromTile, toTile, highVoltage);
+                return false;
+            }
+            string blocker = KnowledgeBlocker(highVoltage ? BuildingType.HighVoltageLine : BuildingType.PowerLine);
+            if (blocker != null) { WireProblem = blocker; return false; }
+            int host = IsPowered(toTile) && !IsPowered(fromTile) ? toTile : fromTile;
+            int other = host == fromTile ? toTile : fromTile;
+            BuildingType type = highVoltage ? BuildingType.HighVoltageLine : BuildingType.PowerLine;
+            for (int s = 0; s < SlotCount(host); s++)
+                if (CanPlace(type, host, s))
+                    return highVoltage ? PlaceHighVoltageLine(host, s, other) : PlacePowerLine(host, s, other);
+            WireProblem = "No free slot on that tile for the wire.";
+            return false;
+        }
+
+        /// <summary>Why the last <see cref="PlaceWire"/> failed.</summary>
+        public string WireProblem { get; private set; }
+
+        string LinkReason(int a, int b, bool highVoltage)
+        {
+            if (a < 0 || b < 0 || a >= TileCount || b >= TileCount || a == b) return "Pick two tiles.";
+            if (Array.IndexOf(Sphere.Neighbors[a], b) < 0) return "A wire runs between neighbouring tiles: pick the next tile along.";
+            if (Linked(a, b, highVoltage)) return highVoltage ? "These tiles already have a high-voltage wire." : "These tiles are already wired.";
+            return "A wire needs land or shallow sea at both ends.";
         }
 
         // ---- raw power per tile, by source (before the lines) ----

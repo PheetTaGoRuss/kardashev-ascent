@@ -157,6 +157,7 @@ namespace KardashevAscent.Simulation.Game
             {
                 Dismantle(tileId, slot, BuildingType.HighVoltageLine);
                 highVoltageLines.Remove((tileId, slot));
+                linkTargets.Remove((tileId, slot));
                 Vacate(tileId, slot);
                 wiringStamp = double.NaN;
                 flowDirty = true;
@@ -166,6 +167,7 @@ namespace KardashevAscent.Simulation.Game
             {
                 Dismantle(tileId, slot, BuildingType.PowerLine);
                 powerLines.Remove((tileId, slot));
+                linkTargets.Remove((tileId, slot));
                 Vacate(tileId, slot);
                 wiringStamp = double.NaN;
                 flowDirty = true;

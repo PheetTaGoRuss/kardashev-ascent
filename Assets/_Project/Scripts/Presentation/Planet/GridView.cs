@@ -73,39 +73,37 @@ namespace KardashevAscent.Presentation.Planet
         void DrawPlanetWires(IPlanetSimulation sim)
         {
             var nodes = new HashSet<int> { sim.BaseTileId };
-            foreach (int t in sim.LineTiles()) nodes.Add(t);
             int used = 0;
-            foreach (int t in nodes)
-                foreach (int nb in planet.Sphere.Neighbors[t])
+            foreach (var link in sim.WireLinks())
+            {
+                int t = link.From, nb = link.To;
+                nodes.Add(t);
+                nodes.Add(nb);
+                Vector3 pa = TilePoint(t, Lift), pb = TilePoint(nb, Lift);
+                LineRenderer wire = Get(planetWires, used++, WidthAt((pa + pb) * 0.5f, link.HighVoltage ? 0.010f : 0.006f, 0.003f, link.HighVoltage ? 0.045f : 0.03f));
+                bool powered = sim.IsPowered(t) && sim.IsPowered(nb);
+                Color c = Dead;
+                if (powered)
                 {
-                    if (nb <= t || !nodes.Contains(nb)) continue;
-                    Vector3 pa = TilePoint(t, Lift), pb = TilePoint(nb, Lift);
-                    LineRenderer wire = Get(planetWires, used++, WidthAt((pa + pb) * 0.5f, 0.006f, 0.003f, 0.03f));
-                    bool powered = sim.IsPowered(t) && sim.IsPowered(nb);
-                    bool built = (t == sim.BaseTileId || sim.HasLineOn(t, true)) && (nb == sim.BaseTileId || sim.HasLineOn(nb, true));
-                    Color c = Dead;
-                    if (powered)
-                    {
-                        // the far end of the wire from the lander carries the flow; the busier of the two ends colours it
-                        double flow = System.Math.Max(sim.LineFlowW(t), sim.LineFlowW(nb));
-                        double cap = System.Math.Min(sim.LineCapacityW(t), sim.LineCapacityW(nb));
-                        bool over = sim.IsLineOverloaded(t) || sim.IsLineOverloaded(nb);
-                        double share = double.IsInfinity(cap) || cap <= 0.0 ? 0.0 : flow / cap;
-                        c = over ? Full : share > 0.6 ? Busy : Free;
-                    }
-                    if (!built) c = new Color(c.r, c.g, c.b, 0.35f);
-                    wire.startColor = wire.endColor = c;
-                    wire.SetPosition(0, pa);
-                    wire.SetPosition(1, pb);
-                    wire.gameObject.SetActive(true);
+                    // the busier end colours the wire (the tile farther from the lander carries the flow of its wire)
+                    double flow = System.Math.Max(sim.LineFlowW(t), sim.LineFlowW(nb));
+                    double cap = System.Math.Min(sim.LineCapacityW(t), sim.LineCapacityW(nb));
+                    bool over = sim.IsLineOverloaded(t) || sim.IsLineOverloaded(nb);
+                    double share = double.IsInfinity(cap) || cap <= 0.0 ? 0.0 : flow / cap;
+                    c = over ? Full : share > 0.6 ? Busy : link.HighVoltage ? new Color(1.00f, 0.62f, 0.25f) : Free;
                 }
-            // a pole at every wired tile, so a single line is still seen from far away
+                if (!link.Built) c = new Color(c.r, c.g, c.b, 0.35f);
+                wire.startColor = wire.endColor = c;
+                wire.SetPosition(0, pa);
+                wire.SetPosition(1, pb);
+                wire.gameObject.SetActive(true);
+            }
+            // a pole at every wired tile, so a single wire is still seen from far away
             foreach (int t in nodes)
             {
                 LineRenderer pole = Get(planetWires, used++, WidthAt(TilePoint(t, Lift), 0.010f, 0.006f, 0.05f));
                 bool powered = sim.IsPowered(t);
                 Color c = !powered ? Dead : sim.IsLineOverloaded(t) ? Full : Free;
-                if (t != sim.BaseTileId && !sim.HasLineOn(t, true)) c = new Color(c.r, c.g, c.b, 0.35f);
                 pole.startColor = pole.endColor = c;
                 pole.SetPosition(0, TilePoint(t, Lift));
                 pole.SetPosition(1, TilePoint(t, Lift + 0.05f));

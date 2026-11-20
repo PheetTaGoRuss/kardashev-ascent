@@ -9,7 +9,7 @@ namespace KardashevAscent.Simulation.Game
     public sealed class SimulationState
     {
         /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished. 7 added robots; 8 their batteries and condition; 9 resources; 10 the Workshop; 11 programs (facility, ranking, queue); 12 movement; 13 critical damage (stage A); 14 reservations and tasks to go back to (stage B); 15 battery ageing by depth, maintenance rules (stage D); 16 building footprints. 23 industry reports. 29 experiments. 30 survey puzzles answered one material at a time. 31 stand-ins (aluminium, sodium) in building bills. 32 deposits run out (what was mined from each). 33 mountains and canyons opened (tunnel, blast, bridge). 34 refinery modules, batches, queue and auto targets.</summary>
-        public const int CurrentVersion = 35;
+        public const int CurrentVersion = 36;
 
         /// <summary>Wired grid (version 35): generators and stations need power lines to the lander tile. Older saves are not wired.</summary>
         public bool WiredGrid;
@@ -188,6 +188,8 @@ namespace KardashevAscent.Simulation.Game
         public double AreaM2;
         /// <summary>Aluminium or sodium in place of copper or lithium in its bill (version 31; older saves: none).</summary>
         public StandIn StandIns;
+        /// <summary>For a power line: the neighbouring tile it links this tile to (version 36; -1 otherwise).</summary>
+        public int LinkTo = -1;
         /// <summary>The other slots the building covers (version 16; empty in older saves: one slot).</summary>
         public List<int> Covered = new List<int>();
     }

@@ -81,9 +81,9 @@ namespace KardashevAscent.Simulation.Game
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.Relay });
             state.WiredGrid = WiredGrid;
             foreach (var c in highVoltageLines)
-                state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.HighVoltageLine });
+                state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.HighVoltageLine, LinkTo = linkTargets.TryGetValue(c, out int hvTo) ? hvTo : -1 });
             foreach (var c in powerLines)
-                state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.PowerLine });
+                state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.PowerLine, LinkTo = linkTargets.TryGetValue(c, out int plTo) ? plTo : -1 });
             foreach (var c in barrages)
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.TidalBarrage });
             foreach (var c in waveConverters)
@@ -377,6 +377,7 @@ namespace KardashevAscent.Simulation.Game
                     return;
                 if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(BuildingType.HighVoltageLine), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r), BuildTimes.Hours(BuildingType.HighVoltageLine));
                 highVoltageLines.Add((r.Tile, r.Slot));
+                linkTargets[(r.Tile, r.Slot)] = r.LinkTo;
             }
             else if (r.Type == BuildingType.PowerLine)
             {
@@ -384,6 +385,7 @@ namespace KardashevAscent.Simulation.Game
                     return;
                 if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(BuildingType.PowerLine), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r), BuildTimes.Hours(BuildingType.PowerLine));
                 powerLines.Add((r.Tile, r.Slot));
+                linkTargets[(r.Tile, r.Slot)] = r.LinkTo;
             }
             else if (r.Type == BuildingType.TidalBarrage)
             {

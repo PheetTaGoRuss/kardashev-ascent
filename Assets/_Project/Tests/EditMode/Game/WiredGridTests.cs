@@ -47,12 +47,12 @@ namespace KardashevAscent.Simulation.Tests.Game
         {
             var sim = Wired();
             int near = Sphere.Neighbors[sim.BaseTileId].First(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
-            Assert.IsTrue(sim.PlacePowerLine(near, 0));
+            Assert.IsTrue(sim.PlacePowerLine(near, 0, sim.BaseTileId));
             sim.Tick(0.1);
             Assert.IsTrue(sim.IsPowered(near));
             int apart = Enumerable.Range(0, sim.TileCount).First(t => t != sim.BaseTileId && t != near && !Sphere.Neighbors[sim.BaseTileId].Contains(t)
                                                                       && !Sphere.Neighbors[near].Contains(t) && !sim.GetTile(t).IsWater && sim.IsOpenGround(t));
-            Assert.IsTrue(sim.PlacePowerLine(apart, 0));
+            Assert.IsTrue(sim.PlacePowerLine(apart, 0, Sphere.Neighbors[apart].First(n => n != sim.BaseTileId && n != near && !sim.GetTile(n).IsWater)));
             sim.Tick(0.1);
             Assert.IsFalse(sim.IsPowered(apart), "a line with a gap to the grid is not connected");
         }
@@ -62,7 +62,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         {
             var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { WiredGrid = true };
             int near = Sphere.Neighbors[sim.BaseTileId].First(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
-            Assert.IsTrue(sim.PlacePowerLine(near, 0));
+            Assert.IsTrue(sim.PlacePowerLine(near, 0, sim.BaseTileId));
             Assert.IsTrue(sim.IsUnderConstruction(near, 0));
             Assert.IsFalse(sim.IsPowered(near), "a site is not a wire yet");
         }
@@ -73,8 +73,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             var sim = Wired();
             int a = Sphere.Neighbors[sim.BaseTileId].First(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
             int b = Sphere.Neighbors[a].First(n => n != sim.BaseTileId && !Sphere.Neighbors[sim.BaseTileId].Contains(n) && !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
-            Assert.IsTrue(sim.PlacePowerLine(a, 0));
-            Assert.IsTrue(sim.PlacePowerLine(b, 0));
+            Assert.IsTrue(sim.PlacePowerLine(a, 0, sim.BaseTileId));
+            Assert.IsTrue(sim.PlacePowerLine(b, 0, a));
             sim.Tick(0.1);
             Assert.IsTrue(sim.IsPowered(b));
             Assert.IsTrue(sim.RemoveBuilding(a, 0));
@@ -120,7 +120,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         {
             var sim = Wired();
             int near = Sphere.Neighbors[sim.BaseTileId].First(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
-            Assert.IsTrue(sim.PlacePowerLine(near, 0));
+            Assert.IsTrue(sim.PlacePowerLine(near, 0, sim.BaseTileId));
             sim.Tick(0.1);
             SimulationState state = sim.CaptureState();
             Assert.IsTrue(state.WiredGrid);
@@ -138,8 +138,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             var sim = Wired();
             int a = Sphere.Neighbors[sim.BaseTileId].First(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
             int b = Sphere.Neighbors[a].First(n => n != sim.BaseTileId && !Sphere.Neighbors[sim.BaseTileId].Contains(n) && !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
-            Assert.IsTrue(sim.PlacePowerLine(a, 0));
-            Assert.IsTrue(sim.PlacePowerLine(b, 0));
+            Assert.IsTrue(sim.PlacePowerLine(a, 0, sim.BaseTileId));
+            Assert.IsTrue(sim.PlacePowerLine(b, 0, a));
             sim.Tick(0.1);
             Assert.AreEqual(1.0, sim.GridEfficiency(sim.BaseTileId), 1e-12);
             Assert.AreEqual(1.0 - PlanetSimulation.LineLossPerHop, sim.GridEfficiency(a), 1e-12);
@@ -154,7 +154,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         {
             var sim = Wired();
             int a = Sphere.Neighbors[sim.BaseTileId].First(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
-            Assert.IsTrue(sim.PlacePowerLine(a, 0));
+            Assert.IsTrue(sim.PlacePowerLine(a, 0, sim.BaseTileId));
             Assert.IsTrue(sim.PlacePanel(a, 1, 0.35, Math.PI));
             double lossSeen = 0.0;
             for (int i = 0; i < 48; i++) { sim.Tick(1.0); lossSeen = Math.Max(lossSeen, sim.TransmissionLossW); }
@@ -169,7 +169,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         static int OverloadedLineTile(PlanetSimulation sim)
         {
             int a = Sphere.Neighbors[sim.BaseTileId].First(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
-            Assert.IsTrue(sim.PlacePowerLine(a, 0));
+            Assert.IsTrue(sim.PlacePowerLine(a, 0, sim.BaseTileId));
             int placed = 0;
             for (int slot = 1; slot < sim.SlotCount(a) && placed < 45; slot++)
                 if (sim.PlacePanel(a, slot, 0.35, Math.PI)) placed++;
@@ -204,7 +204,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             RunToNoon(sim, () => sim.IsLineOverloaded(a));
             Assert.IsTrue(sim.IsLineOverloaded(a));
             double plainDelivered = sim.GenerationW;
-            Assert.IsTrue(sim.PlaceHighVoltageLine(a, 50));
+            Assert.IsTrue(sim.PlaceHighVoltageLine(a, 50, sim.BaseTileId));
             sim.Tick(0.1);
             Assert.AreEqual(PlanetSimulation.LineCapacityHighW, sim.LineCapacityW(a), 1e-6);
             Assert.IsFalse(sim.IsLineOverloaded(a), "the high-voltage line carries it");
@@ -230,8 +230,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             var sim = Wired();
             sim.SetMilestonesForTests(PlanetSimulation.HighVoltageMilestone);
             int a = Sphere.Neighbors[sim.BaseTileId].First(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
-            Assert.IsTrue(sim.PlacePowerLine(a, 0));
-            Assert.IsTrue(sim.PlaceHighVoltageLine(a, 1));
+            Assert.IsTrue(sim.PlacePowerLine(a, 0, sim.BaseTileId));
+            Assert.IsTrue(sim.PlaceHighVoltageLine(a, 1, sim.BaseTileId));
             sim.Tick(0.1);
             var other = new PlanetSimulation(Sphere, Surface, Earthlike);
             Assert.IsTrue(other.RestoreState(sim.CaptureState()));
@@ -239,6 +239,51 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.AreEqual(BuildingType.HighVoltageLine, other.GetBuilding(a, 1));
             Assert.AreEqual(PlanetSimulation.LineCapacityHighW, other.LineCapacityW(a), 1e-6);
             Assert.Contains(a, other.LineTiles().ToList());
+        }
+
+        [Test]
+        public void TheWireTool_RunsWiresTileToTile_OnlyBetweenNeighbours()
+        {
+            var sim = Wired();
+            int a = Sphere.Neighbors[sim.BaseTileId].First(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
+            int b = Sphere.Neighbors[a].First(n => n != sim.BaseTileId && !Sphere.Neighbors[sim.BaseTileId].Contains(n) && !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
+            Assert.IsTrue(sim.PlaceWire(sim.BaseTileId, a, false));
+            Assert.IsTrue(sim.PlaceWire(a, b, false), "the path continues tile after tile");
+            sim.Tick(0.1);
+            Assert.IsTrue(sim.IsPowered(a));
+            Assert.IsTrue(sim.IsPowered(b));
+            var links = sim.WireLinks().ToList();
+            Assert.AreEqual(2, links.Count);
+            Assert.IsTrue(links.All(l => l.Built));
+            Assert.IsFalse(sim.PlaceWire(sim.BaseTileId, b, false), "not neighbours");
+            StringAssert.Contains("neighbouring", sim.WireProblem);
+            Assert.IsFalse(sim.PlaceWire(a, sim.BaseTileId, false), "already wired");
+            StringAssert.Contains("already", sim.WireProblem);
+        }
+
+        [Test]
+        public void AWire_IsBuiltOnTheEndThatIsOnTheGrid()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { WiredGrid = true };
+            int a = Sphere.Neighbors[sim.BaseTileId].First(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
+            Assert.IsTrue(sim.PlaceWire(a, sim.BaseTileId, false), "drawn from the far end toward the lander");
+            Assert.IsTrue(sim.IsUnderConstruction(sim.BaseTileId, 0) || Enumerable.Range(0, sim.SlotCount(sim.BaseTileId)).Any(sl => sim.GetBuilding(sim.BaseTileId, sl) == BuildingType.PowerLine),
+                "a robot builds it where the grid is, so it can reach it");
+        }
+
+        [Test]
+        public void AHighVoltageWire_CanBeRunOverAPlainOne_AndLiftsItsCapacity()
+        {
+            var sim = Wired();
+            sim.SetMilestonesForTests(PlanetSimulation.HighVoltageMilestone);
+            int a = Sphere.Neighbors[sim.BaseTileId].First(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
+            Assert.IsTrue(sim.PlaceWire(sim.BaseTileId, a, false));
+            sim.Tick(0.1);
+            Assert.AreEqual(PlanetSimulation.LineCapacityPlainW, sim.LineCapacityW(a), 1e-6);
+            Assert.IsTrue(sim.PlaceWire(sim.BaseTileId, a, true), "the same two tiles, the better wire");
+            sim.Tick(0.1);
+            Assert.AreEqual(PlanetSimulation.LineCapacityHighW, sim.LineCapacityW(a), 1e-6);
+            Assert.IsFalse(sim.PlaceWire(sim.BaseTileId, a, true), "one wire of each kind between two tiles");
         }
 
         [Test]

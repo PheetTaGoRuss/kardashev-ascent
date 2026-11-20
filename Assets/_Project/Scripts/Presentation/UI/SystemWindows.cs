@@ -37,6 +37,10 @@ namespace KardashevAscent.Presentation.UI
             battery = Text();
             InfoTip.After(battery, "Charges from surplus by day, carries the colony through the night. Until the surface " +
                                    "temperature experiment is done, it only charges to 80 % (safety margin).");
+            Heading("GRID");
+            var wire = MakeButton("⚡  Wire tool (X)", () => KardashevAscent.Presentation.Planet.WireTool.Toggle());
+            wire.tooltip = "Click a tile, then the next tile along, to run a wire between them. Generators and stations only work on tiles the wires join to the lander tile.";
+            Body.Add(wire);
             Heading("BUILDINGS");
             buildings = Text();
             InfoTip.After(buildings, "The week chart of power made and needed is in Overview, Power tab (C).");

@@ -253,7 +253,9 @@ namespace KardashevAscent.EditorTools
                     // wire <Terrain>: power lines along the shortest land path from the base to the nearest tile of that terrain; opens its site.
                     var sim = Runner()?.Simulation;
                     var picker = UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.TilePicker>();
-                    var kind = (Simulation.Planet.TerrainType)Enum.Parse(typeof(Simulation.Planet.TerrainType), argument);
+                    string[] wireArgs = argument.Split(' ');
+                    var kind = (Simulation.Planet.TerrainType)Enum.Parse(typeof(Simulation.Planet.TerrainType), wireArgs[0]);
+                    int maxLinks = wireArgs.Length > 1 ? int.Parse(wireArgs[1]) : 99;
                     if (sim == null) return true;
                     var prev = new Dictionary<int, int> { { sim.BaseTileId, -1 } };
                     var queue = new Queue<int>();
@@ -271,8 +273,11 @@ namespace KardashevAscent.EditorTools
                             }
                     }
                     int placed = 0;
-                    for (int t = goal; t >= 0 && prev[t] >= 0; t = prev[t])
-                        if (sim.PlacePowerLine(t, 0)) placed++;
+                    var path = new List<int>();
+                    for (int t = goal; t >= 0; t = prev[t]) path.Add(t);   // goal ... base
+                    path.Reverse();                                        // base ... goal
+                    for (int i = 1; i < path.Count && placed < maxLinks; i++)
+                        if (sim.PlaceWire(path[i - 1], path[i], false)) placed++;
                     Log($"wire goal={goal} lines={placed} powered={sim.PoweredTileCount}");
                     if (goal >= 0 && picker != null) picker.Select(goal);
                     return true;
