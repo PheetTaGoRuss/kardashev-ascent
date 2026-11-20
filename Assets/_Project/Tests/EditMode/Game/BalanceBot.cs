@@ -24,7 +24,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         [Test, Explicit("Balance tool: prints a timeline of a scripted colony")]
         public void Timeline()
         {
-            const int days = 300;
+            const int days = 700;
             var sphere = HexSphere.Create(12);
             var surface = PlanetSurface.Generate(sphere, new SurfaceSettings(7));
             var planet = new PlanetSolarParams(SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Math.PI / 180.0,
@@ -34,7 +34,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             var log = new System.Text.StringBuilder();
 
             // a sensible player orders robots before spending the cargo on anything else
-            for (int i = 0; i < 6; i++) sim.OrderRobot(RobotKind.General);
+            int robotsOrdered = 3;   // the lander brings three
+            for (int i = 0; i < 6; i++) if (sim.OrderRobot(RobotKind.General) == null) robotsOrdered++;
             // landing: the tutorial's essentials, then enough panels for the base demand (what Skip does)
             sim.PlaceChargingStation(home, 0);
             sim.PlaceBattery(home, 4);
@@ -61,7 +62,7 @@ namespace KardashevAscent.Simulation.Tests.Game
                 {
                     if (!target.TryGetValue(m, out int tile) || sim.Deposits.IsExhausted(tile, m))
                     {
-                        tile = m == Material.Rock || m == Material.Iron ? home : land.FirstOrDefault(t => sim.Deposits.GradeOf(t, m) > 0.0 && !sim.Deposits.IsExhausted(t, m));
+                        tile = land.FirstOrDefault(t => sim.Deposits.GradeOf(t, m) > 0.0 && !sim.Deposits.IsExhausted(t, m) && (m == Material.Copper || m == Material.Lithium || sim.WorkReachProblem(t) == null));
                         target[m] = tile;
                     }
                     // a player stops mining what the stock already covers, so the robots go where the shortage is
@@ -81,11 +82,15 @@ namespace KardashevAscent.Simulation.Tests.Game
                 }
 
                 // robots, up to a crew of 12
-                if (sim.Workforce.Robots.Count < 12) robotNote = sim.OrderRobot(RobotKind.General) ?? "ordered";
+                if (robotsOrdered < 16)
+                {
+                    robotNote = sim.OrderRobot(RobotKind.General) ?? "ordered";
+                    if (robotNote == "ordered") robotsOrdered++;
+                }
 
                 // panels and batteries as the demand target rises
                 // robots first: while the crew is short and the last robot order is waiting on materials, keep the stock for it
-                bool saveForRobot = sim.Workforce.Robots.Count < 12 && robotNote.StartsWith("Missing");
+                bool saveForRobot = robotsOrdered < 16 && robotNote.StartsWith("Missing");
                 if (!saveForRobot && sim.ConstructionQueueCount < 3 + sim.Workforce.Robots.Count)
                 {
                     int slots = 0;
