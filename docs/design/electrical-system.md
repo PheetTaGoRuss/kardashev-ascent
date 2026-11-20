@@ -1,0 +1,109 @@
+# Electrical system redesign: Stage 0 assessment and plan
+
+Status: **PROPOSED, nothing built.** Stage 0 of the brief "Electrical Wiring System Redesign" (pasted by the director, 2026-11-20). This document inspects the repository, says what can stay, what must change and what is new, lists the decisions only the director can make, and proposes the stages. No code, no save change and no gameplay change comes with it.
+Registry entries: EL-01 to EL-12 (new, all PROPOSED; see section 9).
+
+## 1. Purpose
+
+Build a coherent electrical engineering foundation: a mesh-capable electrical graph with physical cables, explicit building terminals, fixed voltage and frequency classes (DC first, AC through progression), resistance-aware transmission, and player-designed physical circuits (blueprints installed into host devices) solved by a real DC circuit solver. Pillars served: 1 (real science), 2 (few, clear commands), 6, 8, 9. Scope limits (no waveforms, no electrons, no dispatch policy) are the brief's section 21 and are kept.
+
+## 2. What exists today
+
+Checked against `main` at `2401f2a` (save version 42). Sizes are lines of code.
+
+| Piece | Where | What it does |
+| --- | --- | --- |
+| Tile wires | `Game/PlanetSimulation.Wiring.cs` (554), `Game/WireBook.cs` (49) | A wire is a *building* (`PowerLine`, `HighVoltageLine`) on a slot of one tile, with a link target tile (`LinkTo`). Links join neighbouring tiles. Powered tiles are found by a breadth-first walk from the lander tile; `lineParent` makes a **rooted tree** (one parent per tile) |
+| Flow | same file, `ComputeFlow` | Per-tile raw power from panels, turbines, wave lines and barrages (each source's generation is summed per tile), carried bottom-up to the lander through the tree, clipped to a **fixed link capacity** (plain 20 MW, high-voltage 1 GW, game rules), minus **2 % per hop** (`LineLossPerHop`). Top-down `tileFactor` gives each tile the share that gets through |
+| Building wiring | same file, `wiredBuildings` | A building counts only once the player has dropped a power line on it (`PlaceBuildingWire`, instant, free). Generators unwired make nothing; stations, batteries, Workshop, Relay, research and refinery modules unwired do not work. Roles in `Game/WireRoles.cs` (12): output = generators, input = consumers |
+| The grid | `Energy/PowerGrid.cs`, `GridStep` | **One** grid: one battery, one demand, one brownout flag, RTG, priority loads (network, robots, computing, Workshop, refineries). It receives one number, `ComputeGeneration()` |
+| Tool and view | `Presentation/Planet/WireTool.cs` (167), `WireNotes.cs` (187), `GridView.cs` (239) | Click tile then next tile; markers and pop-ups; wire drawing. Presentation only reads `WireLinks()`, `UnwiredBuildings()` and similar through `IPlanetSimulation` |
+| Save | `SimulationState` (`WiredGrid`, `WiredBuildings`; the lines are saved as ordinary `BuildingRecord`s with `LinkTo`) | Version 42. Old saves: before 37 everything counts as wired (`WireAllBuildings` on load) |
+| Tests | `Tests/EditMode/Game/WiredGridTests.cs` (about 30 tests) and the mission-operations scenario tests | Links, overload, high voltage, flow, building wires, save/load |
+
+### What depends on it
+
+`IsPowered`, `PlaceWire`, `PlaceBuildingWire`, `UnwiredBuildings`, `LineFlowW`, `LineCapacityW`, `GridEfficiency`, `HasLineOn`, `WiredGrid` are used by: `PlanetSimulation.Footprints.cs` (placement gate: stations and storage only where the grid reaches), `.Save.cs`, `IPlanetSimulation(.Roles).cs`, `GameFlow.cs` (tutorial step, Skip wires everything), `SimulationRunner.cs` (new missions wired), `PanelPlacer.cs` (power-line card drops on a building), `TileInfoView.cs`, `GridView.cs`, `WireTool.cs`, `WireNotes.cs`, `DevDriver.cs`, and about 40 existing tests. The refineries, Workshop, Relay, Research Station, chargers and batteries read it through `WiredOrOff`.
+
+## 3. Assessment against the brief
+
+| Brief requirement | Today | Verdict |
+| --- | --- | --- |
+| Mesh, loops, several paths | Rooted tree by construction (`lineParent`) | **Replace** the topology and flow code; keep the tile-to-tile link idea |
+| Independent networks, splitting | One network: whatever the lander reaches | **New**: connected components of the electrical graph |
+| Separate physical and electrical layers | Wires are slot buildings; connectivity is "tile has a link" | **Refactor**: the electrical graph becomes its own pure model; slot buildings stay as the *physical* posts |
+| Explicit terminals on buildings | A per-building boolean (`wiredBuildings`) | **Refactor** into terminals connected to a node; the boolean maps to "terminal connected" |
+| Cable physics (R = rho L / A, rating, losses) | Fixed MW capacity and 2 % per hop | **Replace** the two constants with a cable specification; keep them only as migration defaults |
+| Fixed voltage classes, AC and DC | None | **New** |
+| Circuit blueprints, instances, solver, editor | None | **New** (largest part) |
+| Single `PowerGrid` | One battery, demand, brownout | **Decision needed** (section 6, D1): islands vs one grid |
+| Simulation / Presentation split, interface only | Kept | **Keep**; add role interfaces and read models |
+| Determinism, stable ids, saves | Sorted iteration used; ids are tile and slot | **Keep**; new ids needed for nodes, connections, terminals, blueprints, instances |
+
+**What can be retained:** the tile-to-tile link concept and neighbour rule; the placement gate idea; the roles (output/input); the wire tool's click flow and markers (re-pointed at the new commands); the building definitions and bills of the existing `PowerLine` and `HighVoltageLine` (as the first two cable products); all generator code (`RawPanelsByTile` and the others) unchanged; `PowerGrid` unchanged until D1 is answered; the tests as a regression suite (they must still pass through a compatibility layer).
+**What must be replaced:** the tree flow (`ComputeFlow`, `lineParent`, `lineHops`, `edgeCapacity`), the per-hop constant loss, the fixed capacities.
+**New systems:** `Electrical` namespace (graph, cable specs, materials, voltage and frequency classes, terminals, devices, connectivity), `Circuits` namespace (components, circuits, blueprints, instances, solver, diagnostics), the circuit editor (Presentation), an engineering-facility building.
+
+## 4. Save compatibility
+
+Current version 42. The change adds electrical state (nodes, connections, terminals, cable specs, blueprints, instances); each stage that adds state bumps the version once and carries a migration test.
+- **Migration of today's world:** every existing `PowerLine` or `HighVoltageLine` becomes an `ElectricalConnection` between the two tile nodes (cable spec derived from the tier: plain = aluminium rated to carry 20 MW at its voltage class, high-voltage likewise 1 GW; the legacy `LinkTo` stays readable); every wired building becomes a terminal connected to its tile node; an unwired building gets an unconnected terminal. Versions before 37 keep the "everything wired" rule.
+- Derived data (components, flows, losses, powered flags) is rebuilt, not saved.
+- The legacy fields (`WiredGrid`, `WiredBuildings`, the line `BuildingRecord`s) stay readable for at least one version after the switch; removal is a separate, announced step.
+- Enums stay append-only (`BuildingType` for new equipment, `TaskKind` for any work).
+
+## 5. Performance and determinism risks
+
+- **Connectivity** must be incremental: components recomputed only when a connection or terminal changes (a topology stamp), not each step (today `EnsureWiring` already caches by stamp).
+- **Power flow on a mesh** is a linear-algebra problem, not a walk; sizes matter (planet tiles are in the thousands, but wires follow the player's routes, so graphs are small). A sparse nodal solve with a fixed node ordering (by stable id) is deterministic and cheap at these sizes. Floating-point order must be fixed (sorted ids, no hash-order sums).
+- **Circuit solving** per installed circuit: modified nodal analysis on tens of nodes; re-solved only when its topology or a switch state changes, not each step.
+- No allocation on the step path: reuse arrays; derive per-step values from cached components.
+- The existing step budget (2.2 ms per step with 300 robots and 26 plants) must not regress noticeably; a test guards it.
+
+## 6. Decisions the director must make
+
+These are missing rules. They are asked, not decided.
+
+- **D1. Islands and the single `PowerGrid`.** The game has one battery, one demand and one brownout flag. Proposal for stage 3: the island that contains the lander is the *main grid* and keeps feeding that one `PowerGrid` (today's behaviour); a device in another island is "connected but not on the main grid" and does not contribute or consume until the future per-island solver (out of scope) exists. This keeps every current number. Alternative: give each island its own grid now (much larger change, needs dispatch rules the brief defers). **Recommend the first.**
+- **D2. Voltage classes (candidate table, not decided).** Physics: for a cable of resistance R carrying power P at voltage V, the loss is P R / V squared times P, so a hundred times the voltage cuts the loss ten-thousand-fold. Example with aluminium (resistivity 2.83e-8 ohm m, the repo's 61 % IACS), 1 000 mm2, one tile of 300 km (R = 8.5 ohm), 20 MW: at 33 kV the current is 606 A and the loss 3.1 MW (16 %, far above the game's 2 % per hop); at 500 kV the current is 40 A and the loss 14 kW (0.07 %), for one conductor; a two-conductor DC line doubles the resistance. So the class ladder decides how far a tier can transmit. Candidate DC ladder: 24 V (robots and tools), 400 V (a colony site), 33 kV (regional), 500 kV (planetary, high-voltage DC). Candidate AC (tier 3): 400 V, 11 kV, 132 kV, 400 kV with one fixed frequency each tier (candidates 50 Hz or 60 Hz; the choice is cultural, not physical). Questions: how many classes, which numbers, and which milestone unlocks each.
+- **D3. Cable length between tiles.** Circuit wires have a manually configured length (confirmed). For tile-to-tile cables: should length be the real centre-to-centre distance (a tile is about 300 km on an Earth-sized planet, so cables are very long and voltage class dominates) or a configurable value? **Recommend the real distance**, since the planet's size is already a game input; and cable cross-section chosen from a small catalogue (the cable product), not free.
+- **D4. Which cable products and materials at the start.** Copper (1.72e-8 ohm m) and aluminium (2.83e-8) exist (the repo's stand-ins and IACS). Propose two products at launch: the existing plain and high-voltage lines, becoming "aluminium cable, 33 kV class" and "aluminium cable, 500 kV class"; copper and silver later. OK?
+- **D5. Circuit hosts and the facility.** The brief says circuits are designed in "engineering facilities" and installed in "supported buildings, robots and machinery". Which building is the facility (a new `BuildingType`, e.g. Engineering Bay), and which hosts take circuits first (proposal: Charging station, Relay, Workshop)? What is the circuit capacity of a host (components and terminals)?
+- **D6. Technology tiers.** The four proposed tiers need unlock rules: milestones, research experiments or both? (No lore or research cost is invented here.)
+- **D7. Phase order of the work.** This is many pull requests (section 7). Confirm that stages 1 to 3 (graph, cables, building terminals) come before any circuit editor work, and that the legacy wire tool keeps working throughout.
+- **D8. Legacy behaviour.** Keep "nothing is wired automatically" (decided 2026-11-20) as the rule for terminals; the Skip-setup shortcut wires what it places. Confirm.
+
+## 7. Staged plan (one pull request per stage, each buildable and tested)
+
+| Stage | Content | Save | Tests |
+| --- | --- | --- | --- |
+| 0 | This document, registry rows, open questions | none | none |
+| 1 | `Electrical` namespace: node, connection, terminal, device, network; connected components (union-find, deterministic order), incremental by topology stamp; mesh, splitting, independent networks. A compatibility adapter builds the graph from today's links; nothing uses it for power yet | +1 (graph state) | topology, loops, splits, determinism, adapter equals legacy reachability |
+| 2 | Materials (data table), `CableSpec` (rho L / A, rating, voltage class), voltage and frequency classes (values from D2), voltage drop, I squared R loss, current limit; a pure two-terminal transmission calculator | none or +1 | resistance, drop, loss, rating, class compatibility |
+| 3 | Terminals on the existing buildings; a nodal power-flow solver for the main island (D1) behind an interface that the future dispatch can replace; the legacy tree flow removed after the new solver reproduces it within tolerance on the regression suite; migration of lines and wired buildings | +1 and migration | all of `WiredGridTests` through the new solver, migration tests, scenario tests |
+| 4 | Circuit data model: components (data), circuit graph, blueprint, instance, power and signal ports | +1 | serialization, validation |
+| 5 | DC solver: modified nodal analysis, sources, resistors, switches, lamps, series and parallel, junction conservation, open and short detection, diagnostics | none | the brief's circuit test list |
+| 6 | Circuit editor (Presentation): grid workspace, placement, rotation, wire drawing, explicit junctions, wire length, probes, test, save blueprint | none | Play-mode checklist (no Presentation tests exist, KI-26) |
+| 7 | Engineering facility and installation: host compatibility, instance runtime, control interfaces to machines | +1 | install, compatibility, interface tests |
+| 8 | AC: RMS steady state, fixed frequency classes, transformer, rectifier, inverter | +1 | AC list in the brief |
+| 9 | Hardening: migration docs, performance guard, documentation, registry verification | none | regression, performance |
+
+Each stage report follows the brief's section 23 (what and why, files, tests added and run, documents, limits, decisions needed). Time dependencies: stage 3 needs D1 and D2; stage 5 needs nothing beyond stage 4; stage 7 needs D5; stage 8 needs D6.
+
+## 8. Interfaces (proposed, per the architecture rules)
+
+- New role interfaces on `IPlanetSimulation`: `IElectricalNetwork` (read models: nodes, connections, networks, terminal status, per-device state "connected, compatible, operational, receiving power, receiving enough") and `IElectricalCommands` (place node or cable, connect terminal, remove); `ICircuitCommands` and `ICircuitReadout` for blueprints and instances. Presentation submits commands and reads values; it never touches a model object.
+- The five states of the brief (connected, compatible, operational, receiving power, receiving enough) are separate fields of the device read model from stage 3.
+- Power-flow and consumer allocation sit behind an interface (`INetworkSolver`) so that dispatch policy can be designed later without touching the graph.
+- Circuits never write into other systems; a circuit's outputs (a relay contact state, a load's draw, a sensor input) are values the orchestrator passes (rule 5).
+
+## 9. Registry rows to add (all PROPOSED, "Designed")
+
+EL-01 electrical graph with mesh and independent networks; EL-02 explicit building terminals; EL-03 cable specification and physics; EL-04 fixed voltage classes; EL-05 fixed frequency classes (AC tier); EL-06 main-island power-flow behind an interface; EL-07 circuit components, blueprints and instances; EL-08 DC circuit solver and diagnostics; EL-09 circuit editor; EL-10 engineering facility and hosts; EL-11 AC components (transformer, rectifier, inverter); EL-12 migration of the legacy wiring. The registry gets these rows when the director approves the plan.
+
+## 10. Risks
+
+- **Scale.** This is the largest single design so far; the staged plan keeps each pull request reviewable.
+- **Behaviour change.** The 2 % per hop and fixed capacities become physics; some colonies will see different losses. The migration derives cables that reproduce today's capacities; the loss figure will differ and is reported, not hidden.
+- **Two sources of truth** during stage 1 to 3 (legacy links and the graph): the adapter is one-way and tested for equality.
+- **Editor effort.** The circuit editor is a large Presentation job with no automated tests; it is last among the visible stages on purpose.
