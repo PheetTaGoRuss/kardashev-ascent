@@ -1,3 +1,4 @@
+using KardashevAscent.Simulation.Logistics;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -228,7 +229,10 @@ namespace KardashevAscent.Simulation.Game
                 fieldWork[t] = h - RobotSpecs.MiningBatchHours;
                 // What comes out is taken from the ground: a deposit runs out (director 2026-11-15; KI-12).
                 double want = RobotSpecs.MiningKgPerHour * RobotSpecs.MiningBatchHours * Deposits.GradeOf(order.Tile, order.Material);
-                Materials.Add(order.Material, Deposits.Extract(order.Tile, order.Material, want));
+                // With logistics on, the ore lies in a pile on the mine tile (room permitting); otherwise in the one stock.
+                if (LogisticsEnabled)
+                    want = Math.Min(want, inventories.FreeAt(PlaceId.Depot(order.Tile)));
+                StockAt(order.Tile).Add(order.Material, Deposits.Extract(order.Tile, order.Material, want));
                 Workforce.Release(t);
                 if (Deposits.IsExhausted(order.Tile, order.Material))
                 {

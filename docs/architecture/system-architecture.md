@@ -41,6 +41,7 @@ Four assemblies are enough today. Do not add an assembly for a category (data, p
 | `Solar` | Light from star to panel: orbit, sun position, atmosphere, panel, yield, spectra, sky knowledge, measurement puzzles | none |
 | `Planet` | Hex sphere, terrain, building slots, planet records, planet chemistry, the light-potential map | `Civilization`, `Solar` |
 | `Resources` | Materials, deposits, material stock, industry, the survey puzzle | `Planet`, `Solar` |
+| `Logistics` | Stock per place (`InventoryBook`), the haul ledger, haul energy physics (new, mission operations P1) | `Resources` |
 | `Robots` | Robots, groups, tasks, scheduling, upkeep, movement, manufacturing, colony network | `Energy`, `Planet`, `Resources` |
 | `Game` | The interface, the orchestrator, construction, save state, panel tiers, history | all of the above |
 

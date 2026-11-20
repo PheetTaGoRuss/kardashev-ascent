@@ -1,3 +1,4 @@
+using KardashevAscent.Simulation.Logistics;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -182,6 +183,8 @@ namespace KardashevAscent.Simulation.Game
             tileAreaM2 = 4.0 * Math.PI * planetRadiusM * planetRadiusM / sphere.TileCount;
             BaseTileId = baseTileId >= 0 ? baseTileId : PickBaseTile();
             Workforce.Reset(BaseTileId);
+            inventories.Adopt(PlaceId.Depot(BaseTileId), Materials);   // the lander depot is the colony's old single stock
+            inventories.Capacity = PlaceCapacityKg;
             // The lander's cargo: materials for the first buildings (game rule, TBD).
             foreach (var (m, kg) in BuildCosts.LanderCargo.Items())
                 Materials.Add(m, kg);

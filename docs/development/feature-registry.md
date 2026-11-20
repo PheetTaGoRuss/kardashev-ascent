@@ -211,9 +211,9 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | ID | Feature | Design | Basis | Implementation | Where |
 | --- | --- | --- | --- | --- | --- |
 | MO-01 | Light-lag doctrine banner from `distancePc` (one-way light time to Earth) | CONFIRMED (director 2026-11-20) | director brief 2026-11-20 | Designed | `docs/design/mission-operations.md` |
-| MO-02 | Inventories per place; a site draws from its own tile; save migration to the lander depot | CONFIRMED; capacities PROPOSED, TBD | director brief 2026-11-20 | Designed | same |
+| MO-02 | Inventories per place; a site draws from its own tile; save migration to the lander depot | CONFIRMED; capacities PROPOSED, TBD | director brief 2026-11-20 | In progress: inventories, mining piles, site draws and save built (P1a, flag off until hauls exist); hauls in P1b | `Logistics/InventoryBook.cs`, `Game/PlanetSimulation.Logistics.cs`, `LogisticsStockTests` |
 | MO-03 | Haul task and demand-driven planner; Transport robots get work (closes the "no work" of RB-14) | CONFIRMED; payload PROPOSED | director brief 2026-11-20 | Designed | same |
-| MO-04 | Haul energy: payload term calibrated to today's drive power; climb term off by default | CONFIRMED; scale PROPOSED | director brief 2026-11-20 | Designed | same |
+| MO-04 | Haul energy: payload term calibrated to today's drive power; climb term off by default | CONFIRMED; scale PROPOSED | director brief 2026-11-20 | In progress: physics and tests built (P1a); used by hauls in P1b | `Logistics/HaulPhysics.cs`, `HaulPhysicsTests` |
 | MO-05 | Storage yard, sealed store, gas tank | CONFIRMED; numbers PROPOSED | director brief 2026-11-20 | Designed | same |
 | MO-06 | Processes with named byproducts; `Oxygen` and `Chlorine` materials; vent or store | CONFIRMED | director brief 2026-11-20 | Designed | same |
 | MO-07 | Plant buffers and blockers wired from `IndustrialProduction` (answers OQ-10 and RS-06) | CONFIRMED | director brief 2026-11-20 | Designed | same |

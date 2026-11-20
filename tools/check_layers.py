@@ -18,8 +18,9 @@ ALLOWED = {
     'Solar': set(),
     'Planet': {'Civilization', 'Solar'},
     'Resources': {'Planet', 'Solar'},
+    'Logistics': {'Resources'},
     'Robots': {'Energy', 'Planet', 'Resources'},
-    'Game': {'Civilization', 'Climate', 'Energy', 'Planet', 'Resources', 'Robots', 'Solar'},
+    'Game': {'Civilization', 'Climate', 'Energy', 'Logistics', 'Planet', 'Resources', 'Robots', 'Solar'},
 }
 NAMES = '|'.join(ALLOWED)
 
