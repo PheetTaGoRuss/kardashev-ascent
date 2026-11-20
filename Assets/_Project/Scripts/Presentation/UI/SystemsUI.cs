@@ -50,7 +50,7 @@ namespace KardashevAscent.Presentation.UI
             CopyStyles(root);
             ScreenInput.Register(root.panel);
 
-            bar = new VisualElement();
+            bar = new VisualElement { name = "system-tabs" };   // UiLayout places it under the top bar
             bar.AddToClassList("panel");
             bar.style.position = Position.Absolute;
             bar.style.top = 78;

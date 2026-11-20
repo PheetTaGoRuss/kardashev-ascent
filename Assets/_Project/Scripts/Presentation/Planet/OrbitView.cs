@@ -206,7 +206,7 @@ namespace KardashevAscent.Presentation.Planet
             string text = locked
                 ? "ORBIT VIEW · the planet goes round its star. Tidally locked: it turns once per orbit, so one face always looks at the star. Sizes not to scale · Y: close"
                 : "ORBIT VIEW · the planet goes round its star on a tilted axis. Spin slowed and orbit sped up so you can follow them. Sizes not to scale · Y: close";
-            GUI.Box(new Rect(Screen.width / 2f - 340f, Screen.height - 78f, 680f, 48f), text, label);
+            GUI.Box(new Rect(Screen.width / 2f - 340f, UiLayout.ClearBottomY - 58f, 680f, 48f), text, label);
         }
 
         void OnDestroy()

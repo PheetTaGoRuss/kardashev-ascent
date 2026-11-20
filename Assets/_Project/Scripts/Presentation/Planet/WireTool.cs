@@ -160,7 +160,8 @@ namespace KardashevAscent.Presentation.Planet
             string text = Active
                 ? $"WIRE TOOL · {(highVoltage ? "high-voltage" : "power")} line · click a tile, then the next tile along · Tab: switch line · X / Esc: stop\\n{message}"
                 : message;
-            GUI.Box(new Rect(Screen.width / 2f - 330f, 120f, 660f, Active ? 52f : 28f), text.Replace("\\n", "\n"), style);
+            float height = Active ? 52f : 28f;
+            GUI.Box(new Rect(Screen.width / 2f - 330f, UiLayout.ClearBottomY - height - 8f, 660f, height), text.Replace("\\n", "\n"), style);
         }
     }
 }
