@@ -89,5 +89,47 @@ namespace KardashevAscent.Tests.Electrical
             sim.PlacePowerLine(b, 0, a);
             CollectionAssert.AreEqual(sim.LanderNetworkTiles().ToArray(), sim.LanderNetworkTiles().ToArray());
         }
+
+        [Test]
+        public void RolesFollowTheBuildingKind()
+        {
+            Assert.AreEqual(KardashevAscent.Simulation.Electrical.TerminalRole.Source, WireRoles.TerminalRoleOf(BuildingType.SolarPanel));
+            Assert.AreEqual(KardashevAscent.Simulation.Electrical.TerminalRole.Storage, WireRoles.TerminalRoleOf(BuildingType.Battery));
+            Assert.AreEqual(KardashevAscent.Simulation.Electrical.TerminalRole.Load, WireRoles.TerminalRoleOf(BuildingType.Workshop));
+            Assert.AreEqual(KardashevAscent.Simulation.Electrical.TerminalRole.Load, WireRoles.TerminalRoleOf(BuildingType.ChargingStation));
+        }
+
+        [Test]
+        public void AnUnwiredBuildingHasNoTerminalAndAWiredOneOnTheMainGridDoes()
+        {
+            var sim = Wired();
+            int a = Land(sim, sim.BaseTileId);
+            Assert.IsTrue(sim.PlacePowerLine(a, 0, sim.BaseTileId));
+            int slot = Enumerable.Range(1, sim.SlotCount(a) - 1).First(s => sim.PlacePanel(a, s, 0.35, System.Math.PI));
+            // A line ends on this tile, but nobody wired the panel: the cable passes by and the panel is not on the grid.
+            Assert.IsFalse(sim.BuildingElectrical(a, slot).HasTerminal);
+            Assert.IsTrue(sim.PlaceBuildingWire(a, slot));
+            var st = sim.BuildingElectrical(a, slot);
+            Assert.IsTrue(st.HasTerminal);
+            Assert.IsTrue(st.Connected);
+            Assert.IsTrue(st.Compatible);
+            Assert.IsTrue(st.OnMainGrid);
+            Assert.AreEqual(KardashevAscent.Simulation.Electrical.TerminalRole.Source, st.Role);
+        }
+
+        [Test]
+        public void AWiredBuildingOnAnIslandIsConnectedButNotOnTheMainGrid()
+        {
+            var sim = Wired();
+            int a = Land(sim, sim.BaseTileId);
+            int far = Land(sim, Land(sim, a, sim.BaseTileId), a, sim.BaseTileId);
+            int far2 = Land(sim, far, a, sim.BaseTileId);
+            Assert.IsTrue(sim.PlacePowerLine(far2, 0, far));
+            int slot = Enumerable.Range(1, sim.SlotCount(far) - 1).First(s => sim.PlacePanel(far, s, 0.35, System.Math.PI));
+            Assert.IsTrue(sim.PlaceBuildingWire(far, slot));
+            var st = sim.BuildingElectrical(far, slot);
+            Assert.IsTrue(st.Connected);
+            Assert.IsFalse(st.OnMainGrid);
+        }
     }
 }

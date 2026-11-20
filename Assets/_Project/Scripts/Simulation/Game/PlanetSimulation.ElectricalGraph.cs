@@ -43,10 +43,15 @@ namespace KardashevAscent.Simulation.Game
             NodeFor(BaseTileId);
             var wired = new List<(int Tile, int Slot)>(wireBook.WiredBuildings);
             wired.Sort((x, y) => x.Tile != y.Tile ? x.Tile.CompareTo(y.Tile) : x.Slot.CompareTo(y.Slot));
+            var typeAt = new Dictionary<(int, int), BuildingType>();
+            foreach (var b in WireableBuildings()) typeAt[(b.Tile, b.Slot)] = b.Type;
             foreach (var w in wired)
             {
-                var dev = g.AddDevice(w.Tile, w.Slot, 0);
-                var term = g.AddTerminal(dev, NetworkType.Dc, 0, TerminalRole.Unspecified);
+                if (!typeAt.TryGetValue((w.Tile, w.Slot), out var type)) continue;   // a wire left on a building that is gone
+                var role = WireRoles.TerminalRoleOf(type);
+                if (role == TerminalRole.Unspecified) continue;
+                var dev = g.AddDevice(w.Tile, w.Slot, (int)type);
+                var term = g.AddTerminal(dev, NetworkType.Dc, 0, role);
                 g.Attach(term, NodeFor(w.Tile));
             }
             legacyGraph = g;
@@ -77,6 +82,25 @@ namespace KardashevAscent.Simulation.Game
             var node = g.NodeOnTile(tileId);
             if (node.IsNone) return false;
             return !g.SameNetwork(node, g.NodeOnTile(BaseTileId));
+        }
+
+        /// <summary>
+        /// What a building's electrical terminal says now (read model). A building is on a network only through a terminal made by
+        /// wiring it; a cable passing through its tile does nothing. "Receiving enough" is not reported: it needs the consumer
+        /// allocation policy, which is a separate design.
+        /// </summary>
+        public BuildingElectricalState BuildingElectrical(int tileId, int slot)
+        {
+            var g = LegacyGraph();
+            foreach (var d in g.Devices())
+            {
+                if (d.OwnerTile != tileId || d.OwnerSlot != slot) continue;
+                var t = g.Terminal(d.Terminals[0]);
+                bool connected = !t.Node.IsNone;
+                bool main = connected && g.SameNetwork(t.Node, g.NodeOnTile(BaseTileId));
+                return new BuildingElectricalState(true, t.Role, connected, true, main);
+            }
+            return default;
         }
     }
 }
