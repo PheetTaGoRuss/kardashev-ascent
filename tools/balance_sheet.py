@@ -37,6 +37,6 @@ How to use it: change the value in the code file shown, keep the `TBD` mark unti
 for f, name, value, doc in out:
     doc = doc.replace('|', '/').replace('TBD', '').strip(' .(),;')
     text += f'| `{f}` | `{name}` | `{value}` | {doc[:140]} |\n'
-text += f'\n{len(out)} constants listed. Generated 2026-11-18 by `tools/balance_sheet.py` (run it again after changing the code).\n'
+text += f'\n{len(out)} constants listed. Generated 2026-11-20 by `tools/balance_sheet.py` (run it again after changing the code).\n'
 io.open('docs/development/balance-placeholders.md', 'w', encoding='utf-8', newline='\n').write(text)
 print(len(out))

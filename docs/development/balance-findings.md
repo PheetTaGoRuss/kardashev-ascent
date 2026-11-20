@@ -68,3 +68,14 @@ A smarter bot that builds forward chargers and relays is needed before tuning mi
 ## Wired grid (2026-11-20): effect on the balance runs
 
 New missions are wired (`SimulationRunner`): generators off the grid make nothing and stations and storage only go where power lines reach. The balance bot (`BalanceBot`) predates it, so its runs describe the unwired game; the simulation tests leave `WiredGrid` off. A line costs 15 Cu, 30 Fe and 20 rock (TBD) and is built by a robot, so the forward-charger chain now needs a line chain first. Expect the early expansion to be slower than the bot shows; re-tune once the bot lays lines.
+
+## 2026-11-20: mission operations (P5 pass)
+
+`tools/balance_sheet.py` was run again: 99 placeholder constants are listed (new ones: haul payload 490 kg, handling 0.25 h and 60 W, storage yard 100 t and sealed store 20 t, plant buffer sizes, starter-rule thresholds, the slag stand-in ratio). All stay TBD; none was tuned.
+
+What the 60-day runs showed (values stay TBD):
+
+- **Hauling is cheap on a light planet and dear on a heavy one.** The same 400 kg haul costs about 1.5 times more energy per kg-km on LHS 1140 b (1.87 g) than on Mars, and about 5 times more per hop. A smelter beside the mine saves real energy there, as intended.
+- **Mars without copper.** With the lander's copper gone, three alumina and three aluminium batches (about 800 h of plant time) were enough to build a charging station at an outpost with aluminium wiring inside 60 days.
+- **Industry was missing from "used power".** Fixed (KI-40); K reads a little higher while the Workshop and refineries run.
+- **Step cost.** 300 robots and 26 plants: about 2.2 ms per 0.25 h step.

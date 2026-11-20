@@ -71,11 +71,12 @@ Detailed specification: [`../design/robotic-workforce.md`](../design/robotic-wor
 | Topic | Design status | Built today |
 | --- | --- | --- |
 | Discovery by survey | CONFIRMED (PR #52) | Built |
-| Mining | CONFIRMED | Built; one colony-wide stock in kg |
+| Mining | CONFIRMED | Built; ore lies in a pile on its mine tile (stock per place) |
 | Substitute materials (aluminium for copper, sodium for lithium) | CONFIRMED | Built |
 | Material composition and purity | FUTURE | Deposits have a grade; mined material has no purity |
-| Storage and logistics | FUTURE | None |
-| Chemical processing, production chains, byproducts, waste, recycling | FUTURE | Two refining jobs in the Workshop; uncommitted foundation work seen locally |
+| Storage and logistics | CONFIRMED (director 2026-11-20; numbers TBD) | Built: depots per tile, haul tasks from demand, haul energy by gravity and load, storage yard, sealed store and gas tank, stock targets |
+| Chemical processing, production chains, byproducts, waste, recycling | CONFIRMED for refining (2026-11-20) | Built: six processes with named byproducts (oxygen, chlorine), plant buffers, store or vent, heat ledger; recycling still FUTURE |
+| Flight rules (the colony runs on a versioned rulebook) | CONFIRMED (2026-11-20) | Built: rulebook with rationales, uplink drift, Operations log; see `docs/design/mission-operations.md` |
 | Environmental effects of industry | FUTURE | None |
 
 ### 3.4 Energy infrastructure

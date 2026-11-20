@@ -321,7 +321,10 @@ Time speeds: pause, real time, 1 hour per second and 1 day per second (the faste
   | Sodium from salt (Downs cell) | Electrolysis cell | 25.4 kg salt → 10 kg sodium | 10 kWh per kg | 4 days | 2.54 kg salt per kg; chlorine vented |
   | Sodium from rock | Electrolysis cell | 225 kg rock → 5 kg sodium | 30 kWh per kg | 10 days | For planets with no salt |
 
-- **Queue and Auto:** batches can be queued, or **Auto** keeps a chosen amount in stock.
+- **Queue and Auto:** batches can be queued, or **Auto** keeps a chosen amount in stock (also a stock target at the lander depot).
+- **Plants have buffers (mission operations).** Each refinery module has an input and an output buffer. A batch starts only when its input is in the input buffer and every output fits in the output buffer; otherwise the plant reports why (missing input, no room in the output store). A same-tile conveyor links the buffers to the tile's depot.
+- **Byproducts are matter.** Aluminium electrolysis gives off oxygen (an inert-anode cell, an emerging technology) and the Downs cell gives off chlorine. Each plant stores its gas (it goes to a gas tank, and a full store stops the plant) or vents it (logged; chlorine is toxic). Slag may stand in for rock in building bills, 1 : 1.
+- **Heat ledger.** Electricity in = chemical energy kept in the product + waste heat; the heat is counted (Flowsheet window, Z) and read out to the waste-heat model. The planet does not warm from it yet.
 - **Manufacturing window (U):**
   - Tabs: Robots, Refining, Queue, Reports.
   - Each recipe is a card with a picture, a big name with an "i", the needs and output as material icons (red = not
@@ -532,7 +535,7 @@ All formulas and checks are in `docs/physics/physics-verification.md`.
 ## 16. Known issues and limits
 
 - **Balance:** many numbers are placeholders marked TBD: robot, recipe, deposit, movement and building times.
-- **Mass balance:** robots and upgrades still use materials without a full mass balance; refining is balanced.
+- **Mass balance:** robots and upgrades still use materials without a full mass balance; refining is balanced and checked (every process, and a 60-day Mars run).
 - **Physics gaps:**
   - Real planets' air temperature has no greenhouse term (a cold bias).
   - The waste-heat model isn't in play.
@@ -610,3 +613,13 @@ All formulas and checks are in `docs/physics/physics-verification.md`.
   - An AI coding assistant helped write code, tests and docs under the team's direction (disclosed in the submission form).
   - There are no AI-generated images, video or audio in the game.
   - The slides say they were drafted with AI assistance.
+
+## Mission operations (added 20 November 2026)
+
+The colony runs on three parts that feed each other, designed in `docs/design/mission-operations.md` (director, 2026-11-20). Real expeditions cannot be run from Earth (Proxima Centauri b is about 4.2 light-years away, so an answer takes about 8.5 years), so the colony runs on decisions made in advance.
+
+- **Logistics (MOVE).** Stock is kept per place: every tile outside the lander has its own depot, mined ore lies in a pile where it was mined, and a construction site draws only from its own tile's depot. Hauls come from demand (a site short of a material, a plant waiting for input, a stock target you set); robots carry them. A robot carries up to 490 kg times its transport capacity; driving with a load costs drive power x (robot + cargo) / robot, so it grows with gravity and weight (on LHS 1140 b it costs about five times what it costs on Mars per hop). Storage buildings: storage yard (bulk solids), sealed store (liquids, sodium, lithium), gas tank (about 2.8 t of oxygen at 20 MPa, from the ideal gas law). Transport robots (milestone 2) are the hauling specialists.
+- **Flowsheet (TRANSFORM).** See section 9: named byproducts, plant buffers, store or vent, heat ledger. The Flowsheet window (Z) draws the last week as a Sankey with the mass-closure readout.
+- **Flight rules (DECIDE).** A versioned rulebook: when up to three conditions hold on known state, do one thing, for a stated reason. A robot runs the version the network last synced to it; a cut-off robot keeps its version and syncs when it is back. A rule never fires on something not measured yet, and a direct order from the player always beats a rule. Step 7a of the sub-step order. The Operations window (I) shows the light time, the uplink, the rulebook editor, plants, depots and the Operations log. A new mission starts with three rules (night safing, return when cut off, tell me when a plant is stuck).
+
+Keys: I (Operations), Z (Flowsheet). Save version 42.
