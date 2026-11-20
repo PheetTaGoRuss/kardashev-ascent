@@ -45,6 +45,18 @@ Changed: `RobotSpecs.MiningKgPerHour` 50 → 150 (game rule, TBD). Reasoning: wi
 
 Still open: demand lags generation (at day 280 the bot makes 295 MW at peak but uses 41 MW, because the demand rule follows 85 % of the mean over a day, and night and angles cut the mean to about a fifth of peak); each milestone costs ten times the last, so milestone 3 and later need the larger panel tiers and a bigger crew than the bot builds. Those are next.
 
+## Pass 3 (2026-11-20): bot that moves its mines and caps its crew
+
+Two bot fixes that showed up as game findings: the bot kept mining an exhausted base tile (deposits are finite, so a real colony must move its mines outward, which is intended), and it ordered robots without counting the ones still being made (it reached 62). With 16 robots, deposits re-targeted inside charger range, mining at 150 kg/h:
+
+| Milestone | Day (bot) | Note |
+| --- | --- | --- |
+| 1 (10 MW) | about 55 | forward charger built by day 30 |
+| 2 (100 MW) | about 145 | iron held at the bot's stock cap, so rock and iron are balanced |
+| 3 (1 GW) | not reached by day 700 | the bot stops at about 130 MW: it only builds on the 12 tiles nearest the base that are inside charger range, so it runs out of room, not materials (rock piles up from day 270) |
+
+Reading: materials no longer limit the first two milestones. Beyond that growth needs more land, which means more forward chargers, relays and a wider crew; that is the intended expansion loop, and the bot does not play it. Next balance work needs a bot that expands outward (a charger chain with panel sites on each new tile); until then milestone 3 and later cannot be judged.
+
 ## Not yet balanced
 
 A smarter bot that builds forward chargers and relays is needed before tuning mining rates, robot costs and build times. Until then those numbers stay as placeholders.
