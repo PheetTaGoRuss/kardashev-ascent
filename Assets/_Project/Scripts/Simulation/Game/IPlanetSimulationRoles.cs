@@ -314,6 +314,18 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Materials on hand, kg.</summary>
         Resources.MaterialStock Materials { get; }
 
+        /// <summary>Stock kept per place (depots, buffers, cargo) instead of one colony stock; hauls and sites draw by place. Off in old saves and in the simulation tests.</summary>
+        bool LogisticsEnabled { get; set; }
+
+        /// <summary>Kg of one material in the depot on a tile.</summary>
+        double KgAt(int tileId, Resources.Material material);
+
+        /// <summary>Kg of one material in every place together.</summary>
+        double TotalKg(Resources.Material material);
+
+        /// <summary>Kg moved, kg-km and the energy of hauling so far.</summary>
+        (double KgMoved, double KgKm, double Wh) HaulTotals { get; }
+
         /// <summary>Ask a robot to survey a land tile's ground. False if it is water, surveyed or already ordered.</summary>
         bool OrderSurvey(int tileId);
         bool IsSurveyOrdered(int tileId);

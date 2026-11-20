@@ -159,15 +159,20 @@ namespace KardashevAscent.Simulation.Game
         /// Let sites take materials from <paramref name="stock"/> in queue order, skipping those <paramref name="canTake"/>
         /// refuses (null: every site; in the game, only sites a robot is working on). Returns the sites finished, in order.
         /// </summary>
-        public List<(int Tile, int Slot)> Pay(MaterialStock stock, Func<(int Tile, int Slot), bool> canTake)
+        public List<(int Tile, int Slot)> Pay(MaterialStock stock, Func<(int Tile, int Slot), bool> canTake) =>
+            Pay(_ => stock, canTake);
+
+        /// <summary>The same, each site drawing from its own stock (its tile's depot when the colony keeps stock per place).</summary>
+        public List<(int Tile, int Slot)> Pay(Func<(int Tile, int Slot), MaterialStock> stockFor, Func<(int Tile, int Slot), bool> canTake)
         {
             var finished = new List<(int Tile, int Slot)>();
-            if (stock == null)
+            if (stockFor == null)
                 return finished;
             for (int i = 0; i < queue.Count;)
             {
                 Site s = queue[i];
-                if (canTake != null && !canTake(s.Key))
+                MaterialStock stock = stockFor(s.Key);
+                if (stock == null || (canTake != null && !canTake(s.Key)))
                 {
                     i++;
                     continue;

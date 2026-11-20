@@ -1,3 +1,4 @@
+using KardashevAscent.Simulation.Logistics;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -63,6 +64,7 @@ namespace KardashevAscent.Simulation.Game
             foreach (Material m in Resources.Materials.All)
                 if (Materials[m] > 0.0)
                     state.MaterialsKg.Add(new MaterialRecord { Material = m, Kg = Materials[m] });
+            CaptureLogistics(state);
             foreach (var kv in fieldWork)
                 state.FieldWork.Add(new FieldWorkRecord { Kind = kv.Key.Kind, Tile = kv.Key.Tile, Slot = kv.Key.Slot, Hours = kv.Value });
             foreach (var w in wiredBuildings)
@@ -236,6 +238,7 @@ namespace KardashevAscent.Simulation.Game
                     if (r != null) mined.Add((r.Tile, r.Material, r.Kg));
             Deposits.SetMined(mined);
             Materials.Clear();
+            inventories.ClearExcept(PlaceId.Depot(BaseTileId));
             orders.Clear();
             fieldWork.Clear();
             Parameters.Restore(state.MeasuredParameters);   // version 18
@@ -280,6 +283,7 @@ namespace KardashevAscent.Simulation.Game
             if (state.MaterialsKg != null)
                 foreach (MaterialRecord m in state.MaterialsKg)
                     Materials.Set(m.Material, m.Kg);
+            RestoreLogistics(state);
             // Before version 26 the colony built from parts; it gets the lander's cargo of materials instead (game rule).
             if (state.Version < 26)
                 foreach (var (m, kg) in BuildCosts.LanderCargo.Items())

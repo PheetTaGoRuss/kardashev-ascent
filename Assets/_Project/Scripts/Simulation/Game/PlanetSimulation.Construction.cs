@@ -24,7 +24,7 @@ namespace KardashevAscent.Simulation.Game
             set => Build.TimeEnabled = value;
         }
         public MaterialBill ConstructionRemaining => Build.Remaining;
-        public MaterialBill ConstructionShortfall => Build.Remaining.Minus(Materials);
+        public MaterialBill ConstructionShortfall => Build.Remaining.Minus(LogisticsEnabled ? inventories.Totals() : Materials);
         public MaterialBill ConstructionRemainingAt(int tileId, int slot) => Build.RemainingAt(tileId, A(tileId, slot));
         public double ConstructionMaterialShare(int tileId, int slot) => Build.MaterialShare(tileId, A(tileId, slot));
         public (double Done, double Total) ConstructionWork(int tileId, int slot) => Build.WorkAt(tileId, A(tileId, slot));

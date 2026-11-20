@@ -34,7 +34,7 @@ namespace KardashevAscent.Simulation.Game
             adjustOrders.RemoveAll(o => o.Tile == tileId && o.Slot == slot);
             if (Build.IsQueued(tileId, slot))
             {
-                Build.Cancel(tileId, slot, Materials);
+                Build.Cancel(tileId, slot, StockAt(tileId));
                 Workforce.Tasks.MarkCancelled(new WorkTask(TaskKind.Build, tileId, slot));
                 standIns.Remove((tileId, slot));
                 return;
@@ -43,7 +43,7 @@ namespace KardashevAscent.Simulation.Game
             MaterialBill made = (type == BuildingType.SolarPanel || type == BuildingType.FloatingSolar) && panels.TryGetValue((tileId, slot), out var p)
                 ? PanelCost(p.Area).Times(wasFloating ? FloatingCostFactor : 1.0) : BuildBill(type);
             // It gives back what it was made of: aluminium if it was wired with aluminium.
-            Build.Salvage(WithStandIns(made, tileId, slot), Materials);
+            Build.Salvage(WithStandIns(made, tileId, slot), StockAt(tileId));
             standIns.Remove((tileId, slot));
             if (type == BuildingType.Battery)
                 Grid.Battery.RemoveCapacity(BatteryUnitWh);
