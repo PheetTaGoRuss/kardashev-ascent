@@ -81,17 +81,17 @@ namespace KardashevAscent.Simulation.Tests.Game
         }
 
         [Test]
-        public void ASiteOnAnotherTile_WaitsForItsOwnDepot_NotTheLanderDepot()
+        public void ASiteOnAnotherTile_DrawsOnlyFromItsOwnDepot_AndTheHaulsFillIt()
         {
             var sim = Make(true);
             int tile = LandNeighbour(sim);
             Assert.IsTrue(sim.PlaceBattery(tile, 0));
-            for (int i = 0; i < 12; i++) sim.Tick(1.0);
-            Assert.AreEqual(0.0, sim.ConstructionProgress(tile, 0), 1e-9, "the lander depot has the parts, but the site's own depot has none");
-            MaterialBill bill = sim.ConstructionRemainingAt(tile, 0);   // what the site still needs (stand-ins included)
-            foreach (var (m, kg) in bill.Items()) sim.PutMaterials(tile, m, kg);
-            for (int i = 0; i < 60 && sim.IsUnderConstruction(tile, 0); i++) sim.Tick(1.0);
-            Assert.IsFalse(sim.IsUnderConstruction(tile, 0), "with the parts in its own depot the site is built");
+            sim.Tick(0.25);
+            Assert.AreEqual(0.0, sim.ConstructionProgress(tile, 0), 1e-9, "nothing is in the site's own depot yet");
+            Assert.IsNotEmpty(sim.HaulOrders(), "a haul was planned from the lander depot");
+            for (int i = 0; i < 400 && sim.IsUnderConstruction(tile, 0); i++) sim.Tick(1.0);
+            Assert.IsFalse(sim.IsUnderConstruction(tile, 0), "the hauls brought what it needed");
+            Assert.Greater(sim.HaulTotals.KgMoved, 0.0);
         }
 
         [Test]

@@ -23,6 +23,12 @@ namespace KardashevAscent.Simulation.Robots
         readonly Dictionary<int, double> criticalRequest = new Dictionary<int, double>();
         readonly Dictionary<int, double> topUpRequest = new Dictionary<int, double>();
 
+        /// <summary>The cargo a robot carries, kg (set by the simulation); it loads the drive: heavier, so more power (MO-04).</summary>
+        public System.Func<Robot, double> CargoKgOf { get; set; }
+
+        /// <summary>Energy spent driving with cargo aboard since the simulation last read it, Wh (it zeroes it).</summary>
+        public double HaulDriveWh { get; set; }
+
         /// <summary>Charging asked for at a charger on the landing tile: the lander's RTGs serve it first (D10).</summary>
         public double DockRequestW { get; private set; }
         /// <summary>Charging asked for elsewhere by robots below 20 %: served right after the colony (D6).</summary>
@@ -207,10 +213,13 @@ namespace KardashevAscent.Simulation.Robots
         }
 
         /// <summary>Drive along the route: draw drive power and cross tiles at their terrain's pace.</summary>
-        static void Drive(Robot r, double hours, Movement movement)
+        void Drive(Robot r, double hours, Movement movement)
         {
-            double want = movement.DrivePowerW / r.Attribute(RobotAttribute.EnergyEfficiency);
+            double cargoKg = CargoKgOf != null ? CargoKgOf(r) : 0.0;
+            double want = (cargoKg > 0.0 ? movement.DrivePowerWithCargoW(cargoKg) : movement.DrivePowerW) / r.Attribute(RobotAttribute.EnergyEfficiency);
             double got = r.Battery.Draw(want, hours);
+            if (cargoKg > 0.0)
+                HaulDriveWh += got * hours;
             double moved = (want > 0.0 ? hours * got / want : hours) * r.Attribute(RobotAttribute.Speed);
             while (moved > 0.0 && r.Route.Count > 0)
             {

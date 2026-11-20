@@ -233,6 +233,10 @@ namespace KardashevAscent.Simulation.Robots
             r != null && r.Has(RobotModule.Boat) && HoursToChargerOnWater != null ? HoursToChargerOnWater : HoursToCharger;
         public double DrivePowerW => Routes.DrivePowerW;
 
+        /// <summary>Drive power with cargo aboard, W: the empty power times (robot + cargo) / robot (mission operations MO-04).</summary>
+        public double DrivePowerWithCargoW(double cargoKg) =>
+            DrivePowerW * Logistics.HaulPhysics.LoadFactor(Logistics.HaulPhysics.DefaultRobotMassKg, cargoKg);
+
         /// <summary>Energy to drive for <paramref name="hours"/>, Wh, taken from the battery (one-way efficiency counted by the battery).</summary>
         public double EnergyWh(double hours) => hours * DrivePowerW;
     }

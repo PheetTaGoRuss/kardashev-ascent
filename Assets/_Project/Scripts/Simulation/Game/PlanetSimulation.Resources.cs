@@ -151,10 +151,11 @@ namespace KardashevAscent.Simulation.Game
                     continue;
                 }
                 if (t.Kind != TaskKind.Survey && t.Kind != TaskKind.Mine && t.Kind != TaskKind.Measure && t.Kind != TaskKind.Experiment
-                    && t.Kind != TaskKind.Excavate)
+                    && t.Kind != TaskKind.Excavate && t.Kind != TaskKind.Haul)
                     continue;
                 fieldWork[t] = (fieldWork.TryGetValue(t, out double h) ? h : 0.0) + dt * speed;
             }
+            AdvanceHauls();
             AdvanceRefineries(dt);
             // Refinery modules draw from the grid as part of the industrial load.
             WorkshopPowerW = workshopW + RefineryPowerW;

@@ -60,10 +60,17 @@ namespace KardashevAscent.Simulation.Robots
                 case TaskKind.Experiment: return SurveyPowerW;
                 case TaskKind.Mine:
                 case TaskKind.Excavate: return MinePowerW;
+                case TaskKind.Haul: return HaulHandlingPowerW;
                 case TaskKind.Manufacture: return BuildPowerW;
                 default: return BuildPowerW;
             }
         }
+
+        /// <summary>Power while loading or unloading cargo, W. Game rule, TBD (driving with cargo is counted by the drive power).</summary>
+        public const double HaulHandlingPowerW = 60.0;
+
+        /// <summary>Hours a robot takes to load or unload its cargo at the stop. Game rule, TBD.</summary>
+        public const double HaulHandlingHours = 0.25;
 
         // ---- Survey and mining (phase 3a; TBD placeholders) ----
 
