@@ -309,3 +309,4 @@ Each needs the director. Until answered, the listed default applies and work tha
 | OQ-13 | Is the original design document to be added to the repository? | The physics report reviews a document that is not here | Not available |
 | OQ-15 | The blue roll ring in the angle editor does nothing for power (a flat panel's output does not depend on twisting about its own normal). Remove it, or give it a use? | Clutter against orientation | Stays, drawn faint and labelled "no effect" |
 | OQ-14 | Does the game still target the NASA Space Apps submission, a longer commercial path, or both? | Scope and priority of the roadmap | Long-term development, per the 2026-11-12 brief |
+| 2026-11-20 | Cable build bill (gate G0(d)): keep the flat bill now, move to real mass times a tuned share (option B) once mining output is known; the physics shows as loss, advice and salvage meanwhile | EN-31 |
