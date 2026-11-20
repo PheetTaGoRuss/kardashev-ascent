@@ -123,7 +123,7 @@ namespace KardashevAscent.Presentation.UI
                 case 3:
                     return $"Press {(colony != null ? colony.ToggleKey.ToString() : "C")} for the colony overview: a week of power, your K and the next milestone.";
                 case 4:
-                    return "Robots work only as far from a charger as one charge lasts: about three tiles. Ore beyond that needs a Charging station built nearer (Stations tab). The colony is wired: stations only go where power lines reach, so run Power lines (Power group) out from the lander tile first.";
+                    return "Robots work only as far from a charger as one charge lasts: about three tiles. Ore beyond that needs a Charging station built nearer (Stations tab). The colony is wired: stations only go where wires reach, so draw wires tile to tile out from the lander tile first (X, the wire tool).";
                 case 5:
                     double next = Kardashev.PowerForMilestone(1, sim.TypeITargetW);
                     return $"Reach milestone 1: {Format.Power(next)} used through a whole day. Buildings take materials: survey and mine iron, copper and lithium for more.";

@@ -1204,8 +1204,7 @@ namespace KardashevAscent.Presentation.Planet
                       : mode == BuildMode.TidalTurbine ? simulation.PlaceTidalTurbine(tile, s)
                       : mode == BuildMode.WaveConverter ? simulation.PlaceWaveConverter(tile, s)
                       : mode == BuildMode.TidalBarrage ? simulation.PlaceBarrage(tile, s)
-                      : mode == BuildMode.PowerLine ? simulation.PlacePowerLine(tile, s)
-                      : mode == BuildMode.HighVoltageLine ? simulation.PlaceHighVoltageLine(tile, s)
+                      : mode == BuildMode.PowerLine || mode == BuildMode.HighVoltageLine ? false   // wires are run tile to tile with the wire tool, not placed in a site
                       : mode == BuildMode.Relay ? simulation.PlaceRelay(tile, s) : simulation.PlaceChargingStation(tile, s)))
                     return false;
                 BatteryVisual yard = MakeBattery(tile, s, simulation.IsUnderConstruction(tile, s));

@@ -585,11 +585,19 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>A line is on this tile (finished only, or a site too).</summary>
         bool HasLineOn(int tileId, bool finishedOnly);
 
-        /// <summary>Put a high-voltage line on a tile (one slot; opens at milestone 1).</summary>
-        bool PlaceHighVoltageLine(int tileId, int slot);
+        /// <summary>A high-voltage wire from this tile to a neighbouring one (opens at milestone 1).</summary>
+        bool PlaceHighVoltageLine(int tileId, int slot, int targetTile);
 
-        /// <summary>Put a power line on a tile (one slot).</summary>
-        bool PlacePowerLine(int tileId, int slot);
+        /// <summary>A wire from this tile to a neighbouring one, built on a slot of this tile.</summary>
+        bool PlacePowerLine(int tileId, int slot, int targetTile);
+
+        /// <summary>Run a wire from one tile to a neighbouring one (the planet wire tool). False: see <see cref="WireProblem"/>.</summary>
+        bool PlaceWire(int fromTile, int toTile, bool highVoltage);
+
+        string WireProblem { get; }
+
+        /// <summary>Every wire, tile to tile: the two tiles, whether it is finished, whether it is high voltage.</summary>
+        System.Collections.Generic.IEnumerable<(int From, int To, bool Built, bool HighVoltage)> WireLinks();
     }
 
     /// <summary>Tidal barrage (director 2026-11-19).</summary>
