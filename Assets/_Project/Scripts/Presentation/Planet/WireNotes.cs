@@ -25,7 +25,18 @@ namespace KardashevAscent.Presentation.Planet
         float popupUntil;
         double lastOverload;
         int lastOffGrid;
-        GUIStyle box, tag;
+        GUIStyle box, outTag, inTag;
+
+        static GUIStyle Solid(Color fill)
+        {
+            var t = new Texture2D(1, 1) { hideFlags = HideFlags.DontSave };
+            t.SetPixel(0, 0, fill);
+            t.Apply();
+            var st = new GUIStyle(GUI.skin.box) { fontSize = 12, alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
+            st.normal.background = t;
+            st.normal.textColor = Color.white;
+            return st;
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Install()
@@ -122,7 +133,8 @@ namespace KardashevAscent.Presentation.Planet
             if (sim == null || !sim.WiredGrid || !GameFlow.IsPlaying)
                 return;
             box ??= new GUIStyle(GUI.skin.box) { fontSize = 14, alignment = TextAnchor.MiddleCenter, wordWrap = true };
-            tag ??= new GUIStyle(GUI.skin.box) { fontSize = 12, alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
+            outTag ??= Solid(new Color(0.16f, 0.38f, 0.85f, 0.95f));
+            inTag ??= Solid(new Color(0.88f, 0.45f, 0.10f, 0.95f));
             if (Time.unscaledTime < popupUntil)
             {
                 float w = Mathf.Min(620f, Screen.width - 40f);
@@ -168,13 +180,8 @@ namespace KardashevAscent.Presentation.Planet
             // hidden behind the planet: skip tiles on the far side
             if (planet != null && Vector3.Dot((world - planet.transform.position).normalized, (cam.transform.position - world).normalized) < -0.05f && !(placer != null && placer.Tile >= 0))
                 return;
-            Color was = GUI.backgroundColor, wasText = GUI.contentColor;
-            GUI.backgroundColor = output ? new Color(0.25f, 0.5f, 1f, 1f) : new Color(1f, 0.55f, 0.15f, 1f);
-            GUI.contentColor = output ? new Color(0.55f, 0.78f, 1f) : new Color(1f, 0.72f, 0.35f);
             float w = 24f + text.Length * 7.5f;
-            GUI.Box(new Rect(s.x - w / 2f, Screen.height - s.y - 26f, w, 22f), (output ? "▶ " : "▼ ") + text, tag);
-            GUI.backgroundColor = was;
-            GUI.contentColor = wasText;
+            GUI.Box(new Rect(s.x - w / 2f, Screen.height - s.y - 26f, w, 22f), (output ? "▶ " : "▼ ") + text, output ? outTag : inTag);
         }
     }
 }
