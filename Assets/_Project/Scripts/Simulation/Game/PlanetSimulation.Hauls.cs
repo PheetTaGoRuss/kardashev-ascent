@@ -16,7 +16,7 @@ namespace KardashevAscent.Simulation.Game
     {
         readonly HaulBook haulBook = new HaulBook();
 
-        /// <summary>What a robot with a transport capacity of 1 can carry, kg. Candidate from the Apollo rover's payload rating (about 490 kg); game rule, TBD.</summary>
+        /// <summary>What a robot with a transport capacity of 1 can carry, kg. Candidate from the Apollo rover design payload (490 kg, NASA NSSDC; its operations handbook limit is about 440 kg); game rule, TBD.</summary>
         public const double BasePayloadKg = 490.0;
 
         /// <summary>Most hauls planned for one demand in a pass.</summary>

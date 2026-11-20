@@ -672,7 +672,7 @@ Unit test (`SkyNotebookTests`): เงาให้ h ตรงกับตำแ
 
 ## Mission operations: sources (added 20 Nov 2026, design phase P0)
 
-For `docs/design/mission-operations.md`. Labels as above. **Every figure marked [recalled] is from standard references the author knows but did not re-read in this session; check it against the cited source before the phase that uses it (P1 for drive and payload, P2 for chemistry).** Nothing here is built yet.
+For `docs/design/mission-operations.md`. Labels as above. **Status of the figures (checked 20 Nov 2026 against web sources, see each line):** [verified] means a source was read for it; [estimated] means it was worked out here and not read from a table; [recalled] means still not checked. The primary databases (NIST WebBook, JANAF, NASA RP-1011) were not opened directly; values come from search results that cite them.
 
 ### Light time to Earth (MO-01)
 
@@ -688,9 +688,9 @@ The rolling-resistance power of the existing model is $P_0 = C_{rr}\, m_r\, g_\o
 
 $$P = P_{base}\,\frac{g}{g_\oplus}\,\frac{m_r + m_c}{m_r}$$
 
-With $m_c = 0$ this equals `DrivePowerW` today, so `BaseDrivePowerW` (50 W, placeholder D4) stays the calibration and existing tests do not change [derived]. $m_r$ defaults to Perseverance's 1 025 kg [recalled]. Climbing: $E = (m_r + m_c)\, g\, \max(0,\Delta h)/\eta$, no regeneration downhill (an assumption). `PlanetSurface.Elevation` is dimensionless; the metres per unit is a game rule, TBD (Q5), and the climb term ships off.
+With $m_c = 0$ this equals `DrivePowerW` today, so `BaseDrivePowerW` (50 W, placeholder D4) stays the calibration and existing tests do not change [derived]. $m_r$ defaults to Perseverance's 1 025 kg [verified: JPL Mars 2020 quick facts, about 2,260 pounds or 1,025 kilograms]. Climbing: $E = (m_r + m_c)\, g\, \max(0,\Delta h)/\eta$, no regeneration downhill (an assumption). `PlanetSurface.Elevation` is dimensionless; the metres per unit is a game rule, TBD (Q5), and the climb term ships off.
 
-Payload base: the Apollo lunar roving vehicle was rated for about 490 kg of payload on a vehicle of about 210 kg [recalled, NASA]; to verify before P1.
+Payload base: the Apollo lunar roving vehicle had a design payload of 490 kg on a vehicle of 210 kg [verified: NASA NSSDC, "The Apollo Lunar Roving Vehicle"]. **Caveat:** the LRV Operations Handbook gives a lunar payload limit of 970 lb Earth weight, about 440 kg, so 490 kg is a design figure; the game value (490 kg, game rule, TBD) is a candidate, not a measurement.
 
 | Test | Input | Expected | tol |
 | --- | --- | --- | --- |
@@ -707,9 +707,9 @@ Masses per kg of product [derived from atomic masses Al 26.982, Na 22.990, O 15.
 | Hall-Heroult, inert anode | $2Al_2O_3 \to 4Al + 3O_2$ | 1.889 kg alumina in, 0.890 kg $O_2$ out per kg Al |
 | Downs cell | $2NaCl \to 2Na + Cl_2$ | 2.542 kg NaCl in, 1.542 kg $Cl_2$ out per kg Na |
 
-Reaction enthalpy from standard formation enthalpies [recalled; NIST-JANAF, CRC Handbook]: $\Delta H_f(Al_2O_3) = -1675.7$ kJ/mol, so splitting it costs 837.9 kJ per mol of Al, 31.06 MJ per kg of Al, **8.63 kWh/kg**; $\Delta H_f(NaCl) = -411.2$ kJ/mol, so 17.9 MJ per kg of Na, **4.97 kWh/kg**. The repo's electricity figures (13.5 kWh/kg Al, 10 kWh/kg Na) are above these, as they must be; the difference is waste heat: $E_{elec} = \Delta H\, n + Q_{waste}$. A recipe whose sourced energy is below its $\Delta H$ is wrong and its test fails.
+Reaction enthalpy from standard formation enthalpies [verified: Al2O3(s, corundum) -1675.7 kJ/mol in the internationally agreed key values table; NaCl(s) -411.1 to -411.15 kJ/mol; compilations of NIST data]: $\Delta H_f(Al_2O_3) = -1675.7$ kJ/mol, so splitting it costs 837.9 kJ per mol of Al, 31.06 MJ per kg of Al, **8.63 kWh/kg**; $\Delta H_f(NaCl) = -411.2$ kJ/mol, so 17.9 MJ per kg of Na, **4.97 kWh/kg**. The repo's electricity figures (13.5 kWh/kg Al, 10 kWh/kg Na) are above these, as they must be; the difference is waste heat: $E_{elec} = \Delta H\, n + Q_{waste}$. A recipe whose sourced energy is below its $\Delta H$ is wrong and its test fails.
 
-**Anode question (open, Q3).** Industrial Hall-Heroult cells use carbon anodes and emit CO2, consuming about 0.4 kg of carbon per kg of Al (stoichiometric about 0.33; the rest is anode loss) [recalled; to verify]. Oxygen is the product only of an inert-anode cell, an emerging technology, so the process is labelled **speculative** (emerging technology) until the director decides.
+**Anode question (open, Q3).** Industrial Hall-Heroult cells use carbon anodes and emit CO2, consuming about 0.4 kg of carbon per kg of Al (stoichiometric about 0.33; the rest is anode loss) [recalled; still to verify]. Oxygen is the product only of an inert-anode cell, an emerging technology, so the process is labelled **speculative** (emerging technology) until the director decides.
 
 | Test | Input | Expected | tol |
 | --- | --- | --- | --- |
@@ -720,7 +720,7 @@ Reaction enthalpy from standard formation enthalpies [recalled; NIST-JANAF, CRC 
 
 ### Gas storage (MO-05)
 
-$n = pV/(ZRT)$ and density $\rho = pM/(ZRT)$, $R = 8.314$ J/(mol K) [established]. Example (ideal gas, $Z = 1$): oxygen at 20 MPa and 293 K is about 263 kg/m3 [calculation; a real tank is denser per the compressibility factor, $Z$ about 0.95, to verify]. Chlorine is liquefied at room temperature under about 7 bar [recalled; to verify]; the game keeps it in the gas tank class with oxygen (brief table 3.1), a simplification of the real liquid storage. Standard-state densities used by `MaterialCatalog`: O2 1.429 kg/m3 and Cl2 3.214 kg/m3 at 0 C and 1 atm [recalled; to verify]. The game tank is 10 m3 at 20 MPa and 293.15 K, quoted for oxygen with Z = 0.95: 2 763 kg (built in `StorageSpecs.TankCapacityKg`; the volume and pressure are game rules, TBD). The yard (100 t) and sealed store (20 t) capacities are game rules, TBD.
+$n = pV/(ZRT)$ and density $\rho = pM/(ZRT)$, $R = 8.314$ J/(mol K) [established]. Example (ideal gas, $Z = 1$): oxygen at 20 MPa and 293 K is about 263 kg/m3 [calculation; a real tank holds a little more per the compressibility factor, $Z$ about 0.95 [estimated: a virial estimate with B about -15 cm3/mol and C about 1200 cm6/mol2 gives 0.96; not read from NIST or RP-1011 tables]]. Chlorine is liquefied at room temperature under about 6.4 to 6.8 bar, its vapour pressure at 20 C [verified: chlorine safety data sheet, NOAA CAMEO]; the game keeps it in the gas tank class with oxygen (brief table 3.1), a simplification of the real liquid storage. Standard-state densities used by `MaterialCatalog`: O2 1.429 kg/m3 and Cl2 3.214 kg/m3 at 0 C and 1 atm [recalled; still to verify]. The game tank is 10 m3 at 20 MPa and 293.15 K, quoted for oxygen with Z = 0.95: 2 763 kg (built in `StorageSpecs.TankCapacityKg`; the volume and pressure are game rules, TBD). The yard (100 t) and sealed store (20 t) capacities are game rules, TBD.
 
 | Test | Input | Expected | tol |
 | --- | --- | --- | --- |
@@ -729,7 +729,7 @@ $n = pV/(ZRT)$ and density $\rho = pM/(ZRT)$, $R = 8.314$ J/(mol K) [established
 
 ### Process heat balance (MO-08), as built
 
-Per batch $E_{elec} = \Delta H\, n + Q_{waste}$ with $\Delta H\, n$ = reaction enthalpy per kg of product x output kg (`RefineRecipe.ReactionWhPerKgOutput`: 8 628 Wh/kg Al, 4 969 Wh/kg Na [recalled; to verify]); the other recipes (sinter and leach, three-layer refining) are not a sourced chemical change here, so $\Delta H = 0$ and all the electricity is waste heat (TBD). One 20 kg aluminium batch: (13 500 - 8 628) Wh/kg x 20 kg = 97.4 kWh of heat.
+Per batch $E_{elec} = \Delta H\, n + Q_{waste}$ with $\Delta H\, n$ = reaction enthalpy per kg of product x output kg (`RefineRecipe.ReactionWhPerKgOutput`: 8 628 Wh/kg Al, 4 969 Wh/kg Na [verified from the two formation enthalpies above]); the other recipes (sinter and leach, three-layer refining) are not a sourced chemical change here, so $\Delta H = 0$ and all the electricity is waste heat (TBD). One 20 kg aluminium batch: (13 500 - 8 628) Wh/kg x 20 kg = 97.4 kWh of heat.
 
 | Test | Input | Expected | tol |
 | --- | --- | --- | --- |
@@ -739,4 +739,4 @@ Per batch $E_{elec} = \Delta H\, n + Q_{waste}$ with $\Delta H\, n$ = reaction e
 
 ### Slag as aggregate (MO-09)
 
-Blast-furnace slag is used as aggregate and cement replacement in concrete (ASTM C989 for ground slag, EN 12620 for aggregates) [recalled; cite before P2]. The 1 : 1 mass substitution for rock in building bills is a game rule, TBD.
+Blast-furnace slag is used as aggregate and cement replacement in concrete (ASTM C989 for ground slag, EN 12620 for aggregates) [recalled; not searched yet]. The 1 : 1 mass substitution for rock in building bills is a game rule, TBD.

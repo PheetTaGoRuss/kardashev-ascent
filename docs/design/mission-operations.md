@@ -134,10 +134,10 @@ Energy (W, Wh): haul drive energy from the battery of the hauling robot, through
 | Light time | one-way years = d(pc) x 3.26156 | IAU parsec to light-year; `sy_dist` from the NASA Exoplanet Archive | Established |
 | Drive power with payload | P = P_base (g / g_e)(m_r + m_c)/m_r; P_base = C_rr m_r g_e v / eta calibrates today's 50 W | Rolling resistance F = C_rr m g | Established form; P_base a placeholder (D4) |
 | Climb energy | E = (m_r + m_c) g dh / eta, no regeneration | Potential energy | Established; elevation scale TBD game rule |
-| Payload base | candidate 490 kg (Apollo LRV payload rating) | NASA LRV fact sheet | To verify before P1 |
+| Payload base | candidate 490 kg (Apollo LRV design payload; the operations handbook limit is about 440 kg) | NASA NSSDC | Verified 2026-11-20, with the caveat |
 | Al per Al2O3, O2 | Al2O3 per kg Al = 101.96 / 53.96 = 1.889; inert-anode O2 per kg Al = 3 x 31.998 / (4 x 26.982) = 0.890 | Stoichiometry | Derived |
 | Na and Cl2 | NaCl per kg Na = 58.44 / 22.99 = 2.542; Cl2 per kg Na = 70.90 / 45.98 = 1.542 | Stoichiometry | Derived |
-| Reaction enthalpy | Al2O3 dHf = -1675.7 kJ/mol gives 8.6 kWh per kg Al (enthalpy); NaCl dHf = -411.2 kJ/mol gives 5.0 kWh per kg Na | NIST-JANAF / CRC Handbook | To verify (recalled, not re-read) |
+| Reaction enthalpy | Al2O3 dHf = -1675.7 kJ/mol gives 8.6 kWh per kg Al (enthalpy); NaCl dHf = -411.2 kJ/mol gives 5.0 kWh per kg Na | NIST data via compilations | Verified 2026-11-20 |
 | Gas storage | n = pV / (ZRT); density = pM / (ZRT); chlorine is a liquid under pressure at room temperature | Ideal gas law; Z from tables | Established; capacities TBD |
 | Slag aggregate | slag aggregate in concrete (ASTM C989, EN 12620) | Standards | To cite before P2; ratio is a game rule |
 
