@@ -114,3 +114,7 @@ Every data file has a test that loads the shipped file and checks:
 - recipes balance in mass within a stated tolerance, with byproducts counted.
 
 `PlanetRecordTests.cs` and `tools/exoplanets/test_convert.py` are the existing examples.
+
+## Electrical state in the save (version 43)
+
+The electrical graph is derived from the wire book, so only what cannot be rebuilt is saved: each power line's stable connection id, its condition and open state (when not whole), and the next id to hand out (`ElectricalLinks`, `NextElectricalConnectionId`). Nodes, networks, voltages and currents are rebuilt on load. Ids are never reused, also across save and load. Older saves carry no ids: they are given out in tile order on the first graph build, so a version 36 to 42 save loads unchanged in behaviour. Saves before version 37 still wire every building, and `WiredGrid = false` saves stay unwired and fully powered. Tests: `ElectricalSaveTests`.

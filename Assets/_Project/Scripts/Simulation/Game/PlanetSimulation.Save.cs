@@ -68,6 +68,13 @@ namespace KardashevAscent.Simulation.Game
             CaptureHauls(state);
             foreach (var kv in fieldWork)
                 state.FieldWork.Add(new FieldWorkRecord { Kind = kv.Key.Kind, Tile = kv.Key.Tile, Slot = kv.Key.Slot, Hours = kv.Value });
+            LegacyGraph();   // makes sure every line has its electrical id before they are written
+            foreach (var kv in wireBook.ElectricalIds)
+            {
+                bool known = wireBook.CableState.TryGetValue(kv.Key, out var cs);
+                state.ElectricalLinks.Add(new ElectricalLinkRecord { Tile = kv.Key.Tile, Slot = kv.Key.Slot, ConnectionId = kv.Value, Condition = known ? cs.Condition : 1.0, Open = known && cs.Open });
+            }
+            state.NextElectricalConnectionId = wireBook.NextElectricalId;
             foreach (var w in wiredBuildings)
                 state.WiredBuildings.Add(new SalvageOrderRecord { Tile = w.Tile, Slot = w.Slot });
             foreach (var salvage in salvageOrders)
@@ -222,6 +229,21 @@ namespace KardashevAscent.Simulation.Game
             wiredBuildings.Clear();
             if (state.WiredBuildings != null)
                 foreach (SalvageOrderRecord w in state.WiredBuildings) wiredBuildings.Add((w.Tile, w.Slot));
+            wireBook.ElectricalIds.Clear();
+            wireBook.CableState.Clear();
+            wireBook.NextElectricalId = 1;
+            legacyGraph = null;
+            if (state.Version >= 43 && state.ElectricalLinks != null)
+            {
+                foreach (ElectricalLinkRecord l in state.ElectricalLinks)
+                {
+                    wireBook.ElectricalIds[(l.Tile, l.Slot)] = l.ConnectionId;
+                    if (l.Condition < 1.0 || l.Open) wireBook.CableState[(l.Tile, l.Slot)] = (l.Condition, l.Open);
+                }
+                wireBook.NextElectricalId = Math.Max(state.NextElectricalConnectionId, 1);
+                foreach (int id in wireBook.ElectricalIds.Values) wireBook.NextElectricalId = Math.Max(wireBook.NextElectricalId, id + 1);
+            }
+            // An older save has no ids: the first graph build gives them out in tile order.
             if (state.Version < 37)
                 WireAllBuildings();   // before building wires, every building counted
             wiringStamp = double.NaN;

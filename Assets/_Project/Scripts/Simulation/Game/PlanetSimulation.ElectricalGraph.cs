@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using KardashevAscent.Simulation.Electrical;
 
@@ -38,7 +39,15 @@ namespace KardashevAscent.Simulation.Game
             foreach (var l in lines)
             {
                 var a = NodeFor(l.Tile); var b = NodeFor(l.To);
-                g.Connect(a, b, ElectricalGraph.CableLengthM(Sphere.Centers[l.Tile], Sphere.Centers[l.To], planetRadiusM));
+                var key = (l.Tile, l.Slot);
+                if (!wireBook.ElectricalIds.TryGetValue(key, out int cid)) wireBook.ElectricalIds[key] = cid = wireBook.NextElectricalId++;
+                double len = ElectricalGraph.CableLengthM(Sphere.Centers[l.Tile], Sphere.Centers[l.To], planetRadiusM);
+                var made = g.ConnectWithId(new ConnectionId(cid), a, b, len);
+                if (made.Ok && wireBook.CableState.TryGetValue(key, out var cs))
+                {
+                    g.SetCondition(new ConnectionId(cid), cs.Condition);
+                    if (cs.Open) g.SetOpen(new ConnectionId(cid), true);
+                }
             }
             NodeFor(BaseTileId);
             var wired = new List<(int Tile, int Slot)>(wireBook.WiredBuildings);
@@ -58,6 +67,24 @@ namespace KardashevAscent.Simulation.Game
             legacyGraphStamp = TimeHours;
             legacyGraphQueue = sig;
             return g;
+        }
+
+        /// <summary>The stable electrical connection id of the line on this slot (0 when there is none).</summary>
+        public int ElectricalIdOfLine(int tile, int slot)
+        {
+            LegacyGraph();
+            return wireBook.ElectricalIds.TryGetValue((tile, slot), out int id) ? id : 0;
+        }
+
+        /// <summary>Sets a line's condition and open state (a fault or a switch-off). Saved from version 43. The flow does not read it yet.</summary>
+        public bool SetCableState(int tile, int slot, double condition, bool open)
+        {
+            var key = (tile, slot);
+            if (!wireBook.PowerLines.Contains(key) && !wireBook.HighVoltageLines.Contains(key)) return false;
+            condition = Math.Max(0.0, Math.Min(1.0, condition));
+            if (condition >= 1.0 && !open) wireBook.CableState.Remove(key); else wireBook.CableState[key] = (condition, open);
+            legacyGraph = null;
+            return true;
         }
 
         /// <summary>The tiles on the same electrical network as the lander tile (the network the single power bus serves).</summary>

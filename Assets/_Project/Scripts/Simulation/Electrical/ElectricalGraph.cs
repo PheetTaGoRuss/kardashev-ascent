@@ -97,6 +97,17 @@ namespace KardashevAscent.Simulation.Electrical
             return ConnectResult.Success(c.Id.Value);
         }
 
+        /// <summary>Like <see cref="Connect"/> but with an id that was saved earlier, so ids survive save and load. Refuses an id already in use.</summary>
+        public ConnectResult ConnectWithId(ConnectionId id, NodeId a, NodeId b, double lengthM)
+        {
+            if (id.IsNone || connections.ContainsKey(id.Value)) return ConnectResult.Fail("That connection id is already in use.");
+            int saved = nextConnection;
+            nextConnection = id.Value;
+            var r = Connect(a, b, lengthM);
+            nextConnection = Math.Max(saved, id.Value + 1);
+            return r;
+        }
+
         public bool RemoveConnection(ConnectionId id)
         {
             if (!connections.TryGetValue(id.Value, out var c)) return false;
