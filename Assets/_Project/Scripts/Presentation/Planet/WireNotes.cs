@@ -138,7 +138,7 @@ namespace KardashevAscent.Presentation.Planet
             if (Time.unscaledTime < popupUntil)
             {
                 float w = Mathf.Min(620f, Screen.width - 40f);
-                GUI.Box(new Rect(Screen.width / 2f - w / 2f, UiLayout.TopY + 52f, w, 56f), "⚠ " + popup, box);
+                GUI.Box(new Rect(Screen.width / 2f - w / 2f, UiLayout.ClearBottomY - 132f, w, 56f), "⚠ " + popup, box);
             }
             if (!MarkersOn)
                 return;
