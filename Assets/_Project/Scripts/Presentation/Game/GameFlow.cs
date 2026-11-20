@@ -266,6 +266,7 @@ namespace KardashevAscent.Presentation.Game
             // One panel is a small slot on rich ground: add panels until the colony covers its base demand (KI-34).
             if (placer != null && placer.Tile == setupTile && runner != null && runner.Simulation != null)
                 placer.AutoPlacePanelsFor(System.Math.Max(runner.Simulation.DemandW, KardashevAscent.Simulation.Energy.PowerGrid.Lander().DemandW));   // demand reads 0 until setup ends
+            runner?.Simulation?.WireAllBuildings();   // "place the rest for me" includes the wires
             FinishSetup();
         }
 

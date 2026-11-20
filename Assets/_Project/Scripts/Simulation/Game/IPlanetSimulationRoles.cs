@@ -596,6 +596,18 @@ namespace KardashevAscent.Simulation.Game
 
         string WireProblem { get; }
 
+        /// <summary>Wire the building on this slot to the grid (a power line dragged onto it). False: see <see cref="WireProblem"/>.</summary>
+        bool PlaceBuildingWire(int tileId, int slot);
+
+        /// <summary>The building on this slot is wired to the grid (true for all when the grid is not wired).</summary>
+        bool IsBuildingWired(int tileId, int slot);
+
+        /// <summary>Buildings still waiting for a wire.</summary>
+        System.Collections.Generic.IEnumerable<(int Tile, int Slot, BuildingType Type)> UnwiredBuildings();
+
+        /// <summary>Wire every building built so far (what Skip setup does).</summary>
+        void WireAllBuildings();
+
         /// <summary>Every wire, tile to tile: the two tiles, whether it is finished, whether it is high voltage.</summary>
         System.Collections.Generic.IEnumerable<(int From, int To, bool Built, bool HighVoltage)> WireLinks();
     }

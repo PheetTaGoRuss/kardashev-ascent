@@ -9,7 +9,7 @@ namespace KardashevAscent.Simulation.Game
     public sealed class SimulationState
     {
         /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished. 7 added robots; 8 their batteries and condition; 9 resources; 10 the Workshop; 11 programs (facility, ranking, queue); 12 movement; 13 critical damage (stage A); 14 reservations and tasks to go back to (stage B); 15 battery ageing by depth, maintenance rules (stage D); 16 building footprints. 23 industry reports. 29 experiments. 30 survey puzzles answered one material at a time. 31 stand-ins (aluminium, sodium) in building bills. 32 deposits run out (what was mined from each). 33 mountains and canyons opened (tunnel, blast, bridge). 34 refinery modules, batches, queue and auto targets.</summary>
-        public const int CurrentVersion = 36;
+        public const int CurrentVersion = 37;
 
         /// <summary>Wired grid (version 35): generators and stations need power lines to the lander tile. Older saves are not wired.</summary>
         public bool WiredGrid;
@@ -53,6 +53,8 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Robots and groups (version 7; older saves start with one General robot at the base).</summary>
         public Robots.WorkforceState Workforce = new Robots.WorkforceState();
         /// <summary>Finished buildings waiting for a robot to take them down (version 7).</summary>
+        /// <summary>37: buildings wired to the grid by the player. A save from before it wires every building it has.</summary>
+        public List<Robots.SalvageOrderRecord> WiredBuildings = new List<Robots.SalvageOrderRecord>();
         public List<Robots.SalvageOrderRecord> SalvageOrders = new List<Robots.SalvageOrderRecord>();
         /// <summary>Panels waiting for a robot to turn them to new angles (version 17; older saves have none).</summary>
         public List<Robots.AdjustOrderRecord> AdjustOrders = new List<Robots.AdjustOrderRecord>();

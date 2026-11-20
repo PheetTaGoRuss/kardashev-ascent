@@ -136,6 +136,7 @@ namespace KardashevAscent.Simulation.Game
         {
             flowDirty = true;   // a removed generator or line changes the flow
             slot = A(tileId, slot);
+            wiredBuildings.Remove((tileId, slot));
             if (RemovePanel(tileId, slot))
                 return true;
             if (workshops.Contains((tileId, slot)))

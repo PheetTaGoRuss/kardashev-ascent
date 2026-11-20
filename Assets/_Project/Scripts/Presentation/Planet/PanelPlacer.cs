@@ -150,6 +150,9 @@ namespace KardashevAscent.Presentation.Planet
         public bool Dragging => dragging;
 
         /// <summary>True for the two panel modes (they share the tilt and facing controls).</summary>
+        /// <summary>The power-line modes wire a building to the grid (dropped on it, even though a building stands there).</summary>
+        public static bool IsWireMode(BuildMode m) => m == BuildMode.PowerLine || m == BuildMode.HighVoltageLine;
+
         public static bool IsPanel(BuildMode m) => m == BuildMode.SolarPanel || m == BuildMode.FloatingSolar;
 
         public static BuildingType TypeOf(BuildMode m) =>
@@ -230,6 +233,20 @@ namespace KardashevAscent.Presentation.Planet
             // One slot: the building on it. Several selected slots: the middle of the selection.
             IReadOnlyList<int> slots = slot < 0 ? new List<int>(siteView.Selection)
                 : simulation.GetBuilding(tile, slot) != BuildingType.None ? simulation.FootprintAt(tile, slot) : new List<int> { slot };
+            FootprintPlace(site, slots, out Vector3 direction, out _);
+            world = transform.TransformPoint(direction * siteView.GroundRadius(site, direction));
+            return true;
+        }
+
+        /// <summary>Where a building of the open site is in the world (for notes drawn over it). False when that tile is not the open site.</summary>
+        public bool TryGetBuildingWorld(int buildingTile, int buildingSlot, out Vector3 world)
+        {
+            world = default;
+            if (simulation == null || siteView.Site == null || buildingTile != tile || buildingTile < 0)
+                return false;
+            TileSite site = siteView.SiteFor(tile);
+            IReadOnlyList<int> slots = simulation.FootprintAt(tile, buildingSlot);
+            if (slots == null || slots.Count == 0) return false;
             FootprintPlace(site, slots, out Vector3 direction, out _);
             world = transform.TransformPoint(direction * siteView.GroundRadius(site, direction));
             return true;
@@ -825,9 +842,16 @@ namespace KardashevAscent.Presentation.Planet
                 else if (mode == BuildMode.HighVoltageLine && simulation.KnowledgeBlocker(BuildingType.HighVoltageLine) != null)
                     preview = new PanelPreview(false, simulation.KnowledgeBlocker(BuildingType.HighVoltageLine), 0, 0, 0, 0);
                 else if (mode == BuildMode.PowerLine || mode == BuildMode.HighVoltageLine)
-                    preview = slot >= 0 && !simulation.CanPlace(TypeOf(mode), tile, slot)
-                        ? new PanelPreview(false, "A power line stands on a free slot of a land or shallow-sea tile.", 0, 0, 0, 0)
+                {
+                    // Dropped onto a building that needs one: a drop cable to the grid.
+                    BuildingType there = slot >= 0 ? simulation.GetBuilding(tile, slot) : BuildingType.None;
+                    preview = !simulation.WiredGrid ? new PanelPreview(false, "This mission has no wired grid.", 0, 0, 0, 0)
+                        : slot < 0 ? new PanelPreview(true, "", 0, 0, 0, 0)
+                        : !(WireRoles.IsOutput(there) || WireRoles.IsInput(there))
+                            ? new PanelPreview(false, "Drop the power line onto a generator, battery or station to wire it in. Wires between tiles: press X.", 0, 0, 0, 0)
+                        : simulation.IsBuildingWired(tile, slot) ? new PanelPreview(false, "Already wired.", 0, 0, 0, 0)
                         : new PanelPreview(true, "", 0, 0, 0, 0);
+                }
                 else if (mode == BuildMode.TidalTurbine || mode == BuildMode.WaveConverter || mode == BuildMode.TidalBarrage)
                 {
                     // Not a panel: the land-panel preview does not apply. The tide gauge / wave buoy gates it.
@@ -980,7 +1004,7 @@ namespace KardashevAscent.Presentation.Planet
             // building under the mouse, each building the selection has room for, or the one selected slot.
             BuildingType type = TypeOf(mode);
             var targets = new List<(List<int> Footprint, bool Fits)>();
-            if (siteView.Site != null && tile >= 0)
+            if (siteView.Site != null && tile >= 0 && !IsWireMode(mode))
             {
                 if (dragging)
                 {
@@ -1110,7 +1134,10 @@ namespace KardashevAscent.Presentation.Planet
             bool done = false;
             for (int s = 0; s < simulation.SlotCount(tile) && !done; s++)
                 if (!Occupied(s) && simulation.CanPlace(type, tile, s))
+                {
                     done = PlaceAt(s);
+                    if (done) simulation.PlaceBuildingWire(tile, s);   // skipping the tutorial wires what it places
+                }
             mode = was;
             return done;
         }
@@ -1148,7 +1175,7 @@ namespace KardashevAscent.Presentation.Planet
         {
             int built = 0;
             foreach (int s in new List<int>(siteView.Selection))
-                if (!Occupied(s) && PlaceAt(s))
+                if ((IsWireMode(mode) || !Occupied(s)) && PlaceAt(s))
                     built++;
             return built;
         }
@@ -1190,6 +1217,12 @@ namespace KardashevAscent.Presentation.Planet
 
         bool PlaceAt(int s)
         {
+            if (simulation != null && tile >= 0 && s >= 0 && siteView.Site != null && IsWireMode(mode))
+            {
+                bool wired = simulation.PlaceBuildingWire(tile, s);
+                if (wired) KardashevAscent.Presentation.Audio.GameAudio.Play(KardashevAscent.Presentation.Audio.Sfx.Place);
+                return wired;
+            }
             if (simulation == null || tile < 0 || s < 0 || Occupied(s) || siteView.Site == null)
                 return false;
             // During the setup tutorial the essentials go on the landing tile only (director 2026-11-15).

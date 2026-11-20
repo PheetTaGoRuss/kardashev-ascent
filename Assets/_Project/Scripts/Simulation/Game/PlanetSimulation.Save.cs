@@ -65,6 +65,8 @@ namespace KardashevAscent.Simulation.Game
                     state.MaterialsKg.Add(new MaterialRecord { Material = m, Kg = Materials[m] });
             foreach (var kv in fieldWork)
                 state.FieldWork.Add(new FieldWorkRecord { Kind = kv.Key.Kind, Tile = kv.Key.Tile, Slot = kv.Key.Slot, Hours = kv.Value });
+            foreach (var w in wiredBuildings)
+                state.WiredBuildings.Add(new SalvageOrderRecord { Tile = w.Tile, Slot = w.Slot });
             foreach (var salvage in salvageOrders)
                 state.SalvageOrders.Add(new SalvageOrderRecord { Tile = salvage.Tile, Slot = salvage.Slot });
             foreach (var adjust in adjustOrders)
@@ -209,6 +211,11 @@ namespace KardashevAscent.Simulation.Game
             RefreshNetwork();   // the relays restored above start relaying; power follows the restored grid
             RefreshBarrageBlocks();   // finished barrages dam their tiles again
             WiredGrid = state.WiredGrid;
+            wiredBuildings.Clear();
+            if (state.WiredBuildings != null)
+                foreach (SalvageOrderRecord w in state.WiredBuildings) wiredBuildings.Add((w.Tile, w.Slot));
+            if (state.Version < 37)
+                WireAllBuildings();   // before building wires, every building counted
             wiringStamp = double.NaN;
             flowDirty = true;
             adjustOrders.Clear();

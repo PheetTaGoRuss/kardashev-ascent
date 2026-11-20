@@ -22,6 +22,8 @@ namespace KardashevAscent.Simulation.Game
         readonly Dictionary<int, int> lineHops = new Dictionary<int, int>();      // tiles of line from the lander tile
         readonly Dictionary<int, int> lineParent = new Dictionary<int, int>();    // the tile toward the lander tile
         double wiringStamp = double.NaN;
+        /// <summary>Buildings the player has wired to their tile's grid (director 2026-11-20: nothing is wired automatically).</summary>
+        readonly HashSet<(int Tile, int Slot)> wiredBuildings = new HashSet<(int, int)>();
 
         // the last flow: raw power per tile and source, what each tile's line carries, and how much of its power gets through
         readonly Dictionary<int, double> rawPanels = new Dictionary<int, double>();
@@ -63,6 +65,68 @@ namespace KardashevAscent.Simulation.Game
         static bool NeedsPower(BuildingType type) =>
             type == BuildingType.Battery || type == BuildingType.Workshop || type == BuildingType.ChargingStation || type == BuildingType.Relay
             || type == BuildingType.ResearchStation || type == BuildingType.AluminaPlant || type == BuildingType.Electrolyser;
+
+        /// <summary>Makes power (panels, turbines, wave lines, barrages): it must be wired to give any.</summary>
+        public static bool IsWireOutput(BuildingType type) =>
+            type == BuildingType.SolarPanel || type == BuildingType.FloatingSolar || type == BuildingType.TidalTurbine
+            || type == BuildingType.WaveConverter || type == BuildingType.TidalBarrage;
+
+        /// <summary>Takes power (storage, stations, refinery modules): it must be wired to work as a robot facility.</summary>
+        public static bool IsWireInput(BuildingType type) => NeedsPower(type);
+
+        /// <summary>This building has been wired to the grid (true for everything when the wired grid is off).</summary>
+        public bool IsBuildingWired(int tileId, int slot) => !WiredGrid || wiredBuildings.Contains((tileId, A(tileId, slot)));
+
+        bool WiredOrOff((int Tile, int Slot) key) => !WiredGrid || wiredBuildings.Contains(key);
+
+        /// <summary>Wire the building on this slot to the grid: a drop cable, instant (a power line dragged onto it). Game rule, TBD.</summary>
+        public bool PlaceBuildingWire(int tileId, int slot)
+        {
+            WireProblem = null;
+            if (!WiredGrid) { WireProblem = "This mission has no wired grid."; return false; }
+            BuildingType type = GetBuilding(tileId, slot);
+            if (!IsWireOutput(type) && !IsWireInput(type)) { WireProblem = "Nothing to wire here: drop the power line on a generator, battery or station."; return false; }
+            var key = (tileId, A(tileId, slot));
+            if (wiredBuildings.Contains(key)) { WireProblem = "Already wired."; return false; }
+            string blocker = KnowledgeBlocker(BuildingType.PowerLine);
+            if (blocker != null) { WireProblem = blocker; return false; }
+            wiredBuildings.Add(key);
+            wiringStamp = double.NaN;
+            flowDirty = true;
+            return true;
+        }
+
+        /// <summary>Wire everything built so far (what skipping the setup does, and loading a save from before building wires).</summary>
+        public void WireAllBuildings()
+        {
+            foreach (var b in WireableBuildings()) wiredBuildings.Add((b.Tile, b.Slot));
+            wiringStamp = double.NaN;
+            flowDirty = true;
+        }
+
+        /// <summary>Every building that makes or takes power, with where it stands.</summary>
+        public IEnumerable<(int Tile, int Slot, BuildingType Type)> WireableBuildings()
+        {
+            foreach (var kv in panels) yield return (kv.Key.Tile, kv.Key.Slot, floatingPanels.Contains(kv.Key) ? BuildingType.FloatingSolar : BuildingType.SolarPanel);
+            foreach (var k in tidalTurbines) yield return (k.Tile, k.Slot, BuildingType.TidalTurbine);
+            foreach (var k in waveConverters) yield return (k.Tile, k.Slot, BuildingType.WaveConverter);
+            foreach (var k in barrages) yield return (k.Tile, k.Slot, BuildingType.TidalBarrage);
+            foreach (var k in batteries) yield return (k.Tile, k.Slot, BuildingType.Battery);
+            foreach (var k in workshops) yield return (k.Tile, k.Slot, BuildingType.Workshop);
+            foreach (var k in stations) yield return (k.Tile, k.Slot, BuildingType.ChargingStation);
+            foreach (var k in relays) yield return (k.Tile, k.Slot, BuildingType.Relay);
+            foreach (var k in research.Stations) yield return (k.Tile, k.Slot, BuildingType.ResearchStation);
+            foreach (var kv in refineryModules) yield return (kv.Key.Tile, kv.Key.Slot, kv.Value);
+        }
+
+        /// <summary>Buildings still waiting for a wire (none when the grid is not wired).</summary>
+        public IEnumerable<(int Tile, int Slot, BuildingType Type)> UnwiredBuildings()
+        {
+            if (!WiredGrid) yield break;
+            foreach (var b in WireableBuildings())
+                if (!wiredBuildings.Contains((b.Tile, b.Slot)))
+                    yield return b;
+        }
 
         public bool IsPowered(int tileId)
         {
@@ -381,10 +445,15 @@ namespace KardashevAscent.Simulation.Game
             int host = IsPowered(toTile) && !IsPowered(fromTile) ? toTile : fromTile;
             int other = host == fromTile ? toTile : fromTile;
             BuildingType type = highVoltage ? BuildingType.HighVoltageLine : BuildingType.PowerLine;
-            for (int s = 0; s < SlotCount(host); s++)
-                if (CanPlace(type, host, s))
-                    return highVoltage ? PlaceHighVoltageLine(host, s, other) : PlacePowerLine(host, s, other);
-            WireProblem = "No free slot on that tile for the wire.";
+            // The wire runs over the tiles whatever stands on them; its post takes a free slot on one end or the other.
+            for (int pass = 0; pass < 2; pass++)
+            {
+                int h = pass == 0 ? host : other, o = pass == 0 ? other : host;
+                for (int s = 0; s < SlotCount(h); s++)
+                    if (CanPlace(type, h, s))
+                        return highVoltage ? PlaceHighVoltageLine(h, s, o) : PlacePowerLine(h, s, o);
+            }
+            WireProblem = "Neither tile has a free slot for the wire's post.";
             return false;
         }
 
@@ -408,6 +477,8 @@ namespace KardashevAscent.Simulation.Game
             {
                 if (Build.QueueCount > 0 && Build.IsQueued(pair.Key.Tile, pair.Key.Slot))
                     continue;   // a site makes nothing until it is finished
+                if (!WiredOrOff(pair.Key))
+                    continue;   // not wired: it makes nothing
                 Double3 sun = SunAt(pair.Key.Tile);
                 if (sun.Up <= 0.0)
                     continue;
@@ -428,6 +499,7 @@ namespace KardashevAscent.Simulation.Game
             foreach (var key in tidalTurbines)
             {
                 if (Build.QueueCount > 0 && Build.IsQueued(key.Tile, key.Slot)) continue;
+                if (!WiredOrOff(key)) continue;
                 double raw = Tides.TurbinePowerW(StreamAtMs(key.Tile));
                 map[key.Tile] = (map.TryGetValue(key.Tile, out double v) ? v : 0.0) + raw;
                 total += raw;
@@ -446,6 +518,7 @@ namespace KardashevAscent.Simulation.Game
             foreach (var key in waveConverters)
             {
                 if (Build.QueueCount > 0 && Build.IsQueued(key.Tile, key.Slot)) continue;
+                if (!WiredOrOff(key)) continue;
                 double raw = Waves.LinePowerW(WaveHeightAtM(key.Tile), EnergyPeriodAt(key.Tile), SurfaceGravityMs2);
                 map[key.Tile] = (map.TryGetValue(key.Tile, out double v) ? v : 0.0) + raw;
             }
@@ -460,6 +533,7 @@ namespace KardashevAscent.Simulation.Game
             foreach (var key in barrages)
             {
                 if (Build.QueueCount > 0 && Build.IsQueued(key.Tile, key.Slot)) continue;
+                if (!WiredOrOff(key)) continue;
                 double energy = Tides.BarrageEnergyPerTideJ(Tides.BarrageBasinM2, TidalRangeBaseM(key.Tile), SurfaceGravityMs2);
                 double raw = Tides.BarragePowerW(energy, period, fraction);
                 map[key.Tile] = (map.TryGetValue(key.Tile, out double v) ? v : 0.0) + raw;
