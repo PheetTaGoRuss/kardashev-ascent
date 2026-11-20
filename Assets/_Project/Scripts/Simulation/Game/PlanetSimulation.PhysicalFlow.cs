@@ -47,6 +47,16 @@ namespace KardashevAscent.Simulation.Game
 
         readonly HashSet<(int, int)> highEdges = new HashSet<(int, int)>();
 
+        /// <summary>
+        /// Conductor temperature of a link, C: the air temperature at its two ends (electrical stage 6: a cold planet makes cheaper
+        /// transmission, a hot one dearer). The heating from the current itself comes with the thermal model (stage 8).
+        /// </summary>
+        double CableCelsius(int tileA, int tileB)
+        {
+            double m = CurrentMeanAnomaly();
+            return 0.5 * (AirTemperatureAt(tileA, m) + AirTemperatureAt(tileB, m));
+        }
+
         sealed class FlowEdge
         {
             public int A, B;           // tile ids
@@ -79,7 +89,7 @@ namespace KardashevAscent.Simulation.Game
                 double lengthM = ElectricalGraph.CableLengthM(Sphere.Centers[fe.A], Sphere.Centers[fe.B], planetRadiusM);
                 double ratio = PlainLineVolts / fe.Volts;
                 // Per-unit on the plain-line base: resistance scales with (Vbase/V)^2, current with V/Vbase.
-                branches[e] = new FlowBranch(index[fe.A], index[fe.B], spec.ResistanceOhm(lengthM) * ratio * ratio, spec.RatingA * fe.Volts / PlainLineVolts);
+                branches[e] = new FlowBranch(index[fe.A], index[fe.B], spec.ResistanceOhm(lengthM, CableCelsius(fe.A, fe.B)) * ratio * ratio, spec.RatingA * fe.Volts / PlainLineVolts);
             }
 
             int slack = index[BaseTileId];
