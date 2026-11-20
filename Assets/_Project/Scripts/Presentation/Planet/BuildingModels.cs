@@ -47,6 +47,9 @@ namespace KardashevAscent.Presentation.Planet
                 case BuildingType.TidalBarrage: Barrage(b); break;
                 case BuildingType.PowerLine: Pole(b); break;
                 case BuildingType.HighVoltageLine: Tower(b); break;
+                case BuildingType.StorageYard: Yard(b); break;
+                case BuildingType.SealedStore: SealedStore(b); break;
+                case BuildingType.GasTank: Tank(b); break;
                 case BuildingType.SolarPanel: Panel(b, false); break;
                 case BuildingType.FloatingSolar: Panel(b, true); break;
                 default: b.Cube("Block", Concrete, 0, 0.1f, 0, 0.7f, 0.2f, 0.7f); break;
@@ -289,6 +292,42 @@ namespace KardashevAscent.Presentation.Planet
                 if (i != 0) b.Cyl("String", White, i * 0.19f, 0.51f, 0f, 0.03f, 0.1f);
             }
             b.Cube("Cap", Warning, 0f, 0.6f, 0f, 0.06f, 0.04f, 0.06f);
+        }
+
+        static void Yard(Builder b)
+        {
+            b.Cube("Hardstanding", DarkConcrete, 0, 0.012f, 0, 0.92f, 0.024f, 0.8f);
+            for (int i = 0; i < 3; i++)
+                b.Part(PrimitiveType.Sphere, "Pile", i == 1 ? Concrete : Rust, (i - 1) * 0.28f, 0.06f, i == 1 ? 0.12f : -0.1f, 0.3f, 0.2f, 0.3f);
+            b.Cube("Fence", Steel, 0f, 0.05f, -0.38f, 0.9f, 0.05f, 0.012f);
+            b.Cube("Fence", Steel, 0f, 0.05f, 0.38f, 0.9f, 0.05f, 0.012f);
+            b.Cube("Gantry", Warning, 0.4f, 0.2f, 0f, 0.03f, 0.36f, 0.5f);
+            b.Cube("GantryBeam", Warning, 0f, 0.37f, 0f, 0.84f, 0.03f, 0.03f);
+        }
+
+        static void SealedStore(Builder b)
+        {
+            b.Cube("Pad", DarkConcrete, 0, 0.012f, 0, 0.8f, 0.024f, 0.7f);
+            b.Cyl("Vessel", White, -0.05f, 0.2f, 0f, 0.5f, 0.34f);
+            b.Part(PrimitiveType.Sphere, "DomeTop", White, -0.05f, 0.37f, 0f, 0.5f, 0.2f, 0.5f);
+            b.Cyl("Hatch", DarkSteel, -0.05f, 0.47f, 0f, 0.1f, 0.04f);
+            b.Cube("HazardBand", Warning, -0.05f, 0.2f, 0.252f, 0.4f, 0.05f, 0.006f);
+            b.Cube("Valves", DarkSteel, 0.32f, 0.08f, 0.1f, 0.12f, 0.12f, 0.12f);
+            b.Cube("Pipe", Steel, 0.2f, 0.06f, 0.1f, 0.2f, 0.03f, 0.03f);
+        }
+
+        static void Tank(Builder b)
+        {
+            b.Cube("Pad", DarkConcrete, 0, 0.012f, 0, 0.8f, 0.024f, 0.7f);
+            for (int i = -1; i <= 1; i += 2)
+            {
+                b.Pill("Cylinder", Teal, i * 0.2f, 0.24f, 0f, 0.3f, 0.7f, new Vector3(90f, 0f, 0f));
+                b.Cube("Cradle", DarkSteel, i * 0.2f, 0.08f, 0.2f, 0.28f, 0.12f, 0.04f);
+                b.Cube("Cradle", DarkSteel, i * 0.2f, 0.08f, -0.2f, 0.28f, 0.12f, 0.04f);
+                b.Cyl("Valve", Steel, i * 0.2f, 0.42f, 0f, 0.05f, 0.06f);
+            }
+            b.Cube("Manifold", Steel, 0f, 0.46f, 0f, 0.4f, 0.025f, 0.025f);
+            b.Cube("Gauge", Warning, 0f, 0.5f, 0f, 0.05f, 0.04f, 0.02f);
         }
 
         /// <summary>The same table the field draws (<see cref="SolarPanelVisual"/>): a post under a framed slab, tilted.</summary>

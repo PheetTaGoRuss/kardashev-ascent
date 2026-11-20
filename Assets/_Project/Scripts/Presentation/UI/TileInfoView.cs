@@ -324,7 +324,7 @@ namespace KardashevAscent.Presentation.UI
                 text += "\n" + (sim.IsOpenGround(tile)
                     ? $"Opened: {KardashevAscent.Simulation.Resources.Passages.Name(sim.PassageAt(tile)).ToLowerInvariant()}. Robots can cross, build and mine here."
                     : sim.ClosedGroundReason(tile) + " Until then robots can't cross it, build or mine on it; they can survey it from the edge.");
-            text += $"\nOn hand: {Stock(sim)}";
+            text += sim.LogisticsEnabled ? $"\nDepot on this tile: {DepotText(sim, tile)}" : $"\nOn hand: {Stock(sim)}";
             // Short line here; the whole story behind "i" (director 2026-11-15).
             if (groundTip != null)
                 groundTip.Text = text.Trim();
@@ -448,6 +448,20 @@ namespace KardashevAscent.Presentation.UI
             b.AddToClassList("ground-button");
             b.EnableInClassList("on", on);
             groundActions.Add(b);
+        }
+
+        /// <summary>What this tile's own depot holds and the stock targets set for it (mission operations MO-02).</summary>
+        static string DepotText(IPlanetSimulation sim, int tile)
+        {
+            var parts = new System.Collections.Generic.List<string>();
+            foreach (Material m in Materials.All)
+            {
+                double kg = sim.KgAt(tile, m);
+                if (kg >= 0.5) parts.Add($"{Materials.Name(m).ToLowerInvariant()} {kg:0} kg");
+            }
+            foreach (var t in sim.StockTargets())
+                if (t.Tile == tile) parts.Add($"target {t.Kg:0} kg {Materials.Name(t.Material).ToLowerInvariant()}");
+            return parts.Count == 0 ? "empty (set targets in Operations, I)" : string.Join(", ", parts);
         }
 
         static string Stock(IPlanetSimulation sim)

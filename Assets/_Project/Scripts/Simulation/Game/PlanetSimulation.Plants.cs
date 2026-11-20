@@ -36,6 +36,7 @@ namespace KardashevAscent.Simulation.Game
             new Dictionary<(int, int), (IndustrialBlocker, string)>();
         readonly double[] ventedKg = new double[Resources.Materials.All.Length];
         double industrialWasteHeatKWh;
+        readonly FlowLedger flows = new FlowLedger();
 
         /// <summary>What an output buffer holds of each storage class, kg. Game rules, TBD.</summary>
         public const double PlantOutputBulkKg = 2000.0, PlantOutputHazardousKg = 500.0, PlantOutputGasKg = 200.0;
@@ -124,7 +125,54 @@ namespace KardashevAscent.Simulation.Game
             };
             // Power is checked while the batch runs (it pauses in a brownout), not at its start.
             var env = new ProcessEnvironment(double.MaxValue / 4.0, double.MaxValue / 4.0, double.MaxValue / 4.0, true);
-            return IndustrialProcessor.TryRun(Refining.ProcessOf(process), ports, env);
+            ProcessResult started = IndustrialProcessor.TryRun(Refining.ProcessOf(process), ports, env);
+            return started;
+        }
+
+        /// <summary>The last week of flows, for the Flowsheet view (a value; the view draws it and computes nothing).</summary>
+        public FlowsheetSnapshot FlowsheetSnapshot(int days = FlowLedger.DaysKept)
+        {
+            var snap = new FlowsheetSnapshot { Days = days, WasteHeatKWh = industrialWasteHeatKWh, WasteHeatNowW = IndustrialWasteHeatW };
+            var mined = new Dictionary<Material, double>();
+            var hauled = new Dictionary<Material, double>();
+            var proc = new Dictionary<RefineProcess, ProcessFlow>();
+            ProcessFlow Of(int key)
+            {
+                var p = (RefineProcess)key;
+                if (!proc.TryGetValue(p, out ProcessFlow f))
+                {
+                    RefineRecipe r = Refining.Of(p);
+                    proc[p] = f = new ProcessFlow { Process = p, Name = r.Name, Input = r.Input, Product = r.Output, Gas = r.Byproduct };
+                }
+                return f;
+            }
+            foreach (FlowEntry e in flows.Last(TimeHours, days))
+            {
+                switch (e.Stage)
+                {
+                    case FlowStage.Mined: mined[e.Material] = (mined.TryGetValue(e.Material, out double a) ? a : 0.0) + e.Kg; break;
+                    case FlowStage.Hauled: hauled[e.Material] = (hauled.TryGetValue(e.Material, out double b) ? b : 0.0) + e.Kg; break;
+                    case FlowStage.PlantIn: Of(e.Key).InKg += e.Kg; break;
+                    case FlowStage.PlantProduct: Of(e.Key).ProductKg += e.Kg; break;
+                    case FlowStage.PlantSlag: Of(e.Key).SlagKg += e.Kg; break;
+                    case FlowStage.PlantGasStored: Of(e.Key).GasStoredKg += e.Kg; break;
+                    case FlowStage.PlantVented: Of(e.Key).VentedKg += e.Kg; break;
+                }
+            }
+            foreach (var kv in mined) snap.Mined.Add((kv.Key, kv.Value));
+            foreach (var kv in hauled) snap.Hauled.Add((kv.Key, kv.Value));
+            snap.Mined.Sort((x, y) => ((int)x.Material).CompareTo((int)y.Material));
+            snap.Hauled.Sort((x, y) => ((int)x.Material).CompareTo((int)y.Material));
+            foreach (RefineProcess p in Refining.Processes)
+                if (proc.TryGetValue(p, out ProcessFlow f)) snap.Processes.Add(f);
+            foreach (var key in new List<(int Tile, int Slot)>(refineryModules.Keys))
+            {
+                PlantReport rep = PlantReportAt(key.Tile, key.Slot);
+                if (rep != null && rep.Blocker != IndustrialBlocker.None)
+                    snap.Blocked.Add(new BlockedPlant { Tile = key.Tile, Slot = key.Slot, Blocker = rep.Blocker, Reason = rep.Reason });
+            }
+            snap.Blocked.Sort((x, y) => x.Tile != y.Tile ? x.Tile.CompareTo(y.Tile) : x.Slot.CompareTo(y.Slot));
+            return snap;
         }
 
         bool OutputsFit(PlaceId outP, IReadOnlyList<MaterialAmount> outputs, Material? gas, bool storeGas)
@@ -150,7 +198,9 @@ namespace KardashevAscent.Simulation.Game
         {
             PlaceId outP = OutputOf(m);
             inventories.Add(outP, r.Output, r.OutputKg);
-            if (r.SlagKg > 0.0) inventories.Add(outP, Material.Slag, r.SlagKg);
+            flows.Add(TimeHours, FlowStage.PlantIn, (int)r.Process, r.Input, r.InputKg);   // counted with its outputs, when the batch is done, so the closure reads exactly
+            flows.Add(TimeHours, FlowStage.PlantProduct, (int)r.Process, r.Output, r.OutputKg);
+            if (r.SlagKg > 0.0) { inventories.Add(outP, Material.Slag, r.SlagKg); flows.Add(TimeHours, FlowStage.PlantSlag, (int)r.Process, Material.Slag, r.SlagKg); }
             string gasNote = "";
             if (r.VentedKg > 0.0)
             {
@@ -158,11 +208,13 @@ namespace KardashevAscent.Simulation.Game
                 if (ByproductPolicyOf(m.Tile, m.Slot) == ByproductPolicy.Store && inventories.FreeFor(outP, gas) >= r.VentedKg - 1e-9)
                 {
                     inventories.Add(outP, gas, r.VentedKg);
+                    flows.Add(TimeHours, FlowStage.PlantGasStored, (int)r.Process, gas, r.VentedKg);
                     gasNote = $", {r.VentedKg:0} kg {r.VentedName} stored";
                 }
                 else
                 {
                     ventedKg[(int)gas] += r.VentedKg;
+                    flows.Add(TimeHours, FlowStage.PlantVented, (int)r.Process, gas, r.VentedKg);
                     gasNote = $", {r.VentedKg:0} kg {r.VentedName} vented" + (gas == Material.Chlorine ? " (WARNING: chlorine is toxic)" : "");
                 }
             }
@@ -221,6 +273,7 @@ namespace KardashevAscent.Simulation.Game
                 if (ventedKg[(int)m] > 0.0)
                     state.VentedKg.Add(new MaterialRecord { Material = m, Kg = ventedKg[(int)m] });
             state.IndustrialWasteHeatKWh = industrialWasteHeatKWh;
+            state.FlowEntries.AddRange(flows.Entries);
         }
 
         void RestorePlants(SimulationState state)
@@ -229,6 +282,7 @@ namespace KardashevAscent.Simulation.Game
             plantStatus.Clear();
             Array.Clear(ventedKg, 0, ventedKg.Length);
             industrialWasteHeatKWh = 0.0;
+            flows.Restore(state.Version >= 42 ? state.FlowEntries : null);
             if (state.Version < 40) return;
             if (state.PlantPolicies != null)
                 foreach (PlantPolicyRecord r in state.PlantPolicies)

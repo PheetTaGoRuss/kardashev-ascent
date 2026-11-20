@@ -238,7 +238,9 @@ namespace KardashevAscent.Simulation.Game
                     else if (room > 1e-9) storageFullReported.Remove((order.Tile, order.Material));
                     want = Math.Min(want, room);
                 }
-                StockAt(order.Tile).Add(order.Material, Deposits.Extract(order.Tile, order.Material, want));
+                double mined = Deposits.Extract(order.Tile, order.Material, want);
+                StockAt(order.Tile).Add(order.Material, mined);
+                flows.Add(TimeHours, FlowStage.Mined, -1, order.Material, mined);
                 Workforce.Release(t);
                 if (Deposits.IsExhausted(order.Tile, order.Material))
                 {

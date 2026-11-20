@@ -342,6 +342,9 @@ namespace KardashevAscent.Simulation.Game
 
         IReadOnlyList<(int Tile, Resources.Material Material, double Kg)> StockTargets();
 
+        /// <summary>Everything every place holds: depots, plant buffers, robots' cargo (kind, id, material, kg).</summary>
+        System.Collections.Generic.IEnumerable<(Logistics.PlaceKind Kind, int Id, Resources.Material Material, double Kg)> Holdings();
+
         /// <summary>Hauls under way: id, from, to, material, kg, loaded, and the carrier once loaded.</summary>
         IReadOnlyList<(int Id, int From, int To, Resources.Material Material, double Kg, bool Loaded, int RobotId)> HaulOrders();
 
@@ -597,6 +600,9 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>Waste heat of the batches finished so far, kWh.</summary>
         double IndustrialWasteHeatKWh { get; }
+
+        /// <summary>The last days of mass flows with closure, waste heat and blocked plants (the Flowsheet view reads this and computes nothing).</summary>
+        FlowsheetSnapshot FlowsheetSnapshot(int days = 7);
     }
 
     /// <summary>Flight rules: the versioned rulebook, its uplink and the Operations log (mission operations 5, MO-10 to MO-14).</summary>

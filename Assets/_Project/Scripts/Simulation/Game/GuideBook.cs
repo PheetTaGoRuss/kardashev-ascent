@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using KardashevAscent.Simulation.Logistics;
+using KardashevAscent.Simulation.Operations;
 using KardashevAscent.Simulation.Planet;
 using KardashevAscent.Simulation.Resources;
 using KardashevAscent.Simulation.Robots;
@@ -52,8 +54,8 @@ namespace KardashevAscent.Simulation.Game
     /// </summary>
     public static class GuideBook
     {
-        public const string Materials = "Materials", Ground = "Ground", Buildings = "Buildings", Robots = "Robots", Research = "Research";
-        public static readonly string[] Categories = { Materials, Ground, Buildings, Robots, Research };
+        public const string Materials = "Materials", Ground = "Ground", Buildings = "Buildings", Robots = "Robots", Research = "Research", Operations = "Operations";
+        public static readonly string[] Categories = { Materials, Ground, Buildings, Robots, Research, Operations };
 
         /// <summary>Battery yard size used for its cost line (the game's default yard).</summary>
         public const double DefaultBatteryWh = 20_000_000.0;
@@ -71,6 +73,7 @@ namespace KardashevAscent.Simulation.Game
             pages.AddRange(BuildingPages());
             pages.AddRange(RobotPages());
             pages.AddRange(ResearchPages());
+            pages.AddRange(OperationPages());
             return pages;
         }
 
@@ -319,6 +322,42 @@ namespace KardashevAscent.Simulation.Game
                 page.Add("Made at", k == RobotKind.General ? "You start with three. More from a Workshop." : $"A Workshop, from milestone {RobotTech.UnlockMilestone(k)}.");
                 yield return page;
             }
+        }
+
+        // ---- operations (mission operations: flight rules, hauling, byproducts, heat) ----
+
+        static IEnumerable<GuidePage> OperationPages()
+        {
+            var rules = new GuidePage(Operations, "Flight rules", "Decisions written down in advance, because the answer from Earth takes years.");
+            rules.Add("What a rule is", "When up to three conditions hold on what is known, do one thing, for a stated reason (the rationale is required). Rules are read top to bottom; the first that holds wins.");
+            rules.Add("Conditions", Enum.GetValues(typeof(ConditionKind)).Cast<ConditionKind>().Select(k => k.ToString()).ToArray());
+            rules.Add("Responses", Enum.GetValues(typeof(ResponseKind)).Cast<ResponseKind>().Select(k => k.ToString()).ToArray());
+            rules.Add("Versions and uplink", "Every publish is a new version. A robot runs the version the colony network last gave it; one that is cut off keeps its last version and syncs when it is back. A rule never fires on something not measured yet.");
+            rules.Add("Your orders win", "A direct order from you always beats a rule: a rule never overwrites a setting or a destination you gave a robot.");
+            rules.Add("The starter rulebook", StarterRulebook.Rules().Select(r => $"{r.Name}: {r.Rationale}").ToArray());
+            yield return rules;
+
+            yield return new GuidePage(Operations, "Hauling", "Materials stay where they are mined or made; robots carry them where they are needed.")
+                .Add("Where stock lies", "Each tile outside the lander keeps its own depot. A construction site draws only from its own tile's depot; mined ore lies in a pile on its mine tile.")
+                .Add("What makes a haul", "A site short of a material, a plant waiting for its input, or a stock target you set. You never plan a trip.")
+                .Add("What a haul costs", $"A robot carries up to {PlanetSimulation.BasePayloadKg:0} kg times its transport capacity. Driving with a load takes more power: drive power x (robot mass + cargo) / robot mass, and on a heavier planet more again (rolling resistance grows with weight). An empty robot costs exactly what it always did.")
+                .Add("Handling", $"Loading or unloading takes about {RobotSpecs.HaulHandlingHours * 60.0:0} minutes of work at each stop.")
+                .Add("Transport robots", $"The specialists: they carry {RobotCatalog.Profile(RobotKind.Transport)[RobotAttribute.TransportCapacity]:0.#} times the load and move {RobotCatalog.Profile(RobotKind.Transport)[RobotAttribute.Speed]:0.#} times as fast. From milestone {RobotTech.UnlockMilestone(RobotKind.Transport)}.");
+
+            var by = new GuidePage(Operations, "Byproducts", "Refining gives off gas. It is real matter: store it or vent it.");
+            foreach (RefineRecipe r in Refining.All.Where(x => x.Byproduct.HasValue))
+                by.Add(Refining.ModuleName(r.Module) + ": " + r.Name, $"{r.VentedKg / r.OutputKg:0.00} kg of {Resources.Materials.Name(r.Byproduct.Value).ToLowerInvariant()} for every kg of {Resources.Materials.Name(r.Output).ToLowerInvariant()}.");
+            by.Add("Store or vent", $"Each plant has a policy. Store: the gas goes to a gas tank (about {StorageSpecs.TankCapacityKg:0} kg at 20 MPa; mass = p V M / (Z R T)) and a full store stops the plant. Vent: it is released, logged, and chlorine is toxic.");
+            yield return by;
+
+            var heat = new GuidePage(Operations, "Heat ledger", "Electricity in = chemical energy kept in the product + waste heat out.");
+            foreach (RefineProcess p in Refining.Processes)
+            {
+                IndustrialProcess proc = Refining.ProcessOf(p);
+                heat.Add(Refining.Of(p).Name, $"{proc.ElectricityKWhPerBatch:0.#} kWh in, {proc.ProductEnthalpyKWhPerBatch:0.#} kWh kept in the product, {proc.WasteHeatKWhPerBatch:0.#} kWh as heat per batch.");
+            }
+            heat.Add("What it does", "The heat is counted and shown in the Flowsheet window; the planet does not warm from it yet.");
+            yield return heat;
         }
 
         // ---- research ----

@@ -167,7 +167,10 @@ namespace KardashevAscent.Simulation.Game
                 {
                     double moved = inventories.Move(PlaceId.Cargo(o.RobotId), PlaceId.Depot(o.ToTile), o.Material, o.Kg);
                     if (moved > 0.0)
+                    {
                         haulLedger.RecordMove(o.Material, moved, DistanceKm(o.FromTile, o.ToTile));
+                        flows.Add(TimeHours, FlowStage.Hauled, -1, o.Material, moved);
+                    }
                     o.Kg -= moved;
                     Workforce.Release(t);
                     if (o.Kg <= 1e-9)

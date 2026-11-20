@@ -224,7 +224,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | MO-12 | Step 7a "rules evaluate" in the sub-step order | CONFIRMED | director brief 2026-11-20 | In progress: step 7a built, table updated in `system-interactions.md`; a colony with no rules steps as before (golden test) (P3) | `Game/PlanetSimulation.cs`, `FlightRulesTests` |
 | MO-13 | Operations log in the observation-record shape (first part of IN-04) | CONFIRMED | director brief 2026-11-20 | In progress: records in the observation shape; a cut-off robot's records have no known-at until it syncs (P3) | `Operations/OperationsLog.cs`, `RulebookTests` |
 | MO-14 | Starter rulebook v1 (three rules with rationales) | PROPOSED (rule numbers TBD) | director brief 2026-11-20 | In progress: three starter rules with rationales on new missions and old saves (P3) | `Operations/OperationsLog.cs` (StarterRulebook) |
-| MO-15 | Operations window, haul lanes, Flowsheet Sankey | CONFIRMED | director brief 2026-11-20 | Designed | same |
+| MO-15 | Operations window, haul lanes, Flowsheet Sankey | CONFIRMED | director brief 2026-11-20 | Implemented, seen in Play mode (P4): Operations window (I) with light-time banner, uplink, rulebook editor, plant cards, depots and targets, log; Flowsheet (Z) Sankey with closure, heat and blockers; haul lanes; storage buildings in the build bar; tile panel depot line; guide pages; light-time row in the planet chooser | `UI/OperationsWindow.cs`, `UI/FlowsheetWindow.cs`, `Planet/HaulLanes.cs`, `Logistics/FlowLedger.cs`, `Game/FlowsheetSnapshot.cs` |
 
 ## 3. Decisions approved by the director
 
