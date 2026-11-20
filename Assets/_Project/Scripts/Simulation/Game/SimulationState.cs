@@ -9,7 +9,7 @@ namespace KardashevAscent.Simulation.Game
     public sealed class SimulationState
     {
         /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished. 7 added robots; 8 their batteries and condition; 9 resources; 10 the Workshop; 11 programs (facility, ranking, queue); 12 movement; 13 critical damage (stage A); 14 reservations and tasks to go back to (stage B); 15 battery ageing by depth, maintenance rules (stage D); 16 building footprints. 23 industry reports. 29 experiments. 30 survey puzzles answered one material at a time. 31 stand-ins (aluminium, sodium) in building bills. 32 deposits run out (what was mined from each). 33 mountains and canyons opened (tunnel, blast, bridge). 34 refinery modules, batches, queue and auto targets.</summary>
-        public const int CurrentVersion = 42;
+        public const int CurrentVersion = 43;
 
         /// <summary>Wired grid (version 35): generators and stations need power lines to the lander tile. Older saves are not wired.</summary>
         public bool WiredGrid;
@@ -55,6 +55,10 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Finished buildings waiting for a robot to take them down (version 7).</summary>
         /// <summary>37: buildings wired to the grid by the player. A save from before it wires every building it has.</summary>
         public List<Robots.SalvageOrderRecord> WiredBuildings = new List<Robots.SalvageOrderRecord>();
+        /// <summary>43: each power line's stable electrical connection id, and its condition and open state when not whole. Older saves get ids on load.</summary>
+        public List<ElectricalLinkRecord> ElectricalLinks = new List<ElectricalLinkRecord>();
+        /// <summary>43: the next electrical connection id (0 in older saves).</summary>
+        public int NextElectricalConnectionId;
         public List<Robots.SalvageOrderRecord> SalvageOrders = new List<Robots.SalvageOrderRecord>();
         /// <summary>Panels waiting for a robot to turn them to new angles (version 17; older saves have none).</summary>
         public List<Robots.AdjustOrderRecord> AdjustOrders = new List<Robots.AdjustOrderRecord>();
@@ -288,5 +292,16 @@ namespace KardashevAscent.Simulation.Game
         public int LinkTo = -1;
         /// <summary>The other slots the building covers (version 16; empty in older saves: one slot).</summary>
         public List<int> Covered = new List<int>();
+    }
+
+    /// <summary>A power line's electrical identity (version 43).</summary>
+    [Serializable]
+    public sealed class ElectricalLinkRecord
+    {
+        public int Tile;
+        public int Slot;
+        public int ConnectionId;
+        public double Condition = 1.0;
+        public bool Open;
     }
 }

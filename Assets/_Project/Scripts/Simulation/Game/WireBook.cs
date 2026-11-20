@@ -20,6 +20,13 @@ namespace KardashevAscent.Simulation.Game
         public readonly Dictionary<(int Tile, int Slot), int> LinkTargets = new Dictionary<(int, int), int>();
 
         /// <summary>Buildings the player has wired to their tile's grid.</summary>
+        /// <summary>Stable electrical connection id of each line (version 43). Never reused; ids of lines taken down are retired.</summary>
+        public readonly Dictionary<(int Tile, int Slot), int> ElectricalIds = new Dictionary<(int, int), int>();
+        /// <summary>Condition (0 to 1) and open/closed of lines that are not in perfect order (version 43). A line with no entry is whole and closed.</summary>
+        public readonly Dictionary<(int Tile, int Slot), (double Condition, bool Open)> CableState = new Dictionary<(int, int), (double, bool)>();
+        /// <summary>The next electrical connection id to hand out (version 43).</summary>
+        public int NextElectricalId = 1;
+
         public readonly HashSet<(int Tile, int Slot)> WiredBuildings = new HashSet<(int, int)>();
 
         /// <summary>The two tiles are linked by a wire of this tier (finished or a site).</summary>
@@ -41,6 +48,8 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Forget the line on this slot (it was taken down).</summary>
         public void RemoveLine((int Tile, int Slot) key)
         {
+            ElectricalIds.Remove(key);
+            CableState.Remove(key);
             PowerLines.Remove(key);
             HighVoltageLines.Remove(key);
             LinkTargets.Remove(key);
