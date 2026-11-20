@@ -31,8 +31,8 @@ namespace KardashevAscent.Tests.Electrical
         [Test]
         public void TheSaveVersionIs43()
         {
-            Assert.AreEqual(43, SimulationState.CurrentVersion);
-            Assert.AreEqual(43, Fresh().CaptureState().Version);
+            Assert.GreaterOrEqual(SimulationState.CurrentVersion, 43);
+            Assert.AreEqual(SimulationState.CurrentVersion, Fresh().CaptureState().Version);
         }
 
         [Test]

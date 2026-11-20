@@ -93,7 +93,7 @@ namespace KardashevAscent.Simulation.Game
                 if (!Build.IsQueued(b.Tile, b.Slot) && WiredOrOff(b))
                     list.Add(new RobotFacility(b.Tile, b.Slot, ChargingCapability.BatteryYard));
             foreach (var c in stations)
-                if (!Build.IsQueued(c.Tile, c.Slot) && WiredOrOff(c))
+                if (!Build.IsQueued(c.Tile, c.Slot) && WiredOrOff(c) && StationEnabled(c))
                     list.Add(new RobotFacility(c.Tile, c.Slot, ChargingCapability.Station));
             return list;
         }
@@ -154,6 +154,7 @@ namespace KardashevAscent.Simulation.Game
 
             // Robots at the lander charge from its RTGs first (D10); elsewhere, robots below 20 % charge right after the
             // colony and the rest top up from spare power (D6).
+            StepCircuits(dt);   // a circuit in a charging station decides whether the station charges
             Movement moving = CurrentMovement();
             Workforce.Movement = moving;
             Upkeep.Plan(Workforce, RobotFacilities(), dt, moving);

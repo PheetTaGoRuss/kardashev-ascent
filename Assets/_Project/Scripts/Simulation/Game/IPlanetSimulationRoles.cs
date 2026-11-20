@@ -661,6 +661,48 @@ namespace KardashevAscent.Simulation.Game
         }
     }
 
+    /// <summary>What the circuit editor and windows see of an installed circuit (a copy; nothing live).</summary>
+    public sealed class StationCircuitView
+    {
+        public Circuits.CircuitBlueprint Design;
+        public int BlueprintVersion;
+        /// <summary>The station charges robots now (its circuit's enable port is high).</summary>
+        public bool Enabled;
+        public Circuits.CircuitResult Result;
+        public System.Collections.Generic.List<Circuits.CircuitFault> Faults;
+        /// <summary>Switch and button positions by component id.</summary>
+        public System.Collections.Generic.Dictionary<int, bool> SwitchClosed;
+    }
+
+    /// <summary>Player-built circuits (electrical redesign stage 9). The first host is the charging station: its circuit's "enable" port decides whether it charges.</summary>
+    public interface ICircuitCommands
+    {
+        /// <summary>Saves a copy of a design in the colony's library (a design with the same name is replaced). Returns its index.</summary>
+        int SaveCircuitBlueprint(Circuits.CircuitBlueprint design);
+
+        /// <summary>Copies of the saved designs.</summary>
+        System.Collections.Generic.IReadOnlyList<Circuits.CircuitBlueprint> CircuitBlueprints();
+
+        bool DeleteCircuitBlueprint(int index);
+
+        /// <summary>Solves a design on its own with its starting switch positions, without installing it.</summary>
+        Circuits.CircuitResult TestCircuit(Circuits.CircuitBlueprint design);
+
+        /// <summary>Why a design does not fit a charging station, or null when it does.</summary>
+        string CircuitFitProblem(Circuits.CircuitBlueprint design);
+
+        /// <summary>Installs a saved design in a finished charging station. Null when done, else the reason it was refused.</summary>
+        string InstallStationCircuit(int tileId, int slot, int blueprintIndex);
+
+        bool RemoveStationCircuit(int tileId, int slot);
+
+        /// <summary>Opens or closes a switch or button of an installed circuit.</summary>
+        bool SetCircuitSwitch(int tileId, int slot, int componentId, bool closed);
+
+        /// <summary>The installed circuit of a station, or null.</summary>
+        StationCircuitView StationCircuit(int tileId, int slot);
+    }
+
     public interface IElectricalNetworks
     {
         /// <summary>How many separate networks the finished lines form.</summary>

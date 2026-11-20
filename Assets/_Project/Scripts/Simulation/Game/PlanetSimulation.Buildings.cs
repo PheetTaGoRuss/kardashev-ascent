@@ -212,6 +212,7 @@ namespace KardashevAscent.Simulation.Game
             {
                 Dismantle(tileId, slot, BuildingType.ChargingStation);
                 stations.Remove((tileId, slot));
+                RemoveStationCircuit(tileId, slot);
                 Vacate(tileId, slot);
                 return true;
             }

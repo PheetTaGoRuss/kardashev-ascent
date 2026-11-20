@@ -56,6 +56,12 @@ namespace KardashevAscent.Simulation.Circuits
         public double WireLossW;
         /// <summary>Hours the batteries last at this load (infinity when none is drawn).</summary>
         public double BatteryHours = double.PositiveInfinity;
+        readonly Dictionary<long, double> pinVoltages = new Dictionary<long, double>();
+
+        internal void SetPinVoltage(int component, int pin, double volts) => pinVoltages[(long)component * 16 + pin] = volts;
+
+        /// <summary>Voltage at a pin, V, measured from the reference of the pin's own island (the negative pin of its source).</summary>
+        public double VoltageAt(int component, int pin) => pinVoltages.TryGetValue((long)component * 16 + pin, out double v) ? v : 0.0;
 
         public ComponentResult Of(int id) => Components.Find(c => c.Id == id);
         public WireResult WireOf(int id) => Wires.Find(w => w.Id == id);
@@ -188,6 +194,8 @@ namespace KardashevAscent.Simulation.Circuits
             if (!settled) res.Diagnostics.Add(Diag(DiagnosticSeverity.Error, DiagnosticCode.DidNotSettle, 0, 0, "The circuit keeps switching itself on and off (a relay or diode is chattering); it has no steady state."));
 
             // Results.
+            foreach (var c in design.Components)
+                for (int p = 0; p < CircuitParts.PinCount(c.Type); p++) res.SetPinVoltage(c.Id, p, V(v, pinBase[c.Id] + p));
             foreach (var c in design.Components) res.Components.Add(new ComponentResult { Id = c.Id });
             // Element currents by part: the first element of a part is its main branch.
             var main = new Dictionary<int, Element>();
