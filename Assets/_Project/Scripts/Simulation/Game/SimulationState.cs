@@ -9,7 +9,7 @@ namespace KardashevAscent.Simulation.Game
     public sealed class SimulationState
     {
         /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished. 7 added robots; 8 their batteries and condition; 9 resources; 10 the Workshop; 11 programs (facility, ranking, queue); 12 movement; 13 critical damage (stage A); 14 reservations and tasks to go back to (stage B); 15 battery ageing by depth, maintenance rules (stage D); 16 building footprints. 23 industry reports. 29 experiments. 30 survey puzzles answered one material at a time. 31 stand-ins (aluminium, sodium) in building bills. 32 deposits run out (what was mined from each). 33 mountains and canyons opened (tunnel, blast, bridge). 34 refinery modules, batches, queue and auto targets.</summary>
-        public const int CurrentVersion = 39;
+        public const int CurrentVersion = 40;
 
         /// <summary>Wired grid (version 35): generators and stations need power lines to the lander tile. Older saves are not wired.</summary>
         public bool WiredGrid;
@@ -95,6 +95,10 @@ namespace KardashevAscent.Simulation.Game
         public int NextHaulId = 1;
         public List<HaulOrderRecord> HaulOrders = new List<HaulOrderRecord>();
         public List<StockTargetRecord> StockTargets = new List<StockTargetRecord>();
+        /// <summary>40: plants' byproduct policies (only Store is saved; Vent is the default), gas released so far, and the waste heat of finished batches.</summary>
+        public List<PlantPolicyRecord> PlantPolicies = new List<PlantPolicyRecord>();
+        public List<MaterialRecord> VentedKg = new List<MaterialRecord>();
+        public double IndustrialWasteHeatKWh;
         public List<FieldWorkRecord> FieldWork = new List<FieldWorkRecord>();
         /// <summary>Workshop jobs in order (version 10).</summary>
         public List<Robots.JobRecord> Jobs = new List<Robots.JobRecord>();
@@ -168,6 +172,14 @@ namespace KardashevAscent.Simulation.Game
         public Logistics.PlaceKind Kind;
         public int Id;
         public List<MaterialRecord> Stock = new List<MaterialRecord>();
+    }
+
+    [Serializable]
+    public sealed class PlantPolicyRecord
+    {
+        public int Tile;
+        public int Slot;
+        public Resources.ByproductPolicy Policy;
     }
 
     [Serializable]

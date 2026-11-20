@@ -76,6 +76,7 @@ namespace KardashevAscent.Simulation.Game
             refineryModules.Remove((tileId, slot));
             // A batch in the pot is lost with the module, as when a real cell is shut down cold (game rule).
             batches.Remove((tileId, slot));
+            ReleasePlantBuffers(tileId, slot);
             Vacate(tileId, slot);
             return true;
         }
@@ -141,6 +142,8 @@ namespace KardashevAscent.Simulation.Game
         {
             if (keepKg > 0.0) autoTargets[process] = keepKg;
             else autoTargets.Remove(process);
+            // The same wish as a stock target at the lander depot: with logistics on, hauls bring the product there (MO-07).
+            haulBook.SetTarget(BaseTileId, Refining.Of(process).Output, keepKg);
             StartBatches();
         }
 
@@ -166,36 +169,51 @@ namespace KardashevAscent.Simulation.Game
             return list;
         }
 
-        /// <summary>Idle finished modules take the next queued batch of their kind, else an auto one, if the input is there.</summary>
+        /// <summary>
+        /// Idle finished modules take the next queued batch of their kind, else an auto one, once its input is in their
+        /// input buffer and its outputs (the gas included, when stored) fit in their output buffer. Otherwise the plant
+        /// reports why (mission operations MO-07).
+        /// </summary>
         void StartBatches()
         {
             foreach (RefineryKind kind in new[] { RefineryKind.AluminaPlant, RefineryKind.Electrolyser })
                 foreach (var m in FinishedModules(kind))
                 {
                     if (batches.ContainsKey(m)) continue;
-                    RefineProcess? next = null;
+                    FlushOutputs(m);
+                    var candidates = new List<(RefineProcess Process, int QueueIndex)>();
                     for (int i = 0; i < refineQueue.Count; i++)
+                        if (Refining.Of(refineQueue[i]).Module == kind) candidates.Add((refineQueue[i], i));
+                    foreach (RefineProcess p in Refining.Processes)
                     {
-                        RefineRecipe r = Refining.Of(refineQueue[i]);
-                        if (r.Module != kind || Materials[r.Input] < r.InputKg - 1e-9) continue;
-                        next = refineQueue[i];
-                        refineQueue.RemoveAt(i);
-                        break;
+                        RefineRecipe r = Refining.Of(p);
+                        if (r.Module != kind || AutoRefineTarget(p) <= 0.0) continue;
+                        if (Materials[r.Output] + Running(r.Output) >= AutoRefineTarget(p)) continue;
+                        candidates.Add((p, -1));
                     }
-                    if (!next.HasValue)
-                        foreach (RefineProcess p in Refining.Processes)
+                    if (candidates.Count == 0) { plantStatus.Remove(m); continue; }
+                    IndustrialBlocker firstBlock = IndustrialBlocker.None;
+                    string firstWhy = null;
+                    bool started = false;
+                    foreach (var (process, queueIndex) in candidates)
+                    {
+                        ProcessResult result = TryStartBatch(m, process);
+                        if (result.Succeeded)
                         {
-                            RefineRecipe r = Refining.Of(p);
-                            if (r.Module != kind || AutoRefineTarget(p) <= 0.0) continue;
-                            if (Materials[r.Output] + Running(r.Output) >= AutoRefineTarget(p)) continue;
-                            if (Materials[r.Input] < r.InputKg - 1e-9) continue;
-                            next = p;
+                            if (queueIndex >= 0) refineQueue.RemoveAt(queueIndex);
+                            batches[m] = (process, 0.0);
+                            plantStatus.Remove(m);
+                            started = true;
                             break;
                         }
-                    if (!next.HasValue) continue;
-                    RefineRecipe take = Refining.Of(next.Value);
-                    Materials.Take(take.Input, take.InputKg);
-                    batches[m] = (next.Value, 0.0);
+                        if (firstWhy == null) { firstBlock = result.Blocker; firstWhy = result.Report; }
+                    }
+                    if (!started && firstWhy != null)
+                    {
+                        if (!plantStatus.TryGetValue(m, out var was) || was.Blocker != firstBlock)
+                            industrialReports.Add(TimeHours, Refining.ModuleName(kind), firstBlock, firstWhy);
+                        plantStatus[m] = (firstBlock, firstWhy);
+                    }
                 }
         }
 
@@ -212,7 +230,7 @@ namespace KardashevAscent.Simulation.Game
         void AdvanceRefineries(double dt)
         {
             StartBatches();
-            double powerW = 0.0;
+            double powerW = 0.0, heatW = 0.0;
             bool powered = RefineryPowerForTests ?? !Grid.IsBrownout;
             var done = new List<(int, int)>();
             foreach (var key in new List<(int Tile, int Slot)>(batches.Keys))
@@ -221,22 +239,22 @@ namespace KardashevAscent.Simulation.Game
                 RefineRecipe r = Refining.Of(b.Process);
                 if (!powered) continue;
                 powerW += r.PowerW;
+                heatW += r.WasteHeatW;
+                industrialWasteHeatKWh += r.WasteHeatW * dt / 1000.0;
                 b.DoneHours += dt;
                 batches[key] = b;
                 if (b.DoneHours >= r.Hours - 1e-9) done.Add(key);
             }
             RefineryPowerW = powerW;
+            IndustrialWasteHeatW = heatW;
             foreach (var key in done)
             {
                 RefineRecipe r = Refining.Of(batches[key].Process);
                 batches.Remove(key);
-                Materials.Add(r.Output, r.OutputKg);
-                if (r.SlagKg > 0.0) Materials.Add(Material.Slag, r.SlagKg);
-                industrialReports.Add(TimeHours, Refining.ModuleName(r.Module), IndustrialBlocker.None,
-                    $"{r.Name}: {r.OutputKg:0} kg made" + (r.SlagKg > 0.0 ? $", {r.SlagKg:0} kg slag" : "") +
-                    (r.VentedKg > 0.0 ? $", {r.VentedKg:0} kg {r.VentedName} vented." : "."));
+                FinishBatch(key, r);
                 RefineDone?.Invoke(r.Process, r.OutputKg);
             }
+            FlushAllOutputs();
             if (done.Count > 0) StartBatches();
         }
 
