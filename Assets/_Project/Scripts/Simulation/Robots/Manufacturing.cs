@@ -119,7 +119,7 @@ namespace KardashevAscent.Simulation.Robots
         /// every planet must be startable, and a planet with no copper or lithium ore still has rock).
         /// </summary>
         public static int UnlockMilestone(Material refined) =>
-            refined == Material.Aluminium || refined == Material.Sodium ? 0 : int.MaxValue;
+            refined == Material.Aluminium || refined == Material.Sodium || refined == Material.Slag ? 0 : int.MaxValue;
 
         /// <summary>Group capacity: the placeholder start, +2 at milestones 2, 4 and 6 (TBD).</summary>
         public static int GroupCapacity(int milestones) =>

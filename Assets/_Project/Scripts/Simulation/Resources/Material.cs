@@ -25,6 +25,10 @@ namespace KardashevAscent.Simulation.Resources
         Alumina,
         /// <summary>High-purity aluminium (99.99 %), for advanced electronics.</summary>
         PureAluminium,
+        /// <summary>Oxygen gas (O2): what an inert-anode Hall-Heroult cell gives off (mission operations MO-06). Appended; saved as an integer.</summary>
+        Oxygen,
+        /// <summary>Chlorine gas (Cl2): what a Downs cell gives off with the sodium (MO-06). Toxic if vented.</summary>
+        Chlorine,
     }
 
     public static class Materials
@@ -52,6 +56,8 @@ namespace KardashevAscent.Simulation.Resources
                 case Material.Salt: return "Salt";
                 case Material.Alumina: return "Alumina";
                 case Material.PureAluminium: return "Aluminium 99.99 %";
+                case Material.Oxygen: return "Oxygen";
+                case Material.Chlorine: return "Chlorine";
                 default: return m.ToString();
             }
         }
@@ -74,6 +80,8 @@ namespace KardashevAscent.Simulation.Resources
                 case Material.Salt: return "dry basins and deserts on planets that once had seas (evaporites), and every shore of a salty sea";
                 case Material.Alumina: return "made from anorthosite or rock in an Alumina plant (step 1 of aluminium)";
                 case Material.PureAluminium: return "aluminium refined again in an Electrolysis cell (three-layer process)";
+                case Material.Oxygen: return "given off by aluminium electrolysis (inert-anode cell, an emerging technology); needs a gas tank or is vented";
+                case Material.Chlorine: return "given off with sodium by a Downs cell; toxic: needs a gas tank, or venting it is logged and warned";
                 default: return "";
             }
         }

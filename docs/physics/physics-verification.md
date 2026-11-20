@@ -720,12 +720,22 @@ Reaction enthalpy from standard formation enthalpies [recalled; NIST-JANAF, CRC 
 
 ### Gas storage (MO-05)
 
-$n = pV/(ZRT)$ and density $\rho = pM/(ZRT)$, $R = 8.314$ J/(mol K) [established]. Example (ideal gas, $Z = 1$): oxygen at 20 MPa and 293 K is about 263 kg/m3 [calculation; a real tank is denser per the compressibility factor, $Z$ about 0.95, to verify]. Chlorine is liquefied at room temperature under about 7 bar and is stored as a liquid in a sealed store [recalled; to verify]. The game tank is 10 m3 at 20 MPa and 293.15 K, quoted for oxygen with Z = 0.95: 2 763 kg (built in `StorageSpecs.TankCapacityKg`; the volume and pressure are game rules, TBD). The yard (100 t) and sealed store (20 t) capacities are game rules, TBD.
+$n = pV/(ZRT)$ and density $\rho = pM/(ZRT)$, $R = 8.314$ J/(mol K) [established]. Example (ideal gas, $Z = 1$): oxygen at 20 MPa and 293 K is about 263 kg/m3 [calculation; a real tank is denser per the compressibility factor, $Z$ about 0.95, to verify]. Chlorine is liquefied at room temperature under about 7 bar [recalled; to verify]; the game keeps it in the gas tank class with oxygen (brief table 3.1), a simplification of the real liquid storage. Standard-state densities used by `MaterialCatalog`: O2 1.429 kg/m3 and Cl2 3.214 kg/m3 at 0 C and 1 atm [recalled; to verify]. The game tank is 10 m3 at 20 MPa and 293.15 K, quoted for oxygen with Z = 0.95: 2 763 kg (built in `StorageSpecs.TankCapacityKg`; the volume and pressure are game rules, TBD). The yard (100 t) and sealed store (20 t) capacities are game rules, TBD.
 
 | Test | Input | Expected | tol |
 | --- | --- | --- | --- |
 | Gas mass | 1 m3 O2, 20 MPa, 293.15 K, Z = 1 | 262.5 kg | 0.5 |
 | Tank | 10 m3, Z = 0.95 | 2 763 kg | 5 |
+
+### Process heat balance (MO-08), as built
+
+Per batch $E_{elec} = \Delta H\, n + Q_{waste}$ with $\Delta H\, n$ = reaction enthalpy per kg of product x output kg (`RefineRecipe.ReactionWhPerKgOutput`: 8 628 Wh/kg Al, 4 969 Wh/kg Na [recalled; to verify]); the other recipes (sinter and leach, three-layer refining) are not a sourced chemical change here, so $\Delta H = 0$ and all the electricity is waste heat (TBD). One 20 kg aluminium batch: (13 500 - 8 628) Wh/kg x 20 kg = 97.4 kWh of heat.
+
+| Test | Input | Expected | tol |
+| --- | --- | --- | --- |
+| Heat balance | every process | electricity = product enthalpy + waste heat | 1e-9 |
+| Energy floor | every process | electricity >= product enthalpy | exact |
+| Waste heat | 20 kg Al batch | 97.4 kWh | 0.5 |
 
 ### Slag as aggregate (MO-09)
 

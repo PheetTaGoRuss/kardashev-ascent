@@ -57,8 +57,14 @@ namespace KardashevAscent.Simulation.Game
 
         double? ClassCapacityKg(PlaceId place, StorageClass storageClass)
         {
-            if (place.Kind != PlaceKind.Depot || place.Id == BaseTileId)
-                return null;   // cargo and the lander hold anything
+            if (place.Kind == PlaceKind.BufferOut)   // a plant's output buffer: a little of each class
+                return storageClass == StorageClass.BulkSolid ? PlantOutputBulkKg
+                     : storageClass == StorageClass.PressurizedGas ? PlantOutputGasKg : PlantOutputHazardousKg;
+            if (place.Kind != PlaceKind.Depot)
+                return null;   // cargo and plant input buffers hold what they are given
+            // The lander holds every solid and liquid (its own cargo), but no gas: gas needs a tank.
+            if (place.Id == BaseTileId && storageClass != StorageClass.PressurizedGas)
+                return null;
             int tile = place.Id;
             double cap;
             switch (storageClass)
@@ -93,7 +99,7 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>Kg of a material a tile's depot has room for now.</summary>
         public double RoomAt(int tileId, Material material) =>
-            !LogisticsEnabled || tileId == BaseTileId ? double.PositiveInfinity : inventories.FreeFor(PlaceId.Depot(tileId), material);
+            !LogisticsEnabled ? double.PositiveInfinity : inventories.FreeFor(PlaceId.Depot(tileId), material);
 
         /// <summary>Mining a material into a depot with no room says so once, instead of silently doing nothing.</summary>
         void ReportNoRoom(int tileId, Material material)

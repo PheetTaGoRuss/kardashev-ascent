@@ -43,6 +43,9 @@ namespace KardashevAscent.Simulation.Resources
                 case Material.Sodium: return new MaterialProperties(MaterialPhase.Solid, StorageClass.Hazardous, 968.0);
                 case Material.Lithium: return new MaterialProperties(MaterialPhase.Solid, StorageClass.Hazardous, 534.0);
                 case Material.Aluminium: return new MaterialProperties(MaterialPhase.Solid, StorageClass.BulkSolid, 2700.0);
+                // Gas densities at 0 C and 1 atm (recalled from standard tables; to verify): O2 1.429, Cl2 3.214 kg/m3. Stored compressed in a gas tank.
+                case Material.Oxygen: return new MaterialProperties(MaterialPhase.Gas, StorageClass.PressurizedGas, 1.429);
+                case Material.Chlorine: return new MaterialProperties(MaterialPhase.Gas, StorageClass.PressurizedGas, 3.214);
                 case Material.Copper: return new MaterialProperties(MaterialPhase.Solid, StorageClass.BulkSolid, 8960.0);
                 case Material.Iron: return new MaterialProperties(MaterialPhase.Solid, StorageClass.BulkSolid, 7874.0);
                 default: return new MaterialProperties(MaterialPhase.Solid, StorageClass.BulkSolid, 2650.0);
@@ -126,6 +129,8 @@ namespace KardashevAscent.Simulation.Resources
         public double ElectricityKWhPerBatch { get; set; }
         public double ProcessHeatKWhPerBatch { get; set; }
         public double WasteHeatKWhPerBatch { get; set; }
+        /// <summary>Chemical energy the products hold above the inputs, kWh per batch (reaction enthalpy x amount; zero where not a chemical change or not sourced yet).</summary>
+        public double ProductEnthalpyKWhPerBatch { get; set; }
         public bool RequiresControlledEnvironment { get; set; }
 
         public IndustrialProcess(string id, string displayName)
@@ -148,6 +153,16 @@ namespace KardashevAscent.Simulation.Resources
             Outputs.Add(new MaterialAmount(material, kg));
             return this;
         }
+    }
+
+    /// <summary>Where a process takes its inputs from and puts its outputs: a plant's input and output buffers.</summary>
+    public sealed class ProcessPorts
+    {
+        public System.Func<Material, double> Available;
+        public System.Func<Material, double, bool> Take;
+        /// <summary>Can all these outputs be put away together?</summary>
+        public System.Func<IReadOnlyList<MaterialAmount>, bool> CanStoreAll;
+        public System.Action<Material, double> Store;
     }
 
     public readonly struct ProcessEnvironment
@@ -257,6 +272,35 @@ namespace KardashevAscent.Simulation.Resources
             foreach (MaterialAmount output in outputs)
                 outputStorage.TryStore(output.Material, output.Kg);
 
+            return new ProcessResult(IndustrialBlocker.None, $"{process.DisplayName} completed {batches:0.##} batch(es).", batches);
+        }
+
+        /// <summary>The same, through ports (a plant's buffers) instead of one stock and one storage.</summary>
+        public static ProcessResult TryRun(IndustrialProcess process, ProcessPorts ports, ProcessEnvironment environment, double batches = 1.0)
+        {
+            if (process == null) throw new ArgumentNullException(nameof(process));
+            if (ports == null) throw new ArgumentNullException(nameof(ports));
+            if (batches <= 0.0) throw new ArgumentOutOfRangeException(nameof(batches));
+            if (process.RequiresControlledEnvironment && !environment.IsControlled)
+                return Blocked(IndustrialBlocker.EnvironmentUnavailable, process, "a controlled environment");
+            if (environment.AvailableElectricityKWh + 1e-9 < process.ElectricityKWhPerBatch * batches)
+                return Blocked(IndustrialBlocker.InsufficientElectricity, process, "electricity");
+            if (environment.AvailableProcessHeatKWh + 1e-9 < process.ProcessHeatKWhPerBatch * batches)
+                return Blocked(IndustrialBlocker.InsufficientProcessHeat, process, "process heat");
+            if (environment.AvailableCoolingKWh + 1e-9 < process.WasteHeatKWhPerBatch * batches)
+                return Blocked(IndustrialBlocker.InsufficientCooling, process, "cooling capacity");
+            foreach (MaterialAmount input in process.Inputs)
+                if (ports.Available(input.Material) + 1e-9 < input.Kg * batches)
+                    return Blocked(IndustrialBlocker.MissingInput, process, Materials.Name(input.Material).ToLowerInvariant());
+            var outputs = new List<MaterialAmount>(process.Outputs.Count);
+            foreach (MaterialAmount output in process.Outputs)
+                outputs.Add(new MaterialAmount(output.Material, output.Kg * batches));
+            if (!ports.CanStoreAll(outputs))
+                return Blocked(IndustrialBlocker.OutputStorageUnavailable, process, "room in the output store");
+            foreach (MaterialAmount input in process.Inputs)
+                ports.Take(input.Material, input.Kg * batches);
+            foreach (MaterialAmount output in outputs)
+                ports.Store(output.Material, output.Kg);
             return new ProcessResult(IndustrialBlocker.None, $"{process.DisplayName} completed {batches:0.##} batch(es).", batches);
         }
 

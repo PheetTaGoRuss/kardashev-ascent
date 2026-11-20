@@ -19,6 +19,7 @@ namespace KardashevAscent.Simulation.Game
         {
             (Material.Copper, Material.Aluminium, StandIn.AluminiumForCopper, StandIns.AluminiumPerCopperKg),
             (Material.Lithium, Material.Sodium, StandIn.SodiumForLithium, StandIns.SodiumPerLithiumKg),
+            (Material.Rock, Material.Slag, StandIn.SlagForRock, StandIns.SlagPerRockKg),
         };
 
         static bool Unlocked(Material sub, int milestones) => milestones >= RobotTech.UnlockMilestone(sub);

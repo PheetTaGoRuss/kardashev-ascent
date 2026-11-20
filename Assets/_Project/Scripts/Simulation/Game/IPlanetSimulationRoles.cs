@@ -578,6 +578,27 @@ namespace KardashevAscent.Simulation.Game
     }
 
     /// <summary>The wired grid (director 2026-11-20): generators and stations must be connected to the lander by power lines.</summary>
+    /// <summary>Plants with buffers, byproducts and waste heat (mission operations MO-06, MO-07, MO-08).</summary>
+    public interface IFlowsheetCommands
+    {
+        /// <summary>What a refinery module does with its gas: store it (a full store stops the plant) or vent it (logged).</summary>
+        bool SetByproductPolicy(int tileId, int slot, Resources.ByproductPolicy policy);
+
+        Resources.ByproductPolicy ByproductPolicyOf(int tileId, int slot);
+
+        /// <summary>A plant's blocker, buffers and heat; null if no module is there.</summary>
+        PlantReport PlantReportAt(int tileId, int slot);
+
+        /// <summary>Gas released to the air so far, kg.</summary>
+        double VentedKg(Resources.Material material);
+
+        /// <summary>Waste heat of the batches running now, W (a readout only).</summary>
+        double IndustrialWasteHeatW { get; }
+
+        /// <summary>Waste heat of the batches finished so far, kWh.</summary>
+        double IndustrialWasteHeatKWh { get; }
+    }
+
     public interface IWiredGrid
     {
         /// <summary>When on, generators make power only on tiles wired to the lander tile, and stations and storage can only be built there. Off in old saves and tests.</summary>

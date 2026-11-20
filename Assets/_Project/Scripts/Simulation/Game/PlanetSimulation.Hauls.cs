@@ -81,6 +81,20 @@ namespace KardashevAscent.Simulation.Game
                     wanted[(site.Tile, m)] = (wanted.TryGetValue((site.Tile, m), out double w) ? w : 0.0) + kg;
             foreach (StockTarget t in haulBook.Targets())
                 wanted[(t.Tile, t.Material)] = (wanted.TryGetValue((t.Tile, t.Material), out double w) ? w : 0.0) + t.Kg;
+            // An idle plant with a batch waiting wants its input at its tile (what its input buffer already holds counts).
+            foreach (RefineryKind kind in new[] { RefineryKind.AluminaPlant, RefineryKind.Electrolyser })
+            {
+                RefineProcess? pending = PendingProcess(kind);
+                if (!pending.HasValue) continue;
+                RefineRecipe r = Refining.Of(pending.Value);
+                foreach (var m in FinishedModules(kind))
+                {
+                    if (batches.ContainsKey(m)) continue;
+                    double need = r.InputKg - inventories.StockOf(InputOf(m))[r.Input];
+                    if (need > 1e-9)
+                        wanted[(m.Tile, r.Input)] = (wanted.TryGetValue((m.Tile, r.Input), out double w2) ? w2 : 0.0) + need;
+                }
+            }
 
             var keys = new List<(int Tile, Material Material)>(wanted.Keys);
             keys.Sort((a, b) => a.Tile != b.Tile ? a.Tile.CompareTo(b.Tile) : ((int)a.Material).CompareTo((int)b.Material));

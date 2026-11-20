@@ -22,6 +22,15 @@ namespace KardashevAscent.Simulation.Resources
         SodiumFromRock,
     }
 
+    /// <summary>What a plant does with the gas its process gives off (mission operations MO-06). Saved as an integer.</summary>
+    public enum ByproductPolicy
+    {
+        /// <summary>Release it (logged; chlorine is toxic and is warned about). The default, as refining always was.</summary>
+        Vent,
+        /// <summary>Keep it: it goes to the output buffer and from there to a gas tank, and a full store stops the plant.</summary>
+        Store,
+    }
+
     /// <summary>Which refinery module runs a process.</summary>
     public enum RefineryKind { AluminaPlant, Electrolyser }
 
@@ -42,8 +51,18 @@ namespace KardashevAscent.Simulation.Resources
         /// <summary>What leaves as gas (oxygen or CO₂ from electrolysis, chlorine from salt), kg; not kept yet.</summary>
         public double VentedKg;
         public string VentedName;
+        /// <summary>The gas that leaves (<see cref="VentedKg"/> of it): stored in a tank or vented, by the plant's policy. None when nothing leaves.</summary>
+        public Material? Byproduct;
+        /// <summary>Reaction enthalpy per kg of output, Wh: the chemical energy the product holds above the input (NIST-JANAF / CRC standard formation enthalpies). Zero where the process is not a sourced chemical change.</summary>
+        public double ReactionWhPerKgOutput;
         public double EnergyWh;
         public double Hours;
+
+        /// <summary>Waste heat of a batch, Wh: the electricity that did not end up as chemical energy in the product (first law).</summary>
+        public double WasteHeatWh => EnergyWh - ReactionWhPerKgOutput * OutputKg;
+
+        /// <summary>Waste heat while a batch runs, W.</summary>
+        public double WasteHeatW => Hours > 0.0 ? WasteHeatWh / Hours : 0.0;
 
         /// <summary>Grid power while a batch runs, W (its energy spread over its hours).</summary>
         public double PowerW => Hours > 0.0 ? EnergyWh / Hours : 0.0;
@@ -77,6 +96,10 @@ namespace KardashevAscent.Simulation.Resources
         public const double SaltPerSodium = 58.44 / 22.99;
         /// <summary>Downs cell electricity, Wh per kg of sodium: about 10 kWh/kg.</summary>
         public const double SodiumWhPerKg = 10_000.0;
+        /// <summary>Enthalpy to split alumina into aluminium and oxygen: 1675.7 kJ per mol Al2O3 = 837.9 kJ per mol Al, 31.06 MJ/kg = 8 628 Wh/kg (formation enthalpy from NIST-JANAF / CRC; recalled, to verify).</summary>
+        public const double AluminiumReactionWhPerKg = 8_628.0;
+        /// <summary>Enthalpy to split salt into sodium and chlorine: 411.2 kJ per mol NaCl, 17.89 MJ/kg of Na = 4 969 Wh/kg (recalled, to verify).</summary>
+        public const double SodiumReactionWhPerKg = 4_969.0;
 
         static readonly Dictionary<RefineProcess, RefineRecipe> Recipes = Make();
 
@@ -106,7 +129,8 @@ namespace KardashevAscent.Simulation.Resources
                 Process = RefineProcess.Aluminium, Module = RefineryKind.Electrolyser, Name = "Aluminium (99.7 %)",
                 What = "Hall–Héroult: alumina dissolved in molten cryolite at about 960 °C, split by a big current. The oxygen leaves as gas.",
                 Input = Material.Alumina, InputKg = al * AluminaPerAluminium, Output = Material.Aluminium, OutputKg = al,
-                VentedKg = al * AluminaPerAluminium - al, VentedName = "oxygen", EnergyWh = SmeltWhPerKg * al, Hours = 168.0,
+                VentedKg = al * AluminaPerAluminium - al, VentedName = "oxygen", Byproduct = Material.Oxygen, EnergyWh = SmeltWhPerKg * al, Hours = 168.0,
+                ReactionWhPerKgOutput = AluminiumReactionWhPerKg,
             };
             double pure = 10.0;
             d[RefineProcess.PureAluminium] = new RefineRecipe
@@ -122,7 +146,8 @@ namespace KardashevAscent.Simulation.Resources
                 Process = RefineProcess.SodiumFromSalt, Module = RefineryKind.Electrolyser, Name = "Sodium from salt",
                 What = "Downs cell: molten salt at about 600 °C split into liquid sodium and chlorine gas.",
                 Input = Material.Salt, InputKg = na * SaltPerSodium, Output = Material.Sodium, OutputKg = na,
-                VentedKg = na * SaltPerSodium - na, VentedName = "chlorine", EnergyWh = SodiumWhPerKg * na, Hours = 96.0,
+                VentedKg = na * SaltPerSodium - na, VentedName = "chlorine", Byproduct = Material.Chlorine, EnergyWh = SodiumWhPerKg * na, Hours = 96.0,
+                ReactionWhPerKgOutput = SodiumReactionWhPerKg,
             };
             double naRock = 5.0;
             d[RefineProcess.SodiumFromRock] = new RefineRecipe
@@ -136,6 +161,24 @@ namespace KardashevAscent.Simulation.Resources
         }
 
         public static RefineRecipe Of(RefineProcess p) => Recipes[p];
+
+        /// <summary>
+        /// The recipe as an industrial process: every output named, product, slag and the gas that leaves (mission
+        /// operations MO-06), with its heat balance (MO-08): electricity = chemical energy in the product + waste heat.
+        /// </summary>
+        public static IndustrialProcess ProcessOf(RefineProcess p)
+        {
+            RefineRecipe r = Of(p);
+            var proc = new IndustrialProcess(p.ToString(), r.Name);
+            proc.AddInput(r.Input, r.InputKg);
+            proc.AddOutput(r.Output, r.OutputKg);
+            if (r.SlagKg > 0.0) proc.AddOutput(Material.Slag, r.SlagKg);
+            if (r.VentedKg > 0.0) proc.AddOutput(r.Byproduct ?? Material.Slag, r.VentedKg);
+            proc.ElectricityKWhPerBatch = r.EnergyWh / 1000.0;
+            proc.ProductEnthalpyKWhPerBatch = r.ReactionWhPerKgOutput * r.OutputKg / 1000.0;
+            proc.WasteHeatKWhPerBatch = r.WasteHeatWh / 1000.0;
+            return proc;
+        }
 
         public static IEnumerable<RefineRecipe> All => Recipes.Values;
 

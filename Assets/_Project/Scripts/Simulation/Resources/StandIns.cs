@@ -14,6 +14,8 @@ namespace KardashevAscent.Simulation.Resources
         AluminiumForCopper = 1,
         /// <summary>Sodium-ion cells instead of lithium (<see cref="StandIns.SodiumPerLithiumKg"/>).</summary>
         SodiumForLithium = 2,
+        /// <summary>Slag instead of rock, 1 : 1 by mass (<see cref="StandIns.SlagPerRockKg"/>; game rule, TBD): slag is used as aggregate.</summary>
+        SlagForRock = 4,
     }
 
     /// <summary>
@@ -42,6 +44,9 @@ namespace KardashevAscent.Simulation.Resources
         /// </summary>
         public const double SodiumPerLithiumKg = 22.99 / 6.94;
 
+        /// <summary>Slag for one kg of rock. Slag aggregate replaces natural aggregate in concrete (ASTM C989, EN 12620); the 1 : 1 ratio is a game rule, TBD (MO-09).</summary>
+        public const double SlagPerRockKg = 1.0;
+
         /// <summary>The bill with its stand-ins used.</summary>
         public static MaterialBill Apply(MaterialBill bill, StandIn use)
         {
@@ -49,6 +54,8 @@ namespace KardashevAscent.Simulation.Resources
             MaterialBill b = bill;
             if ((use & StandIn.AluminiumForCopper) != 0 && bill[Material.Copper] > 0.0)
                 b = b.Without(Material.Copper).Add(Material.Aluminium, bill[Material.Copper] * AluminiumPerCopperKg);
+            if ((use & StandIn.SlagForRock) != 0 && bill[Material.Rock] > 0.0)
+                b = b.Without(Material.Rock).Add(Material.Slag, bill[Material.Rock] * SlagPerRockKg);
             if ((use & StandIn.SodiumForLithium) != 0 && bill[Material.Lithium] > 0.0)
                 b = b.Without(Material.Lithium).Add(Material.Sodium, bill[Material.Lithium] * SodiumPerLithiumKg);
             return b;
