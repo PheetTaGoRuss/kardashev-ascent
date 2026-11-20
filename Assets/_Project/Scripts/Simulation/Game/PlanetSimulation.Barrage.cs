@@ -51,6 +51,7 @@ namespace KardashevAscent.Simulation.Game
             {
                 if (Build.QueueCount > 0 && Build.IsQueued(key.Tile, key.Slot))
                     continue;
+                if (!IsPowered(key.Tile)) continue;
                 double energy = Tides.BarrageEnergyPerTideJ(Tides.BarrageBasinM2, TidalRangeBaseM(key.Tile), SurfaceGravityMs2);
                 total += Tides.BarragePowerW(energy, period, fraction);
             }

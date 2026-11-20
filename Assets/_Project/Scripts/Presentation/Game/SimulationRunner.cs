@@ -213,7 +213,7 @@ namespace KardashevAscent.Presentation.Game
                 PickRecord(startPlanet);
             if (landingTile.HasValue && (landingTile.Value >= planet.Sphere.TileCount || Terrains.IsWater(planet.Surface.Terrain[landingTile.Value])))
                 landingTile = null;
-            Simulation = new PlanetSimulation(planet.Sphere, planet.Surface, record, landingTile ?? -1);
+            Simulation = new PlanetSimulation(planet.Sphere, planet.Surface, record, landingTile ?? -1) { WiredGrid = true };   // new missions are wired (director 2026-11-20); a loaded save brings its own flag
             SolarParams = record.ToSolarParams();
             ClockSpeed speed = Clock?.Speed ?? startSpeed;
             double yearHours = SolarParams.YearLengthHours;

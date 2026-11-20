@@ -47,6 +47,7 @@ namespace KardashevAscent.Simulation.Game
             {
                 if (Build.QueueCount > 0 && Build.IsQueued(key.Tile, key.Slot))
                     continue;
+                if (!IsPowered(key.Tile)) continue;
                 total += Waves.LinePowerW(WaveHeightAtM(key.Tile), EnergyPeriodAt(key.Tile), SurfaceGravityMs2);
             }
             return total;

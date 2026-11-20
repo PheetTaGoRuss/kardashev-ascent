@@ -67,6 +67,7 @@ namespace KardashevAscent.Simulation.Game
             {
                 if (Build.QueueCount > 0 && Build.IsQueued(key.Tile, key.Slot))
                     continue;
+                if (!IsPowered(key.Tile)) continue;
                 total += Tides.TurbinePowerW(StreamAtMs(key.Tile));
             }
             return Math.Min(total, Tides.PlanetCeilingW(Moon));

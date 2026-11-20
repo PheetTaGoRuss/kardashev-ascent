@@ -179,7 +179,7 @@ namespace KardashevAscent.EditorTools
                 {
                     var sim = Runner()?.Simulation;
                     if (sim != null)
-                        Log($"STATUS t={sim.TimeHours:0}h gen={sim.GenerationW:0}W demand={sim.DemandW:0}W battery={sim.BatteryStoredWh / 1e6:0.0}MWh brownout={sim.IsBrownout} K={sim.PlanetK:0.000} milestones={sim.MilestonesReached} iron={sim.Materials[KardashevAscent.Simulation.Resources.Material.Iron]:0}kg queue={sim.ConstructionQueueCount} robots={sim.Workforce.Robots.Count} tidal={sim.TidalPowerW():0}W waves={sim.WavePowerW():0}W barrage={sim.BarragePowerW():0}W period={sim.TidePeriodHours:0.0}h moonM={sim.Moon.MassRatio:0.0000} moonD={sim.Moon.DistanceRadii:0}");
+                        Log($"STATUS t={sim.TimeHours:0}h gen={sim.GenerationW:0}W demand={sim.DemandW:0}W battery={sim.BatteryStoredWh / 1e6:0.0}MWh brownout={sim.IsBrownout} K={sim.PlanetK:0.000} milestones={sim.MilestonesReached} iron={sim.Materials[KardashevAscent.Simulation.Resources.Material.Iron]:0}kg queue={sim.ConstructionQueueCount} robots={sim.Workforce.Robots.Count} tidal={sim.TidalPowerW():0}W waves={sim.WavePowerW():0}W wired={sim.WiredGrid} poweredTiles={sim.PoweredTileCount} offGrid={sim.GeneratorsOffGrid} barrage={sim.BarragePowerW():0}W period={sim.TidePeriodHours:0.0}h moonM={sim.Moon.MassRatio:0.0000} moonD={sim.Moon.DistanceRadii:0}");
                     return true;
                 }
                 case "select":
@@ -246,6 +246,35 @@ namespace KardashevAscent.EditorTools
                         else cut++;
                     }
                     Log($"REACH land={land} inRange={inRange} outOfRange={far} cutOff={cut} base={sim?.BaseTileId}");
+                    return true;
+                }
+                case "wire":
+                {
+                    // wire <Terrain>: power lines along the shortest land path from the base to the nearest tile of that terrain; opens its site.
+                    var sim = Runner()?.Simulation;
+                    var picker = UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.TilePicker>();
+                    var kind = (Simulation.Planet.TerrainType)Enum.Parse(typeof(Simulation.Planet.TerrainType), argument);
+                    if (sim == null) return true;
+                    var prev = new Dictionary<int, int> { { sim.BaseTileId, -1 } };
+                    var queue = new Queue<int>();
+                    queue.Enqueue(sim.BaseTileId);
+                    int goal = -1;
+                    while (queue.Count > 0 && goal < 0)
+                    {
+                        int t = queue.Dequeue();
+                        foreach (int nb in sim.Sphere.Neighbors[t])
+                            if (!prev.ContainsKey(nb) && !sim.GetTile(nb).IsWater)
+                            {
+                                prev[nb] = t;
+                                if (sim.GetTile(nb).Terrain == kind) { goal = nb; break; }
+                                queue.Enqueue(nb);
+                            }
+                    }
+                    int placed = 0;
+                    for (int t = goal; t >= 0 && prev[t] >= 0; t = prev[t])
+                        if (sim.PlacePowerLine(t, 0)) placed++;
+                    Log($"wire goal={goal} lines={placed} powered={sim.PoweredTileCount}");
+                    if (goal >= 0 && picker != null) picker.Select(goal);
                     return true;
                 }
                 case "survey":
