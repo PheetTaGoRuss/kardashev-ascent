@@ -23,7 +23,7 @@ namespace KardashevAscent.Simulation.Game
         {
             var list = new List<(int Tile, int Slot)>();
             foreach (var w in workshops)
-                if (!Build.IsQueued(w.Tile, w.Slot))
+                if (!Build.IsQueued(w.Tile, w.Slot) && WiredOrOff(w))   // an unwired Workshop has no power
                     list.Add(w);
             list.Sort((a, b) => a.Tile != b.Tile ? a.Tile.CompareTo(b.Tile) : a.Slot.CompareTo(b.Slot));
             return list;

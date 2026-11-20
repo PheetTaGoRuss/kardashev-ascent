@@ -93,6 +93,7 @@ namespace KardashevAscent.Simulation.Game
             wiredBuildings.Add(key);
             wiringStamp = double.NaN;
             flowDirty = true;
+            RefreshNetwork();   // a wired relay starts relaying
             return true;
         }
 
@@ -102,6 +103,7 @@ namespace KardashevAscent.Simulation.Game
             foreach (var b in WireableBuildings()) wiredBuildings.Add((b.Tile, b.Slot));
             wiringStamp = double.NaN;
             flowDirty = true;
+            RefreshNetwork();
         }
 
         /// <summary>Every building that makes or takes power, with where it stands.</summary>
