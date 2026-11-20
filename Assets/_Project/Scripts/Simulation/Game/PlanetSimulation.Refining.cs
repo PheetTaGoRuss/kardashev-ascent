@@ -85,7 +85,7 @@ namespace KardashevAscent.Simulation.Game
         {
             var list = new List<(int Tile, int Slot)>();
             foreach (var kv in refineryModules)
-                if (KindOf(kv.Value) == kind && !Build.IsQueued(kv.Key.Tile, kv.Key.Slot))
+                if (KindOf(kv.Value) == kind && !Build.IsQueued(kv.Key.Tile, kv.Key.Slot) && WiredOrOff(kv.Key))   // unwired: no power
                     list.Add(kv.Key);
             list.Sort((a, b) => a.Tile != b.Tile ? a.Tile.CompareTo(b.Tile) : a.Slot.CompareTo(b.Slot));
             return list;

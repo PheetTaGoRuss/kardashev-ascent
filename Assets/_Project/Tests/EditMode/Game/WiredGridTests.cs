@@ -350,6 +350,18 @@ namespace KardashevAscent.Simulation.Tests.Game
         }
 
         [Test]
+        public void AnUnwiredResearchStation_IsNotThereForExperiments_UntilWired()
+        {
+            var sim = Wired();
+            sim.Debug.UnlockAll = true;
+            Assert.IsTrue(sim.PlaceResearchStation(sim.BaseTileId, 0));
+            sim.Tick(200.0);
+            Assert.IsFalse(sim.HasResearchStation, "no power to it yet");
+            Assert.IsTrue(sim.PlaceBuildingWire(sim.BaseTileId, 0));
+            Assert.IsTrue(sim.HasResearchStation);
+        }
+
+        [Test]
         public void BuildingWires_SurviveSaveAndLoad()
         {
             var sim = Wired();
