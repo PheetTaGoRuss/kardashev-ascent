@@ -676,7 +676,7 @@ For `docs/design/mission-operations.md`. Labels as above. **Every figure marked 
 
 ### Light time to Earth (MO-01)
 
-One-way light time in years equals the distance in light-years: $t = d_{pc} 	imes 3.26156$ [derived; 1 pc = 3.26156 ly, IAU]. Proxima Centauri b at 1.30 pc gives 4.24 ly, so a round trip is about 8.5 years [derived]. `distancePc` comes from `sy_dist` of the NASA Exoplanet Archive.
+One-way light time in years equals the distance in light-years: $t = d_{pc} \times 3.26156$ [derived; 1 pc = 3.26156 ly, IAU]. Proxima Centauri b at 1.30 pc gives 4.24 ly, so a round trip is about 8.5 years [derived]. `distancePc` comes from `sy_dist` of the NASA Exoplanet Archive.
 
 | Test | Input | Expected | tol |
 | --- | --- | --- | --- |
@@ -686,7 +686,7 @@ One-way light time in years equals the distance in light-years: $t = d_{pc} 	ime
 
 The rolling-resistance power of the existing model is $P_0 = C_{rr}\, m_r\, g_\oplus\, v/\eta$ [general physics]. With cargo of mass $m_c$ on a world of gravity $g$:
 
-$$P = P_{base}\,rac{g}{g_\oplus}\,rac{m_r + m_c}{m_r}$$
+$$P = P_{base}\,\frac{g}{g_\oplus}\,\frac{m_r + m_c}{m_r}$$
 
 With $m_c = 0$ this equals `DrivePowerW` today, so `BaseDrivePowerW` (50 W, placeholder D4) stays the calibration and existing tests do not change [derived]. $m_r$ defaults to Perseverance's 1 025 kg [recalled]. Climbing: $E = (m_r + m_c)\, g\, \max(0,\Delta h)/\eta$, no regeneration downhill (an assumption). `PlanetSurface.Elevation` is dimensionless; the metres per unit is a game rule, TBD (Q5), and the climb term ships off.
 
@@ -704,8 +704,8 @@ Masses per kg of product [derived from atomic masses Al 26.982, Na 22.990, O 15.
 
 | Process | Reaction | Per kg of product |
 | --- | --- | --- |
-| Hall-Heroult, inert anode | $2Al_2O_3 	o 4Al + 3O_2$ | 1.889 kg alumina in, 0.890 kg $O_2$ out per kg Al |
-| Downs cell | $2NaCl 	o 2Na + Cl_2$ | 2.542 kg NaCl in, 1.542 kg $Cl_2$ out per kg Na |
+| Hall-Heroult, inert anode | $2Al_2O_3 \to 4Al + 3O_2$ | 1.889 kg alumina in, 0.890 kg $O_2$ out per kg Al |
+| Downs cell | $2NaCl \to 2Na + Cl_2$ | 2.542 kg NaCl in, 1.542 kg $Cl_2$ out per kg Na |
 
 Reaction enthalpy from standard formation enthalpies [recalled; NIST-JANAF, CRC Handbook]: $\Delta H_f(Al_2O_3) = -1675.7$ kJ/mol, so splitting it costs 837.9 kJ per mol of Al, 31.06 MJ per kg of Al, **8.63 kWh/kg**; $\Delta H_f(NaCl) = -411.2$ kJ/mol, so 17.9 MJ per kg of Na, **4.97 kWh/kg**. The repo's electricity figures (13.5 kWh/kg Al, 10 kWh/kg Na) are above these, as they must be; the difference is waste heat: $E_{elec} = \Delta H\, n + Q_{waste}$. A recipe whose sourced energy is below its $\Delta H$ is wrong and its test fails.
 
@@ -720,7 +720,7 @@ Reaction enthalpy from standard formation enthalpies [recalled; NIST-JANAF, CRC 
 
 ### Gas storage (MO-05)
 
-$n = pV/(ZRT)$ and density $ho = pM/(ZRT)$, $R = 8.314$ J/(mol K) [established]. Example (ideal gas, $Z = 1$): oxygen at 20 MPa and 293 K is about 263 kg/m3 [calculation; a real tank is denser per the compressibility factor, $Z$ about 0.95, to verify]. Chlorine is liquefied at room temperature under about 7 bar and is stored as a liquid in a sealed store [recalled; to verify]. Tank capacities are a game rule, TBD.
+$n = pV/(ZRT)$ and density $\rho = pM/(ZRT)$, $R = 8.314$ J/(mol K) [established]. Example (ideal gas, $Z = 1$): oxygen at 20 MPa and 293 K is about 263 kg/m3 [calculation; a real tank is denser per the compressibility factor, $Z$ about 0.95, to verify]. Chlorine is liquefied at room temperature under about 7 bar and is stored as a liquid in a sealed store [recalled; to verify]. Tank capacities are a game rule, TBD.
 
 ### Slag as aggregate (MO-09)
 
