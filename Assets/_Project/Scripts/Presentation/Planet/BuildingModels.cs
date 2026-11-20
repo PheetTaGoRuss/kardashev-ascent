@@ -291,20 +291,13 @@ namespace KardashevAscent.Presentation.Planet
             b.Cube("Cap", Warning, 0f, 0.6f, 0f, 0.06f, 0.04f, 0.06f);
         }
 
+        /// <summary>The same table the field draws (<see cref="SolarPanelVisual"/>): a post under a framed slab, tilted.</summary>
         static void Panel(Builder b, bool floating)
         {
-            if (floating)
-            {
-                b.Cube("PontoonL", Concrete, -0.32f, 0.03f, 0f, 0.16f, 0.06f, 0.8f);
-                b.Cube("PontoonR", Concrete, 0.32f, 0.03f, 0f, 0.16f, 0.06f, 0.8f);
-            }
-            else
-                b.Cube("Pad", DarkConcrete, 0, 0.012f, 0, 0.9f, 0.024f, 0.78f);
-            b.Cube("Stand", DarkSteel, 0f, 0.09f, 0.0f, 0.06f, 0.14f, 0.06f);
-            b.Cube("Panel", Blue, 0f, 0.2f, 0f, 0.8f, 0.03f, 0.56f, new Vector3(-28f, 0, 0));
-            b.Cube("Frame", Steel, 0f, 0.2f, 0f, 0.84f, 0.02f, 0.6f, new Vector3(-28f, 0, 0));
-            for (int i = -1; i <= 1; i++)
-                b.Cube("Cells", Black, i * 0.26f, 0.205f, 0f, 0.004f, 0.034f, 0.56f, new Vector3(-28f, 0, 0));
+            b.Cube("Post", DarkSteel, 0f, 0.225f, 0f, 0.07f, 0.45f, 0.07f);
+            var tilt = new Vector3(-30f, 0f, 0f);
+            b.Cube("Frame", Steel, 0f, 0.45f, 0f, 1f, 0.04f, 0.66f, tilt);
+            b.Cube("Cells", Blue, 0f, 0.45f + 0.0217f + 0.02f * 0.866f, -0.0125f - 0.01f, 0.92f, 0.02f, 0.58f, tilt);
         }
     }
 }

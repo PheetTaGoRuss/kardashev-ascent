@@ -90,10 +90,10 @@ namespace KardashevAscent.Simulation.Game
         {
             var list = new List<RobotFacility> { new RobotFacility(BaseTileId, -1, ChargingCapability.Lander) };
             foreach (var b in batteries)
-                if (!Build.IsQueued(b.Tile, b.Slot))
+                if (!Build.IsQueued(b.Tile, b.Slot) && WiredOrOff(b))
                     list.Add(new RobotFacility(b.Tile, b.Slot, ChargingCapability.BatteryYard));
             foreach (var c in stations)
-                if (!Build.IsQueued(c.Tile, c.Slot))
+                if (!Build.IsQueued(c.Tile, c.Slot) && WiredOrOff(c))
                     list.Add(new RobotFacility(c.Tile, c.Slot, ChargingCapability.Station));
             return list;
         }

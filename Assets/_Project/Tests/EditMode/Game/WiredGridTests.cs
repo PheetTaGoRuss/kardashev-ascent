@@ -97,6 +97,10 @@ namespace KardashevAscent.Simulation.Tests.Game
 
             var wired = Wired();
             Assert.IsTrue(wired.PlacePanel(wired.BaseTileId, 0, 0.35, Math.PI));
+            double unwiredMax = 0.0;
+            for (int i = 0; i < 24; i++) { wired.Tick(1.0); unwiredMax = Math.Max(unwiredMax, wired.GenerationW - wired.RtgW); }
+            Assert.AreEqual(0.0, unwiredMax, 1e-6, "a panel nobody wired makes nothing, even on the lander tile");
+            Assert.IsTrue(wired.PlaceBuildingWire(wired.BaseTileId, 0));
             double onGrid = 0.0;
             for (int i = 0; i < 48; i++) { wired.Tick(1.0); onGrid = Math.Max(onGrid, wired.GenerationW - wired.RtgW); }
             Assert.Greater(onGrid, 1000.0, "a panel on the lander tile is on the grid");
@@ -156,11 +160,13 @@ namespace KardashevAscent.Simulation.Tests.Game
             int a = Sphere.Neighbors[sim.BaseTileId].First(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
             Assert.IsTrue(sim.PlacePowerLine(a, 0, sim.BaseTileId));
             Assert.IsTrue(sim.PlacePanel(a, 1, 0.35, Math.PI));
+            sim.WireAllBuildings();
             double lossSeen = 0.0;
             for (int i = 0; i < 48; i++) { sim.Tick(1.0); lossSeen = Math.Max(lossSeen, sim.TransmissionLossW); }
             Assert.Greater(lossSeen, 0.0, "the lines lose something while the panel makes power");
             var home = Wired();
             Assert.IsTrue(home.PlacePanel(home.BaseTileId, 1, 0.35, Math.PI));
+            home.WireAllBuildings();
             for (int i = 0; i < 48; i++) home.Tick(1.0);
             Assert.AreEqual(0.0, home.TransmissionLossW, 1e-9, "a panel on the lander tile loses nothing");
         }
@@ -174,6 +180,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             for (int slot = 1; slot < sim.SlotCount(a) && placed < 45; slot++)
                 if (sim.PlacePanel(a, slot, 0.35, Math.PI)) placed++;
             Assert.GreaterOrEqual(placed, 30);
+            sim.WireAllBuildings();
             return a;
         }
 
@@ -296,6 +303,51 @@ namespace KardashevAscent.Simulation.Tests.Game
             var other = new PlanetSimulation(Sphere, Surface, Earthlike) { WiredGrid = true };
             Assert.IsTrue(other.RestoreState(state));
             Assert.IsFalse(other.WiredGrid, "a save from before the wired grid keeps working as it did");
+        }
+
+        [Test]
+        public void ABuildingNeedsItsOwnWire_AndTheListShowsWhatIsStillUnwired()
+        {
+            var sim = Wired();
+            Assert.IsTrue(sim.PlaceBattery(sim.BaseTileId, 0));
+            Assert.IsTrue(sim.PlacePanel(sim.BaseTileId, 3, 0.35, Math.PI));
+            var open = sim.UnwiredBuildings().ToList();
+            Assert.AreEqual(2, open.Count);
+            Assert.IsTrue(open.Any(b => b.Type == BuildingType.Battery && PlanetSimulation.IsWireInput(b.Type)), "storage takes power");
+            Assert.IsTrue(open.Any(b => b.Type == BuildingType.SolarPanel && PlanetSimulation.IsWireOutput(b.Type)), "a panel gives power");
+            Assert.IsFalse(sim.IsBuildingWired(sim.BaseTileId, 0));
+            Assert.IsTrue(sim.PlaceBuildingWire(sim.BaseTileId, 0));
+            Assert.IsFalse(sim.PlaceBuildingWire(sim.BaseTileId, 0), "only once");
+            StringAssert.Contains("Already", sim.WireProblem);
+            Assert.IsFalse(sim.PlaceBuildingWire(sim.BaseTileId, 10), "an empty slot has nothing to wire");
+            Assert.AreEqual(1, sim.UnwiredBuildings().Count());
+            sim.RemoveBuilding(sim.BaseTileId, 0);
+            Assert.IsTrue(sim.PlaceBattery(sim.BaseTileId, 0));
+            Assert.IsFalse(sim.IsBuildingWired(sim.BaseTileId, 0), "a new building on the same slot is not wired");
+        }
+
+        [Test]
+        public void AnUnwiredBatteryYard_IsNoRobotChargingFacility()
+        {
+            var sim = Wired();
+            Assert.IsTrue(sim.PlaceBattery(sim.BaseTileId, 0));
+            sim.Tick(48.0);
+            int before = sim.RobotFacilities().Count;
+            Assert.IsTrue(sim.PlaceBuildingWire(sim.BaseTileId, 0));
+            Assert.AreEqual(before + 1, sim.RobotFacilities().Count);
+        }
+
+        [Test]
+        public void BuildingWires_SurviveSaveAndLoad()
+        {
+            var sim = Wired();
+            Assert.IsTrue(sim.PlacePanel(sim.BaseTileId, 0, 0.35, Math.PI));
+            Assert.IsTrue(sim.PlaceBuildingWire(sim.BaseTileId, 0));
+            Assert.IsTrue(sim.PlacePanel(sim.BaseTileId, 4, 0.35, Math.PI));
+            var loaded = new PlanetSimulation(Sphere, Surface, Earthlike);
+            Assert.IsTrue(loaded.RestoreState(sim.CaptureState()));
+            Assert.IsTrue(loaded.IsBuildingWired(loaded.BaseTileId, 0));
+            Assert.IsFalse(loaded.IsBuildingWired(loaded.BaseTileId, 4));
         }
     }
 }
