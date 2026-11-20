@@ -158,7 +158,7 @@ namespace KardashevAscent.Presentation.Planet
                 return;
             style ??= new GUIStyle(GUI.skin.box) { fontSize = 14, alignment = TextAnchor.MiddleCenter, wordWrap = true };
             string text = Active
-                ? $"WIRE TOOL · {(highVoltage ? "high-voltage" : "power")} line · click a tile, then the next tile along · Tab: switch line · X / Esc: stop\\n{message}"
+                ? $"WIRE TOOL · {(highVoltage ? "high-voltage" : "power")} line · click a tile, then the next tile along · Tab: switch line · X / Esc: stop · blue OUT = gives power, orange IN = takes power\\n{message}"
                 : message;
             float height = Active ? 52f : 28f;
             GUI.Box(new Rect(Screen.width / 2f - 400f, UiLayout.ClearBottomY - height - 8f, 800f, height), text.Replace("\\n", "\n"), style);
