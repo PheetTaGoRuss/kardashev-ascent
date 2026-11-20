@@ -107,3 +107,19 @@ EL-01 electrical graph with mesh and independent networks; EL-02 explicit buildi
 - **Behaviour change.** The 2 % per hop and fixed capacities become physics; some colonies will see different losses. The migration derives cables that reproduce today's capacities; the loss figure will differ and is reported, not hidden.
 - **Two sources of truth** during stage 1 to 3 (legacy links and the graph): the adapter is one-way and tested for equality.
 - **Editor effort.** The circuit editor is a large Presentation job with no automated tests; it is last among the visible stages on purpose.
+
+## Gate G1 calibration (stage 2 result, candidates only)
+
+Today's model against the physical solver, one generator at the end of a chain of 300 km tiles, one 500 mm2 copper conductor. The voltages (33 kV, 500 kV) and the cable product are **candidates**, not approved (D2, D4). Run `CalibrationTests.PrintTodayVersusPhysicalTable` for the full table.
+
+| Line | Generated | Hops | Today delivered | Physical delivered | Physical loss |
+|---|---|---|---|---|---|
+| plain 33 kV | 1 MW | 1 | 0.98 MW | 0.99 MW | 0.9 % |
+| plain 33 kV | 5 MW | 3 | 4.71 MW | 4.44 MW | 11 % |
+| plain 33 kV | 20 MW | 1 | 19.60 MW | 17.19 MW | 14 % |
+| plain 33 kV | 20 MW | 3 | 18.82 MW | 14.23 MW | 29 % |
+| plain 33 kV | 100 MW | 1 | 19.60 MW (clipped) | 62.68 MW, 1899 A | 37 % |
+| high 500 kV | 20 MW | 3 | 18.82 MW | 19.95 MW | 0.2 % |
+| high 500 kV | 1 GW | 1 | 980 MW | 962 MW, 1923 A | 3.8 % |
+
+What it shows: at about 1 MW the two models agree. At 20 MW a plain line loses 14 to 29 %, not 2 % a hop, and high voltage loses far less than today's flat 2 %. Today's 20 MW clip corresponds to a current rating of about 600 A at 33 kV; a 1000 A rating would let a plain line carry about 35 MW. Nothing in gameplay uses these numbers yet.
