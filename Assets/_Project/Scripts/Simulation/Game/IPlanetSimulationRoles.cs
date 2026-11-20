@@ -599,6 +599,37 @@ namespace KardashevAscent.Simulation.Game
         double IndustrialWasteHeatKWh { get; }
     }
 
+    /// <summary>Flight rules: the versioned rulebook, its uplink and the Operations log (mission operations 5, MO-10 to MO-14).</summary>
+    public interface IRulebookCommands
+    {
+        /// <summary>The newest rulebook version (0: none published).</summary>
+        int RulebookVersion { get; }
+
+        /// <summary>Every version ever published, oldest first.</summary>
+        System.Collections.Generic.IReadOnlyList<Operations.RulebookVersion> RulebookHistory { get; }
+
+        /// <summary>Publish the rules as the next version (they are copied). Null on success; else why not (a rule with no rationale is refused).</summary>
+        string PublishRulebook(System.Collections.Generic.IReadOnlyList<Operations.Rule> rules, string note);
+
+        /// <summary>Publish the starter rulebook if there is no rulebook yet.</summary>
+        bool InstallStarterRulebook();
+
+        /// <summary>The rulebook version a robot runs now (0: none yet).</summary>
+        int RobotRulebookVersion(int robotId);
+
+        /// <summary>The version the plants run.</summary>
+        int PlantRulebookVersion { get; }
+
+        /// <summary>How many robots run each version.</summary>
+        System.Collections.Generic.IReadOnlyDictionary<int, int> RulebookUplink();
+
+        /// <summary>Rule firings, syncs, notices and other operations records, oldest first.</summary>
+        System.Collections.Generic.IReadOnlyList<Operations.OperationRecord> OperationsLog { get; }
+
+        /// <summary>A plant a rule paused.</summary>
+        bool IsPlantPaused(int tileId, int slot);
+    }
+
     public interface IWiredGrid
     {
         /// <summary>When on, generators make power only on tiles wired to the lander tile, and stations and storage can only be built there. Off in old saves and tests.</summary>

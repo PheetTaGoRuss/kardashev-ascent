@@ -70,7 +70,9 @@ flowchart LR
 | 5 | Robot upkeep applies | Power served to robots, flares, air temperature, build parts, materials | Robot charge, battery health, condition, repairs |
 | 6 | Field work advances | Robots at work | Survey progress, mined kg, Workshop job hours |
 | 7 | Build parts added | Build-part power | Parts stock |
-| 8 | Work is settled | Parts, sites, open tasks, robot settings | Sites paid and finished, tasks assigned, building events |
+| 7a | **Rules evaluate** (new, mission operations P3, MO-12) | The known state of each robot and plant (own readings; the colony's values only while on the network), the rulebook version each one runs | Overrides on robots, plant commands, stock targets and haul requests, Operations log entries; robots and plants sync to the newest rulebook version. With no rulebook published, nothing changes |
+| 7b | Hauls are planned (mission operations P1b) | Site shortfalls, stock targets, plants waiting for input, what each depot holds | New haul orders (the planner folds them into the open tasks of step 8) |
+| 8 | Work is settled | Parts, sites, open tasks (haul stops included), robot settings | Sites paid and finished, tasks assigned, building events |
 | 9 | Used power and milestones | Served, charged, parts and robot power | K, day average, milestone events at the end of a day |
 | 10 | Colony demand step | Generation, served power, brownout | Demand for the next step |
 | 11 | History sample | Step results | Power history |

@@ -1238,6 +1238,7 @@ namespace KardashevAscent.Simulation.Robots
                     rs.PriorityOverrides.Add(new PriorityRecord { Kind = kv.Key, Priority = kv.Value });
                 rs.Connected = r.Connected;
                 rs.HoursOffline = r.HoursOffline;
+                rs.SyncedRulebookVersion = r.SyncedRulebookVersion;
                 rs.CachedProgram = r.CachedProgram;
                 rs.UnsyncedFindings = r.UnsyncedFindings;
                 rs.CachedBrownoutRisk = r.CachedNeeds.BrownoutRisk;
@@ -1298,6 +1299,7 @@ namespace KardashevAscent.Simulation.Robots
                 // Saves before version 22 have no network: the robot comes back connected (UpdateConnections syncs it).
                 r.Connected = rs.Connected;
                 r.HoursOffline = rs.HoursOffline;
+                r.SyncedRulebookVersion = rs.SyncedRulebookVersion;
                 r.CachedProgram = rs.CachedProgram;
                 r.UnsyncedFindings = rs.UnsyncedFindings;
                 r.CachedNeeds = new ColonyNeeds(rs.CachedBrownoutRisk, rs.CachedSitesWaiting);

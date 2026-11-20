@@ -159,6 +159,12 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>Survey and measurement results it found while cut off, waiting to sync (counts; the data itself lands at once in this stage).</summary>
         public int UnsyncedFindings { get; internal set; }
 
+        /// <summary>
+        /// The rulebook version the colony network last synced to this robot (0: none yet). It follows that version while cut
+        /// off, whatever the player publishes meanwhile (mission operations 5.2, U2).
+        /// </summary>
+        public int SyncedRulebookVersion { get; internal set; }
+
         /// <summary>The colony's needs at its last sync: an AI level 2+ robot keeps working by them while cut off.</summary>
         public ColonyNeeds CachedNeeds { get; internal set; }
 

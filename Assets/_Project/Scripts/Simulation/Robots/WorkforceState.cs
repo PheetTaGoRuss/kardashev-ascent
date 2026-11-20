@@ -30,6 +30,8 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>Colony network (stage E, save version 22).</summary>
         public bool Connected = true;
         public double HoursOffline;
+        /// <summary>Save version 41: the rulebook version this robot runs.</summary>
+        public int SyncedRulebookVersion;
         public OperatingProgram CachedProgram;
         public List<PriorityRecord> CachedPriorities = new List<PriorityRecord>();
         public int UnsyncedFindings;

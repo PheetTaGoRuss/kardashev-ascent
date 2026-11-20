@@ -106,6 +106,7 @@ namespace KardashevAscent.Simulation.Game
             CapturePassages(state);
             CaptureRefining(state);
             CapturePlants(state);
+            CaptureRules(state);
             foreach (ManufacturingJob j in jobs)
                 state.Jobs.Add(new JobRecord
                 {
@@ -281,6 +282,7 @@ namespace KardashevAscent.Simulation.Game
             RestorePassages(state);
             RestoreRefining(state);
             RestorePlants(state);
+            RestoreRules(state);
             measureOrders.Clear();
             if (state.MeasureOrders != null)
                 foreach (MeasureOrderRecord mo in state.MeasureOrders)

@@ -180,6 +180,7 @@ namespace KardashevAscent.Simulation.Game
             haulLedger.RecordEnergy(Upkeep.HaulDriveWh);   // what driving with cargo aboard cost
             Upkeep.HaulDriveWh = 0.0;
             AdvanceFieldWork(dt);
+            EvaluateRules();   // step 7a: rules evaluate (mission operations 5.3)
             PlanHauls();
             Settle(null);
             // Used power: what reached the loads (the Workshop's included) or went into the battery; curtailed power is not used.
