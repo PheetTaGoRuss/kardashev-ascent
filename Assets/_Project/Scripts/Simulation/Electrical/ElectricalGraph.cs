@@ -44,9 +44,9 @@ namespace KardashevAscent.Simulation.Electrical
         }
 
         // ---- nodes ----
-        public NodeId AddNode(int tile, NetworkType type, int voltageClass)
+        public NodeId AddNode(int tile, NetworkType type, int voltageClass, double frequencyHz = 0.0)
         {
-            var n = new ElectricalNode { Id = new NodeId(nextNode++), Tile = tile, Type = type, VoltageClass = voltageClass };
+            var n = new ElectricalNode { Id = new NodeId(nextNode++), Tile = tile, Type = type, VoltageClass = voltageClass, FrequencyHz = frequencyHz };
             nodes[n.Id.Value] = n;
             adjacency[n.Id.Value] = new List<int>();
             if (tile >= 0 && !nodeAtTile.ContainsKey(tile)) nodeAtTile[tile] = n.Id.Value;
@@ -83,11 +83,11 @@ namespace KardashevAscent.Simulation.Electrical
         /// Joins two nodes with a cable. Refuses (with a plain reason) a missing node, a cable to itself, an AC/DC mix, or a
         /// voltage-class mismatch. Parallel cables between the same pair are allowed.
         /// </summary>
-        public ConnectResult Connect(NodeId a, NodeId b, double lengthM)
+        public ConnectResult Connect(NodeId a, NodeId b, double lengthM, bool touchesSea = false)
         {
             if (!nodes.TryGetValue(a.Value, out var na) || !nodes.TryGetValue(b.Value, out var nb)) return ConnectResult.Fail("A cable end has no node.");
             if (a == b) return ConnectResult.Fail("A cable cannot join a node to itself.");
-            string why = Compatible(na.Type, na.VoltageClass, nb.Type, nb.VoltageClass);
+            string why = Compatible(na.Type, na.VoltageClass, nb.Type, nb.VoltageClass, na.FrequencyHz, nb.FrequencyHz) ?? SubseaRules.Check(na.Type, lengthM, touchesSea);
             if (why != null) return ConnectResult.Fail(why);
             var c = new ElectricalConnection { Id = new ConnectionId(nextConnection++), A = a, B = b, LengthM = lengthM };
             connections[c.Id.Value] = c;
@@ -179,7 +179,7 @@ namespace KardashevAscent.Simulation.Electrical
         {
             if (!terminals.TryGetValue(terminal.Value, out var t)) return ConnectResult.Fail("No such terminal.");
             if (!nodes.TryGetValue(node.Value, out var n)) return ConnectResult.Fail("No such node.");
-            string why = Compatible(t.Type, t.VoltageClass, n.Type, n.VoltageClass);
+            string why = Compatible(t.Type, t.VoltageClass, n.Type, n.VoltageClass, t.FrequencyHz, n.FrequencyHz);
             if (why != null) return ConnectResult.Fail(why);
             t.Node = node;
             Touch();
@@ -195,12 +195,14 @@ namespace KardashevAscent.Simulation.Electrical
         }
 
         /// <summary>Why two ends cannot be joined, or null when they can. Unspecified kind or class (0) matches anything.</summary>
-        public static string Compatible(NetworkType ta, int ca, NetworkType tb, int cb)
+        public static string Compatible(NetworkType ta, int ca, NetworkType tb, int cb, double fa = 0.0, double fb = 0.0)
         {
             if (ta != NetworkType.Unspecified && tb != NetworkType.Unspecified && ta != tb)
                 return "AC and DC cannot join without conversion equipment.";
             if (ca != 0 && cb != 0 && ca != cb)
                 return "The voltage classes differ; a transformer or converter is needed.";
+            if (ta == NetworkType.Ac && tb == NetworkType.Ac && fa > 0.0 && fb > 0.0 && Math.Abs(fa - fb) > 1e-9)
+                return "The two AC networks run at different frequencies; only a frequency converter (not available) could join them.";
             return null;
         }
 
@@ -266,12 +268,13 @@ namespace KardashevAscent.Simulation.Electrical
                 int r = Find(n.Id.Value);
                 if (!byRoot.TryGetValue(r, out var net))
                 {
-                    net = new ElectricalNetwork { Id = new NodeId(r), Type = n.Type, VoltageClass = n.VoltageClass };
+                    net = new ElectricalNetwork { Id = new NodeId(r), Type = n.Type, VoltageClass = n.VoltageClass, FrequencyHz = n.FrequencyHz };
                     byRoot[r] = net;
                     list.Add(net);
                 }
                 if (net.Type == NetworkType.Unspecified) net.Type = n.Type;
                 if (net.VoltageClass == 0) net.VoltageClass = n.VoltageClass;
+                if (net.FrequencyHz == 0.0) net.FrequencyHz = n.FrequencyHz;
                 net.Nodes.Add(n.Id);
                 networkOfNode[n.Id.Value] = net;
             }

@@ -89,6 +89,8 @@ namespace KardashevAscent.Simulation.Electrical
         public NetworkType Type;
         /// <summary>An opaque voltage class id (0: not set). The classes and their values come with design decision D2.</summary>
         public int VoltageClass;
+        /// <summary>Nominal frequency of an AC node, terminal or network, Hz; 0 for DC or not set. A network has one frequency. The values are a design decision still open.</summary>
+        public double FrequencyHz;
     }
 
     /// <summary>
@@ -118,6 +120,8 @@ namespace KardashevAscent.Simulation.Electrical
         public NodeId Node;
         public NetworkType Type;
         public int VoltageClass;
+        /// <summary>Nominal frequency of an AC node, terminal or network, Hz; 0 for DC or not set. A network has one frequency. The values are a design decision still open.</summary>
+        public double FrequencyHz;
         public TerminalRole Role;
     }
 
@@ -163,6 +167,8 @@ namespace KardashevAscent.Simulation.Electrical
         public NodeId Id;
         public NetworkType Type;
         public int VoltageClass;
+        /// <summary>Nominal frequency of an AC node, terminal or network, Hz; 0 for DC or not set. A network has one frequency. The values are a design decision still open.</summary>
+        public double FrequencyHz;
         public readonly List<NodeId> Nodes = new List<NodeId>();
         public readonly List<ConnectionId> Connections = new List<ConnectionId>();
         /// <summary>Terminals connected to a node of this network, in id order.</summary>
