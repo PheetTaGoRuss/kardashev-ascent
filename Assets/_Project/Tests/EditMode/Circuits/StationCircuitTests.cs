@@ -132,7 +132,7 @@ namespace KardashevAscent.Tests.Circuits
             sim.InstallStationCircuit(t, s, sim.SaveCircuitBlueprint(SwitchedEnable()));
             sim.SetCircuitSwitch(t, s, SwitchId(sim, t, s), true);
             var state = sim.CaptureState();
-            Assert.AreEqual(44, state.Version);
+            Assert.AreEqual(SimulationState.CurrentVersion, state.Version);
             var loaded = new PlanetSimulation(Sphere, Surface, Earthlike);
             Assert.IsTrue(loaded.RestoreState(state));
             Assert.AreEqual(1, loaded.CircuitBlueprints().Count);

@@ -135,3 +135,15 @@ Today a power line costs 15 Cu, 30 Fe, 20 rock per tile. One 500 mm2 copper cond
 | C. Keep the flat bill; use the physics only for advice and salvage | 15 Cu | Nothing changes in play; cable choice shows in loss only |
 
 Recommendation: C now, then B once mining output is known, so the share can be tuned to a number of days of mining. The advice function and the mass formula are built and tested either way.
+
+## Gate G3: how much the interface hides (director decision needed)
+
+The simulation reports honestly: an unmetered line's flow is NaN, so a window can choose. Options for the Power window and the grid view:
+
+| Option | Unmetered line shows | Cost to the player |
+|---|---|---|
+| A. Hide fully | only its design capacity and a "not measured" note; no colour by load | The player must build meters to see where a grid is overloaded; most "information as observation" |
+| B. Show the estimate | capacity plus a rough range (0 to capacity); the overload colour only when measured | Middle: the player sees the plan, not the live state |
+| C. Show everything as today | true flow, with a small marker for measured lines | Nothing hidden; meters become a cosmetic |
+
+Recommendation: B. Also open: price of a meter, and the robot Inspect task (a robot walks the line and reports condition and faults; needs the cable condition from stage 8 to be worth doing).
