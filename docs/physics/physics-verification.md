@@ -751,3 +751,13 @@ Code: `Simulation/Electrical/CablePhysics.cs`; tests `CablePhysicsTests`.
 - Conductor mass $m = d L A n$ (test: one 500 mm2 copper conductor over 300 km is 1.33e6 kg).
 - Tile-span sanity table (one 500 mm2 Cu conductor, 300 km, R = 10.34 ohm): 1 MW at 33 kV loses 0.95 %, 20 MW at 33 kV loses 19 %, 1 GW at 500 kV loses 4.1 %, and 1 kV can deliver at most $V^2/4R$ = 24 kW [tested].
 - DC nodal flow: $G V = I$ with $I_k = P_k / V_k$ (fixed power injections), one slack node, dense Cholesky. Tests: two-node analytic answer, series and parallel reduction, KCL, current split by conductance in a loop, energy balance injected = delivered + $\sum I^2 R$, 100 identical runs and branch-order independence, collapse near $V^2/4R$ reported (no NaN), unreachable node diagnosed.
+
+## Cables on a planet (electrical redesign, stage 6)
+
+Code: `Simulation/Electrical/CableEnvironment.cs`; tests `CableEnvironmentTests`.
+
+- Relative air density $\delta = (p/p_0)(T_0/T)$ with $p_0$ = 76 cmHg and $T_0$ = 25 C [verified: Wikipedia "Peek's law"; MDPI Energies 11(7) 1908].
+- Peek's law, corona onset field (peak): $E = 30\,m\,\delta\,(1 + 0.301/\sqrt{\delta r})$ kV/cm, $r$ in cm, $m$ a surface factor [verified form: Wikipedia; other papers use 0.308 and units differ, so the constant is 0.301 only in kV/cm and cm]. The surface factor 0.8 for a stranded conductor is [recalled, TBD].
+- The game trusts Peek's law for $0.1 \le \delta \le 2$ (game rule, TBD). Outside it (thin air, a different gas, no air) a labelled fallback applies: derate proportional to $\delta$, floored at 0.1 (game rule, no source). Airless worlds are an open question for the director.
+- Conductor temperature in the flow is the air temperature at the link's two ends (the current's own heating comes with stage 8); $ho(T) = ho_{20}[1 + lpha(T-20)]$.
+- AC submarine cables: charging current from cable capacitance limits them to roughly 50 to 100 km; HVDC beyond [verified: industry guide; Lauria et al. 2016 (break-even about 80 km, longest AC subsea link Malta-Sicily 120 km); SINTEF presentation]. The game takes 100 km (game rule, TBD).
