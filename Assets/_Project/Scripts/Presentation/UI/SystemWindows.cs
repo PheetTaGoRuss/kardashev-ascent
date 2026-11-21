@@ -19,6 +19,10 @@ namespace KardashevAscent.Presentation.UI
 
         Label now, sources, uses, battery, buildings;
         InfoTip nowTip;
+        VisualElement lineRows;
+        readonly System.Collections.Generic.Dictionary<int, (Label Text, Button Meter)> lineRowOf = new System.Collections.Generic.Dictionary<int, (Label, Button)>();
+        string lineShape = "";
+        const int MaxLineRows = 12;
 
         // One line per section; what each means is behind "i" (director 2026-11-15, after Oxygen Not Included).
         protected override void BuildBody()
@@ -41,6 +45,11 @@ namespace KardashevAscent.Presentation.UI
             var wire = MakeButton("⚡  Wire tool (X)", () => KardashevAscent.Presentation.Planet.WireTool.Toggle());
             wire.tooltip = "Click a tile, then the next tile along, to run a wire between them. Generators and stations only work on tiles the wires join to the lander tile.";
             Body.Add(wire);
+            Heading("LINES");
+            var lineNote = Text("caption");
+            lineNote.text = "A line's load is only known with a meter or a fresh inspection (a day). Unmetered lines show their rating and a range.";
+            lineRows = new VisualElement();
+            Body.Add(lineRows);
             Heading("BUILDINGS");
             buildings = Text();
             InfoTip.After(buildings, "The week chart of power made and needed is in Overview, Power tab (C).");
@@ -72,6 +81,61 @@ namespace KardashevAscent.Presentation.UI
                 yards += sim.BatteryCount(t);
             }
             buildings.text = $"{panels} panel{(panels == 1 ? "" : "s")} · {yards} battery yard{(yards == 1 ? "" : "s")}";
+            RefreshLines(sim);
+        }
+
+        void RefreshLines(IPlanetSimulation sim)
+        {
+            var tiles = new System.Collections.Generic.List<int>();
+            if (sim.WiredGrid)
+                foreach (int t in sim.LineTiles())
+                    if (sim.LineReadout(t).HasLine) tiles.Add(t);
+            tiles.Sort();
+            int hidden = System.Math.Max(0, tiles.Count - MaxLineRows);
+            if (hidden > 0) tiles.RemoveRange(MaxLineRows, hidden);
+            string shape = string.Join(",", tiles) + "/" + hidden;
+            if (shape != lineShape)
+            {
+                lineShape = shape;
+                lineRows.Clear();
+                lineRowOf.Clear();
+                foreach (int tile in tiles)
+                {
+                    int t = tile;
+                    var row = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center } };
+                    var text = Label("", "caption");
+                    text.style.flexGrow = 1;
+                    row.Add(text);
+                    Button meter = null;
+                    meter = MakeButton("Meter", () =>
+                    {
+                        var s = SystemTabsSim();
+                        if (s == null) return;
+                        if (s.HasLineMeter(t)) s.RemoveLineMeter(t); else s.InstallLineMeter(t);
+                    });
+                    row.Add(meter);
+                    row.Add(MakeButton("Inspect", () => SystemTabsSim()?.InspectLine(t)));
+                    lineRows.Add(row);
+                    lineRowOf[t] = (text, meter);
+                }
+                if (hidden > 0) lineRows.Add(Label($"… and {hidden} more lines", "caption"));
+            }
+            foreach (int t in tiles)
+            {
+                LineReadout r = sim.LineReadout(t);
+                var (text, meter) = lineRowOf[t];
+                string cap = Format.Power(r.CapacityW);
+                text.text = r.Measured
+                    ? $"Tile {t}: carries {Format.Power(r.FlowW)} of {cap}" + (r.Overloaded ? " · OVERLOADED" : "") + (r.Source == ReadingSource.Meter ? " · meter" : $" · inspected {r.AgeHours:0} h ago")
+                    : $"Tile {t}: rated {cap} · load not measured (0 to {cap})";
+                meter.text = sim.HasLineMeter(t) ? "Remove meter" : "Meter";
+            }
+        }
+
+        static IPlanetSimulation SystemTabsSim()
+        {
+            var runner = Object.FindFirstObjectByType<KardashevAscent.Presentation.Game.SimulationRunner>();
+            return runner != null ? runner.Simulation : null;
         }
     }
 

@@ -101,7 +101,7 @@ namespace KardashevAscent.Presentation.Planet
                 known.Clear();
                 foreach (var b in unwired) known.Add((b.Tile, b.Slot));
                 knownReady = true;
-                lastOverload = sim.OverloadLossW;
+                lastOverload = KnownOverload(sim) ? 1e9 : 0.0;
                 lastOffGrid = sim.GeneratorsOffGrid;
                 return;
             }
@@ -121,10 +121,21 @@ namespace KardashevAscent.Presentation.Planet
             if (off > lastOffGrid)
                 Say($"{off} generator{(off == 1 ? "" : "s")} stand on tiles the grid does not reach: press X and run wire tile by tile from the lander.");
             lastOffGrid = off;
-            double overload = sim.OverloadLossW;
+            // only a line the colony can measure tells it that it is overloaded (electrical stage 7)
+            double overload = KnownOverload(sim) ? 1e9 : 0.0;
             if (overload > 1e6 && lastOverload <= 1e6)
-                Say("A wire is overloaded and wastes power: add a second wire, or a high-voltage line (opens at milestone 1).");
+                Say("A metered wire is overloaded and wastes power: add a second wire, or a high-voltage line (opens at milestone 1).");
             lastOverload = overload;
+        }
+
+        static bool KnownOverload(IPlanetSimulation sim)
+        {
+            foreach (int t in sim.LineTiles())
+            {
+                LineReadout r = sim.LineReadout(t);
+                if (r.Measured && r.Overloaded) return true;
+            }
+            return false;
         }
 
         void OnGUI()
