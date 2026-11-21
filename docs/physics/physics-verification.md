@@ -761,3 +761,11 @@ Code: `Simulation/Electrical/CableEnvironment.cs`; tests `CableEnvironmentTests`
 - The game trusts Peek's law for $0.1 \le \delta \le 2$ (game rule, TBD). Outside it (thin air, a different gas, no air) a labelled fallback applies: derate proportional to $\delta$, floored at 0.1 (game rule, no source). Airless worlds are an open question for the director.
 - Conductor temperature in the flow is the air temperature at the link's two ends (the current's own heating comes with stage 8); $ho(T) = ho_{20}[1 + lpha(T-20)]$.
 - AC submarine cables: charging current from cable capacitance limits them to roughly 50 to 100 km; HVDC beyond [verified: industry guide; Lauria et al. 2016 (break-even about 80 km, longest AC subsea link Malta-Sicily 120 km); SINTEF presentation]. The game takes 100 km (game rule, TBD).
+
+## Cable heating and ageing (electrical redesign, stage 8)
+
+Code: `Simulation/Electrical/CableThermal.cs`; tests `CableThermalTests`.
+
+- Lumped thermal circuit: $C\,dT/dt = I^2 R - (T - T_{air})/R_{th}$, solved exactly over a step, so $T 	o T_{air} + I^2 R\,R_{th}$ with time constant $	au = R_{th} C$ (length cancels: both scale with it). Form as in IEC 60287 thermal circuits [form verified; the values are game rules, TBD: $R_{th}$ = 0.5 K m/W, conductor heat capacity only, copper 385 J/(kg K) recalled, aluminium 900 J/(kg K) recalled].
+- XLPE continuous conductor limit 90 C [verified: IEC 60840 and 62067 through cable-engineering sources; emergency 105 C is not modelled].
+- Ageing: insulation life halves for each 8 to 10 K above the limit (Montsinger's rule, the 10-degree rule) [verified as an empirical rule of thumb, less accurate than Arrhenius; the game takes 10 K, TBD]. The same rule runs below the limit (a cool cable lasts longer). Design life 40 years at 90 C [verified as the usual XLPE design life; TBD].

@@ -699,6 +699,15 @@ namespace KardashevAscent.Simulation.Game
         bool InspectLine(int tileId);
 
         LineReadout LineReadout(int tileId);
+
+        /// <summary>Lines that have failed or been opened (tile and slot of the line, and its condition), in order.</summary>
+        System.Collections.Generic.IEnumerable<(int Tile, int Slot, double Condition)> FailedLines();
+
+        /// <summary>What repairing the line takes now (its build bill times the condition lost; stand-in, TBD).</summary>
+        Resources.MaterialBill RepairBill(int tileId, int slot);
+
+        /// <summary>Repairs the line from stock. Null when done, else why not.</summary>
+        string RepairLine(int tileId, int slot);
     }
 
     /// <summary>What the circuit editor and windows see of an installed circuit (a copy; nothing live).</summary>
