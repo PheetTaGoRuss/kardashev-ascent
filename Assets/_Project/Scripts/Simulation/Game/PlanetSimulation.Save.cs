@@ -76,6 +76,7 @@ namespace KardashevAscent.Simulation.Game
             }
             state.NextElectricalConnectionId = wireBook.NextElectricalId;
             CaptureCircuits(state);
+            CaptureMeters(state);
             foreach (var w in wiredBuildings)
                 state.WiredBuildings.Add(new SalvageOrderRecord { Tile = w.Tile, Slot = w.Slot });
             foreach (var salvage in salvageOrders)
@@ -231,6 +232,7 @@ namespace KardashevAscent.Simulation.Game
             if (state.WiredBuildings != null)
                 foreach (SalvageOrderRecord w in state.WiredBuildings) wiredBuildings.Add((w.Tile, w.Slot));
             RestoreCircuits(state);
+            RestoreMeters(state);
             wireBook.ElectricalIds.Clear();
             wireBook.CableState.Clear();
             wireBook.NextElectricalId = 1;

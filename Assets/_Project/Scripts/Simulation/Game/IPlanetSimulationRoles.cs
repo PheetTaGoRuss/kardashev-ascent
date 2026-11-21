@@ -661,6 +661,46 @@ namespace KardashevAscent.Simulation.Game
         }
     }
 
+    public enum ReadingSource { None, Meter, Inspection }
+
+    /// <summary>
+    /// What the colony knows about the line from a tile toward the lander (electrical stage 7). Capacity is a design figure and always known.
+    /// The flow is known only when <see cref="Measured"/>; otherwise <see cref="FlowW"/> is NaN and the line is only known to carry
+    /// between 0 and its capacity.
+    /// </summary>
+    public readonly struct LineReadout
+    {
+        public readonly bool HasLine;
+        public readonly ReadingSource Source;
+        /// <summary>Hours since the inspection (0 for a meter).</summary>
+        public readonly double AgeHours;
+        public readonly double FlowW;
+        /// <summary>Known only when measured.</summary>
+        public readonly bool Overloaded;
+        public readonly double MeasuredFlowW;
+        public readonly double CapacityW;
+        public bool Measured => Source != ReadingSource.None;
+
+        public LineReadout(bool hasLine, ReadingSource source, double ageHours, double flowW, bool overloaded, double measuredFlowW, double capacityW)
+        {
+            HasLine = hasLine; Source = source; AgeHours = ageHours; FlowW = flowW; Overloaded = overloaded; MeasuredFlowW = measuredFlowW; CapacityW = capacityW;
+        }
+    }
+
+    /// <summary>Meters and inspections (electrical stage 7): the readout of a line says whether the colony knows what it carries.</summary>
+    public interface IElectricalMeters
+    {
+        /// <summary>Puts a meter on the line from this tile toward the lander. False when there is no line on the grid there.</summary>
+        bool InstallLineMeter(int tileId);
+        bool RemoveLineMeter(int tileId);
+        bool HasLineMeter(int tileId);
+
+        /// <summary>Inspects the line now (a stand-in for a robot walking it); the reading stays valid for a day.</summary>
+        bool InspectLine(int tileId);
+
+        LineReadout LineReadout(int tileId);
+    }
+
     /// <summary>What the circuit editor and windows see of an installed circuit (a copy; nothing live).</summary>
     public sealed class StationCircuitView
     {

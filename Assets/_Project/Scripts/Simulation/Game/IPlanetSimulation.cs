@@ -13,7 +13,7 @@ namespace KardashevAscent.Simulation.Game
     /// Units: SI except time (hours) and energy (Wh). Angles in radians.
     /// Directions use the planet frame described in <see cref="PlanetFrame"/>.
     /// </summary>
-    public interface IPlanetSimulation : IPlanetReadout, IEnergyReadout, IConstructionReadout, IBuildingCommands, IRobotCommands, IResourceCommands, IManufacturingCommands, ISolarAdvice, IResearchCommands, IPassageCommands, IAnglePresets, IDebugTools, ITidalPower, IWavePower, ITidalBarrage, IWiredGrid, IElectricalNetworks, ICircuitCommands, IFlowsheetCommands, IRulebookCommands, ISimulationSave, ISimulationEvents
+    public interface IPlanetSimulation : IPlanetReadout, IEnergyReadout, IConstructionReadout, IBuildingCommands, IRobotCommands, IResourceCommands, IManufacturingCommands, ISolarAdvice, IResearchCommands, IPassageCommands, IAnglePresets, IDebugTools, ITidalPower, IWavePower, ITidalBarrage, IWiredGrid, IElectricalNetworks, ICircuitCommands, IElectricalMeters, IFlowsheetCommands, IRulebookCommands, ISimulationSave, ISimulationEvents
     {
         /// <summary>Advance the simulation by <paramref name="hours"/> of game time.</summary>
         void Tick(double hours);
