@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Collections.Generic;
 using KardashevAscent.Simulation.Game;
 using KardashevAscent.Simulation.Resources;
@@ -22,6 +23,9 @@ namespace KardashevAscent.Presentation.UI
         VisualElement lineRows;
         readonly System.Collections.Generic.Dictionary<int, (Label Text, Button Meter)> lineRowOf = new System.Collections.Generic.Dictionary<int, (Label, Button)>();
         string lineShape = "";
+        Label failedText;
+        VisualElement failedRows;
+        string failedShape = "";
         const int MaxLineRows = 12;
 
         // One line per section; what each means is behind "i" (director 2026-11-15, after Oxygen Not Included).
@@ -50,6 +54,9 @@ namespace KardashevAscent.Presentation.UI
             lineNote.text = "A line's load is only known with a meter or a fresh inspection (a day). Unmetered lines show their rating and a range.";
             lineRows = new VisualElement();
             Body.Add(lineRows);
+            failedText = Text("message");
+            failedRows = new VisualElement();
+            Body.Add(failedRows);
             Heading("BUILDINGS");
             buildings = Text();
             InfoTip.After(buildings, "The week chart of power made and needed is in Overview, Power tab (C).");
@@ -82,6 +89,28 @@ namespace KardashevAscent.Presentation.UI
             }
             buildings.text = $"{panels} panel{(panels == 1 ? "" : "s")} · {yards} battery yard{(yards == 1 ? "" : "s")}";
             RefreshLines(sim);
+            RefreshFailed(sim);
+        }
+
+        void RefreshFailed(IPlanetSimulation sim)
+        {
+            var failed = sim.WiredGrid ? sim.FailedLines().ToList() : new System.Collections.Generic.List<(int Tile, int Slot, double Condition)>();
+            failedText.text = failed.Count == 0 ? "" : $"{failed.Count} line{(failed.Count == 1 ? "" : "s")} failed: the grid is split there until repaired.";
+            failedText.style.display = failed.Count == 0 ? DisplayStyle.None : DisplayStyle.Flex;
+            string shape = string.Join(",", failed.Select(f => f.Tile + "." + f.Slot));
+            if (shape == failedShape) return;
+            failedShape = shape;
+            failedRows.Clear();
+            foreach (var f in failed)
+            {
+                int tile = f.Tile, slot = f.Slot;
+                var row = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center } };
+                var text = Label($"Line {tile}.{slot}: failed", "caption");
+                text.style.flexGrow = 1;
+                row.Add(text);
+                row.Add(MakeButton("Repair", () => { var s = SystemTabsSim(); string why = s?.RepairLine(tile, slot); if (why != null) text.text = $"Line {tile}.{slot}: {why}"; }));
+                failedRows.Add(row);
+            }
         }
 
         void RefreshLines(IPlanetSimulation sim)

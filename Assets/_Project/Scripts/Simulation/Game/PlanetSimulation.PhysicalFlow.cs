@@ -53,6 +53,7 @@ namespace KardashevAscent.Simulation.Game
         /// </summary>
         double CableCelsius(int tileA, int tileB)
         {
+            if (edgeTemperature.TryGetValue((Math.Min(tileA, tileB), Math.Max(tileA, tileB)), out double known)) return known;
             double m = CurrentMeanAnomaly();
             return 0.5 * (AirTemperatureAt(tileA, m) + AirTemperatureAt(tileB, m));
         }
@@ -169,6 +170,7 @@ namespace KardashevAscent.Simulation.Game
                 if (overEdges.Contains(e)) overloadedTiles.Add(t);
             }
             tileFlow[BaseTileId] = deliveredFromLines + ownBase;
+            UpdateCableHealth(edges, total.BranchCurrentA);
             return (deliveredFromLines + ownBase, total.TotalLossW, curtailed);
         }
     }
