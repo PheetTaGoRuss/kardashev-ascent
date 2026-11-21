@@ -86,11 +86,15 @@ namespace KardashevAscent.Presentation.Planet
                 if (powered)
                 {
                     // the busier end colours the wire (the tile farther from the lander carries the flow of its wire)
-                    double flow = System.Math.Max(sim.LineFlowW(t), sim.LineFlowW(nb));
+                    // Measured, not omniscient (director 2026-11-21, option B): the load colours only show on a metered or freshly inspected line.
+                    LineReadout ra = sim.LineReadout(t), rb = sim.LineReadout(nb);
+                    bool known = ra.Measured || rb.Measured;
+                    double flow = System.Math.Max(ra.Measured ? ra.FlowW : 0.0, rb.Measured ? rb.FlowW : 0.0);
                     double cap = System.Math.Min(sim.LineCapacityW(t), sim.LineCapacityW(nb));
-                    bool over = sim.IsLineOverloaded(t) || sim.IsLineOverloaded(nb);
+                    bool over = (ra.Measured && ra.Overloaded) || (rb.Measured && rb.Overloaded);
                     double share = double.IsInfinity(cap) || cap <= 0.0 ? 0.0 : flow / cap;
-                    c = over ? Full : share > 0.6 ? Busy : link.HighVoltage ? new Color(1.00f, 0.62f, 0.25f) : Free;
+                    Color plan = link.HighVoltage ? new Color(1.00f, 0.62f, 0.25f) : Free;
+                    c = !known ? plan : over ? Full : share > 0.6 ? Busy : plan;
                 }
                 if (!link.Built) c = new Color(c.r, c.g, c.b, 0.35f);
                 wire.startColor = wire.endColor = c;
@@ -104,7 +108,8 @@ namespace KardashevAscent.Presentation.Planet
                 if (siteView != null && siteView.Site != null) break;
                 LineRenderer pole = Get(planetWires, used++, WidthAt(TilePoint(t, Lift), 0.010f, 0.006f, 0.05f));
                 bool powered = sim.IsPowered(t);
-                Color c = !powered ? Dead : sim.IsLineOverloaded(t) ? Full : Free;
+                LineReadout poleRead = sim.LineReadout(t);
+                Color c = !powered ? Dead : poleRead.Measured && poleRead.Overloaded ? Full : Free;
                 pole.startColor = pole.endColor = c;
                 pole.SetPosition(0, TilePoint(t, Lift));
                 pole.SetPosition(1, TilePoint(t, Lift + 0.05f));
@@ -137,7 +142,7 @@ namespace KardashevAscent.Presentation.Planet
                     if (onGrid)
                     {
                         LineRenderer wire = Get(siteWires, used++, spacing * 0.07f);
-                        wire.startColor = wire.endColor = sim.IsLineOverloaded(tile) ? Full : Free;
+                        wire.startColor = wire.endColor = sim.LineReadout(tile).Measured && sim.LineReadout(tile).Overloaded ? Full : Free;
                         wire.SetPosition(0, from);
                         wire.SetPosition(1, hub);
                         wire.gameObject.SetActive(true);
