@@ -164,8 +164,8 @@ namespace KardashevAscent.Simulation.Game
                 var edge = (Math.Min(a, b), Math.Max(a, b));
                 edgeCapacity[edge] = edgeCapacity.TryGetValue(edge, out double c) ? Math.Max(c, capacity) : capacity;
             }
-            foreach (var key in powerLines) if (HasFinishedLine(key) && linkTargets.TryGetValue(key, out int to)) AddLink(key.Tile, to, LineCapacityPlainW);
-            foreach (var key in highVoltageLines) if (HasFinishedLine(key) && linkTargets.TryGetValue(key, out int to)) { AddLink(key.Tile, to, LineCapacityHighW); highEdges.Add((Math.Min(key.Tile, to), Math.Max(key.Tile, to))); }
+            foreach (var key in powerLines) if (HasFinishedLine(key) && LineWorks(key) && linkTargets.TryGetValue(key, out int to)) AddLink(key.Tile, to, LineCapacityPlainW);
+            foreach (var key in highVoltageLines) if (HasFinishedLine(key) && LineWorks(key) && linkTargets.TryGetValue(key, out int to)) { AddLink(key.Tile, to, LineCapacityHighW); highEdges.Add((Math.Min(key.Tile, to), Math.Max(key.Tile, to))); }
             var queue = new Queue<int>();
             poweredTiles.Add(BaseTileId);
             lineHops[BaseTileId] = 0;

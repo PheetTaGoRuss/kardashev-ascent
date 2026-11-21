@@ -84,6 +84,7 @@ namespace KardashevAscent.Simulation.Game
             condition = Math.Max(0.0, Math.Min(1.0, condition));
             if (condition >= 1.0 && !open) wireBook.CableState.Remove(key); else wireBook.CableState[key] = (condition, open);
             legacyGraph = null;
+            wiringStamp = double.NaN; flowDirty = true;
             return true;
         }
 
