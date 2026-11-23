@@ -276,6 +276,7 @@ namespace KardashevAscent.Tests.Electrical
             Run(sim, 0.2);
             Assert.IsFalse(sim.IsPowered(t3), "the AC chain is broken at the failed line");
             Assert.AreEqual(1, sim.FailedLines().Count());
+            sim.Materials.Add(KardashevAscent.Simulation.Resources.Material.Copper, 1000.0);   // the real-mass bill needs the copper in stock
             Assert.IsNull(sim.RepairLine(hostTile, hostSlot));
             Run(sim, 0.2);
             Assert.IsTrue(sim.IsPowered(t3));

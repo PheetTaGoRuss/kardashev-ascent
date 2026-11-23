@@ -90,5 +90,17 @@ namespace KardashevAscent.Tests.Electrical
             Assert.AreEqual(13_335.0, real, 5.0);
             Assert.Greater(real / 15.0, 800.0, "today's bill is 15 Cu");
         }
+
+        [Test]
+        public void TheLineBillIsTheRealConductorMassTimesTheShare_OptionB()
+        {
+            var m = KardashevAscent.Simulation.Resources.Material.Copper;
+            Assert.AreEqual(CableEconomics.ConductorMassKg(Cu(500), TileM), KardashevAscent.Simulation.Resources.BuildCosts.CableConductorMassKg, 1.0, "the same real mass as the cable economics");
+            Assert.AreEqual(112.5, KardashevAscent.Simulation.Resources.BuildCosts.PowerLine[m], 1e-6);
+            Assert.AreEqual(KardashevAscent.Simulation.Resources.BuildCosts.PowerLine[m], KardashevAscent.Simulation.Resources.BuildCosts.HighVoltageLine[m], 1e-9, "the same conductor, the same copper");
+            Assert.AreEqual(3.0 * KardashevAscent.Simulation.Resources.BuildCosts.PowerLine[m], KardashevAscent.Simulation.Resources.BuildCosts.AcLine[m], 1e-9, "three conductors");
+            Assert.AreEqual(CableEconomics.ConductorBillKg(Cu(500), TileM, KardashevAscent.Simulation.Resources.BuildCosts.CableCopperShare), KardashevAscent.Simulation.Resources.BuildCosts.PowerLine[m], 1e-6);
+            Assert.LessOrEqual(2.0 * KardashevAscent.Simulation.Resources.BuildCosts.PowerLine[m], 250.0, "the lander's 250 kg of copper pays for two lines (no deadlock at the start)");
+        }
     }
 }
