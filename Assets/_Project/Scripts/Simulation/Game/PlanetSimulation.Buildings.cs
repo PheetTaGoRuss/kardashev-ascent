@@ -107,6 +107,8 @@ namespace KardashevAscent.Simulation.Game
             : barrages.Contains((tileId, slot)) ? BuildingType.TidalBarrage
             : powerLines.Contains((tileId, slot)) ? BuildingType.PowerLine
             : highVoltageLines.Contains((tileId, slot)) ? BuildingType.HighVoltageLine
+            : wireBook.AcLines.Contains((tileId, slot)) ? BuildingType.AcLine
+            : converterBuildings.TryGetValue((tileId, slot), out BuildingType conv) ? conv
             : research.Stations.Contains((tileId, slot)) ? BuildingType.ResearchStation
             : refineryModules.TryGetValue((tileId, slot), out BuildingType module) ? module
             : storageBuildings.TryGetValue((tileId, slot), out BuildingType store) ? store
@@ -153,6 +155,19 @@ namespace KardashevAscent.Simulation.Game
                 relays.Remove((tileId, slot));
                 Vacate(tileId, slot);
                 RefreshNetwork();
+                return true;
+            }
+            if (RemoveConverter(tileId, slot))
+                return true;
+            if (wireBook.AcLines.Contains((tileId, slot)))
+            {
+                Dismantle(tileId, slot, BuildingType.AcLine);
+                wireBook.AcLines.Remove((tileId, slot));
+                wireBook.AcClass.Remove((tileId, slot));
+                linkTargets.Remove((tileId, slot));
+                Vacate(tileId, slot);
+                wiringStamp = double.NaN;
+                flowDirty = true;
                 return true;
             }
             if (highVoltageLines.Contains((tileId, slot)))

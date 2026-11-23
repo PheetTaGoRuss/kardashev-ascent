@@ -25,6 +25,8 @@ namespace KardashevAscent.Presentation.Planet
         LineRenderer preview;
         int first = -1;
         bool highVoltage;
+        /// <summary>0 power line, 1 high-voltage line, 2 AC 33 kV, 3 AC 500 kV.</summary>
+        int lineKind;
         string message = "";
         float messageUntil;
         GUIStyle style;
@@ -100,8 +102,12 @@ namespace KardashevAscent.Presentation.Planet
             }
             if (ScreenInput.KeyDown(KeyCode.Tab))
             {
-                highVoltage = !highVoltage;
-                Say(highVoltage ? "High-voltage line (1 GW a tile; opens at milestone 1)." : "Power line (20 MW a tile).");
+                lineKind = (lineKind + 1) % 4;
+                highVoltage = lineKind == 1;
+                Say(lineKind == 0 ? "Power line (20 MW a tile)."
+                    : lineKind == 1 ? "High-voltage line (1.5 GW a tile; opens at milestone 1)."
+                    : lineKind == 2 ? "AC line, 33 kV, 50 Hz (34 MW a tile; opens at milestone 2). Needs a rectifier and an inverter to join the DC grid."
+                    : "AC line, 500 kV, 50 Hz (2.6 GW a tile; opens at milestone 2). Needs a rectifier and an inverter to join the DC grid.");
             }
             UpdatePreview();
         }
@@ -137,7 +143,7 @@ namespace KardashevAscent.Presentation.Planet
             }
             else if (tile != first)
             {
-                if (sim.PlaceWire(first, tile, highVoltage))
+                if (lineKind >= 2 ? sim.PlaceAcWire(first, tile, lineKind == 2 ? 33000 : 500000) : sim.PlaceWire(first, tile, highVoltage))
                 {
                     Say($"Wire run from tile {first} to tile {tile}: a robot builds it. Click the next tile to go on.");
                     first = tile;
@@ -158,7 +164,7 @@ namespace KardashevAscent.Presentation.Planet
                 return;
             style ??= new GUIStyle(GUI.skin.box) { fontSize = 14, alignment = TextAnchor.MiddleCenter, wordWrap = true };
             string text = Active
-                ? $"WIRE TOOL · {(highVoltage ? "high-voltage" : "power")} line · click a tile, then the next tile along · Tab: switch line · X / Esc: stop · blue OUT = gives power, orange IN = takes power\\n{message}"
+                ? $"WIRE TOOL · {(lineKind == 0 ? "power" : lineKind == 1 ? "high-voltage" : lineKind == 2 ? "AC 33 kV" : "AC 500 kV")} line · click a tile, then the next tile along · Tab: switch line · X / Esc: stop · blue OUT = gives power, orange IN = takes power\\n{message}"
                 : message;
             float height = Active ? 52f : 28f;
             GUI.Box(new Rect(Screen.width / 2f - 400f, UiLayout.ClearBottomY - height - 8f, 800f, height), text.Replace("\\n", "\n"), style);

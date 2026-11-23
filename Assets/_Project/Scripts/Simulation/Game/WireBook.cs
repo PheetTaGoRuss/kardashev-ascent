@@ -16,6 +16,10 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Slots with a high-voltage line.</summary>
         public readonly HashSet<(int Tile, int Slot)> HighVoltageLines = new HashSet<(int, int)>();
 
+        /// <summary>Slots with an AC line (decided 2026-11-23) and the class of each (33 000 or 500 000 V).</summary>
+        public readonly HashSet<(int Tile, int Slot)> AcLines = new HashSet<(int, int)>();
+        public readonly Dictionary<(int Tile, int Slot), int> AcClass = new Dictionary<(int, int), int>();
+
         /// <summary>A line building: the tile it links its own tile to.</summary>
         public readonly Dictionary<(int Tile, int Slot), int> LinkTargets = new Dictionary<(int, int), int>();
 
@@ -37,6 +41,14 @@ namespace KardashevAscent.Simulation.Game
             return false;
         }
 
+        /// <summary>The two tiles are linked by an AC line of this class (finished or a site).</summary>
+        public bool LinkedAc(int a, int b, int acClass)
+        {
+            foreach (var key in AcLines)
+                if (AcClass.TryGetValue(key, out int c) && c == acClass && LinkTargets.TryGetValue(key, out int to) && ((key.Tile == a && to == b) || (key.Tile == b && to == a))) return true;
+            return false;
+        }
+
         /// <summary>A line of this tier touches the tile (it stands on it or links to it) and passes <paramref name="counts"/>.</summary>
         public bool TouchesTile(int tile, bool highVoltage, Func<(int Tile, int Slot), bool> counts)
         {
@@ -52,6 +64,8 @@ namespace KardashevAscent.Simulation.Game
             CableState.Remove(key);
             PowerLines.Remove(key);
             HighVoltageLines.Remove(key);
+            AcLines.Remove(key);
+            AcClass.Remove(key);
             LinkTargets.Remove(key);
         }
     }

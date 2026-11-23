@@ -42,7 +42,7 @@ namespace KardashevAscent.Simulation.Game
             var inj = new double[lastNodeCount];
             inj[i] = ProbePowerW;
             var r = DcFlow.Solve(lastNodeCount, lastBranches, inj, lastSlack, PlainLineVolts);
-            return r.Converged ? Math.Max(0.0, -r.SlackPowerW) / ProbePowerW : 0.0;
+            return r.Converged ? Math.Max(0.0, -r.SlackPowerW) / ProbePowerW * (tileConvEff.TryGetValue(tile, out double ce) ? ce : 1.0) : 0.0;
         }
 
         readonly HashSet<(int, int)> highEdges = new HashSet<(int, int)>();
@@ -61,8 +61,8 @@ namespace KardashevAscent.Simulation.Game
         sealed class FlowEdge
         {
             public int A, B;           // tile ids
-            public bool High;
-            public double Volts => High ? HighLineVolts : PlainLineVolts;
+            public LineKind Kind;
+            public double Volts => KindVolts(Kind);
         }
 
         /// <summary>
@@ -72,7 +72,19 @@ namespace KardashevAscent.Simulation.Game
         (double Delivered, double Loss, double Curtailed) SolvePhysicalFlow(Dictionary<int, double> own)
         {
             // Nodes: powered tiles, in tile order. Edges: the finished links between them, in tile order.
-            var tiles = new List<int>(poweredTiles);
+            // Power made beyond a converter loses the converter's share first (heat); the solver then sees what enters the lines.
+            double convLoss = 0.0;
+            var scaled = new Dictionary<int, double>();
+            foreach (var kv in own)
+            {
+                double eta = tileConvEff.TryGetValue(kv.Key, out double ce) ? ce : 1.0;
+                scaled[kv.Key] = kv.Value * eta;
+                convLoss += kv.Value - kv.Value * eta;
+            }
+            own = scaled;
+            converterLossW = convLoss;
+            if (!AcActive) { reachedTiles.Clear(); reachedTiles.UnionWith(poweredTiles); }
+            var tiles = new List<int>(reachedTiles);
             tiles.Sort();
             var index = new Dictionary<int, int>();
             for (int i = 0; i < tiles.Count; i++) index[tiles[i]] = i;
@@ -81,22 +93,22 @@ namespace KardashevAscent.Simulation.Game
             keys.Sort();
             foreach (var k in keys)
                 if (index.ContainsKey(k.Item1) && index.ContainsKey(k.Item2))
-                    edges.Add(new FlowEdge { A = k.Item1, B = k.Item2, High = highEdges.Contains(k) });
+                    edges.Add(new FlowEdge { A = k.Item1, B = k.Item2, Kind = edgeKind.TryGetValue(k, out var ek) ? ek : LineKind.Plain });
             var branches = new FlowBranch[edges.Count];
             for (int e = 0; e < edges.Count; e++)
             {
                 var fe = edges[e];
-                var spec = fe.High ? HighLineSpec : PlainLineSpec;
+                var spec = KindSpec(fe.Kind);
                 double lengthM = ElectricalGraph.CableLengthM(Sphere.Centers[fe.A], Sphere.Centers[fe.B], planetRadiusM);
                 double ratio = PlainLineVolts / fe.Volts;
                 // Per-unit on the plain-line base: resistance scales with (Vbase/V)^2, current with V/Vbase.
-                branches[e] = new FlowBranch(index[fe.A], index[fe.B], spec.ResistanceOhm(lengthM, CableCelsius(fe.A, fe.B)) * ratio * ratio, spec.RatingA * fe.Volts / PlainLineVolts);
+                branches[e] = new FlowBranch(index[fe.A], index[fe.B], spec.ResistanceOhm(lengthM, CableCelsius(fe.A, fe.B)) * ratio * ratio, spec.RatingA * KindRatingFactor(fe.Kind) * fe.Volts / PlainLineVolts);
             }
 
             int slack = index[BaseTileId];
             lastBranches = branches; lastIndex = index; lastNodeCount = tiles.Count; lastSlack = slack;
             var gens = new List<int>();   // powered generator tiles other than the lander tile, in tile order
-            foreach (int t in tiles) if (t != BaseTileId && own.TryGetValue(t, out double p) && p > 0.0) gens.Add(t);
+            foreach (int t in tiles) if (t != BaseTileId && poweredTiles.Contains(t) && own.TryGetValue(t, out double p) && p > 0.0) gens.Add(t);
             var f = new Dictionary<int, double>();
             foreach (int g in gens) f[g] = 1.0;
             var overEdges = new HashSet<int>();
@@ -154,7 +166,7 @@ namespace KardashevAscent.Simulation.Game
             double curtailed = 0.0;
             foreach (int g in gens)
             {
-                tileFactor[g] = f[g] * eff[g] * scale;
+                tileFactor[g] = f[g] * eff[g] * scale * (tileConvEff.TryGetValue(g, out double ge) ? ge : 1.0);
                 curtailed += own[g] * (1.0 - f[g]);
             }
             tileFactor[BaseTileId] = 1.0;
@@ -171,7 +183,7 @@ namespace KardashevAscent.Simulation.Game
             }
             tileFlow[BaseTileId] = deliveredFromLines + ownBase;
             UpdateCableHealth(edges, total.BranchCurrentA);
-            return (deliveredFromLines + ownBase, total.TotalLossW, curtailed);
+            return (deliveredFromLines + ownBase, total.TotalLossW + convLoss, curtailed);
         }
     }
 }

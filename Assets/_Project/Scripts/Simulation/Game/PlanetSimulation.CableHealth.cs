@@ -54,9 +54,9 @@ namespace KardashevAscent.Simulation.Game
             {
                 var fe = edges[e];
                 var key = (Math.Min(fe.A, fe.B), Math.Max(fe.A, fe.B));
-                var spec = fe.High ? HighLineSpec : PlainLineSpec;
+                var spec = KindSpec(fe.Kind);
                 double air = 0.5 * (AirTemperatureAt(fe.A, mean) + AirTemperatureAt(fe.B, mean));
-                double actualA = Math.Abs(baseCurrentA[e]) * PlainLineVolts / fe.Volts;
+                double actualA = Math.Abs(baseCurrentA[e]) * PlainLineVolts / fe.Volts / KindRatingFactor(fe.Kind);   // a three-phase line carries 1/sqrt(3) of the flow current in each conductor
                 double t = edgeTemperature.TryGetValue(key, out double known) ? known : air;
                 if (dt > 0.0)
                 {
@@ -108,7 +108,7 @@ namespace KardashevAscent.Simulation.Game
 
         IEnumerable<(int Tile, int Slot)> LinesOfEdge(int a, int b)
         {
-            foreach (var key in wireBook.PowerLines.Concat(wireBook.HighVoltageLines))
+            foreach (var key in wireBook.PowerLines.Concat(wireBook.HighVoltageLines).Concat(wireBook.AcLines))
                 if (wireBook.LinkTargets.TryGetValue(key, out int to) && ((key.Tile == a && to == b) || (key.Tile == b && to == a)))
                     yield return key;
         }
@@ -152,7 +152,7 @@ namespace KardashevAscent.Simulation.Game
                 // a breaker is only reset (free); a blown fuse is replaced (its price)
                 return lineProtection.TryGetValue(EdgeKey(tileId, to), out var kind) && kind == ProtectionKind.Fuse ? ProtectionPrice(kind) : new MaterialBill();
             }
-            BuildingType type = wireBook.HighVoltageLines.Contains(key) ? BuildingType.HighVoltageLine : BuildingType.PowerLine;
+            BuildingType type = wireBook.AcLines.Contains(key) ? BuildingType.AcLine : wireBook.HighVoltageLines.Contains(key) ? BuildingType.HighVoltageLine : BuildingType.PowerLine;
             return BuildBill(type).Times(1.0 - Math.Max(0.0, Math.Min(1.0, cs.Condition)));
         }
 

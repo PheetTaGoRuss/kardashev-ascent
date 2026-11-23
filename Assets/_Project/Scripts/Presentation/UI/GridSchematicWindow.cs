@@ -51,6 +51,7 @@ namespace KardashevAscent.Presentation.UI
         readonly List<Hub> hubs = new List<Hub>();
         readonly Dictionary<int, Hub> hubOf = new Dictionary<int, Hub>();
         List<(int From, int To, bool Built, bool High)> links = new List<(int, int, bool, bool)>();
+        readonly HashSet<(int, int)> acPairs = new HashSet<(int, int)>();
         string shape = "";
         (int Tile, int Slot)? pendingPin;
         int pendingHub = -1;
@@ -118,6 +119,12 @@ namespace KardashevAscent.Presentation.UI
         {
             var parts = sim.WireableBuildings().Select(b => new Part(b.Tile, b.Slot, b.Type)).Where(PartShown).ToList();
             links = sim.WireLinks().ToList();
+            acPairs.Clear();
+            foreach (var ac in sim.AcLinks())
+            {
+                links.Add((ac.From, ac.To, ac.Built, true));
+                acPairs.Add((System.Math.Min(ac.From, ac.To), System.Math.Max(ac.From, ac.To)));
+            }
             string sig = string.Join(";", parts.Select(p => $"{p.Tile}.{p.Slot}:{(sim.IsBuildingWired(p.Tile, p.Slot) ? 1 : 0)}")) + "|" +
                          string.Join(";", links.Select(l => $"{l.From}-{l.To}:{(l.Built ? 1 : 0)}{(l.High ? 1 : 0)}")) + "|" + fIslands.value + "|" + sim.BaseTileId;
             if (sig == shape) return;
@@ -276,7 +283,8 @@ namespace KardashevAscent.Presentation.UI
                 Clear();
                 foreach (Hub h in w.hubs)
                 {
-                    AddLabel($"Tile {h.Tile}" + (h.IsLander ? " · lander" : h.Island ? " · island" : ""), h.Rect.x + 6, h.Rect.y + 3, 12, new Color(0.92f, 0.94f, 0.97f));
+                    string conv = string.Join(", ", w.sim.ConvertersOn(h.Tile).Select(c => c.ToString().ToLowerInvariant()));
+                    AddLabel($"Tile {h.Tile}" + (h.IsLander ? " · lander" : h.Island ? " · island" : "") + (conv.Length > 0 ? " · " + conv : ""), h.Rect.x + 6, h.Rect.y + 3, 12, new Color(0.92f, 0.94f, 0.97f));
                     for (int i = 0; i < h.Parts.Count; i++)
                     {
                         Part p = h.Parts[i];
@@ -329,6 +337,7 @@ namespace KardashevAscent.Presentation.UI
                     bool over = (ra.Measured && ra.Overloaded) || (rb.Measured && rb.Overloaded);
                     Color c = !l.Built ? new Color(0.5f, 0.55f, 0.62f, 0.5f) : over ? new Color(0.95f, 0.3f, 0.25f) : l.High ? new Color(1f, 0.62f, 0.25f) : new Color(0.95f, 0.8f, 0.3f);
                     if (!known && l.Built && !over) c = l.High ? new Color(1f, 0.62f, 0.25f) : new Color(0.85f, 0.75f, 0.35f);
+                    if (w.acPairs.Contains((Mathf.Min(l.From, l.To), Mathf.Max(l.From, l.To))) && !over) c = l.Built ? new Color(0.4f, 0.85f, 1f) : new Color(0.4f, 0.85f, 1f, 0.4f);
                     p.strokeColor = c;
                     p.lineWidth = l.High ? 4f : 2.5f;
                     p.BeginPath();

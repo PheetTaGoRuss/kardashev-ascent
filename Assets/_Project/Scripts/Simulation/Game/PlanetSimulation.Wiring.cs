@@ -149,6 +149,9 @@ namespace KardashevAscent.Simulation.Game
             wiringStamp = TimeHours;
             flowDirty = true;
             poweredTiles.Clear();
+            reachedTiles.Clear();
+            tileConvEff.Clear();
+            edgeKind.Clear();
             lineHops.Clear();
             lineParent.Clear();
             // The wires are links between neighbouring tiles (director 2026-11-20: "connect from tile to tile"); finished links only.
@@ -166,6 +169,15 @@ namespace KardashevAscent.Simulation.Game
             }
             foreach (var key in powerLines) if (HasFinishedLine(key) && LineWorks(key) && linkTargets.TryGetValue(key, out int to)) AddLink(key.Tile, to, LineCapacityPlainW);
             foreach (var key in highVoltageLines) if (HasFinishedLine(key) && LineWorks(key) && linkTargets.TryGetValue(key, out int to)) { AddLink(key.Tile, to, LineCapacityHighW); highEdges.Add((Math.Min(key.Tile, to), Math.Max(key.Tile, to))); }
+            if (AcActive)
+            {
+                // AC in the colony: the reach goes through the media (DC, AC 33 kV, AC 500 kV) and the converters between them.
+                edgeCapacity.Clear();
+                highEdges.Clear();
+                ReachMedia();
+                return;
+            }
+            foreach (var edge in edgeCapacity.Keys) edgeKind[edge] = highEdges.Contains(edge) ? LineKind.High : LineKind.Plain;
             var queue = new Queue<int>();
             poweredTiles.Add(BaseTileId);
             lineHops[BaseTileId] = 0;

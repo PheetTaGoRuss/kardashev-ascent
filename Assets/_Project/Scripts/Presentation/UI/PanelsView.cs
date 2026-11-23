@@ -180,7 +180,7 @@ namespace KardashevAscent.Presentation.UI
             DragFrom(modeLine, BuildMode.PowerLine);
             // The storage buildings (mission operations MO-05): buttons made in code, in the Storage group.
             VisualElement itemRow = root.Q("item-battery")?.parent;
-            foreach (var (smode, slabel) in new[] { (BuildMode.StorageYard, "Storage yard"), (BuildMode.SealedStore, "Sealed store"), (BuildMode.GasTank, "Gas tank") })
+            foreach (var (smode, slabel) in new[] { (BuildMode.StorageYard, "Storage yard"), (BuildMode.SealedStore, "Sealed store"), (BuildMode.GasTank, "Gas tank"), (BuildMode.Transformer, "Transformer"), (BuildMode.Inverter, "Inverter"), (BuildMode.Rectifier, "Rectifier") })
             {
                 if (itemRow == null) break;
                 BuildMode sm = smode;
@@ -582,6 +582,7 @@ namespace KardashevAscent.Presentation.UI
                 placeButton.text = $"Place {thing} (P)";
             }
             batteryText.text = moduleMode ? "Refinery module · must touch a Robot Workshop"
+                : PanelPlacer.IsConverterMode(placer.Mode) ? "Converter · joins AC and DC (inverter, rectifier) or the two AC classes (transformer) on this tile · opens at milestone 2"
                 : PanelPlacer.IsStorageMode(placer.Mode) ? "Storage · each class of material needs its own store away from the lander"
                 : placer.Mode == BuildMode.HighVoltageLine ? "50 times the capacity of a power line · opens at milestone 1"
                 : placer.Mode == BuildMode.PowerLine ? "Wires this tile into the grid · chains reach out from the lander tile"

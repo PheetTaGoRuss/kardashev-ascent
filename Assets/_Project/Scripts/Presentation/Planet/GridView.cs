@@ -102,6 +102,20 @@ namespace KardashevAscent.Presentation.Planet
                 wire.SetPosition(1, pb);
                 wire.gameObject.SetActive(true);
             }
+            // AC lines (cyan; paler when still a site), drawn over the same tile centres
+            foreach (var ac in sim.AcLinks())
+            {
+                nodes.Add(ac.From);
+                nodes.Add(ac.To);
+                Vector3 qa = TilePoint(ac.From, Lift), qb = TilePoint(ac.To, Lift);
+                LineRenderer acWire = Get(planetWires, used++, WidthAt((qa + qb) * 0.5f, ac.AcClass == 500000 ? 0.010f : 0.006f, 0.003f, ac.AcClass == 500000 ? 0.045f : 0.03f));
+                Color ca = ac.AcClass == 500000 ? new Color(0.35f, 0.85f, 1.00f) : new Color(0.45f, 0.75f, 0.95f);
+                if (!ac.Built) ca.a = 0.35f;
+                acWire.startColor = acWire.endColor = ca;
+                acWire.SetPosition(0, qa);
+                acWire.SetPosition(1, qb);
+                acWire.gameObject.SetActive(true);
+            }
             // a pole at every wired tile, so a single wire is still seen from far away (not while a site is open: it would tower over it)
             foreach (int t in nodes)
             {

@@ -1,4 +1,5 @@
 using KardashevAscent.Simulation.Logistics;
+using KardashevAscent.Simulation.Electrical;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -99,6 +100,9 @@ namespace KardashevAscent.Simulation.Game
             foreach (var c in relays)
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.Relay });
             state.WiredGrid = WiredGrid;
+            CaptureConverters(state);
+            foreach (var c in wireBook.AcLines)
+                state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.AcLine, LinkTo = linkTargets.TryGetValue(c, out int acTo) ? acTo : -1, AcClass = wireBook.AcClass.TryGetValue(c, out int acCls) ? acCls : 0 });
             foreach (var c in highVoltageLines)
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.HighVoltageLine, LinkTo = linkTargets.TryGetValue(c, out int hvTo) ? hvTo : -1 });
             foreach (var c in powerLines)
@@ -181,6 +185,10 @@ namespace KardashevAscent.Simulation.Game
             foreach (var key in new List<(int Tile, int Slot)>(stations))
                 RemoveBuilding(key.Tile, key.Slot);
             foreach (var key in new List<(int Tile, int Slot)>(relays))
+                RemoveBuilding(key.Tile, key.Slot);
+            foreach (var key in new List<(int Tile, int Slot)>(converterBuildings.Keys))
+                RemoveBuilding(key.Tile, key.Slot);
+            foreach (var key in new List<(int Tile, int Slot)>(wireBook.AcLines))
                 RemoveBuilding(key.Tile, key.Slot);
             foreach (var key in new List<(int Tile, int Slot)>(highVoltageLines))
                 RemoveBuilding(key.Tile, key.Slot);
@@ -432,6 +440,22 @@ namespace KardashevAscent.Simulation.Game
                     return;
                 if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(BuildingType.ResearchStation), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r), BuildTimes.Hours(BuildingType.ResearchStation));
                 research.Stations.Add((r.Tile, r.Slot));
+            }
+            else if (IsConverter(r.Type))
+            {
+                if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
+                    return;
+                if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(r.Type), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r), BuildTimes.Hours(r.Type));
+                converterBuildings[(r.Tile, r.Slot)] = r.Type;
+            }
+            else if (r.Type == BuildingType.AcLine)
+            {
+                if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
+                    return;
+                if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(BuildingType.AcLine), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r), BuildTimes.Hours(BuildingType.AcLine));
+                wireBook.AcLines.Add((r.Tile, r.Slot));
+                wireBook.AcClass[(r.Tile, r.Slot)] = r.AcClass == VoltageLadder.Ac33k ? VoltageLadder.Ac33k : VoltageLadder.Ac500k;
+                linkTargets[(r.Tile, r.Slot)] = r.LinkTo;
             }
             else if (r.Type == BuildingType.HighVoltageLine)
             {

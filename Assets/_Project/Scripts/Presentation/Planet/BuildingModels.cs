@@ -47,6 +47,10 @@ namespace KardashevAscent.Presentation.Planet
                 case BuildingType.TidalBarrage: Barrage(b); break;
                 case BuildingType.PowerLine: Pole(b); break;
                 case BuildingType.HighVoltageLine: Tower(b); break;
+                case BuildingType.AcLine: Tower(b); break;
+                case BuildingType.Transformer: Battery(b); break;
+                case BuildingType.Inverter:
+                case BuildingType.Rectifier: Relay(b); break;
                 case BuildingType.StorageYard: Yard(b); break;
                 case BuildingType.SealedStore: SealedStore(b); break;
                 case BuildingType.GasTank: Tank(b); break;
