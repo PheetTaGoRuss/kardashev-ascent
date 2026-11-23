@@ -57,6 +57,14 @@ namespace KardashevAscent.Simulation.Game
         SealedStore,
         /// <summary>Gas tank: pressurised gas such as oxygen.</summary>
         GasTank,
+        /// <summary>AC line (decided 2026-11-23): three-phase, 33 kV or 500 kV at 50 Hz; joins the DC grid only through a Rectifier or Inverter (opens at the AC milestone).</summary>
+        AcLine,
+        /// <summary>Transformer: joins the 33 kV and 500 kV AC classes on a tile.</summary>
+        Transformer,
+        /// <summary>Inverter: at the generating end, sends DC generation onto an AC line.</summary>
+        Inverter,
+        /// <summary>Rectifier: where an AC line comes into the DC grid.</summary>
+        Rectifier,
     }
 
     /// <summary>Static facts about one tile.</summary>

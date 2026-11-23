@@ -56,6 +56,12 @@ namespace KardashevAscent.Presentation.Planet
         StorageYard,
         SealedStore,
         GasTank,
+        /// <summary>Transformer: joins the 33 kV and 500 kV AC classes (AC milestone).</summary>
+        Transformer,
+        /// <summary>Inverter: DC generation onto an AC line.</summary>
+        Inverter,
+        /// <summary>Rectifier: an AC line into the DC grid.</summary>
+        Rectifier,
     }
 
     [RequireComponent(typeof(PlanetView))]
@@ -137,6 +143,10 @@ namespace KardashevAscent.Presentation.Planet
                 case BuildingType.PowerLine: return new Color32(235, 200, 70, a);
                 case BuildingType.HighVoltageLine: return new Color32(235, 120, 60, a);
                 case BuildingType.StorageYard: return new Color32(170, 150, 110, a);
+                case BuildingType.AcLine: return new Color32(90, 200, 235, a);
+                case BuildingType.Transformer: return new Color32(110, 170, 235, a);
+                case BuildingType.Inverter: return new Color32(235, 190, 90, a);
+                case BuildingType.Rectifier: return new Color32(150, 215, 140, a);
                 case BuildingType.SealedStore: return new Color32(190, 90, 90, a);
                 case BuildingType.GasTank: return new Color32(110, 190, 210, a);
                 default: return new Color32(160, 160, 160, a);
@@ -158,7 +168,10 @@ namespace KardashevAscent.Presentation.Planet
 
         /// <summary>True for the two panel modes (they share the tilt and facing controls).</summary>
         /// <summary>The power-line modes wire a building to the grid (dropped on it, even though a building stands there).</summary>
-        public static bool IsStorageMode(BuildMode m) => m == BuildMode.StorageYard || m == BuildMode.SealedStore || m == BuildMode.GasTank;
+        public static bool IsConverterMode(BuildMode m) => m == BuildMode.Transformer || m == BuildMode.Inverter || m == BuildMode.Rectifier;
+
+        /// <summary>The storage and converter modes place through the same generic path (a block with its own slot).</summary>
+        public static bool IsStorageMode(BuildMode m) => m == BuildMode.StorageYard || m == BuildMode.SealedStore || m == BuildMode.GasTank || IsConverterMode(m);
 
         public static bool IsWireMode(BuildMode m) => m == BuildMode.PowerLine || m == BuildMode.HighVoltageLine;
 
@@ -179,7 +192,10 @@ namespace KardashevAscent.Presentation.Planet
             : m == BuildMode.HighVoltageLine ? BuildingType.HighVoltageLine
             : m == BuildMode.StorageYard ? BuildingType.StorageYard
             : m == BuildMode.SealedStore ? BuildingType.SealedStore
-            : m == BuildMode.GasTank ? BuildingType.GasTank : BuildingType.SolarPanel;
+            : m == BuildMode.GasTank ? BuildingType.GasTank
+            : m == BuildMode.Transformer ? BuildingType.Transformer
+            : m == BuildMode.Inverter ? BuildingType.Inverter
+            : m == BuildMode.Rectifier ? BuildingType.Rectifier : BuildingType.SolarPanel;
 
         /// <summary>Panels aside, every building is a block on its slots (battery yard, Workshop, stations, refinery modules).</summary>
         static bool IsBlock(BuildingType t) =>
@@ -187,7 +203,8 @@ namespace KardashevAscent.Presentation.Planet
             || t == BuildingType.ResearchStation || t == BuildingType.AluminaPlant || t == BuildingType.Electrolyser
             || t == BuildingType.TidalTurbine || t == BuildingType.WaveConverter || t == BuildingType.TidalBarrage
             || t == BuildingType.PowerLine || t == BuildingType.HighVoltageLine
-            || t == BuildingType.StorageYard || t == BuildingType.SealedStore || t == BuildingType.GasTank;
+            || t == BuildingType.StorageYard || t == BuildingType.SealedStore || t == BuildingType.GasTank
+            || t == BuildingType.AcLine || t == BuildingType.Transformer || t == BuildingType.Inverter || t == BuildingType.Rectifier;
 
         /// <summary>The slot a building covering this one is keyed by (its anchor), or the slot itself when empty.</summary>
         int Anchor(int t, int s)

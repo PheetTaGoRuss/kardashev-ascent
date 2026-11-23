@@ -16,7 +16,7 @@ namespace KardashevAscent.Presentation.UI
             m == BuildMode.SolarPanel || m == BuildMode.FloatingSolar ? Category.Solar
             : m == BuildMode.TidalTurbine || m == BuildMode.WaveConverter || m == BuildMode.TidalBarrage ? Category.Sea
             : m == BuildMode.Battery ? Category.Storage
-            : m == BuildMode.PowerLine || m == BuildMode.HighVoltageLine ? Category.Grid
+            : m == BuildMode.PowerLine || m == BuildMode.HighVoltageLine || PanelPlacer.IsConverterMode(m) ? Category.Grid
             : PanelPlacer.IsStorageMode(m) ? Category.Storage
             : m == BuildMode.Workshop || m == BuildMode.AluminaPlant || m == BuildMode.Electrolyser ? Category.Industry
             : Category.Stations;
@@ -53,6 +53,9 @@ namespace KardashevAscent.Presentation.UI
                 case BuildMode.PowerLine: return "Power line";
                 case BuildMode.HighVoltageLine: return "High-voltage line";
                 case BuildMode.StorageYard: return "Storage yard";
+                case BuildMode.Transformer: return "Transformer";
+                case BuildMode.Inverter: return "Inverter";
+                case BuildMode.Rectifier: return "Rectifier";
                 case BuildMode.SealedStore: return "Sealed store";
                 case BuildMode.GasTank: return "Gas tank";
                 default: return "Network relay";
@@ -87,6 +90,15 @@ namespace KardashevAscent.Presentation.UI
                     break;
                 case BuildMode.HighVoltageLine:
                     what = Short(BuildingType.HighVoltageLine);
+                    break;
+                case BuildMode.Transformer:
+                    what = Short(BuildingType.Transformer);
+                    break;
+                case BuildMode.Inverter:
+                    what = Short(BuildingType.Inverter);
+                    break;
+                case BuildMode.Rectifier:
+                    what = Short(BuildingType.Rectifier);
                     break;
                 case BuildMode.StorageYard:
                     what = Short(BuildingType.StorageYard);
@@ -134,6 +146,9 @@ namespace KardashevAscent.Presentation.UI
                 case BuildingType.Workshop: return "Builds robots and upgrades. Refinery modules attach to its sides.";
                 case BuildingType.ChargingStation: return "Charges robots from the grid near their work.";
                 case BuildingType.Relay: return "Extends the robot network; needs grid power.";
+                case BuildingType.Transformer: return "Joins the 33 kV and 500 kV AC classes on a tile: about 99.5 % efficient. Opens at milestone 2.";
+                case BuildingType.Inverter: return "At the generating end of an AC line: DC to AC, about 98.5 % at 33 kV and 99 % at 500 kV. Opens at milestone 2.";
+                case BuildingType.Rectifier: return "Where an AC line comes into the DC grid: AC to DC, about 98.5 % at 33 kV and 99 % at 500 kV. Opens at milestone 2.";
                 case BuildingType.StorageYard: return "Holds bulk solids (ore, rock, metals) on a tile: 100 t. A tile away from the lander keeps its stock in its own depot; robots haul between depots.";
                 case BuildingType.SealedStore: return "Holds liquids and hazardous solids such as sodium and lithium: 20 t. Without one a tile cannot keep them.";
                 case BuildingType.GasTank: return "Holds pressurised gas such as the oxygen and chlorine a refinery gives off: about 2.8 t at 20 MPa. A full tank stops a plant that stores its gas.";

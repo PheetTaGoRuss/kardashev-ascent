@@ -23,6 +23,8 @@ namespace KardashevAscent.Simulation.Game
         public const int StorageYard = 2;
         public const int SealedStore = 1;
         public const int GasTank = 1;
+        public const int AcLine = 1;
+        public const int Converter = 1;
 
         public static int SlotsFor(BuildingType type, int panelTier)
         {

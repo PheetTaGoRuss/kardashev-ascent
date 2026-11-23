@@ -20,6 +20,7 @@ namespace KardashevAscent.Simulation.Game
 
         public bool PlaceStorage(BuildingType type, int tileId, int slot)
         {
+            if (IsConverter(type)) return PlaceConverter(type, tileId, slot);   // converters are placed through the same build bar path
             if (!IsStorage(type) || !CanPlace(type, tileId, slot))
                 return false;
             StartSite(tileId, slot, BuildBill(type), BuildTimes.Hours(type));

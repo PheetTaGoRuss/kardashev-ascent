@@ -802,6 +802,18 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>The tile has a line end and is on a network separate from the lander's.</summary>
         bool IsOnElectricalIsland(int tileId);
 
+        /// <summary>The AC lines as (from tile, to tile, finished, class in volts).</summary>
+        System.Collections.Generic.IEnumerable<(int From, int To, bool Built, int AcClass)> AcLinks();
+
+        /// <summary>Runs an AC line (33000 or 500000 V) between two neighbouring tiles. False: see <see cref="IWiredGrid.WireProblem"/>.</summary>
+        bool PlaceAcWire(int fromTile, int toTile, int acClass);
+
+        /// <summary>The converters (transformer, inverter, rectifier) on a tile.</summary>
+        System.Collections.Generic.IEnumerable<BuildingType> ConvertersOn(int tileId);
+
+        /// <summary>Conversion loss at the converters at the last flow, W (heat).</summary>
+        double ConverterLossW { get; }
+
         /// <summary>Every building that makes or takes power (the ones a wire connects), with where it stands.</summary>
         System.Collections.Generic.IEnumerable<(int Tile, int Slot, BuildingType Type)> WireableBuildings();
 

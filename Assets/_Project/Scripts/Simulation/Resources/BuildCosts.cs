@@ -103,6 +103,18 @@ namespace KardashevAscent.Simulation.Resources
         public static readonly MaterialBill HighVoltageLine = new MaterialBill()
             .Add(Material.Copper, 60.0).Add(Material.Iron, 120.0).Add(Material.Rock, 60.0);
 
+        /// <summary>AC line: three conductors, towers and insulators for one tile (game rule, TBD).</summary>
+        public static readonly MaterialBill AcLine = new MaterialBill()
+            .Add(Material.Copper, 45.0).Add(Material.Iron, 90.0).Add(Material.Rock, 40.0);
+
+        /// <summary>Transformer: a core of iron and copper windings in a bay (game rule, TBD).</summary>
+        public static readonly MaterialBill Transformer = new MaterialBill()
+            .Add(Material.Copper, 150.0).Add(Material.Iron, 400.0).Add(Material.Rock, 60.0);
+
+        /// <summary>Inverter or rectifier: a converter station (game rule, TBD).</summary>
+        public static readonly MaterialBill Converter = new MaterialBill()
+            .Add(Material.Copper, 200.0).Add(Material.Iron, 150.0).Add(Material.Rock, 40.0);
+
         /// <summary>Storage yard: a levelled, fenced hardstanding with a gantry (game rule, TBD).</summary>
         public static readonly MaterialBill StorageYard = new MaterialBill()
             .Add(Material.Iron, 150.0).Add(Material.Rock, 300.0);
