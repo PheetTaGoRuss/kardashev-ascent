@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using KardashevAscent.Simulation.Game;
+using KardashevAscent.Simulation.Energy;
 using KardashevAscent.Simulation.Planet;
 using KardashevAscent.Simulation.Robots;
 using KardashevAscent.Simulation.Solar;
@@ -31,15 +32,38 @@ namespace KardashevAscent.Simulation.Tests.Robots
 
         // ---- the rules ----
         [Test]
-        public void TheOperatingRangeIsMinus40To50AndTheHeaterScalesWithHowFarOutsideIt()
+        public void TheOperatingRangeIsTheOverlapOfElectronicsAndBattery_AndTheHeaterScalesWithHowFarOutsideIt()
         {
+            Assert.AreEqual(-20.0, RobotThermal.OperatingMinC, "the battery's -20 C is reached before the electronics' -40 C");
+            Assert.AreEqual(50.0, RobotThermal.OperatingMaxC, "the electronics' +50 C is reached before the battery's +60 C");
             Assert.AreEqual(0.0, RobotThermal.ExcessK(0.0));
-            Assert.AreEqual(0.0, RobotThermal.ExcessK(-40.0));
+            Assert.AreEqual(0.0, RobotThermal.ExcessK(-20.0));
             Assert.AreEqual(0.0, RobotThermal.ExcessK(50.0));
-            Assert.AreEqual(30.0, RobotThermal.ExcessK(-70.0), 1e-12);
+            Assert.AreEqual(50.0, RobotThermal.ExcessK(-70.0), 1e-12);
             Assert.AreEqual(15.0, RobotThermal.ExcessK(65.0), 1e-12, "a hot world needs cooling: the same rule");
-            Assert.AreEqual(60.0, RobotThermal.HeaterW(-70.0, false), 1e-12, "2 W per kelvin");
+            Assert.AreEqual(100.0, RobotThermal.HeaterW(-70.0, false), 1e-12, "2 W per kelvin");
             Assert.AreEqual(0.0, RobotThermal.HeaterW(25.0, false));
+        }
+
+        [Test]
+        public void TheBatteryTakesAChargeOnlyBetween0And45()
+        {
+            Assert.IsFalse(RobotThermal.CanCharge(-1.0));
+            Assert.IsTrue(RobotThermal.CanCharge(0.0));
+            Assert.IsTrue(RobotThermal.CanCharge(25.0));
+            Assert.IsTrue(RobotThermal.CanCharge(45.0));
+            Assert.IsFalse(RobotThermal.CanCharge(46.0));
+        }
+
+        [Test]
+        public void TheBatterySettlesTowardShelterTheHeldLimitOrTheAir()
+        {
+            Assert.AreEqual(15.0, RobotThermal.BatteryTarget(-80.0, false, sheltered: true, heaterRuns: true), 1e-12);
+            Assert.AreEqual(-20.0, RobotThermal.BatteryTarget(-80.0, false, sheltered: false, heaterRuns: true), 1e-12, "the heater holds the limit reached first");
+            Assert.AreEqual(-80.0, RobotThermal.BatteryTarget(-80.0, false, sheltered: false, heaterRuns: false), 1e-12, "no heater, no hold");
+            Assert.AreEqual(50.0, RobotThermal.BatteryTarget(70.0, false, sheltered: false, heaterRuns: true), 1e-12);
+            double after = RobotThermal.BatteryStep(-30.0, 15.0, RobotThermal.BatteryThermalTauHours);
+            Assert.AreEqual(15.0 + (-30.0 - 15.0) * Math.Exp(-1.0), after, 1e-9);
         }
 
         [Test]
@@ -200,6 +224,49 @@ namespace KardashevAscent.Simulation.Tests.Robots
             sim.Tick(3.0);
             Assert.AreEqual(2, sim.RobotWeatherNewsSerial, "the loss");
             StringAssert.Contains("destroyed", sim.RobotWeatherNews);
+        }
+
+        [Test]
+        public void AColdRobotAtTheLanderIsWarmedBeforeItIsCharged()
+        {
+            var w = new Workforce();
+            Robot r = w.AddRobot(RobotKind.General, 0);
+            r.Battery.Restore(0.0, 0.0);   // flat: it wants a charge
+            r.BatteryTempC = -10.0;        // and it is cold
+            var lander = new[] { new RobotFacility(0, -1, new ChargingCapability(2, 1000.0, true)) };
+            var up = new RobotUpkeep();
+            bool everWarming = false;
+            double chargedAt = -1.0, hours = 0.0;
+            for (int i = 0; i < 60 && chargedAt < 0.0; i++)
+            {
+                up.Plan(w, lander, 0.05);
+                up.Apply(w, 0.05, up.DockRequestW, 0.0, 0.0, false, null, null, -60.0, tile => -60.0, tile => true);
+                hours += 0.05;
+                everWarming |= r.WarmingUp;
+                if (r.WarmingUp) Assert.AreEqual(0.0, r.LastChargeW, 1e-9, "no charge into a battery below 0 C");
+                if (r.LastChargeW > 0.0) chargedAt = hours;
+            }
+            Assert.IsTrue(everWarming, "it was warmed first");
+            Assert.Greater(chargedAt, 0.2, "charging began only after the shelter had warmed the battery past 0 C");
+            Assert.IsTrue(RobotThermal.CanCharge(r.BatteryTempC));
+        }
+
+        [Test]
+        public void TheBatteryTemperatureIsSavedAndAnOlderSaveStartsWarm()
+        {
+            var sim = Colony(-150.0);
+            var r = sim.Workforce.AddRobot(RobotKind.General, FarLandTile(sim));
+            int id = r.Id;
+            r.BatteryTempC = -12.5;
+            var state = sim.CaptureState();
+            var loaded = Colony(-150.0);
+            Assert.IsTrue(loaded.RestoreState(state));
+            Assert.AreEqual(-12.5, loaded.Workforce.GetRobot(id).BatteryTempC, 1e-9);
+            state.Version = 49;
+            foreach (var rs in state.Workforce.Robots) rs.BatteryTempC = 15.0;
+            var old = Colony(-150.0);
+            Assert.IsTrue(old.RestoreState(state));
+            Assert.AreEqual(15.0, old.Workforce.GetRobot(id).BatteryTempC, 1e-9);
         }
     }
 }

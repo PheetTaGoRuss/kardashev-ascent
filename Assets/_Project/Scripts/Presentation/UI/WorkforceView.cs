@@ -586,6 +586,7 @@ namespace KardashevAscent.Presentation.UI
         /// <summary>A short line on what the robot is doing (the full wording is on hover).</summary>
         static string ShortTask(IPlanetSimulation sim, Robot r)
         {
+            if (r.WarmingUp) return $"warming its battery ({r.BatteryTempC:0} C) before charging";
             string cold = r.HeaterW > 0.0 ? $" · outside its range: heater {r.HeaterW:0} W, {r.ThermalHoursLeft:0.0} h left" : "";
             if (r.IsStranded) return "stranded: battery empty" + cold;
             if (r.ManualTarget.HasValue) return $"→ tile {r.ManualTarget.Value} · {r.HopsLeft} to go";
