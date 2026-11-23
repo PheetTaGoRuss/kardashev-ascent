@@ -347,6 +347,8 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>Hauls under way: id, from, to, material, kg, loaded, and the carrier once loaded.</summary>
         IReadOnlyList<(int Id, int From, int To, Resources.Material Material, double Kg, bool Loaded, int RobotId)> HaulOrders();
+        /// <summary>One line on what a haul costs a robot: round-trip energy split into driving, climbing and the heater.</summary>
+        string HaulCostText(int fromTile, int toTile, double cargoKg);
 
         /// <summary>Ask a robot to survey a land tile's ground. False if it is water, surveyed or already ordered.</summary>
         bool OrderSurvey(int tileId);

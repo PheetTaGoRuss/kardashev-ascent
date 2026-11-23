@@ -422,6 +422,7 @@ namespace KardashevAscent.Presentation.UI
             var targets = sim.StockTargets();
             foreach (var t in targets) lines.Add($"Target: tile {t.Tile} keeps {t.Kg:0} kg {Materials.Name(t.Material).ToLowerInvariant()} (now {sim.KgAt(t.Tile, t.Material):0})");
             var haul = sim.HaulOrders();
+            foreach (var h in haul) lines.Add($"Haul {h.Id}: {h.Kg:0} kg {Materials.Name(h.Material).ToLowerInvariant()} from tile {h.From} to {h.To}: {sim.HaulCostText(h.From, h.To, h.Kg)}");
             lines.Add($"{haul.Count} haul(s) under way · {sim.HaulTotals.KgMoved:0} kg moved so far, {sim.HaulTotals.Wh / 1000.0:0.0} kWh spent hauling");
             string shape = string.Join("\n", lines);
             if (shape != shownDepots)
