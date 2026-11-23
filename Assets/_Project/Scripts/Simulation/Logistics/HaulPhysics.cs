@@ -18,13 +18,12 @@ namespace KardashevAscent.Simulation.Logistics
         public const double StandardGravityMs2 = 9.80665;
 
         /// <summary>
-        /// Metres of height per unit of <c>PlanetSurface.Elevation</c> (dimensionless, about -1 to 1). An assumed scale:
-        /// game rule, TBD (open question Q5). Climbing is off by default (<see cref="ClimbEnabled"/>).
+        /// The share of the true climbing energy m g dh the robots pay (game rule, TBD; decided 2026-11-23 with the real relief, see
+        /// <c>Planet.ReliefScale</c>). At the full 1.0 a tile hop on land climbs 1.2 km on average, which costs a one-tonne robot about 3.3 kWh,
+        /// ten times the starting robot's 350 Wh battery, whose flat drive (50 W, 5 h a hop) costs 260 Wh. The game's robots are on a smaller
+        /// scale than the real mass used here, so 0.15 makes the average climb about as costly as the flat drive. Tune with the robot battery.
         /// </summary>
-        public const double MetresPerElevationUnit = 1000.0;
-
-        /// <summary>Whether the climb term counts. Off until the director approves the scale (Q5).</summary>
-        public static bool ClimbEnabled { get; set; }
+        public const double ClimbEffortShare = 0.15;
 
         /// <summary>
         /// Drive power, W, with cargo: P = P_base (g / g_earth) (m_r + m_c) / m_r. With no cargo this is the plain

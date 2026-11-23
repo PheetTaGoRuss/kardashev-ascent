@@ -255,6 +255,7 @@ namespace KardashevAscent.Simulation.Robots
             if (cargoKg > 0.0)
                 HaulDriveWh += got * hours;
             double moved = (want > 0.0 ? hours * got / want : hours) * r.Attribute(RobotAttribute.Speed);
+            double climbWh = 0.0;
             while (moved > 0.0 && r.Route.Count > 0)
             {
                 double hop = movement.RoutesFor(r).HopHoursAt(r.Route[0]);
@@ -265,13 +266,25 @@ namespace KardashevAscent.Simulation.Robots
                     break;
                 }
                 moved -= left;
+                // climbing: potential energy m g dh over the drive efficiency, uphill only, no regeneration (KI-42)
+                if (movement.HeightM != null)
+                    climbWh += Logistics.HaulPhysics.ClimbEffortShare * Logistics.HaulPhysics.ClimbEnergyWh(Logistics.HaulPhysics.DefaultRobotMassKg, cargoKg, movement.GravityMs2,
+                                                                   movement.HeightM[r.Route[0]] - movement.HeightM[r.Tile], r.Attribute(RobotAttribute.EnergyEfficiency));
                 r.Tile = r.Route[0];
                 r.Route.RemoveAt(0);
                 r.HopProgress = 0.0;
             }
+            if (climbWh > 0.0 && hours > 0.0)
+            {
+                r.Battery.Draw(climbWh / hours, hours);
+                ClimbDriveWh += climbWh;
+            }
             if (r.Route.Count == 0 && r.ManualTarget.HasValue && r.Tile == r.ManualTarget.Value)
                 r.ManualTarget = null;
         }
+
+        /// <summary>Energy robots spent climbing so far, Wh (not saved; a readout).</summary>
+        public double ClimbDriveWh { get; private set; }
 
         /// <summary>
         /// Repairs are paid in materials (director, 2026-11-14): a new battery takes the cells' materials

@@ -31,7 +31,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             for (int t = 0; t < Sphere.TileCount && landing < 0; t++)
                 if (Terrains.LandingProblem(surface.Terrain[t]) == null && Sphere.Neighbors[t].Any(n => surface.Terrain[n] == nextTo))
                     landing = t;
-            var sim = new PlanetSimulation(Sphere, surface, Earthlike, baseTileId: landing) { ConstructionTimeEnabled = false, PuzzleChance = 0.0 };
+            var sim = new PlanetSimulation(Sphere, surface, Earthlike, baseTileId: landing) { ConstructionTimeEnabled = false, PuzzleChance = 0.0, ClimbEnabled = false };   // the tunnel tests are not about the energy of climbing
             KardashevAscent.Simulation.Tests.TestColony.AddCharger(sim);
             sim.Workforce.Reset(sim.BaseTileId, 1);
             return sim;
