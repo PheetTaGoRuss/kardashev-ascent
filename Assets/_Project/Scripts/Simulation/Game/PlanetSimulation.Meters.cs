@@ -19,7 +19,7 @@ namespace KardashevAscent.Simulation.Game
         readonly HashSet<int> meteredLines = new HashSet<int>();
         readonly Dictionary<int, double> inspectedLines = new Dictionary<int, double>();
 
-        bool LineExists(int tileId) => tileId != BaseTileId && poweredTiles.Contains(tileId) && lineParent.TryGetValue(tileId, out int p) && p >= 0;
+        bool LineExists(int tileId) => tileId != BaseTileId && (reachedTiles.Contains(tileId) || poweredTiles.Contains(tileId)) && ParentOfTile(tileId, out int p) && p >= 0;
 
         /// <summary>A meter costs a current sensor and its electronics: 2 kg copper and 1 kg iron (director 2026-11-23; game rule, TBD).</summary>
         public static Resources.MaterialBill MeterPrice => new Resources.MaterialBill().Add(Resources.Material.Copper, 2.0).Add(Resources.Material.Iron, 1.0);

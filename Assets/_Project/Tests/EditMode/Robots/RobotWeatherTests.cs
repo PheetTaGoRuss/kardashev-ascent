@@ -31,13 +31,13 @@ namespace KardashevAscent.Simulation.Tests.Robots
 
         // ---- the rules ----
         [Test]
-        public void TheOperatingRangeIsMinus40To40AndTheHeaterScalesWithHowFarOutsideIt()
+        public void TheOperatingRangeIsMinus40To50AndTheHeaterScalesWithHowFarOutsideIt()
         {
             Assert.AreEqual(0.0, RobotThermal.ExcessK(0.0));
             Assert.AreEqual(0.0, RobotThermal.ExcessK(-40.0));
-            Assert.AreEqual(0.0, RobotThermal.ExcessK(40.0));
+            Assert.AreEqual(0.0, RobotThermal.ExcessK(50.0));
             Assert.AreEqual(30.0, RobotThermal.ExcessK(-70.0), 1e-12);
-            Assert.AreEqual(25.0, RobotThermal.ExcessK(65.0), 1e-12, "a hot world needs cooling: the same rule");
+            Assert.AreEqual(15.0, RobotThermal.ExcessK(65.0), 1e-12, "a hot world needs cooling: the same rule");
             Assert.AreEqual(60.0, RobotThermal.HeaterW(-70.0, false), 1e-12, "2 W per kelvin");
             Assert.AreEqual(0.0, RobotThermal.HeaterW(25.0, false));
         }
@@ -164,6 +164,42 @@ namespace KardashevAscent.Simulation.Tests.Robots
             Empty(r);
             sim.Tick(3.0);
             Assert.IsFalse(sim.HeldFindings.Any(f => f.RobotId == id));
+        }
+
+        [Test]
+        public void ADestroyedRobotsCargoStaysWhereItStopped()
+        {
+            var sim = Colony(-150.0);
+            sim.LogisticsEnabled = true;
+            int tile = FarLandTile(sim);
+            var r = sim.Workforce.AddRobot(RobotKind.General, tile);
+            int id = r.Id;
+            var cargo = KardashevAscent.Simulation.Logistics.PlaceId.Cargo(id);
+            sim.InventoriesForTests.Add(cargo, KardashevAscent.Simulation.Resources.Material.Iron, 50.0);
+            Empty(r);
+            sim.Tick(3.0);
+            Assert.AreEqual(1, sim.RobotsDestroyed);
+            Assert.IsFalse(sim.InventoriesForTests.Has(cargo), "the cargo place is gone with the robot");
+            Assert.AreEqual(50.0, sim.KgAt(r.Tile == tile ? tile : tile, KardashevAscent.Simulation.Resources.Material.Iron), 1e-9, "the iron lies on the tile");
+            StringAssert.Contains("cargo stays on the tile", sim.OperationsLog.Last(o => o.Quantity == "Robot destroyed").Text);
+        }
+
+        [Test]
+        public void TheHudGetsNewsOfAWarningAndOfALoss_AndNoneOnAnEarthlikeWorld()
+        {
+            var calm = Colony(15.0);
+            calm.Workforce.AddRobot(RobotKind.General, FarLandTile(calm));
+            calm.Tick(1.0);
+            Assert.AreEqual(0, calm.RobotWeatherNewsSerial);
+            var sim = Colony(-150.0);
+            var r = sim.Workforce.AddRobot(RobotKind.General, FarLandTile(sim));
+            sim.Tick(0.1);
+            Assert.AreEqual(1, sim.RobotWeatherNewsSerial, "the warning");
+            StringAssert.Contains("needs shelter", sim.RobotWeatherNews);
+            Empty(r);
+            sim.Tick(3.0);
+            Assert.AreEqual(2, sim.RobotWeatherNewsSerial, "the loss");
+            StringAssert.Contains("destroyed", sim.RobotWeatherNews);
         }
     }
 }

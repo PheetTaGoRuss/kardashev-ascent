@@ -24,6 +24,15 @@ namespace KardashevAscent.Simulation.Game
         readonly Dictionary<(int Tile, int Slot), BuildingType> converterBuildings = new Dictionary<(int, int), BuildingType>();
         readonly Dictionary<(int, int), LineKind> edgeKind = new Dictionary<(int, int), LineKind>();
         readonly HashSet<int> reachedTiles = new HashSet<int>();
+        /// <summary>The tile toward the lander for tiles reached only through AC (no DC bus there, so no entry in the DC parent map).</summary>
+        readonly Dictionary<int, int> acOnlyParent = new Dictionary<int, int>();
+
+        /// <summary>The tile a line from this tile runs toward the lander along: DC tiles by the DC reach, AC-only tiles by the AC reach.</summary>
+        bool ParentOfTile(int tileId, out int parent)
+        {
+            if (lineParent.TryGetValue(tileId, out parent)) return true;
+            return acOnlyParent.TryGetValue(tileId, out parent);
+        }
         readonly Dictionary<int, double> tileConvEff = new Dictionary<int, double>();
 
         public static bool IsConverter(BuildingType t) => t == BuildingType.Transformer || t == BuildingType.Inverter || t == BuildingType.Rectifier;
@@ -201,7 +210,7 @@ namespace KardashevAscent.Simulation.Game
             foreach (var kv in seen)
             {
                 reachedTiles.Add(kv.Key.Item1);
-                if (kv.Key.Item2 != 0) continue;
+                if (kv.Key.Item2 != 0) { if (kv.Value.Parent >= 0 && !seen.ContainsKey((kv.Key.Item1, 0))) acOnlyParent[kv.Key.Item1] = kv.Value.Parent; continue; }
                 poweredTiles.Add(kv.Key.Item1);
                 lineHops[kv.Key.Item1] = kv.Value.Hops;
                 lineParent[kv.Key.Item1] = kv.Value.Parent;
@@ -218,6 +227,13 @@ namespace KardashevAscent.Simulation.Game
                     edgeKind[edge] = l.Kind;
                 }
             }
+        }
+
+        /// <summary>The share of a generator's power on this tile that survives the converters on its way to the lander (1 with none or off the grid).</summary>
+        public double ConversionEfficiencyFrom(int tileId)
+        {
+            EnsureWiring();
+            return tileConvEff.TryGetValue(tileId, out double e) ? e : 1.0;
         }
 
         /// <summary>Conversion loss at the converters on the way from the generators, W (heat), at the last flow.</summary>

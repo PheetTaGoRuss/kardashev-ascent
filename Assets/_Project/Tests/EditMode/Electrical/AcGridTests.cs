@@ -154,6 +154,56 @@ namespace KardashevAscent.Tests.Electrical
         }
 
         [Test]
+        public void TheFullChain_DcInverterAc33TransformerAc500TransformerAc33RectifierDc_DeliversTheProductOfTheEfficiencies()
+        {
+            // lander - plain DC - [rectifier] - AC33 - [transformer] - AC500 - [transformer] - AC33 - [inverter] - generator tile
+            double Probe(bool ac)
+            {
+                var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { WiredGrid = true };
+                sim.Debug.FreeBuilding = true; sim.Debug.UnlockAll = true;
+                var path = new System.Collections.Generic.List<int> { sim.BaseTileId };
+                while (path.Count < 6)
+                {
+                    int last = path[path.Count - 1];
+                    int next = Sphere.Neighbors[last].First(n => !path.Contains(n) && !sim.GetTile(n).IsWater && sim.IsOpenGround(n)
+                        && path.All(p => p == last || !Sphere.Neighbors[p].Contains(n)));
+                    path.Add(next);
+                }
+                int b = path[0], t1 = path[1], t2 = path[2], t3 = path[3], t4 = path[4], gen = path[5];
+                Assert.IsTrue(sim.PlaceWire(b, t1, false), sim.WireProblem);
+                if (ac)
+                {
+                    Assert.IsTrue(sim.PlaceConverter(BuildingType.Rectifier, t1, 40));
+                    Assert.IsTrue(sim.PlaceAcWire(t1, t2, Ac33), sim.WireProblem);
+                    Assert.IsTrue(sim.PlaceConverter(BuildingType.Transformer, t2, 40));
+                    Assert.IsTrue(sim.PlaceAcWire(t2, t3, Ac500), sim.WireProblem);
+                    Assert.IsTrue(sim.PlaceConverter(BuildingType.Transformer, t3, 40));
+                    Assert.IsTrue(sim.PlaceAcWire(t3, t4, Ac33), sim.WireProblem);
+                    Assert.IsTrue(sim.PlaceAcWire(t4, gen, Ac33), sim.WireProblem);
+                    Assert.IsTrue(sim.PlaceConverter(BuildingType.Inverter, gen, 40));
+                }
+                else
+                {
+                    Assert.IsTrue(sim.PlaceWire(t1, t2, false), sim.WireProblem);
+                    Assert.IsTrue(sim.PlaceWire(t2, t3, false), sim.WireProblem);
+                    Assert.IsTrue(sim.PlaceWire(t3, t4, false), sim.WireProblem);
+                    Assert.IsTrue(sim.PlaceWire(t4, gen, false), sim.WireProblem);
+                }
+                Run(sim, 1.0);
+                Assert.IsTrue(sim.IsPowered(gen), ac ? "the AC chain stands" : "the DC chain stands");
+                if (ac) Assert.AreEqual(0.985 * 0.995 * 0.995 * 0.985, sim.ConversionEfficiencyFrom(gen), 1e-12, "rectifier 33 kV x two transformers x inverter 33 kV");
+                else Assert.AreEqual(1.0, sim.ConversionEfficiencyFrom(gen), 1e-12);
+                return sim.GridEfficiency(gen);
+            }
+            // the whole delivered share: the converters' product times the line loss; the 500 kV leg is a better line than 33 kV DC, so the
+            // AC chain delivers a little more than the product of the efficiencies against the all-33-kV DC chain, and always less than the DC chain
+            double ratio = Probe(true) / Probe(false);
+            double product = 0.985 * 0.995 * 0.995 * 0.985;
+            Assert.Greater(ratio, product);
+            Assert.Less(ratio, 1.0);
+        }
+
+        [Test]
         public void AnAcSeaLinkLongerThanTheLimitIsRefusedAndTheReasonIsGiven()
         {
             var sim = Colony(out _, out _, out _);
@@ -187,6 +237,48 @@ namespace KardashevAscent.Tests.Electrical
             Assert.IsTrue(loaded.IsPowered(t3), "the AC chain stands after loading");
             Assert.AreEqual(3, loaded.ConvertersOn(t1).Count() + loaded.ConvertersOn(t2).Count() + loaded.ConvertersOn(t3).Count());
             Assert.AreEqual(2, loaded.AcLinks().Count());
+        }
+
+        [Test]
+        public void AcLinesHaveTheSameMeterInspectProtectionAndRepairAsDcLines()
+        {
+            var sim = Colony(out int t1, out int t2, out int t3);
+            sim.PlaceWire(sim.BaseTileId, t1, false);
+            sim.PlaceConverter(BuildingType.Rectifier, t1, 40);
+            sim.PlaceAcWire(t1, t2, Ac500); sim.PlaceAcWire(t2, t3, Ac500);
+            sim.PlaceConverter(BuildingType.Inverter, t3, 40);
+            Run(sim, 2.0);
+            CollectionAssert.Contains(sim.LineTiles().ToList(), t2, "the AC-only middle tile is in the lines list");
+            Assert.IsFalse(sim.IsPowered(t2));
+            var read = sim.LineReadout(t2);
+            Assert.IsTrue(read.HasLine);
+            Assert.AreEqual(PlanetSimulation.KindCapacityW(LineKind.Ac500), read.CapacityW, 1e-6, "the AC 500 kV rating: sqrt(3) x 500 kV x 3000 A");
+            Assert.IsFalse(read.Measured);
+            Assert.IsTrue(sim.InstallLineMeter(t2));
+            Assert.IsTrue(sim.LineReadout(t2).Measured);
+            Assert.IsTrue(sim.InstallLineProtection(t2, ProtectionKind.Breaker));
+            Assert.AreEqual(ProtectionKind.Breaker, sim.LineProtectionOf(t2));
+        }
+
+        [Test]
+        public void AFailedAcLineSplitsTheChainAndRepairRestoresIt()
+        {
+            var sim = Colony(out int t1, out int t2, out int t3);
+            sim.PlaceWire(sim.BaseTileId, t1, false);
+            sim.PlaceConverter(BuildingType.Rectifier, t1, 40);
+            sim.PlaceAcWire(t1, t2, Ac33); sim.PlaceAcWire(t2, t3, Ac33);
+            sim.PlaceConverter(BuildingType.Inverter, t3, 40);
+            Run(sim, 2.0);
+            Assert.IsTrue(sim.IsPowered(t3));
+            var link = sim.AcLinks().First(l => l.From == t2 || l.To == t2);
+            int hostTile = link.From, hostSlot = sim.CaptureState().Buildings.First(b => b.Type == BuildingType.AcLine && b.Tile == hostTile && b.LinkTo == link.To).Slot;
+            Assert.IsTrue(sim.SetCableState(hostTile, hostSlot, 0.0, false));
+            Run(sim, 0.2);
+            Assert.IsFalse(sim.IsPowered(t3), "the AC chain is broken at the failed line");
+            Assert.AreEqual(1, sim.FailedLines().Count());
+            Assert.IsNull(sim.RepairLine(hostTile, hostSlot));
+            Run(sim, 0.2);
+            Assert.IsTrue(sim.IsPowered(t3));
         }
 
         [Test]

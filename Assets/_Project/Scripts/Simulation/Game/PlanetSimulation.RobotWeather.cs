@@ -11,10 +11,19 @@ namespace KardashevAscent.Simulation.Game
     /// Robots and the weather on the planet side (KI-43, decided 2026-11-23): where shelter is, what happens when a robot is destroyed, and the
     /// warning before it comes to that. The rules are in <see cref="RobotThermal"/> and <see cref="RobotUpkeep"/>.
     /// </summary>
-    public sealed partial class PlanetSimulation
+    public sealed partial class PlanetSimulation : IRobotWeather
     {
+        /// <summary>Rises by one each time the colony has news of a robot and the weather (a warning or a loss): the HUD shows a short toast for each.</summary>
+        public int RobotWeatherNewsSerial { get; private set; }
+
+        /// <summary>The latest of those, in a short line.</summary>
+        public string RobotWeatherNews { get; private set; } = "";
+
         /// <summary>Robots lost to the weather so far (not saved; the operations log keeps the record).</summary>
         public int RobotsDestroyed { get; private set; }
+
+        /// <summary>Test hook: the inventories (so a test can load a robot with cargo).</summary>
+        internal InventoryBook InventoriesForTests => inventories;
 
         /// <summary>The tiles where a robot is sheltered: the lander, battery yards, charging stations and Workshops (finished).</summary>
         HashSet<int> ShelterTiles()
@@ -34,6 +43,8 @@ namespace KardashevAscent.Simulation.Game
                 if (r.HeaterW > 0.0 && r.ThermalHoursLeft < RobotThermal.WarnWithinHours && !r.ThermalWarned)
                 {
                     r.ThermalWarned = true;
+                    RobotWeatherNews = $"Robot {r.Id} is outside its range: battery lasts {r.ThermalHoursLeft:0.0} h. It needs shelter.";
+                    RobotWeatherNewsSerial++;
                     double air = AirTemperatureAt(r.Tile, CurrentMeanAnomaly());
                     Log($"Robot {r.Id}", "Cold or heat warning", r.ThermalHoursLeft, "h",
                         $"R{r.Id}", $"Robot {r.Id} is outside its operating range ({air:0} C) and its battery lasts about {r.ThermalHoursLeft:0.0} h at the heater draw ({r.HeaterW:0} W). It needs shelter.", r.Id);
@@ -71,6 +82,8 @@ namespace KardashevAscent.Simulation.Game
                 + (cargoKg > 0.0 ? $" Its {cargoKg:0} kg of cargo stays on the tile." : ""), robotId);
             Workforce.RemoveRobot(robotId);
             RobotsDestroyed++;
+            RobotWeatherNews = $"Robot {robotId} was destroyed: battery empty at {air:0} C.";
+            RobotWeatherNewsSerial++;
         }
     }
 }

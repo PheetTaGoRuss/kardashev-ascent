@@ -586,10 +586,11 @@ namespace KardashevAscent.Presentation.UI
         /// <summary>A short line on what the robot is doing (the full wording is on hover).</summary>
         static string ShortTask(IPlanetSimulation sim, Robot r)
         {
-            if (r.IsStranded) return "stranded: battery empty";
+            string cold = r.HeaterW > 0.0 ? $" · outside its range: heater {r.HeaterW:0} W, {r.ThermalHoursLeft:0.0} h left" : "";
+            if (r.IsStranded) return "stranded: battery empty" + cold;
             if (r.ManualTarget.HasValue) return $"→ tile {r.ManualTarget.Value} · {r.HopsLeft} to go";
             string what = DoingText(sim, r);
-            return r.IsTravelling ? $"→ tile {r.Destination} · {r.HopsLeft} to go · {what}" : what;
+            return (r.IsTravelling ? $"→ tile {r.Destination} · {r.HopsLeft} to go · {what}" : what) + cold;
         }
 
         VisualElement MakeRobot(IPlanetSimulation sim, Workforce w, Robot r)
@@ -607,7 +608,7 @@ namespace KardashevAscent.Presentation.UI
             kindIcon.tooltip = $"{r.Kind} robot";
             head.Add(kindIcon);
             head.Add(MakeLabel(r.Name, "robot-name"));
-            Color stateColour = r.State == RobotState.Working ? UiPalette.Good : r.IsShutDown || r.IsStranded ? UiPalette.Critical : UiPalette.Muted;
+            Color stateColour = r.State == RobotState.Working ? UiPalette.Good : r.IsShutDown || r.IsStranded || (r.HeaterW > 0.0 && r.ThermalHoursLeft < RobotThermal.WarnWithinHours) ? UiPalette.Critical : UiPalette.Muted;
             var dot = new Label("●");
             dot.style.color = stateColour;
             dot.style.marginLeft = 6;

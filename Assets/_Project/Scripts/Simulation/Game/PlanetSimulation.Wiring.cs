@@ -150,6 +150,7 @@ namespace KardashevAscent.Simulation.Game
             flowDirty = true;
             poweredTiles.Clear();
             reachedTiles.Clear();
+            acOnlyParent.Clear();
             tileConvEff.Clear();
             edgeKind.Clear();
             lineHops.Clear();
@@ -203,7 +204,7 @@ namespace KardashevAscent.Simulation.Game
             if (tileId == BaseTileId)
                 return double.PositiveInfinity;
             EnsureWiring();
-            if (!lineParent.TryGetValue(tileId, out int parent) || parent < 0)
+            if (!ParentOfTile(tileId, out int parent) || parent < 0)
                 return LineCapacityPlainW;
             return edgeCapacity.TryGetValue((Math.Min(tileId, parent), Math.Max(tileId, parent)), out double c) ? c : LineCapacityPlainW;
         }
@@ -317,6 +318,11 @@ namespace KardashevAscent.Simulation.Game
                 if (linkTargets.TryGetValue(key, out int to) && seen.Add(to)) yield return to;
             }
             foreach (var key in highVoltageLines)
+            {
+                if (seen.Add(key.Tile)) yield return key.Tile;
+                if (linkTargets.TryGetValue(key, out int to) && seen.Add(to)) yield return to;
+            }
+            foreach (var key in wireBook.AcLines)
             {
                 if (seen.Add(key.Tile)) yield return key.Tile;
                 if (linkTargets.TryGetValue(key, out int to) && seen.Add(to)) yield return to;

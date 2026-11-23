@@ -116,6 +116,10 @@ namespace KardashevAscent.Presentation.UI
         IPlanetSimulation watched;
         int milestonesSeen;
         string milestoneMessage;
+        int weatherSerial;
+        string weatherMessage;
+        float weatherTime;
+        const float WeatherToastSeconds = 6f;
         float milestoneTime = float.NegativeInfinity;
         const float MilestoneSeconds = 6f;
 
@@ -155,17 +159,28 @@ namespace KardashevAscent.Presentation.UI
             if (ScreenInput.KeyDown(KeyCode.K) && document != null && document.rootVisualElement != null)
                 CalculatorPad.Toggle(document.rootVisualElement);
             CheckMilestones(runner != null ? runner.Simulation : null);
+            if (runner != null && runner.Simulation != null && runner.Simulation.RobotWeatherNewsSerial != weatherSerial)
+            {
+                weatherSerial = runner.Simulation.RobotWeatherNewsSerial;
+                weatherMessage = runner.Simulation.RobotWeatherNews;
+                weatherTime = Time.unscaledTime;
+            }
             if (toast != null)
             {
                 bool milestone = !string.IsNullOrEmpty(milestoneMessage) && Time.unscaledTime - milestoneTime < MilestoneSeconds;
                 bool save = saveGame != null && !string.IsNullOrEmpty(saveGame.Message)
                     && Time.unscaledTime - saveGame.MessageTime < 2.5f
                     && (!milestone || saveGame.MessageTime > milestoneTime);
-                toast.EnableInClassList("hidden", !milestone && !save);
+                bool weather = !string.IsNullOrEmpty(weatherMessage) && Time.unscaledTime - weatherTime < WeatherToastSeconds;
+                toast.EnableInClassList("hidden", !milestone && !save && !weather);
                 if (save)
                     toast.text = saveGame.Message;
+                else if (weather)
+                    toast.text = weatherMessage;
                 else if (milestone)
                     toast.text = milestoneMessage;
+                // the weather toast sits below the system tab bar, which lies over the top of the usual toast place
+                toast.style.marginTop = weather && !save ? 46f : 8f;
             }
             IPlanetSimulation sim = runner != null ? runner.Simulation : null;
             if (sim == null || date == null)

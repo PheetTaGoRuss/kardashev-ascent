@@ -147,6 +147,83 @@ namespace KardashevAscent.EditorTools
                     Log("land: no tile accepted");
                     return true;
                 }
+                case "acchain":
+                {
+                    // acchain: lander - DC - rectifier - AC 33 kV - transformer - AC 500 kV - transformer - AC 33 kV - inverter, along a land path from the base.
+                    var runner = Runner();
+                    var sim = runner?.Simulation;
+                    if (sim == null) return true;
+                    if (sim is Simulation.Game.IDebugTools dbg) { dbg.Debug.FreeBuilding = true; dbg.Debug.UnlockAll = true; }
+                    var path = new List<int> { sim.BaseTileId };
+                    while (path.Count < 6)
+                    {
+                        int last = path[path.Count - 1], next = -1;
+                        foreach (int n in sim.Sphere.Neighbors[last])
+                        {
+                            if (path.Contains(n) || sim.GetTile(n).IsWater || !sim.IsOpenGround(n)) continue;
+                            bool touches = false;
+                            foreach (int p in path) if (p != last && System.Array.IndexOf(sim.Sphere.Neighbors[p], n) >= 0) touches = true;
+                            if (!touches) { next = n; break; }
+                        }
+                        if (next < 0) { Log("acchain: no land path"); return true; }
+                        path.Add(next);
+                    }
+                    int FreeSlot(int tile, Simulation.Game.BuildingType type)
+                    {
+                        for (int s = 0; s < sim.SlotCount(tile); s++) if (sim.CanPlace(type, tile, s)) return s;
+                        return -1;
+                    }
+                    bool Conv(Simulation.Game.BuildingType type, int tile) { int s = FreeSlot(tile, type); return s >= 0 && sim.PlaceStorage(type, tile, s); }
+                    var why = new List<string>();
+                    bool Step(bool placed) { why.Add(placed ? "ok" : (sim.WireProblem ?? "no")); return placed; }
+                    var ok = new List<bool>
+                    {
+                        Step(sim.PlaceWire(path[0], path[1], false)),
+                        Conv(Simulation.Game.BuildingType.Rectifier, path[1]),
+                        Step(sim.PlaceAcWire(path[1], path[2], 33000)),
+                        Conv(Simulation.Game.BuildingType.Transformer, path[2]),
+                        sim.PlaceAcWire(path[2], path[3], 500000),
+                        Conv(Simulation.Game.BuildingType.Transformer, path[3]),
+                        sim.PlaceAcWire(path[3], path[4], 33000),
+                        sim.PlaceAcWire(path[4], path[5], 33000),
+                        Conv(Simulation.Game.BuildingType.Inverter, path[5]),
+                    };
+                    Log($"acchain path={string.Join(",", path)} placed={string.Join("", ok.ConvertAll(b => b ? '1' : '0'))} why={string.Join(" | ", why)} unlocked={sim.KnowledgeBlocker(Simulation.Game.BuildingType.Rectifier) ?? "yes"} wired={sim.WiredGrid}");
+                    var picker = UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.TilePicker>();
+                    if (picker != null) picker.Select(path[3]);
+                    return true;
+                }
+                case "coldrobot":
+                {
+                    // coldrobot: a General robot on a land tile away from the lander, battery emptied; logs its state. "coldrobot status" logs the robots.
+                    var sim = Runner()?.Simulation;
+                    if (sim == null) return true;
+                    if (argument == "status")
+                    {
+                        foreach (var r in sim.Workforce.Robots)
+                            Log($"robot {r.Id} tile={r.Tile} heater={r.HeaterW:0}W sheltered={r.Sheltered} usableWh={r.Battery.UsableWh:0.0} exposedEmptyH={r.ExposedEmptyHours:0.00}");
+                        Log($"robots={sim.Workforce.Robots.Count} destroyed={((Simulation.Game.PlanetSimulation)sim).RobotsDestroyed}");
+                        return true;
+                    }
+                    int far = -1;
+                    for (int t = 0; t < sim.TileCount && far < 0; t++)
+                        if (t != sim.BaseTileId && !sim.GetTile(t).IsWater && sim.IsOpenGround(t) && System.Array.IndexOf(sim.Sphere.Neighbors[sim.BaseTileId], t) < 0
+                            && System.Array.IndexOf(sim.Sphere.Neighbors[sim.BaseTileId], t) < 0)
+                            far = t;
+                    var added = sim.Workforce.AddRobot(Simulation.Robots.RobotKind.General, far);
+                    if (argument != "warm") added.Battery.Draw(1e12, 1.0);
+                    else added.Battery.Draw(added.Battery.UsableWh * 0.97 * 1.0, 1.0);   // nearly flat: it will not last the night
+                    Log($"coldrobot added robot {added.Id} on tile {far}, battery {(argument == "warm" ? "nearly flat" : "emptied")}");
+                    return true;
+                }
+                case "acstatus":
+                {
+                    var sim = Runner()?.Simulation;
+                    if (sim == null) return true;
+                    int gen = int.Parse(argument);
+                    Log($"acstatus tile={gen} powered={sim.IsPowered(gen)} conversion={sim.ConversionEfficiencyFrom(gen):0.0000} grid={sim.GridEfficiency(gen):0.0000} converterLossW={sim.ConverterLossW:0}");
+                    return true;
+                }
                 case "planet":
                     UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.TilePicker>()?.Select(-1);
                     return true;

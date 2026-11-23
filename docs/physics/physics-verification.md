@@ -774,6 +774,6 @@ Code: `Simulation/Electrical/CableThermal.cs`; tests `CableThermalTests`.
 
 Code: `Simulation/Robots/RobotThermal.cs`; tests `RobotWeatherTests`.
 
-- Operating range of the electronics and battery: about -40 to +40 C, from rover practice (the Mars rovers keep their electronics and batteries in this band with heaters) [recalled, TBD; check against the Mars 2020 / MSL thermal design papers before tuning].
+- Operating range of the electronics: -40 to +50 C. Curiosity (MSL) keeps sensitive electronics and instruments within -40 to +50 C with a pumped fluid loop and radiators while the surface ranges about -123 to +38 C [verified: NASA technical paper on the MSL rover heat exchangers, NTRS (found by search among 20150008771, 20150012015, 20150007428; the exact paper is still to be pinned)]. The earlier Mars Exploration Rovers had a narrower battery operating range, -20 to +30 C [verified: JPL MER thermal design overview, TFAWS 2005 "TFAWS05_GTsuyuki_TH"]. The game uses one range per robot (game rule, TBD) and takes the electronics range; a separate battery range is a possible refinement. Perseverance pages give no limits (checked). The earlier game value of +40 C was recalled and is replaced by +50 C.
 - Heater or cooler power: 2 W per kelvin outside the range (game rule, TBD; the real heaters of a rover are a few tens of watts at night).
 - Destruction by an empty battery outside the range for an hour (game rule, TBD); the heater needs the battery, as with Opportunity (dust, a long storm) and InSight (dust on the panels).
