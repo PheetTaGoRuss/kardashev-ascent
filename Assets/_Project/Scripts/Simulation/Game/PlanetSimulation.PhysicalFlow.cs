@@ -176,7 +176,7 @@ namespace KardashevAscent.Simulation.Game
             for (int e = 0; e < edges.Count; e++) edgeAt[(Math.Min(edges[e].A, edges[e].B), Math.Max(edges[e].A, edges[e].B))] = e;
             foreach (int t in tiles)
             {
-                if (t == BaseTileId || !lineParent.TryGetValue(t, out int parent) || parent < 0) continue;
+                if (t == BaseTileId || !ParentOfTile(t, out int parent) || parent < 0) continue;
                 if (!edgeAt.TryGetValue((Math.Min(t, parent), Math.Max(t, parent)), out int e)) continue;
                 tileFlow[t] = Math.Abs(total.BranchCurrentA[e]) * PlainLineVolts;   // power on the plain-line base equals V x I in any class
                 if (overEdges.Contains(e)) overloadedTiles.Add(t);

@@ -8,15 +8,15 @@ namespace KardashevAscent.Simulation.Robots
     /// battery yard, a charging station or a Workshop removes the draw. A robot is destroyed only when its battery is empty while it stands
     /// outside its range with no shelter, so the heater can no longer protect it: the way the rovers Opportunity and InSight ended. Robots never
     /// die on a schedule; on a cold night a robot gets home with margin or it does not.
-    /// Every number is a game rule, TBD, from rover practice: electronics and battery are kept between about -40 and +40 C.
+    /// Every number is a game rule, TBD, from rover practice: the electronics are kept between -40 and +50 C (Curiosity); the battery of the earlier rovers had a narrower range.
     /// </summary>
     public static class RobotThermal
     {
-        /// <summary>Lowest air temperature a robot works in without its heater, C (rover practice, recalled, TBD).</summary>
+        /// <summary>Lowest air temperature a robot works in without its heater, C (MSL electronics and instruments, -40 C; see <see cref="OperatingMaxC"/>).</summary>
         public const double OperatingMinC = -40.0;
 
-        /// <summary>Highest air temperature a robot works in without cooling, C (rover practice, recalled, TBD).</summary>
-        public const double OperatingMaxC = 40.0;
+        /// <summary>Highest air temperature a robot works in without cooling, C. Curiosity (MSL) keeps its sensitive electronics and instruments between -40 and +50 C [verified: NASA technical paper on the MSL heat exchangers, found through NTRS]; the lower limit matches. The Mars Exploration Rover battery had a narrower operating range, -20 to +30 C [verified: JPL thermal design overview, TFAWS 2005]; the game keeps one range for a robot (game rule, TBD).</summary>
+        public const double OperatingMaxC = 50.0;
 
         /// <summary>Heater or cooler power per kelvin outside the range, W/K (game rule, TBD).</summary>
         public const double HeaterWPerK = 2.0;

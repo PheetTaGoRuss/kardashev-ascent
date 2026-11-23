@@ -80,7 +80,7 @@ namespace KardashevAscent.Simulation.Game
         public bool SetCableState(int tile, int slot, double condition, bool open)
         {
             var key = (tile, slot);
-            if (!wireBook.PowerLines.Contains(key) && !wireBook.HighVoltageLines.Contains(key)) return false;
+            if (!wireBook.PowerLines.Contains(key) && !wireBook.HighVoltageLines.Contains(key) && !wireBook.AcLines.Contains(key)) return false;
             condition = Math.Max(0.0, Math.Min(1.0, condition));
             if (condition >= 1.0 && !open) wireBook.CableState.Remove(key); else wireBook.CableState[key] = (condition, open);
             legacyGraph = null;

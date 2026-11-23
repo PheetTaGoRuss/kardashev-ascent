@@ -115,7 +115,7 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>The protection fitted to the line from this tile toward the lander.</summary>
         public ProtectionKind LineProtectionOf(int tileId) =>
-            lineParent.TryGetValue(tileId, out int p) && p >= 0 && lineProtection.TryGetValue(EdgeKey(tileId, p), out var k) ? k : ProtectionKind.None;
+            ParentOfTile(tileId, out int p) && p >= 0 && lineProtection.TryGetValue(EdgeKey(tileId, p), out var k) ? k : ProtectionKind.None;
 
         /// <summary>The condition of a line, 0 (failed) to 1 (whole); 1 for a line with no wear.</summary>
         public double LineCondition(int tileId, int slot) => wireBook.CableState.TryGetValue((tileId, slot), out var cs) ? cs.Condition : 1.0;
@@ -125,7 +125,8 @@ namespace KardashevAscent.Simulation.Game
         {
             if (WiredGrid) EnsureWiring();
             if (kind == ProtectionKind.None || !LineExists(tileId)) return false;
-            var key = EdgeKey(tileId, lineParent[tileId]);
+            ParentOfTile(tileId, out int parentTile);
+            var key = EdgeKey(tileId, parentTile);
             if (lineProtection.TryGetValue(key, out var have) && have == kind) return false;
             var price = ProtectionPrice(kind);
             MaterialBillCheck(price, out string missing);

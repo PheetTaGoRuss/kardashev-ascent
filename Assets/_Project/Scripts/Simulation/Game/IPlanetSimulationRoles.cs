@@ -691,6 +691,14 @@ namespace KardashevAscent.Simulation.Game
     }
 
     /// <summary>Meters and inspections (electrical stage 7): the readout of a line says whether the colony knows what it carries.</summary>
+    /// <summary>News of robots and the weather for the HUD: a serial that rises with each warning or loss, and the latest line.</summary>
+    public interface IRobotWeather
+    {
+        int RobotWeatherNewsSerial { get; }
+        string RobotWeatherNews { get; }
+        int RobotsDestroyed { get; }
+    }
+
     public interface IElectricalMeters
     {
         /// <summary>Puts a meter on the line from this tile toward the lander. False when there is no line on the grid there.</summary>
@@ -810,6 +818,9 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>The converters (transformer, inverter, rectifier) on a tile.</summary>
         System.Collections.Generic.IEnumerable<BuildingType> ConvertersOn(int tileId);
+
+        /// <summary>The share of a generator's power on this tile that survives the converters on its way to the lander.</summary>
+        double ConversionEfficiencyFrom(int tileId);
 
         /// <summary>Conversion loss at the converters at the last flow, W (heat).</summary>
         double ConverterLossW { get; }
