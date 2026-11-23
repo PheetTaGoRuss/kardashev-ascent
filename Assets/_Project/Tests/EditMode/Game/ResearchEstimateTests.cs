@@ -128,5 +128,19 @@ namespace KardashevAscent.Simulation.Tests.Game
             }
             Assert.Greater(Reserve(false), Reserve(true), "the climb back is reserved at the high end of the relief range until it is measured");
         }
+
+        [Test]
+        public void TheMineRateIsARangeUntilTheAssay()
+        {
+            var sim = Make();
+            int tile = Enumerable.Range(0, sim.TileCount).First(t => !sim.GetTile(t).IsWater && sim.Deposits.GradeOf(t, Material.Iron) > 0.0);
+            var r = sim.MiningRateEstimate(tile, Material.Iron);
+            Assert.IsFalse(r.IsExact);
+            double truth = KardashevAscent.Simulation.Robots.RobotSpecs.MiningKgPerHour * sim.Deposits.GradeOf(tile, Material.Iron);
+            Assert.GreaterOrEqual(truth, r.Low - 1e-9);
+            Assert.LessOrEqual(truth, r.High + 1e-9);
+            sim.LearnExperimentForTests(ExperimentKind.OreAssay);
+            Assert.AreEqual(truth, sim.MiningRateEstimate(tile, Material.Iron).Value, 1e-9);
+        }
     }
 }

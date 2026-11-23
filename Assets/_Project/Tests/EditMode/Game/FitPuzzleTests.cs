@@ -127,7 +127,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             typeof(PlanetSimulation).GetMethod("OnExperimentFinished", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
                 .Invoke(sim, new object[] { ExperimentKind.AirPressure });
             var state = sim.CaptureState();
-            Assert.AreEqual(KardashevAscent.Simulation.Game.SimulationState.CurrentVersion, 51);
+            Assert.GreaterOrEqual(KardashevAscent.Simulation.Game.SimulationState.CurrentVersion, 51);
             var loaded = Make();
             loaded.RestoreState(state);
             Assert.Contains(ExperimentKind.AirPressure, loaded.PendingPuzzles.ToList());
@@ -143,6 +143,26 @@ namespace KardashevAscent.Simulation.Tests.Game
         public void TheSameDataEveryRun()
         {
             Assert.AreEqual(Make().PuzzleFor(ExperimentKind.TideGauge).Y[7], Make().PuzzleFor(ExperimentKind.TideGauge).Y[7]);
+        }
+
+        [Test]
+        public void TheAssayChargesItsSamplesToRobotTime_AndNarrowsTheRangeWhenDone()
+        {
+            var sim = Make();
+            sim.AddFinishedResearchStationForTests(sim.BaseTileId);
+            sim.LearnExperimentForTests(ExperimentKind.OreAssay);
+            typeof(PlanetSimulation).GetMethod("OnExperimentFinished", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).Invoke(sim, new object[] { ExperimentKind.OreAssay });
+            var p = sim.PuzzleFor(ExperimentKind.OreAssay);
+            string said = sim.AnswerFitPuzzle(ExperimentKind.OreAssay, new[] { 10.0 });
+            StringAssert.Contains("5 h", said);
+            Assert.IsTrue(sim.IsExperimentOrdered(ExperimentKind.OreAssay), "the sampling is an order a robot works");
+            Assert.AreEqual(1.0, sim.ExperimentRangeShare(ExperimentKind.OreAssay), "not narrowed until the samples are taken");
+            var state = sim.CaptureState();
+            Assert.AreEqual(1, state.ExperimentSampling.Count);
+            var loaded = Make();
+            loaded.AddFinishedResearchStationForTests(loaded.BaseTileId);
+            loaded.RestoreState(state);
+            Assert.IsTrue(loaded.IsExperimentOrdered(ExperimentKind.OreAssay), "the sampling order survives a save");
         }
     }
 }

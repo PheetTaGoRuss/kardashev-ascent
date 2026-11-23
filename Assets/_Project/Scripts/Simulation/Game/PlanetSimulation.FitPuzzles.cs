@@ -70,6 +70,18 @@ namespace KardashevAscent.Simulation.Game
             if (!research.Puzzles.Contains(kind)) return "Nothing waiting to be fitted.";
             FitPuzzle p = PuzzleFor(kind);
             double share = p.Share(handles);
+            if (p.ExtraHours != null)
+            {
+                // the ore assay: every sample takes robot time at the station; the range narrows when the sampling is done
+                int tile = FinishedStationTile(BaseTileId);
+                if (tile < 0) return "Build a Research Station first: samples are taken there.";
+                double hours = p.ExtraHours(handles);
+                research.Puzzles.Remove(kind);
+                research.Sampling[kind] = (hours, share);
+                research.Orders.Add((kind, tile));
+                Settle(null);
+                return $"Sampling: {hours:0.#} h of robot time. The range narrows when it is done.";
+            }
             return Finish(kind, share, share <= 0.2 ? "A good fit: the range is down to the instrument's precision." : share <= 0.6 ? "A fair fit: the range is narrower." : "A poor fit: the range is still wide. Try again, or let the computer fit.");
         }
 
@@ -92,6 +104,12 @@ namespace KardashevAscent.Simulation.Game
 
         void OnExperimentFinished(ExperimentKind kind)
         {
+            if (research.Sampling.TryGetValue(kind, out var s))
+            {
+                research.Sampling.Remove(kind);
+                research.Shares[kind] = Math.Min(research.Shares.TryGetValue(kind, out double old) ? old : 1.0, s.Share);
+                return;
+            }
             if (!research.Puzzles.Contains(kind)) research.Puzzles.Add(kind);
             research.Shares[kind] = 1.0;
         }
@@ -99,6 +117,7 @@ namespace KardashevAscent.Simulation.Game
         void CaptureFitPuzzles(SimulationState state)
         {
             foreach (ExperimentKind k in research.Puzzles) state.ExperimentPuzzles.Add((int)k);
+            foreach (var kv in research.Sampling) state.ExperimentSampling.Add(new ExperimentSamplingRecord { Kind = kv.Key, Hours = kv.Value.Hours, Share = kv.Value.Share });
             foreach (var kv in research.Shares) state.ExperimentShares.Add(new ExperimentShareRecord { Kind = kv.Key, Share = kv.Value });
         }
 
@@ -111,6 +130,10 @@ namespace KardashevAscent.Simulation.Game
                 foreach (int k in state.ExperimentPuzzles)
                     if (Enum.IsDefined(typeof(ExperimentKind), k) && research.Known.Contains((ExperimentKind)k) && !research.Puzzles.Contains((ExperimentKind)k))
                         research.Puzzles.Add((ExperimentKind)k);
+            research.Sampling.Clear();
+            if (state.ExperimentSampling != null)   // version 52
+                foreach (ExperimentSamplingRecord r in state.ExperimentSampling)
+                    if (research.Known.Contains(r.Kind)) research.Sampling[r.Kind] = (Math.Max(0.0, r.Hours), Math.Max(0.0, Math.Min(1.0, r.Share)));
             if (state.ExperimentShares != null)
                 foreach (ExperimentShareRecord r in state.ExperimentShares)
                     if (research.Known.Contains(r.Kind)) research.Shares[r.Kind] = Math.Max(0.0, Math.Min(1.0, r.Share));
