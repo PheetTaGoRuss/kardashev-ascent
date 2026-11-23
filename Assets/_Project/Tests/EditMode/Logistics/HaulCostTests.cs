@@ -223,7 +223,8 @@ namespace KardashevAscent.Simulation.Tests.Logistics
             int far = Enumerable.Range(0, sim.TileCount).Where(t => !sim.GetTile(t).IsWater && !double.IsInfinity(sim.Routes.HoursBetween(lander, t)))
                 .OrderBy(t => Math.Abs(sim.Routes.HoursBetween(lander, t) - 12.0)).First();
             var (delay, saved) = sim.BestHaulStart(lander, far, 400.0);
-            Assert.GreaterOrEqual(saved, 0.0);
+            Assert.Greater(saved, 0.0, "starting at the warm part of the day saves heater energy: " + delay + " h");
+            Assert.Greater(delay, 0.0);
             double[] heater = Enumerable.Range(0, 12).Select(k => sim.HaulLegCost(lander, far, 400.0).HeaterWh).ToArray();
             Assert.Greater(heater[0], 0.0, "in the cold the heater runs");
         }

@@ -218,7 +218,7 @@ namespace KardashevAscent.EditorTools
                     int lander = sim.BaseTileId;
                     var land = new System.Collections.Generic.List<int>();
                     for (int t = 0; t < sim.TileCount; t++)
-                        if (!sim.GetTile(t).IsWater && t != lander && sim.Routes.HoursBetween(lander, t) > 20.0 && sim.Routes.HoursBetween(lander, t) < 90.0 && sim.Deposits.GradeOf(t, KardashevAscent.Simulation.Resources.Material.Iron) > 0.0) land.Add(t);
+                        if (!sim.GetTile(t).IsWater && t != lander && sim.Routes.HoursBetween(lander, t) > 8.0 && sim.Routes.HoursBetween(lander, t) < 90.0 && sim.Deposits.GradeOf(t, KardashevAscent.Simulation.Resources.Material.Iron) > 0.0) land.Add(t);
                     land.Sort((x, y) => sim.TileHeightM(y).CompareTo(sim.TileHeightM(x)));
                     for (int i = 0; i < Math.Min(4, land.Count); i++) { sim.Deposits.MarkSurveyed(land[i]); sim.OrderMining(land[i], KardashevAscent.Simulation.Resources.Material.Iron); }
                     Log($"logistics: {land.Count} reachable iron tiles; lander {lander}; budget {sim.LegBudgetWh:0} Wh");
@@ -236,6 +236,38 @@ namespace KardashevAscent.EditorTools
                             if (es - ec > bestGain) { bestGain = es - ec; bestTile = t; Log($"contour vs straight to tile {t}: climb {ec:0} Wh vs {es:0} Wh, hours {hc:0.#} vs {hs:0.#}"); }
                         }
                         sim.ContourRouting = true;
+                        // a refused haul, then staged through a depot with a charging bay on its route (free building, instant)
+                        int staged = -1;
+                        foreach (int t in System.Linq.Enumerable.OrderBy(land, x => sim.Routes.HoursBetween(lander, x)))
+                            if (!sim.PlanHaul(lander, t, 400.0).Feasible && sim.Routes.HoursBetween(lander, t) < 70.0) { staged = t; break; }
+                        if (staged >= 0)
+                        {
+                            Log("refused: " + lander + "->" + staged + ": " + sim.HaulCostText(lander, staged, 400.0));
+                            sim.ConstructionTimeEnabled = false; sim.Debug.FreeBuilding = true; sim.Debug.UnlockAll = true;
+                            var route = sim.Routes.Route(lander, staged);
+                            int placed = 0;
+                            // a charger needs power: lay a line along the route first (the wired grid; free building)
+                            { int prevTile = lander; foreach (int rt in route) { sim.PlaceWire(prevTile, rt, false); prevTile = rt; } sim.Tick(0.01); }
+                            for (int k = route.Count / 3; k < route.Count && placed < 2; k += Math.Max(1, route.Count / 3))
+                                for (int j = k; j < route.Count && j < k + 4; j++)
+                                {
+                                    if (!sim.IsOpenGround(route[j])) continue;
+                                    bool yard = false;
+                                    for (int slot = 0; slot < sim.SlotCount(route[j]) && !yard; slot++) yard = sim.PlaceStorage(KardashevAscent.Simulation.Game.BuildingType.StorageYard, route[j], slot);
+                                    if (!yard) continue;
+                                    sim.Tick(0.01);
+                                    bool bay = false;
+                                    for (int slot = 0; slot < sim.SlotCount(route[j]) && !bay; slot++) bay = sim.PlaceChargingBay(route[j], slot);
+                                    Log($"tile {route[j]}: yard placed, bay {(bay ? "placed" : "refused: " + sim.ChargingBayBlocker(route[j]))}");
+                                    if (bay) { placed++; break; }
+                                }
+                            sim.Debug.FreeBuilding = false;
+                            Log($"bays placed: {placed}");
+                            sim.Tick(0.01);
+                            Log("staged: " + lander + "->" + staged + ": " + sim.HaulCostText(lander, staged, 400.0));
+                        }
+                        var (dl, sv) = sim.BestHaulStart(lander, land[0], 400.0);
+                        Log($"night vs day: best start in {dl:0} h saves {sv:0} Wh of heater on the haul to tile {land[0]}; air now {sim.DiurnalAirTemperatureAt(lander, sim.TimeHours):0.0} C, in 12 h {sim.DiurnalAirTemperatureAt(lander, sim.TimeHours + sim.DayLengthHours / 2.0):0.0} C");
                     }
                     return true;
                 }
