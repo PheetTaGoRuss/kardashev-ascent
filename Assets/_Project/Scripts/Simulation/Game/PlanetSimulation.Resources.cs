@@ -68,10 +68,21 @@ namespace KardashevAscent.Simulation.Game
         /// Keep robots mining a material on a tile (in batches, so they still take more urgent work between them).
         /// The material must be known there: rock anywhere on land, the rest after a survey.
         /// </summary>
+        /// <summary>
+        /// Mined ore lies in a pile where it was mined (mission operations, decided 2026-11-23, Q1): bulk solids on solid ground only. No piles
+        /// on water, wetland, frozen sea or glacier tiles; water ice itself may be mined there (it is the ice). Placeholder rule, TBD.
+        /// </summary>
+        public bool CanPileOn(int tileId, Material material)
+        {
+            var terrain = GetTile(tileId).Terrain;
+            if (!Terrains.IsBuildableLand(terrain)) return false;
+            return (terrain != TerrainType.Ice && terrain != TerrainType.FrozenSea) || material == Material.Water;   // water ice is the ice itself
+        }
+
         public bool OrderMining(int tileId, Material material)
         {
             if (tileId < 0 || tileId >= TileCount || !Deposits.IsKnown(tileId, material) || Deposits.GradeOf(tileId, material) <= 0.0
-                || Deposits.IsExhausted(tileId, material) || orders.HasMining(tileId, material) || !IsOpenGround(tileId))
+                || Deposits.IsExhausted(tileId, material) || orders.HasMining(tileId, material) || !IsOpenGround(tileId) || !CanPileOn(tileId, material))
                 return false;
             orders.AddMining(tileId, material);
             Settle(null);
