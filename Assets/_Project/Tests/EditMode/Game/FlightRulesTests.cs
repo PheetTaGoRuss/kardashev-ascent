@@ -20,7 +20,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Math.PI / 180.0,
             282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0);
 
-        static PlanetSimulation Make() => new PlanetSimulation(Sphere, Surface, Earthlike);
+        // these tests are about the network range and the rulebook, not about the energy of climbing: the climb term is off here
+        static PlanetSimulation Make() => new PlanetSimulation(Sphere, Surface, Earthlike) { ClimbEnabled = false };
 
         /// <summary>A colony whose network stays up (panels, a battery yard and a charger, built at once) so connection depends on distance only.</summary>
         static PlanetSimulation MakePowered()

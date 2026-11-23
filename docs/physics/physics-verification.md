@@ -784,3 +784,14 @@ Code: `Simulation/Robots/RobotThermal.cs`; tests `RobotWeatherTests`, `BatteryV2
 
 - The operating range is the overlap of the electronics (-40 to +50 C, Curiosity) and the discharging battery (about -20 to +60 C, typical cell datasheets [recalled, TBD; no datasheet was found in the search]): -20 to +50 C. The heater holds whichever limit is reached first, so on the cold side it holds the battery's -20 C. The Mars Exploration Rover battery had a narrower operating range, -20 to +30 C [verified: JPL thermal design overview, TFAWS 2005].
 - Charging only between 0 and +45 C (datasheets, recalled, TBD). Below 0 C charging plates metallic lithium on the graphite anode: plating is seen at -10 C (reversible) and -20 C (irreversible), and already at 5 C at a 1C rate, which is why charging is slowed or the battery is warmed first [verified: Yang et al., "Fast charging of lithium-ion batteries at all temperatures", PNAS 115 (2018) 7266-7271; Robinson et al., UCL, J. Power Sources]. The game does not charge below 0 C at all, so a cold robot at a shelter is warmed first (a game rule: the shelter is a heated bay at +15 C and warms the battery with a one-hour time constant; the warm-up costs no grid power, TBD).
+
+## Terrain relief and the climb (KI-42, 2026-11-23)
+
+Code: `Simulation/Planet/ReliefScale.cs`, `Simulation/Logistics/HaulPhysics.cs`; tests `ReliefScaleTests`, `HaulPhysicsTests`.
+
+- A tile's `Elevation` (about -1 to 1) maps linearly onto the planet's real relief: below zero the lowest point, above zero the highest.
+- Earth twins (the made-up Viridia and Earth): about -11 km to +8.8 km [verified: Challenger Deep about -10 935 m, Everest 8 849 m; rounded as decided].
+- Mars: -8 200 m (Hellas) to +21 200 m (Olympus Mons) on the MOLA areoid [verified: Mars Orbiter Laser Altimeter, Smith et al. 1999, Science 284, 1495].
+- Every other world: Earth's relief times g_earth / g (h proportional to 1/g, the first-order rule for the height a mountain of rock can reach, set by the strength of rock against its own weight) **[assumption, cite: e.g. Weisskopf's estimate of the maximum mountain height; to be replaced by real topography where it exists]**.
+- Climbing energy is potential energy $E = m g \Delta h / \eta$, uphill only, no regeneration downhill (assumption, MO-04); water tiles are at height 0 (boats stay at sea level). The robots pay a share of it, 0.15 (game rule, TBD, see KI-42): the true value would drain the starting robots' batteries on the first hill.
+- Energy conservation: the 60-day energy runs and the energy ledger tests still close with the climb on (the climb is drawn from the robot's own battery, which is charged from the grid).

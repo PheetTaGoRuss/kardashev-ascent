@@ -36,9 +36,31 @@ namespace KardashevAscent.Simulation.Game
             if (movement == null || key != chargerKey)
             {
                 movement = new Movement(Routes, Routes.HoursFromNearest(tiles), Routes.Amphibious().HoursFromNearest(tiles));
+                if (ClimbEnabled) { movement.HeightM = TileHeightsM(); movement.GravityMs2 = SurfaceGravityMs2; }
                 chargerKey = key;
             }
             return movement;
+        }
+
+        /// <summary>Whether hauling pays for climbing (KI-42, decided 2026-11-23). On by default.</summary>
+        public bool ClimbEnabled { get; set; } = true;
+
+        double[] tileHeightsM;
+
+        /// <summary>The planet's relief (lowest and highest, m): Earth's, Mars's from MOLA, or Earth's scaled by gravity (assumption).</summary>
+        public (double MinM, double MaxM) Relief => ReliefScale.For(PlanetId, SurfaceGravityMs2);
+
+        /// <summary>The height of a tile above sea level, m (0 on water).</summary>
+        public double TileHeightM(int tileId) => TileHeightsM()[tileId];
+
+        double[] TileHeightsM()
+        {
+            if (tileHeightsM != null) return tileHeightsM;
+            var relief = Relief;
+            tileHeightsM = new double[TileCount];
+            for (int t = 0; t < TileCount; t++)
+                tileHeightsM[t] = GetTile(t).IsWater ? 0.0 : ReliefScale.HeightM(surface.Elevation[t], relief);
+            return tileHeightsM;
         }
 
         public double DriveHours(int fromTile, int toTile) =>

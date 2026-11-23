@@ -215,6 +215,13 @@ namespace KardashevAscent.Simulation.Robots
         }
 
         public RouteFinder Routes { get; }
+
+        /// <summary>The height of each tile above sea level, m (null: flat ground; no climbing cost). Water tiles are at 0.</summary>
+        public double[] HeightM { get; set; }
+
+        /// <summary>Surface gravity, m/s2, for the climb.</summary>
+        public double GravityMs2 { get; set; } = Logistics.HaulPhysics.StandardGravityMs2;
+
         /// <summary>
         /// False while the colony has no charger (director 2026-11-15: no charger, no recharging): robots then work
         /// until their battery is empty instead of keeping charge for a way back to nowhere.
