@@ -663,6 +663,9 @@ namespace KardashevAscent.Simulation.Game
 
     public enum ReadingSource { None, Meter, Inspection }
 
+    /// <summary>Protection fitted to a line (saved as integers: append only). A fuse blows and must be replaced; a breaker trips and is reset.</summary>
+    public enum ProtectionKind { None = 0, Fuse = 1, Breaker = 2 }
+
     /// <summary>
     /// What the colony knows about the line from a tile toward the lander (electrical stage 7). Capacity is a design figure and always known.
     /// The flow is known only when <see cref="Measured"/>; otherwise <see cref="FlowW"/> is NaN and the line is only known to carry
@@ -720,6 +723,15 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>Sends a robot to put a meter on a line; the price (2 Cu, 1 Fe) is taken when it finishes. Null when ordered, else why not.</summary>
         string OrderLineMeter(int tileId);
+
+        /// <summary>The fuse or breaker on the line from this tile toward the lander.</summary>
+        ProtectionKind LineProtectionOf(int tileId);
+
+        /// <summary>The condition of a line, 0 (failed) to 1.</summary>
+        double LineCondition(int tileId, int slot);
+
+        /// <summary>Sends a robot to fit a fuse or breaker to a line; the price is taken when it finishes. Null when ordered, else why not.</summary>
+        string OrderLineProtection(int tileId, ProtectionKind kind);
 
         /// <summary>Electrical jobs waiting for a robot, in order.</summary>
         System.Collections.Generic.IReadOnlyList<ElectricalOrder> ElectricalOrders();

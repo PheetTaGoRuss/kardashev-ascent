@@ -55,6 +55,7 @@ namespace KardashevAscent.Presentation.UI
         (int Tile, int Slot)? pendingPin;
         int pendingHub = -1;
         float contentW = 600f, contentH = 300f;
+        Vector2 downPos, pointer;
 
         protected override void BuildBody()
         {
@@ -186,6 +187,7 @@ namespace KardashevAscent.Presentation.UI
         void OnBoardClick(Vector2 pos)
         {
             if (sim == null) return;
+            downPos = pos; pointer = pos;
             // pins first
             foreach (Hub h in hubs)
                 for (int i = 0; i < h.Parts.Count; i++)
@@ -203,6 +205,31 @@ namespace KardashevAscent.Presentation.UI
             foreach (Hub h in hubs)
             {
                 if (!new Rect(h.Rect.x, h.Rect.y, h.Rect.width, HeadH).Contains(pos)) continue;
+                ClickHub(h);
+                return;
+            }
+            pendingPin = null; pendingHub = -1;
+            board.MarkDirtyRepaint();
+        }
+
+        /// <summary>Letting go of a drag: the pin or tile picked up on the way down is dropped on the tile under the pointer.</summary>
+        void OnBoardRelease(Vector2 pos)
+        {
+            if (sim == null || (pos - downPos).magnitude <= 8f) return;   // a click, already handled on the way down
+            foreach (Hub h in hubs)
+                if (new Rect(h.Rect.x, h.Rect.y, h.Rect.width, HeadH).Contains(pos) && (pendingPin.HasValue || pendingHub >= 0))
+                {
+                    ClickHub(h);
+                    return;
+                }
+            pendingPin = null; pendingHub = -1;
+            hint.text = "Dropped on nothing: cancelled.";
+            board.MarkDirtyRepaint();
+        }
+
+        void ClickHub(Hub h)
+        {
+            {
                 if (pendingPin.HasValue)
                 {
                     var pp = pendingPin.Value;
@@ -212,15 +239,12 @@ namespace KardashevAscent.Presentation.UI
                     shape = "";
                     return;
                 }
-                if (pendingHub < 0) { pendingHub = h.Tile; hint.text = $"Tile {h.Tile}: click a neighbouring tile to run a line."; board.MarkDirtyRepaint(); return; }
+                if (pendingHub < 0) { pendingHub = h.Tile; hint.text = $"Tile {h.Tile}: click or drag to a neighbouring tile to run a line."; board.MarkDirtyRepaint(); return; }
                 int from = pendingHub; pendingHub = -1;
                 if (from == h.Tile) { board.MarkDirtyRepaint(); return; }
                 hint.text = sim.PlaceWire(from, h.Tile, fHigh.value) ? "Line placed." : (sim.WireProblem ?? "Could not place the line.");
                 shape = "";
-                return;
             }
-            pendingPin = null; pendingHub = -1;
-            board.MarkDirtyRepaint();
         }
 
         static IEnumerable<Vector2> PinPositions(Hub h, int row, Part p)
@@ -242,7 +266,9 @@ namespace KardashevAscent.Presentation.UI
                 style.backgroundColor = new Color(0.08f, 0.09f, 0.11f, 0.9f);
                 style.width = 700; style.height = 300;
                 generateVisualContent += Draw;
-                RegisterCallback<PointerDownEvent>(e => { if (e.button == 0) w.OnBoardClick(e.localPosition); });
+                RegisterCallback<PointerDownEvent>(e => { if (e.button == 0) { this.CapturePointer(e.pointerId); w.OnBoardClick(e.localPosition); } });
+                RegisterCallback<PointerMoveEvent>(e => { if (w.pendingPin.HasValue || w.pendingHub >= 0) { w.pointer = e.localPosition; MarkDirtyRepaint(); } });
+                RegisterCallback<PointerUpEvent>(e => { if (e.button == 0 && this.HasPointerCapture(e.pointerId)) { this.ReleasePointer(e.pointerId); w.OnBoardRelease(e.localPosition); } });
             }
 
             public void Rebuild()
@@ -310,6 +336,24 @@ namespace KardashevAscent.Presentation.UI
                     float mid = (pa.x + pb.x) * 0.5f;
                     p.BezierCurveTo(new Vector2(mid, pa.y), new Vector2(mid, pb.y), pb);
                     p.Stroke();
+                }
+                // the wire being pulled
+                if (w.pendingPin.HasValue || w.pendingHub >= 0)
+                {
+                    Vector2? from = null;
+                    foreach (Hub h in w.hubs)
+                    {
+                        if (w.pendingHub == h.Tile) from = new Vector2(h.Rect.xMax, h.Rect.y + HeadH * 0.5f);
+                        for (int i = 0; i < h.Parts.Count; i++)
+                            if (w.pendingPin.HasValue && w.pendingPin.Value.Tile == h.Parts[i].Tile && w.pendingPin.Value.Slot == h.Parts[i].Slot)
+                                from = PinPositions(h, i, h.Parts[i]).First();
+                    }
+                    if (from.HasValue)
+                    {
+                        p.strokeColor = new Color(1f, 0.9f, 0.4f, 0.9f);
+                        p.lineWidth = 2.5f;
+                        p.BeginPath(); p.MoveTo(from.Value); p.LineTo(w.pointer); p.Stroke();
+                    }
                 }
                 // hubs
                 foreach (Hub h in w.hubs)

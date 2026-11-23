@@ -78,6 +78,10 @@ namespace KardashevAscent.Simulation.Game
             CaptureCircuits(state);
             CaptureMeters(state);
             CaptureElectricalOrders(state);
+            var guardKeys = new List<(int, int)>(lineProtection.Keys);
+            guardKeys.Sort();
+            foreach (var gk in guardKeys)
+                state.LineProtections.Add(new LineProtectionRecord { TileA = gk.Item1, TileB = gk.Item2, Kind = (int)lineProtection[gk] });
             foreach (var w in wiredBuildings)
                 state.WiredBuildings.Add(new SalvageOrderRecord { Tile = w.Tile, Slot = w.Slot });
             foreach (var salvage in salvageOrders)
@@ -235,6 +239,9 @@ namespace KardashevAscent.Simulation.Game
             RestoreCircuits(state);
             RestoreMeters(state);
             RestoreElectricalOrders(state);
+            lineProtection.Clear();
+            if (state.Version >= 47 && state.LineProtections != null)
+                foreach (var r in state.LineProtections) lineProtection[(r.TileA, r.TileB)] = (ProtectionKind)r.Kind;
             wireBook.ElectricalIds.Clear();
             wireBook.CableState.Clear();
             wireBook.NextElectricalId = 1;
