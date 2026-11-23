@@ -6,7 +6,7 @@ using KardashevAscent.Simulation.Robots;
 namespace KardashevAscent.Simulation.Game
 {
     /// <summary>What a robot does in an electrical task (saved as integers: append only).</summary>
-    public enum ElectricalAction { InspectLine = 1, RepairLine = 2, InstallCircuit = 3, InstallMeter = 4 }
+    public enum ElectricalAction { InspectLine = 1, RepairLine = 2, InstallCircuit = 3, InstallMeter = 4, InstallProtection = 5 }
 
     /// <summary>An electrical job waiting for a robot (saved in version 46).</summary>
     public sealed class ElectricalOrder
@@ -55,6 +55,20 @@ namespace KardashevAscent.Simulation.Game
             MaterialBillCheck(MeterPrice, out string missing);
             if (missing != null) return "Missing " + missing + ".";
             electricalOrders.Add(new ElectricalOrder { Action = ElectricalAction.InstallMeter, Tile = tileId });
+            Settle(null);
+            return null;
+        }
+
+        /// <summary>Orders a robot to fit a fuse or breaker to a line (the price is taken when it finishes). Null when ordered, else why not.</summary>
+        public string OrderLineProtection(int tileId, ProtectionKind kind)
+        {
+            if (WiredGrid) EnsureWiring();
+            if (kind == ProtectionKind.None || !LineExists(tileId)) return "There is no line on the grid there.";
+            if (LineProtectionOf(tileId) == kind) return "That line already has one.";
+            if (HasElectricalOrder(ElectricalAction.InstallProtection, tileId, 0)) return "A robot is already on it.";
+            MaterialBillCheck(ProtectionPrice(kind), out string missing);
+            if (missing != null) return "Missing " + missing + ".";
+            electricalOrders.Add(new ElectricalOrder { Action = ElectricalAction.InstallProtection, Tile = tileId, Arg = (int)kind });
             Settle(null);
             return null;
         }
@@ -139,6 +153,7 @@ namespace KardashevAscent.Simulation.Game
                     case ElectricalAction.InspectLine: if (!InspectLine(o.Tile)) problem = "The line is gone."; break;
                     case ElectricalAction.RepairLine: problem = RepairLine(o.Tile, o.Slot); break;
                     case ElectricalAction.InstallCircuit: problem = InstallStationCircuit(o.Tile, o.Slot, o.Arg); break;
+                    case ElectricalAction.InstallProtection: if (!InstallLineProtection(o.Tile, (ProtectionKind)o.Arg)) problem = "The protection could not be fitted (the line is gone or the stock is short)."; break;
                     case ElectricalAction.InstallMeter: if (!InstallLineMeter(o.Tile)) problem = "The meter could not be installed (the line is gone or the stock is short)."; break;
                 }
                 LastElectricalProblem = problem ?? "";

@@ -18,6 +18,16 @@ namespace KardashevAscent.Simulation.Game
     public sealed partial class PlanetSimulation
     {
         readonly Dictionary<(int, int), double> edgeTemperature = new Dictionary<(int, int), double>();
+        /// <summary>Protection fitted to a link (by its two tiles, smaller first). A link without an entry has none.</summary>
+        readonly Dictionary<(int, int), ProtectionKind> lineProtection = new Dictionary<(int, int), ProtectionKind>();
+
+        /// <summary>What a protection device costs (game rule, TBD): a fuse is a cheap one-shot, a breaker a resettable switch.</summary>
+        public static Resources.MaterialBill ProtectionPrice(ProtectionKind kind) =>
+            kind == ProtectionKind.Fuse ? new MaterialBill().Add(Material.Copper, 1.0)
+            : kind == ProtectionKind.Breaker ? new MaterialBill().Add(Material.Copper, 5.0).Add(Material.Iron, 2.0)
+            : new MaterialBill();
+
+        static (int, int) EdgeKey(int a, int b) => (Math.Min(a, b), Math.Max(a, b));
         double thermalStamp = double.NaN;
 
         /// <summary>A line works unless it has failed or been opened.</summary>
@@ -52,6 +62,12 @@ namespace KardashevAscent.Simulation.Game
                 {
                     t = CableThermal.Step(t, air, CableThermal.HeatPerM(spec, actualA, t), spec, dt);
                     edgeTemperature[key] = t;
+                    if (CableThermal.Overheated(t) && lineProtection.TryGetValue(key, out var guard) && guard != ProtectionKind.None)
+                    {
+                        // The fuse blows or the breaker trips before the insulation suffers: the link opens, the condition is kept.
+                        changed |= OpenLinesOfEdge(fe.A, fe.B);
+                        continue;
+                    }
                     double loss = CableThermal.ConditionLoss(t, dt);
                     if (loss > 0.0) changed |= AgeLinesOfEdge(fe.A, fe.B, loss);
                 }
@@ -76,11 +92,46 @@ namespace KardashevAscent.Simulation.Game
             return failed;
         }
 
+        bool OpenLinesOfEdge(int a, int b)
+        {
+            bool any = false;
+            foreach (var key in LinesOfEdge(a, b).ToList())
+            {
+                double cond = wireBook.CableState.TryGetValue(key, out var cs) ? cs.Condition : 1.0;
+                if (cs.Open && wireBook.CableState.ContainsKey(key)) continue;
+                wireBook.CableState[key] = (cond, true);
+                any = true;
+            }
+            return any;
+        }
+
         IEnumerable<(int Tile, int Slot)> LinesOfEdge(int a, int b)
         {
             foreach (var key in wireBook.PowerLines.Concat(wireBook.HighVoltageLines))
                 if (wireBook.LinkTargets.TryGetValue(key, out int to) && ((key.Tile == a && to == b) || (key.Tile == b && to == a)))
                     yield return key;
+        }
+
+        /// <summary>The protection fitted to the line from this tile toward the lander.</summary>
+        public ProtectionKind LineProtectionOf(int tileId) =>
+            lineParent.TryGetValue(tileId, out int p) && p >= 0 && lineProtection.TryGetValue(EdgeKey(tileId, p), out var k) ? k : ProtectionKind.None;
+
+        /// <summary>The condition of a line, 0 (failed) to 1 (whole); 1 for a line with no wear.</summary>
+        public double LineCondition(int tileId, int slot) => wireBook.CableState.TryGetValue((tileId, slot), out var cs) ? cs.Condition : 1.0;
+
+        /// <summary>Fits a fuse or breaker to the line from this tile toward the lander now and takes its price. False when there is no line, it already has that, or the stock is short.</summary>
+        public bool InstallLineProtection(int tileId, ProtectionKind kind)
+        {
+            if (WiredGrid) EnsureWiring();
+            if (kind == ProtectionKind.None || !LineExists(tileId)) return false;
+            var key = EdgeKey(tileId, lineParent[tileId]);
+            if (lineProtection.TryGetValue(key, out var have) && have == kind) return false;
+            var price = ProtectionPrice(kind);
+            MaterialBillCheck(price, out string missing);
+            if (missing != null) return false;
+            foreach (Material m in Enum.GetValues(typeof(Material))) if (price[m] > 0.0) Materials.TryTake(m, price[m]);
+            lineProtection[key] = kind;
+            return true;
         }
 
         /// <summary>Lines that have failed or been opened, as (tile, slot) of the line's own slot, in order.</summary>
@@ -93,6 +144,13 @@ namespace KardashevAscent.Simulation.Game
         {
             var key = (tileId, slot);
             if (!wireBook.CableState.TryGetValue(key, out var cs)) return new MaterialBill();
+            // A line that only tripped (its condition is whole) costs what its protection costs to replace or reset.
+            if (cs.Condition > 0.0 && cs.Open)
+            {
+                if (!wireBook.LinkTargets.TryGetValue(key, out int to)) return new MaterialBill();
+                // a breaker is only reset (free); a blown fuse is replaced (its price)
+                return lineProtection.TryGetValue(EdgeKey(tileId, to), out var kind) && kind == ProtectionKind.Fuse ? ProtectionPrice(kind) : new MaterialBill();
+            }
             BuildingType type = wireBook.HighVoltageLines.Contains(key) ? BuildingType.HighVoltageLine : BuildingType.PowerLine;
             return BuildBill(type).Times(1.0 - Math.Max(0.0, Math.Min(1.0, cs.Condition)));
         }
@@ -110,8 +168,11 @@ namespace KardashevAscent.Simulation.Game
             if (missing.Length > 0) return "Missing " + missing + ".";
             foreach (Material m in Enum.GetValues(typeof(Material)))
                 if (bill[m] > 0.0) Materials.TryTake(m, bill[m]);
-            wireBook.CableState.Remove(key);
-            edgeTemperature.Clear();
+if (cs.Open && cs.Condition > 0.0)
+                wireBook.CableState[key] = (cs.Condition, false);   // a reset closes the line; the wear it has stays
+            else
+                wireBook.CableState.Remove(key);
+            edgeTemperature.Clear();   // a repaired or reset link starts cool
             wiringStamp = double.NaN; flowDirty = true; legacyGraph = null;
             return null;
         }

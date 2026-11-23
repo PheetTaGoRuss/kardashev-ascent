@@ -171,6 +171,8 @@ namespace KardashevAscent.Presentation.UI
                     });
                     row.Add(meter);
                     row.Add(MakeButton("Send robot to inspect", () => SystemTabsSim()?.OrderLineInspection(t)));
+                    row.Add(MakeButton("Fuse", () => SystemTabsSim()?.OrderLineProtection(t, ProtectionKind.Fuse)));
+                    row.Add(MakeButton("Breaker", () => SystemTabsSim()?.OrderLineProtection(t, ProtectionKind.Breaker)));
                     lineRows.Add(row);
                     lineRowOf[t] = (text, meter);
                 }
@@ -181,9 +183,11 @@ namespace KardashevAscent.Presentation.UI
                 LineReadout r = sim.LineReadout(t);
                 var (text, meter) = lineRowOf[t];
                 string cap = Format.Power(r.CapacityW);
+                string guard = sim.LineProtectionOf(t) == ProtectionKind.None ? "" : " · " + sim.LineProtectionOf(t).ToString().ToLowerInvariant();
                 text.text = r.Measured
                     ? $"Tile {t}: carries {Format.Power(r.FlowW)} of {cap}" + (r.Overloaded ? " · OVERLOADED" : "") + (r.Source == ReadingSource.Meter ? " · meter" : $" · inspected {r.AgeHours:0} h ago")
                     : $"Tile {t}: rated {cap} · load not measured (0 to {cap})";
+                text.text += guard;
                 meter.text = sim.HasLineMeter(t) ? "Remove meter" : "Meter";
             }
         }
