@@ -126,6 +126,7 @@ namespace KardashevAscent.Simulation.Robots
             new Capability(RobotKind.Maintenance, TaskKind.Adjust),
             new Capability(RobotKind.Mining, TaskKind.Mine),
             new Capability(RobotKind.Research, TaskKind.Survey),
+            new Capability(RobotKind.General, TaskKind.Survey),   // any General robot can do research (director delegated 2026-11-23); research robots are specialists and quicker
             new Capability(RobotKind.Research, TaskKind.Measure),
             new Capability(RobotKind.General, TaskKind.Measure),   // research robots are twice as quick (sensor quality)
             new Capability(RobotKind.Research, TaskKind.Experiment),
