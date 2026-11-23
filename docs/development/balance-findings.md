@@ -79,3 +79,17 @@ What the 60-day runs showed (values stay TBD):
 - **Mars without copper.** With the lander's copper gone, three alumina and three aluminium batches (about 800 h of plant time) were enough to build a charging station at an outpost with aluminium wiring inside 60 days.
 - **Industry was missing from "used power".** Fixed (KI-40); K reads a little higher while the Workshop and refineries run.
 - **Step cost.** 300 robots and 26 plants: about 2.2 ms per 0.25 h step.
+
+## 2026-11-23: the cable bill, option B (real mass times a share)
+
+The decision of 2026-11-20 was the flat bill now and real mass times a tuned share later (option B). Run: a balance sheet test with one Mining robot on the nearest copper tile (grade 0.295, 18 h from the lander), a forward charging station and a battery yard on that tile, the whole planet surveyed, 8 game days.
+
+| Day | Copper mined (cumulative) |
+| --- | --- |
+| 1 | 487 kg |
+| 2 | 885 kg (the deposit was exhausted) |
+| 3 to 8 | no more |
+
+So one mine yields about **450 kg of copper a day** while it lasts (a day of mining at 150 kg ore an hour times the grade). The real conductor mass of one tile of 500 mm2 copper line is 1 333 500 kg, so a line at "one day of one mine" would be a share of 3.4e-4 (450 kg).
+
+Finding: 450 kg is more than the **250 kg of copper the lander carries**, and stations only go where the grid reaches, so a full-day line would block the first copper mine (a deadlock). The share is therefore set to **8.4e-5 (112.5 kg a tile, about a quarter of a mine day)**: the lander's copper pays for two lines. The full-day rule needs the lander's starting copper raised to about 1 t (a balance change for the director). All values TBD. Effects: a power line or a high-voltage line costs 112.5 kg of copper (was 15 and 60), an AC line three times that (three conductors); iron and rock of the lines and the converters are unchanged.

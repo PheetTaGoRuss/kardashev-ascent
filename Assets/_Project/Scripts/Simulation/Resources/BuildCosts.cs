@@ -95,17 +95,35 @@ namespace KardashevAscent.Simulation.Resources
         public static readonly MaterialBill TidalBarrage = new MaterialBill()
             .Add(Material.Iron, 12000.0).Add(Material.Rock, 20000.0).Add(Material.Copper, 800.0);
 
-        /// <summary>Power line: poles, cable and a switch box for one tile (game rule, TBD; copper-heavy).</summary>
-        public static readonly MaterialBill PowerLine = new MaterialBill()
-            .Add(Material.Copper, 15.0).Add(Material.Iron, 30.0).Add(Material.Rock, 20.0);
+        /// <summary>
+        /// Real conductor mass of one tile of line, kg: one 500 mm2 copper conductor over a nominal 300 km tile, density x length x area
+        /// = 8 890 x 300 000 x 5e-4 (the cable spec of the physical flow; see Electrical.CableEconomics).
+        /// </summary>
+        public const double CableConductorMassKg = 8890.0 * 300_000.0 * 500e-6;
 
-        /// <summary>High-voltage line: a tower, insulators and a transformer for one tile (game rule, TBD).</summary>
+        /// <summary>
+        /// Share of the real conductor mass a line takes on site: option B of the cable-bill decision (2026-11-20 C now, B later; 2026-11-23 B).
+        /// Balance run: one Mining robot at a copper mine with a forward charger and battery yard (8 game days, the deposit ran out) made about
+        /// 450 kg of copper a day. A line at the full "one day of one mine" would cost 450 kg, more than the 250 kg of copper the lander carries,
+        /// and stations only go where the grid reaches, so the share is set for about a quarter of a mine day, 112 kg (game rule, TBD): the
+        /// lander's copper then pays for two lines. Logged in balance-findings.md.
+        /// </summary>
+        public const double CableCopperShare = 112.5 / CableConductorMassKg;
+
+        /// <summary>Copper of one tile of single-conductor line: the real mass times the share (about 112 kg).</summary>
+        public static double CableCopperKg => CableConductorMassKg * CableCopperShare;
+
+        /// <summary>Power line: real conductor copper (mass times the share) and poles and a switch box (iron and rock, game rule, TBD).</summary>
+        public static readonly MaterialBill PowerLine = new MaterialBill()
+            .Add(Material.Copper, CableCopperKg).Add(Material.Iron, 30.0).Add(Material.Rock, 20.0);
+
+        /// <summary>High-voltage line: the same 500 mm2 conductor (the same copper), a tower and insulators for one tile (iron and rock, game rule, TBD).</summary>
         public static readonly MaterialBill HighVoltageLine = new MaterialBill()
-            .Add(Material.Copper, 60.0).Add(Material.Iron, 120.0).Add(Material.Rock, 60.0);
+            .Add(Material.Copper, CableCopperKg).Add(Material.Iron, 120.0).Add(Material.Rock, 60.0);
 
         /// <summary>AC line: three conductors, towers and insulators for one tile (game rule, TBD).</summary>
         public static readonly MaterialBill AcLine = new MaterialBill()
-            .Add(Material.Copper, 45.0).Add(Material.Iron, 90.0).Add(Material.Rock, 40.0);
+            .Add(Material.Copper, 3.0 * CableCopperKg).Add(Material.Iron, 90.0).Add(Material.Rock, 40.0);   // three conductors
 
         /// <summary>Transformer: a core of iron and copper windings in a bay (game rule, TBD).</summary>
         public static readonly MaterialBill Transformer = new MaterialBill()
