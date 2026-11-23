@@ -210,6 +210,35 @@ namespace KardashevAscent.EditorTools
                     Log("fit puzzle pending: " + kind);
                     return true;
                 }
+                case "logistics":
+                {
+                    // logistics: survey a few tiles, order mining, then log depot advice, a far haul's staging, contour against straight routes, and mine rate estimates.
+                    var sim = Runner()?.Simulation as KardashevAscent.Simulation.Game.PlanetSimulation;
+                    if (sim == null) { Log("logistics: no sim"); return true; }
+                    int lander = sim.BaseTileId;
+                    var land = new System.Collections.Generic.List<int>();
+                    for (int t = 0; t < sim.TileCount; t++)
+                        if (!sim.GetTile(t).IsWater && t != lander && sim.Routes.HoursBetween(lander, t) > 20.0 && sim.Routes.HoursBetween(lander, t) < 90.0 && sim.Deposits.GradeOf(t, KardashevAscent.Simulation.Resources.Material.Iron) > 0.0) land.Add(t);
+                    land.Sort((x, y) => sim.TileHeightM(y).CompareTo(sim.TileHeightM(x)));
+                    for (int i = 0; i < Math.Min(4, land.Count); i++) { sim.Deposits.MarkSurveyed(land[i]); sim.OrderMining(land[i], KardashevAscent.Simulation.Resources.Material.Iron); }
+                    Log($"logistics: {land.Count} reachable iron tiles; lander {lander}; budget {sim.LegBudgetWh:0} Wh");
+                    foreach (var d in sim.DepotSites(3)) Log($"depot advice: tile {d.Tile} saves {d.SavedWhPerDay:0} Wh/day");
+                    if (land.Count > 0)
+                    {
+                        int far = land[0];
+                        Log($"mine tile {far}: rate {sim.MiningRateEstimate(far, KardashevAscent.Simulation.Resources.Material.Iron).Say("0.#", "kg/h")}; grade {sim.GradeEstimate(far, KardashevAscent.Simulation.Resources.Material.Iron).Say("0.00", "")}");
+                        Log("haul " + lander + "->" + far + ": " + sim.HaulCostText(lander, far, 400.0));
+                        double bestGain = 0.0; int bestTile = -1;
+                        foreach (int t in land)
+                        {
+                            sim.ContourRouting = true; double ec = sim.HaulLegCost(lander, t, 0.0).ClimbWh, hc = sim.Routes.HoursBetween(lander, t);
+                            sim.ContourRouting = false; double es = sim.HaulLegCost(lander, t, 0.0).ClimbWh, hs = sim.Routes.HoursBetween(lander, t);
+                            if (es - ec > bestGain) { bestGain = es - ec; bestTile = t; Log($"contour vs straight to tile {t}: climb {ec:0} Wh vs {es:0} Wh, hours {hc:0.#} vs {hs:0.#}"); }
+                        }
+                        sim.ContourRouting = true;
+                    }
+                    return true;
+                }
                 case "coldrobot":
                 {
                     // coldrobot: a General robot on a land tile away from the lander, battery emptied; logs its state. "coldrobot status" logs the robots.

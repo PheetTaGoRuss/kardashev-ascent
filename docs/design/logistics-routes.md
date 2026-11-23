@@ -23,3 +23,10 @@ Logistics now uses them.
 - The way back is empty: no cargo climb term, lighter drive power.
 - Heater Wh uses the air temperature on each tile of the route at the time of planning, for a robot without insulation (cautious).
 - Until the terrain relief survey is done, the climb is scaled by the high end over the centre of the relief range (RS-14).
+
+## Seen in Play mode (2026-11-24)
+
+- Mine tiles show their grade and kg/h as ranges ("about 99.1 kg/h, plus or minus 22.3") until the ore assay.
+- A haul of 192 h is refused ("no chain of legs between chargers or shelters fits the battery": the biggest battery gives 1926 Wh above the return level; the round trip needs 27 kWh, mostly climbing).
+- Contour against straight routes from the lander: for example tile 2743, climb 10 911 Wh against 23 268 Wh for 41 h more driving.
+- Depot advice with mines 20 to 90 h away: "tile 312 saves 36 808 Wh a day". For a refused haul the advice names a site where a charger would make both halves fit one charge. With mines 190 h away no single site helps, so there is no advice.

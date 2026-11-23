@@ -71,13 +71,20 @@ namespace KardashevAscent.Simulation.Game
             {
                 if (d == BaseTileId || GetTile(d).IsWater || !IsOpenGround(d)) continue;
                 double saved = 0.0;
+                double budget = LegBudgetWh;
                 foreach (var f in flows)
                 {
                     List<int> toD = Routes.Route(f.Tile, d);
                     List<int> fromD = Routes.Route(d, BaseTileId);
                     if (toD == null || fromD == null) continue;
                     double via = (RoundTripWhAlong(f.Tile, toD, payload) + RoundTripWhAlong(d, fromD, payload)) / payload;
-                    saved += f.KgPerDay * (f.DirectWhPerKg - via);
+                    if (!PlanHaul(f.Tile, BaseTileId, payload).Feasible)
+                    {
+                        // a refused haul: a depot with a charger on the way makes it possible if both halves fit one charge; the energy it then moves is the saving
+                        if (LegAlong(f.Tile, toD, payload).TotalWh <= budget && LegAlong(d, fromD, payload).TotalWh <= budget)
+                            saved += f.KgPerDay * f.DirectWhPerKg;
+                    }
+                    else saved += f.KgPerDay * (f.DirectWhPerKg - via);
                 }
                 if (saved > 1.0) result.Add(new DepotAdvice(d, saved));
             }
