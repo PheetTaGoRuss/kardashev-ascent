@@ -61,6 +61,7 @@ namespace KardashevAscent.Presentation.UI
         protected override void BuildBody()
         {
             hint = Text("caption");
+            hint.style.minHeight = 34f;   // two lines kept free: a longer hint must not push the board down while a drag is in progress
             hint.text = "Click a building's pin, then its tile, to wire it. Click a tile, then a neighbouring tile, to run a line between them.";
             var chips = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap } };
             Toggle Chip(string text, bool on)

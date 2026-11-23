@@ -20,6 +20,8 @@ What gets tested, how, and what "done" means for a change. Sections 1–2 descri
 
 **In Unity (authoritative):** Window → General → Test Runner → EditMode → Run All. The Unity MCP connection can run the same tests through it when available.
 
+**PlayMode (UI input):** `Assets/_Project/Tests/PlayMode/UiPointerTests.cs` sends synthetic mouse down, move and up events to a real UI Toolkit panel (picked at a position, like the mouse) and checks what the windows do: the F3 grid schematic (drag a pin onto its tile, drop on nothing, drag a tile onto a neighbour, click-click) and the F2 circuit editor (place a battery and a lamp, wire them, the circuit runs). The window geometry is read back from the labels the window draws. The driver runs them with `playtests` (Play must be off; the editor reloads scripts, so the result logger is registered on load). 5 pass on 2026-11-23.
+
 **Inside Unity from a script:** the editor driver (`Assets/_Project/Scripts/Editor/DevDriver.cs`) runs every EditMode test when sent `tests`, and writes `TESTS passed=… failed=…` to `Temp/dev-driver.log` (803 pass on 2026-11-13).
 
 **Outside Unity (fast check, added with this document):**

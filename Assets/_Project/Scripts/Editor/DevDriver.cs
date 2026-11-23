@@ -40,6 +40,12 @@ namespace KardashevAscent.EditorTools
         static DevDriver()
         {
             EditorApplication.update += Tick;
+            // a PlayMode run reloads the scripts, so the result logger is registered on every load while a run is pending
+            if (SessionState.GetBool("DevDriver.PlayTestsPending", false))
+            {
+                var api = ScriptableObject.CreateInstance<TestRunnerApi>();
+                api.RegisterCallbacks(new TestLog(() => SessionState.SetBool("DevDriver.PlayTestsPending", false)));
+            }
         }
 
         static void Tick()
@@ -510,6 +516,15 @@ namespace KardashevAscent.EditorTools
                     api.Execute(new ExecutionSettings(new Filter { testMode = TestMode.EditMode }));
                     return true;
                 }
+                case "playtests":
+                {
+                    // Run every PlayMode test (Play must be off); the result goes to the log (TESTS passed=... failed=...).
+                    SessionState.SetBool("DevDriver.PlayTestsPending", true);
+                    var api = ScriptableObject.CreateInstance<TestRunnerApi>();
+                    api.RegisterCallbacks(new TestLog(() => SessionState.SetBool("DevDriver.PlayTestsPending", false)));
+                    api.Execute(new ExecutionSettings(new Filter { testMode = TestMode.PlayMode }));
+                    return true;
+                }
                 case "save":
                     UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
                     return true;
@@ -521,8 +536,10 @@ namespace KardashevAscent.EditorTools
 
         sealed class TestLog : ICallbacks
         {
+            readonly Action onFinished;
+            public TestLog(Action finished = null) { onFinished = finished; }
             public void RunStarted(ITestAdaptor testsToRun) { Log("tests started"); }
-            public void RunFinished(ITestResultAdaptor result) { Log($"TESTS passed={result.PassCount} failed={result.FailCount} skipped={result.SkipCount} inconclusive={result.InconclusiveCount}"); }
+            public void RunFinished(ITestResultAdaptor result) { onFinished?.Invoke(); Log($"TESTS passed={result.PassCount} failed={result.FailCount} skipped={result.SkipCount} inconclusive={result.InconclusiveCount}"); }
             public void TestStarted(ITestAdaptor test) { }
             public void TestFinished(ITestResultAdaptor result)
             {
