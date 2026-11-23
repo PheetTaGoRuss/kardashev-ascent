@@ -68,6 +68,7 @@ namespace KardashevAscent.Simulation.Game
         public KnowledgeEstimate GradeEstimate(int tileId, Material material)
         {
             double g = Deposits.GradeOf(tileId, material);
+            if (material == Material.Rock) return new KnowledgeEstimate(g, 0.0);   // rock is everywhere on land: nothing to assay
             return KnowledgeEstimate.Of(g, g * GradeSpreadShare * ExperimentRangeShare(ExperimentKind.OreAssay), false, unchecked(EstimateKey(5) + tileId * 7 + (int)material));
         }
 

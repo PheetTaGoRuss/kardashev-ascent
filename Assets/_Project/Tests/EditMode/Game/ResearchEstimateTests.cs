@@ -142,5 +142,14 @@ namespace KardashevAscent.Simulation.Tests.Game
             sim.LearnExperimentForTests(ExperimentKind.OreAssay);
             Assert.AreEqual(truth, sim.MiningRateEstimate(tile, Material.Iron).Value, 1e-9);
         }
+
+        [Test]
+        public void RockIsNeverARange()
+        {
+            var sim = Make();
+            int tile = Enumerable.Range(0, sim.TileCount).First(t => !sim.GetTile(t).IsWater);
+            Assert.IsTrue(sim.GradeEstimate(tile, Material.Rock).IsExact);
+            Assert.IsTrue(sim.MiningRateEstimate(tile, Material.Rock).IsExact);
+        }
     }
 }
