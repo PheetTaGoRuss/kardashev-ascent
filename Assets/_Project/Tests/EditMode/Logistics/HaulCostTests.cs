@@ -258,5 +258,32 @@ namespace KardashevAscent.Simulation.Tests.Logistics
             }
             for (int i = 1; i < advice.Count; i++) Assert.GreaterOrEqual(advice[i - 1].ValueWhPerDayPerKg, advice[i].ValueWhPerDayPerKg - 1e-9, "best value first");
         }
+
+        [Test]
+        public void ALoadTheBatteryCannotCarryIsSplitIntoSmallerLoads()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
+            int lander = sim.BaseTileId;
+            double full = PlanetSimulation.BasePayloadKg;
+            int split = -1;
+            for (int t = 0; t < sim.TileCount && split < 0; t++)
+            {
+                if (sim.GetTile(t).IsWater || t == lander || double.IsInfinity(sim.Routes.HoursBetween(lander, t))) continue;
+                double f = sim.FeasiblePayloadKg(lander, t, full);
+                if (f > 0.0 && f < full - 1e-9) split = t;
+            }
+            Assert.GreaterOrEqual(split, 0, "some mine needs a smaller load than the full payload");
+            Assert.Greater(sim.FeasiblePayloadKg(lander, split, full), 0.0);
+            Assert.LessOrEqual(sim.FeasiblePayloadKg(lander, split, full), full * 0.75 + 1e-9);
+        }
+
+        [Test]
+        public void ThePlannerCapsEachHaulAtThePairsFeasiblePayload()
+        {
+            var demands = new[] { new KardashevAscent.Simulation.Logistics.HaulDemand(5, KardashevAscent.Simulation.Resources.Material.Iron, 1000.0) };
+            var plan = KardashevAscent.Simulation.Logistics.HaulPlanner.Plan(demands, new[] { 1 }, (t, m) => 5000.0, (a, b) => 10.0, 490.0, 8, (a, b) => 100.0);
+            Assert.Greater(plan.Count, 4, "a load split into many small trips");
+            foreach (var h in plan) Assert.LessOrEqual(h.Kg, 100.0 + 1e-9);
+        }
     }
 }
