@@ -60,7 +60,8 @@ namespace KardashevAscent.Simulation.Game
                 double t = edgeTemperature.TryGetValue(key, out double known) ? known : air;
                 if (dt > 0.0)
                 {
-                    t = CableThermal.Step(t, air, CableThermal.HeatPerM(spec, actualA, t), spec, dt);
+                    double density = CableEnvironment.RelativeAirDensity(planet.SurfacePressureEarth * CableEnvironment.StandardPressurePa, air);
+                    t = CableThermal.Step(t, air, CableThermal.HeatPerM(spec, actualA, t), spec, dt, density);
                     edgeTemperature[key] = t;
                     if (CableThermal.Overheated(t) && lineProtection.TryGetValue(key, out var guard) && guard != ProtectionKind.None)
                     {
