@@ -100,6 +100,7 @@ namespace KardashevAscent.Simulation.Game
             foreach (var c in relays)
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.Relay });
             state.WiredGrid = WiredGrid;
+            state.ContourRouting = ContourRouting;
             CaptureConverters(state);
             foreach (var c in wireBook.AcLines)
                 state.Buildings.Add(new BuildingRecord { Tile = c.Tile, Slot = c.Slot, Type = BuildingType.AcLine, LinkTo = linkTargets.TryGetValue(c, out int acTo) ? acTo : -1, AcClass = wireBook.AcClass.TryGetValue(c, out int acCls) ? acCls : 0 });
@@ -241,6 +242,7 @@ namespace KardashevAscent.Simulation.Game
             RefreshNetwork();   // the relays restored above start relaying; power follows the restored grid
             RefreshBarrageBlocks();   // finished barrages dam their tiles again
             WiredGrid = state.WiredGrid;
+            ContourRouting = state.Version >= 53 && state.ContourRouting;   // an older save keeps time-only routes
             wiredBuildings.Clear();
             if (state.WiredBuildings != null)
                 foreach (SalvageOrderRecord w in state.WiredBuildings) wiredBuildings.Add((w.Tile, w.Slot));
