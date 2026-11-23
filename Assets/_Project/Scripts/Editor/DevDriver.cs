@@ -266,6 +266,13 @@ namespace KardashevAscent.EditorTools
                             sim.Tick(0.01);
                             Log("staged: " + lander + "->" + staged + ": " + sim.HaulCostText(lander, staged, 400.0));
                         }
+                        int shown = 0;
+                        foreach (int t in System.Linq.Enumerable.OrderBy(land, x => sim.Routes.HoursBetween(lander, x)))
+                        {
+                            if (sim.Routes.HoursBetween(lander, t) < 6.0 || shown >= 2) continue;
+                            var (d2, s2) = sim.BestHaulStart(lander, t, 400.0);
+                            if (d2 > 0.0) { Log($"short haul to tile {t} ({sim.Routes.HoursBetween(lander, t):0} h one way): {sim.HaulCostText(lander, t, 400.0)}"); shown++; }
+                        }
                         var (dl, sv) = sim.BestHaulStart(lander, land[0], 400.0);
                         Log($"night vs day: best start in {dl:0} h saves {sv:0} Wh of heater on the haul to tile {land[0]}; air now {sim.DiurnalAirTemperatureAt(lander, sim.TimeHours):0.0} C, in 12 h {sim.DiurnalAirTemperatureAt(lander, sim.TimeHours + sim.DayLengthHours / 2.0):0.0} C");
                     }

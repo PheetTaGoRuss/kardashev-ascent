@@ -228,5 +228,18 @@ namespace KardashevAscent.Simulation.Tests.Logistics
             double[] heater = Enumerable.Range(0, 12).Select(k => sim.HaulLegCost(lander, far, 400.0).HeaterWh).ToArray();
             Assert.Greater(heater[0], 0.0, "in the cold the heater runs");
         }
+
+        [Test]
+        public void ThinAirSwingsMoreThanThickAir_AndMarsMatchesTheRoverRecord()
+        {
+            PlanetSolarParams Make(double pressure) => new PlanetSolarParams(SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Math.PI / 180.0,
+                282.94 * Math.PI / 180.0, 24.66, 365.256 * 24.0, 0.32, 0.3, -59.0, false, pressure);
+            var earth = new PlanetSimulation(Sphere, Surface, Make(1.0));
+            var mars = new PlanetSimulation(Sphere, Surface, Make(0.00628));
+            Assert.AreEqual(10.0, earth.DiurnalAmplitudeK(earth.BaseTileId), 1e-9);
+            Assert.AreEqual(34.8, mars.DiurnalAmplitudeK(mars.BaseTileId), 0.1);
+            Assert.GreaterOrEqual(2.0 * mars.DiurnalAmplitudeK(mars.BaseTileId), 60.0, "a range of 60 to 80 K, as Curiosity's REMS measured at Gale crater");
+            Assert.LessOrEqual(2.0 * mars.DiurnalAmplitudeK(mars.BaseTileId), 80.0);
+        }
     }
 }

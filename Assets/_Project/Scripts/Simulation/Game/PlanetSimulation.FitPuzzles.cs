@@ -43,7 +43,7 @@ namespace KardashevAscent.Simulation.Game
                 PressurePa = PressurePaAt(tile),
                 ScaleHeightM = GasConstant * (meanC + 273.15) / (AirMolarMassKg * g),
                 TemperatureMeanC = meanC,
-                TemperatureAmpK = 10.0 + 0.1 * (hi - lo),   // game rule, TBD: the day-night swing
+                TemperatureAmpK = DiurnalAmplitudeK(tile),   // the day-night swing (Diurnal.cs)
                 DayHours = DayLengthHours,
                 ReliefMaxM = Relief.MaxM,
                 TideRangeM = Tides.EquilibriumRangeM(Moon, planetRadiusM),
