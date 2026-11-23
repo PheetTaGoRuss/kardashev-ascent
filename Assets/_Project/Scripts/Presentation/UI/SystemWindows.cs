@@ -109,8 +109,8 @@ namespace KardashevAscent.Presentation.UI
             foreach (var o in orders)
             {
                 var order = o;
-                var row = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center } };
-                var name = order.Action == ElectricalAction.InspectLine ? "Inspect line" : order.Action == ElectricalAction.RepairLine ? "Repair line" : order.Action == ElectricalAction.InstallMeter ? "Install meter" : "Install circuit";
+                var row = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center, flexWrap = Wrap.Wrap } };
+                var name = order.Action == ElectricalAction.InspectLine ? "Inspect line" : order.Action == ElectricalAction.RepairLine ? "Repair line" : order.Action == ElectricalAction.InstallMeter ? "Install meter" : order.Action == ElectricalAction.InstallProtection ? "Fit fuse or breaker" : "Install circuit";
                 var text = Label($"{name} · tile {order.Tile}", "caption");
                 text.style.flexGrow = 1;
                 row.Add(text);
@@ -131,9 +131,9 @@ namespace KardashevAscent.Presentation.UI
             foreach (var f in failed)
             {
                 int tile = f.Tile, slot = f.Slot;
-                var row = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center } };
+                var row = new VisualElement { style = { flexDirection = FlexDirection.Column, marginBottom = 4 } };
                 var text = Label($"Line {tile}.{slot}: failed", "caption");
-                text.style.flexGrow = 1;
+                text.AddToClassList("wrap");
                 row.Add(text);
                 row.Add(MakeButton("Send robot to repair", () => { var s = SystemTabsSim(); string why = s?.OrderLineRepair(tile, slot); text.text = why != null ? $"Line {tile}.{slot}: {why}" : $"Line {tile}.{slot}: a robot is on its way"; }));
                 failedRows.Add(row);
@@ -158,10 +158,12 @@ namespace KardashevAscent.Presentation.UI
                 foreach (int tile in tiles)
                 {
                     int t = tile;
-                    var row = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center } };
+                    var row = new VisualElement { style = { flexDirection = FlexDirection.Column, marginBottom = 4 } };
                     var text = Label("", "caption");
-                    text.style.flexGrow = 1;
+                    text.AddToClassList("wrap");
                     row.Add(text);
+                    var buttonRow = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap } };
+                    row.Add(buttonRow);
                     Button meter = null;
                     meter = MakeButton("Meter", () =>
                     {
@@ -169,10 +171,10 @@ namespace KardashevAscent.Presentation.UI
                         if (s == null) return;
                         if (s.HasLineMeter(t)) s.RemoveLineMeter(t); else s.OrderLineMeter(t);
                     });
-                    row.Add(meter);
-                    row.Add(MakeButton("Send robot to inspect", () => SystemTabsSim()?.OrderLineInspection(t)));
-                    row.Add(MakeButton("Fuse", () => SystemTabsSim()?.OrderLineProtection(t, ProtectionKind.Fuse)));
-                    row.Add(MakeButton("Breaker", () => SystemTabsSim()?.OrderLineProtection(t, ProtectionKind.Breaker)));
+                    buttonRow.Add(meter);
+                    buttonRow.Add(MakeButton("Inspect", () => SystemTabsSim()?.OrderLineInspection(t)));
+                    buttonRow.Add(MakeButton("Fuse", () => SystemTabsSim()?.OrderLineProtection(t, ProtectionKind.Fuse)));
+                    buttonRow.Add(MakeButton("Breaker", () => SystemTabsSim()?.OrderLineProtection(t, ProtectionKind.Breaker)));
                     lineRows.Add(row);
                     lineRowOf[t] = (text, meter);
                 }
