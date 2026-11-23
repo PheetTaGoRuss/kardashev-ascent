@@ -36,9 +36,28 @@ namespace KardashevAscent.Simulation.Game
             if (movement == null || key != chargerKey)
             {
                 movement = new Movement(Routes, Routes.HoursFromNearest(tiles), Routes.Amphibious().HoursFromNearest(tiles));
-                if (ClimbEnabled) { movement.HeightM = TileHeightsM(); movement.GravityMs2 = SurfaceGravityMs2; }
+                if (ClimbEnabled)
+                {
+                    movement.HeightM = TileHeightsM(); movement.GravityMs2 = SurfaceGravityMs2;
+                    // the height of the nearest charger (straight line) for each tile: what a robot may have to climb on the way back
+                    var near = new double[TileCount];
+                    for (int t = 0; t < TileCount; t++)
+                    {
+                        double best = double.MaxValue; int bestTile = -1;
+                        foreach (int c in tiles)
+                        {
+                            var ca = Sphere.Centers[t]; var cb = Sphere.Centers[c]; double d = -(ca.X * cb.X + ca.Y * cb.Y + ca.Z * cb.Z);   // nearest on the sphere = largest dot product
+                            if (d < best) { best = d; bestTile = c; }
+                        }
+                        near[t] = bestTile >= 0 ? movement.HeightM[bestTile] : movement.HeightM[t];
+                    }
+                    movement.NearestChargerHeightM = near;
+                }
                 chargerKey = key;
             }
+            // Until the terrain relief is surveyed, robots keep a climb reserve for the high end of the relief range (RS-14, decided 2026-11-24).
+            var high = HighestPointEstimate;
+            movement.ReliefReserveScale = high.Value > 0.0 ? Math.Max(1.0, high.High / high.Value) : 1.0;
             return movement;
         }
 

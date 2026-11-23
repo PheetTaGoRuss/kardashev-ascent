@@ -108,5 +108,25 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.IsTrue(loaded.IsExperimentKnown(ExperimentKind.AirPressure));
             Assert.IsFalse(loaded.IsExperimentKnown(ExperimentKind.ReliefSurvey));
         }
+
+        [Test]
+        public void ARobotBelowItsChargerKeepsAMoreCautiousClimbReserveUntilTheReliefIsSurveyed()
+        {
+            double Reserve(bool surveyed)
+            {
+                var sim = Make();
+                sim.ConstructionTimeEnabled = false;
+                sim.Debug.FreeBuilding = true;
+                Assert.IsTrue(sim.PlaceChargingStation(sim.BaseTileId, 20));
+                var tiles = Enumerable.Range(0, sim.TileCount).Where(t => !sim.GetTile(t).IsWater && sim.TileHeightM(t) < sim.TileHeightM(sim.BaseTileId) - 300.0).ToList();
+                if (tiles.Count == 0) Assert.Ignore("no tile below the lander on this surface");
+                int low = tiles.OrderBy(t => sim.Routes.HoursBetween(sim.BaseTileId, t)).First(t => !double.IsInfinity(sim.Routes.HoursBetween(sim.BaseTileId, t)));
+                var r = sim.Workforce.AddRobot(KardashevAscent.Simulation.Robots.RobotKind.General, low);
+                if (surveyed) sim.LearnExperimentForTests(ExperimentKind.ReliefSurvey);
+                sim.Tick(0.01);
+                return r.ReserveFraction;
+            }
+            Assert.Greater(Reserve(false), Reserve(true), "the climb back is reserved at the high end of the relief range until it is measured");
+        }
     }
 }
