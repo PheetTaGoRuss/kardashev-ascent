@@ -241,5 +241,22 @@ namespace KardashevAscent.Simulation.Tests.Logistics
             Assert.GreaterOrEqual(2.0 * mars.DiurnalAmplitudeK(mars.BaseTileId), 60.0, "a range of 60 to 80 K, as Curiosity's REMS measured at Gale crater");
             Assert.LessOrEqual(2.0 * mars.DiurnalAmplitudeK(mars.BaseTileId), 80.0);
         }
+
+        [Test]
+        public void DepotAdviceCarriesTheFullCost_CopperLineTilesAndHours_AndRanksByValuePerKilogram()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { WiredGrid = true };
+            sim.Debug.UnlockAll = true;
+            var tiles = Enumerable.Range(0, sim.TileCount).Where(t => !sim.GetTile(t).IsWater && t != sim.BaseTileId && sim.Routes.HoursBetween(sim.BaseTileId, t) > 8.0 && sim.Routes.HoursBetween(sim.BaseTileId, t) < 60.0 && sim.Deposits.GradeOf(t, KardashevAscent.Simulation.Resources.Material.Iron) > 0.0).Take(4).ToList();
+            foreach (int t in tiles) { sim.Deposits.MarkSurveyed(t); sim.OrderMining(t, KardashevAscent.Simulation.Resources.Material.Iron); }
+            var advice = sim.DepotSuggestions(5);
+            foreach (var a in advice)
+            {
+                Assert.GreaterOrEqual(a.CopperKg, KardashevAscent.Simulation.Resources.BuildCosts.ChargingBay[KardashevAscent.Simulation.Resources.Material.Copper] - 1e-9);
+                Assert.Greater(a.BuildHours, 0.0);
+                if (a.LineTiles > 0) Assert.Greater(a.CopperKg, a.LineTiles * KardashevAscent.Simulation.Resources.BuildCosts.CableCopperKg, "the line's real-mass copper is in the bill");
+            }
+            for (int i = 1; i < advice.Count; i++) Assert.GreaterOrEqual(advice[i - 1].ValueWhPerDayPerKg, advice[i].ValueWhPerDayPerKg - 1e-9, "best value first");
+        }
     }
 }
