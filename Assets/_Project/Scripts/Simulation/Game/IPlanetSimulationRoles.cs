@@ -708,6 +708,18 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>Repairs the line from stock. Null when done, else why not.</summary>
         string RepairLine(int tileId, int slot);
+
+        /// <summary>Sends a robot to inspect a line (a day-long reading when it is done). False when there is no line there or one is on its way.</summary>
+        bool OrderLineInspection(int tileId);
+
+        /// <summary>Sends a robot to repair a failed line; the repair bill is taken from stock when it finishes. Null when ordered, else why not.</summary>
+        string OrderLineRepair(int tileId, int slot);
+
+        /// <summary>Sends a robot to install a saved circuit in a charging station. Null when ordered, else why not.</summary>
+        string OrderCircuitInstall(int tileId, int slot, int blueprintIndex);
+
+        /// <summary>Why the last electrical order was dropped when its robot finished (empty when none was).</summary>
+        string LastElectricalProblem { get; }
     }
 
     /// <summary>What the circuit editor and windows see of an installed circuit (a copy; nothing live).</summary>
