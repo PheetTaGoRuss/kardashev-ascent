@@ -219,6 +219,12 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>The height of each tile above sea level, m (null: flat ground; no climbing cost). Water tiles are at 0.</summary>
         public double[] HeightM { get; set; }
 
+        /// <summary>The height of the nearest charger for each tile, m (null: no climb reserve).</summary>
+        public double[] NearestChargerHeightM { get; set; }
+
+        /// <summary>The climb reserve is scaled by this while the relief is only an estimate: the high end of its range over its centre (1 once surveyed).</summary>
+        public double ReliefReserveScale { get; set; } = 1.0;
+
         /// <summary>Surface gravity, m/s2, for the climb.</summary>
         public double GravityMs2 { get; set; } = Logistics.HaulPhysics.StandardGravityMs2;
 

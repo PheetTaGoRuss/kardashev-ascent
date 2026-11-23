@@ -39,6 +39,16 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>Charging power robots took in the last <see cref="Apply"/>, W.</summary>
         public double ChargingW { get; private set; }
 
+        /// <summary>Charge a robot keeps to climb back to the nearest charger: the climb from its tile up to the charger's height, at the high end of the relief estimate.</summary>
+        static double ClimbReserveWh(Movement movement, Robot r)
+        {
+            if (movement.HeightM == null || movement.NearestChargerHeightM == null) return 0.0;
+            double up = movement.NearestChargerHeightM[r.Tile] - movement.HeightM[r.Tile];
+            if (up <= 0.0) return 0.0;
+            return Logistics.HaulPhysics.ClimbEnergyWh(Logistics.HaulPhysics.DefaultRobotMassKg, 0.0, movement.GravityMs2, up, r.Attribute(RobotAttribute.EnergyEfficiency))
+                   * Logistics.HaulPhysics.ClimbEffortShare * movement.ReliefReserveScale;
+        }
+
         public void Plan(Workforce workforce, IReadOnlyList<RobotFacility> facilities, double hours, Movement movement = null)
         {
             // Each robot follows its group's maintenance rule (spec v2 §8).
@@ -52,7 +62,7 @@ namespace KardashevAscent.Simulation.Robots
             {
                 double toCharger = movement != null ? movement.HoursToChargerFor(r)[r.Tile] / r.Attribute(RobotAttribute.Speed) : 0.0;
                 r.ReserveFraction = movement != null && r.Battery.CapacityWh > 0.0 && !double.IsInfinity(toCharger)
-                    ? movement.EnergyWh(toCharger) / r.Battery.CapacityWh : 0.0;
+                    ? (movement.EnergyWh(toCharger) + ClimbReserveWh(movement, r)) / r.Battery.CapacityWh : 0.0;
                 r.IsStranded = movement != null && r.Battery.UsableWh <= 1e-6 && toCharger > 1e-9;
                 r.ChargerExists = movement == null ? HasChargingFacility(facilities) : movement.HasCharger;
             }

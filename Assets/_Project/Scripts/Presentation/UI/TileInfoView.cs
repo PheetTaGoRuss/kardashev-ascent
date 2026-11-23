@@ -273,6 +273,15 @@ namespace KardashevAscent.Presentation.UI
         }
 
         /// <summary>"42 t of 50 t left", "used up" or "never runs out" (director 2026-11-15: deposits run out).</summary>
+        /// <summary>A grade as the colony knows it: a range ("0.31 ± 0.08") until the ore assay, exact after. Rock is always exact.</summary>
+        static string GradeText(IPlanetSimulation sim, int tile, Deposit d, bool rough)
+        {
+            if (d.Material == Material.Rock) return d.Grade.ToString("0.00");
+            var e = sim.GradeEstimate(tile, d.Material);
+            if (e.IsExact) return (rough ? "±" : "") + d.Grade.ToString("0.00");
+            return $"{e.Value:0.00} ± {e.HalfRange:0.00}";
+        }
+
         static string Left(DepositMap map, int tile, Material m)
         {
             if (map.IsEndless(tile, m)) return "never runs out (sea water)";
@@ -304,7 +313,7 @@ namespace KardashevAscent.Presentation.UI
                 text = "";
                 bool rough = sim.IsRoughSurvey(tile);
                 foreach (Deposit d in map.Known(tile))
-                    text += $"{Materials.Name(d.Material)}: grade {(rough && d.Material != Material.Rock ? "±" : "")}{d.Grade:0.00}, {Left(map, tile, d.Material)}" +
+                    text += $"{Materials.Name(d.Material)}: grade {GradeText(sim, tile, d, rough)}, {Left(map, tile, d.Material)}" +
                             $"{(sim.IsMiningOrdered(tile, d.Material) ? " · being mined" : "")}\n";
                 text += "Deposits run out: what robots mine comes out of the ground. Sea water from a shore never runs out.\n";
                 if (rough)
@@ -355,7 +364,7 @@ namespace KardashevAscent.Presentation.UI
                     bool rough = sim.IsRoughSurvey(tile) && d.Material != Material.Rock;
                     bool empty = map.IsExhausted(tile, d.Material);
                     string share = map.IsEndless(tile, d.Material) ? "" : empty ? " · empty" : $" · {map.RemainingShare(tile, d.Material) * 100.0:0}%";
-                    var g = new Label($"×{(rough ? "±" : "")}{d.Grade:0.00}{share}{(sim.IsMiningOrdered(tile, d.Material) ? " · mining" : "")}");
+                    var g = new Label($"×{GradeText(sim, tile, d, rough)}{share}{(sim.IsMiningOrdered(tile, d.Material) ? " · mining" : "")}");
                     g.style.marginLeft = 4;
                     g.style.fontSize = 14;
                     if (empty) g.style.color = UiPalette.Muted;
