@@ -161,7 +161,7 @@ namespace KardashevAscent.Simulation.Robots
             foreach (Robot r in workforce.Robots)
             {
                 double t = r.Has(RobotModule.ThermalInsulation) ? Math.Max(airTemperatureC, RobotTech.InsulatedBatteryC) : airTemperatureC;
-                r.Battery.ColdFactor = RobotBattery.ColdCapacityFactor(t);
+                r.Battery.ColdFactor = RobotBattery.ColdCapacityFactor(airTemperatureAt != null ? r.BatteryTempC : t);
             }
             if (hours <= 0.0)
                 return;
@@ -187,7 +187,9 @@ namespace KardashevAscent.Simulation.Robots
                         double offer = dockRequest.TryGetValue(r.Id, out double d) ? d * fd
                                      : criticalRequest.TryGetValue(r.Id, out double c) ? c * fc
                                      : topUpRequest.TryGetValue(r.Id, out double t) ? t * ft : 0.0;
-                        r.LastChargeW = r.Battery.Charge(offer, hours);
+                        // A lithium-ion battery is not charged outside 0 to 45 C: a cold robot at a charger is warmed first, then charged.
+                        r.WarmingUp = airTemperatureAt != null && !RobotThermal.CanCharge(r.BatteryTempC);
+                        r.LastChargeW = r.WarmingUp ? 0.0 : r.Battery.Charge(offer, hours);
                         r.ChargedBefore = true;
                         ChargingW += r.LastChargeW;
                         break;
@@ -224,9 +226,13 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>The heater or cooler of a robot outside its range runs from its battery; shelter removes the draw (KI-43).</summary>
         void ApplyWeather(Robot r, double hours, double airC, bool sheltered)
         {
-            double heater = sheltered ? 0.0 : RobotThermal.HeaterW(airC, r.Has(RobotModule.ThermalInsulation));
+            bool insulated = r.Has(RobotModule.ThermalInsulation);
+            double heater = sheltered ? 0.0 : RobotThermal.HeaterW(airC, insulated);
             r.Sheltered = sheltered;
             r.HeaterW = heater;
+            // the battery follows its surroundings; the heater (while the battery has energy) holds it at the limit it would pass first
+            r.BatteryTempC = RobotThermal.BatteryStep(r.BatteryTempC, RobotThermal.BatteryTarget(airC, insulated, sheltered, heater > 0.0 && r.Battery.UsableWh > 1e-6), hours);
+            if (r.Activity != RobotActivity.Charging) r.WarmingUp = false;
             if (heater <= 0.0)
             {
                 r.ExposedEmptyHours = 0.0;

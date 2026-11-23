@@ -167,6 +167,10 @@ namespace KardashevAscent.Simulation.Robots
         public double ThermalHoursLeft { get; internal set; } = double.PositiveInfinity;
         /// <summary>Hours spent outside the range with an empty battery (saved from version 49); the robot is destroyed at <see cref="RobotThermal.DestroyAfterHours"/>.</summary>
         public double ExposedEmptyHours { get; internal set; }
+        /// <summary>The battery's own temperature, C (saved from version 50). It follows the shelter, the held limit or the air.</summary>
+        public double BatteryTempC { get; internal set; } = RobotThermal.ShelterBatteryC;
+        /// <summary>At a charger with a battery too cold (or too hot) to take a charge: it is being warmed first.</summary>
+        public bool WarmingUp { get; internal set; }
         /// <summary>The warning for this stretch of cold or heat has been given.</summary>
         public bool ThermalWarned { get; internal set; }
 

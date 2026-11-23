@@ -183,12 +183,15 @@ namespace KardashevAscent.Simulation.Tests.Robots
         public void ColdPlanet_RobotsHaveLessUsableBattery_InsulationHelps()
         {
             var sim = new PlanetSimulation(Sphere, Surface, Planet(-20.0)) { ConstructionTimeEnabled = false };
-            Robot r = sim.Workforce.Robots[0];
-            Robot insulated = sim.Workforce.AddRobot(RobotKind.General, sim.BaseTileId);
+            // A robot in shelter keeps its battery warm (KI-43); the cold costs capacity once it is out in the open, so use a far tile.
+            int far = System.Linq.Enumerable.First(System.Linq.Enumerable.Range(0, sim.TileCount),
+                t => t != sim.BaseTileId && !sim.GetTile(t).IsWater && System.Array.IndexOf(Sphere.Neighbors[sim.BaseTileId], t) < 0);
+            Robot r = sim.Workforce.AddRobot(RobotKind.General, far);
+            Robot insulated = sim.Workforce.AddRobot(RobotKind.General, far);
             insulated.Modules = RobotModule.ThermalInsulation;
-            sim.Tick(0.25);
-            Assert.AreEqual(0.65, r.Battery.ColdFactor, 1e-9);
-            Assert.AreEqual(RobotBattery.ColdCapacityFactor(RobotTech.InsulatedBatteryC), insulated.Battery.ColdFactor, 1e-9);
+            sim.Tick(6.0);   // the battery follows the air with a time constant of an hour
+            Assert.AreEqual(0.65, r.Battery.ColdFactor, 0.01);
+            Assert.AreEqual(RobotBattery.ColdCapacityFactor(RobotTech.InsulatedBatteryC), insulated.Battery.ColdFactor, 0.01);
             Assert.Greater(insulated.Battery.ColdFactor, r.Battery.ColdFactor);
         }
 

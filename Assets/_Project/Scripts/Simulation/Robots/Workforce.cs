@@ -1253,6 +1253,7 @@ namespace KardashevAscent.Simulation.Robots
                 rs.CachedProgram = r.CachedProgram;
                 rs.UnsyncedFindings = r.UnsyncedFindings;
                 rs.ExposedEmptyHours = r.ExposedEmptyHours;
+                rs.BatteryTempC = r.BatteryTempC;
                 rs.CachedBrownoutRisk = r.CachedNeeds.BrownoutRisk;
                 rs.CachedSitesWaiting = r.CachedNeeds.SitesWaiting;
                 foreach (var kv in r.CachedPriorities)
@@ -1315,6 +1316,7 @@ namespace KardashevAscent.Simulation.Robots
                 r.CachedProgram = rs.CachedProgram;
                 r.UnsyncedFindings = rs.UnsyncedFindings;
                 r.ExposedEmptyHours = Math.Max(0.0, rs.ExposedEmptyHours);
+                r.BatteryTempC = rs.BatteryTempC;
                 r.CachedNeeds = new ColonyNeeds(rs.CachedBrownoutRisk, rs.CachedSitesWaiting);
                 if (rs.CachedPriorities != null)
                     foreach (PriorityRecord p in rs.CachedPriorities)
