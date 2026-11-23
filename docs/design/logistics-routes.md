@@ -49,3 +49,7 @@ The 10 K plus a tenth of the annual range rule gave Mars about 10 K, far below w
 ## Depot advice with the full cost (Decided 2026-11-24, director delegated)
 
 Each suggested site carries what it costs: the storage yard, the charging bay, and the power line to the nearest powered tile (the cable is real-mass copper per tile, 112.5 kg, and 1 h of building per tile as for any power line), as copper kg and build hours. Sites are ranked by the energy saved per day per kilogram of everything the site costs. When the colony's copper cannot cover the bill the advice says "needs X kg copper, you have Y: mine first".
+
+## Robots use the staging (L5, Decided 2026-11-24, director delegated)
+
+A haul order carries its stops (the staged plan, not saved: a load re-plans). Only powered chargers count as stops (a charging station or bay that lost power is not one); the lander, workshops and battery yards always do. Each step a haul not yet picked up is checked against the current plan: if no chain fits any more (a stop lost power, or the weather changed the heater) it is marked waiting with its reason, is not offered to robots, and is logged once ("Haul N ... is waiting: a stop on its route lost power or is gone"); it resumes by itself when the plan holds again. When one robot's battery cannot carry the full load through the stops the planner splits it into smaller loads (3/4, 1/2 or 1/4 of the payload, more trips) before refusing the source. The Operations window shows "WAITING: reason" on the haul.

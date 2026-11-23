@@ -353,6 +353,9 @@ namespace KardashevAscent.Simulation.Game
         bool HasChargingBay(int tileId);
         /// <summary>Advice only: tiles where a storage yard would save the most haul energy per day, best first.</summary>
         IReadOnlyList<(int Tile, double SavedWhPerDay, double CopperKg, int LineTiles, double BuildHours)> DepotSites(int max);
+        /// <summary>Why a haul is waiting (a stop lost power, no chain fits), or null.</summary>
+        string HaulBlockedReason(int haulId);
+        IReadOnlyList<int> HaulStops(int haulId);
         /// <summary>One line on what a haul costs a robot: round-trip energy split into driving, climbing and the heater.</summary>
         string HaulCostText(int fromTile, int toTile, double cargoKg);
 

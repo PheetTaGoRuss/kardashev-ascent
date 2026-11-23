@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using KardashevAscent.Simulation.Logistics;
 using KardashevAscent.Simulation.Robots;
 
@@ -82,6 +83,24 @@ namespace KardashevAscent.Simulation.Game
             public HaulPlan(bool feasible, List<int> stops, double hours) { Feasible = feasible; Stops = stops; Hours = hours; }
         }
 
+        /// <summary>The stops a haul can be staged through: the lander, workshops and battery yards, and charging stations (and bays) that have power.</summary>
+        HashSet<int> StagingStops()
+        {
+            var tiles = new HashSet<int> { BaseTileId };
+            foreach (var b in batteries) if (!Build.IsQueued(b.Tile, b.Slot)) tiles.Add(b.Tile);
+            foreach (var c in stations) if (!Build.IsQueued(c.Tile, c.Slot) && WiredOrOff(c)) tiles.Add(c.Tile);
+            foreach (var w in workshops) if (!Build.IsQueued(w.Tile, w.Slot)) tiles.Add(w.Tile);
+            return tiles;
+        }
+
+        /// <summary>The most cargo one robot can take from one tile to another through the stops, kg: the full load if it fits, else the largest of 3/4, 1/2 or 1/4 that does, else 0.</summary>
+        public double FeasiblePayloadKg(int from, int to, double fullKg)
+        {
+            foreach (double share in new[] { 1.0, 0.75, 0.5, 0.25 })
+                if (PlanHaul(from, to, fullKg * share).Feasible) return fullKg * share;
+            return 0.0;
+        }
+
         /// <summary>Usable charge for one leg between stops, Wh (infinity when the colony has no robots: nothing to limit).</summary>
         public double LegBudgetWh
         {
@@ -99,7 +118,7 @@ namespace KardashevAscent.Simulation.Game
         public HaulPlan PlanHaul(int from, int to, double cargoKg)
         {
             // plans are remembered for a game hour (the heater follows the weather) and while the stops are the same
-            int stamp = (int)TimeHours, stopCount = ShelterTiles().Count;
+            int stamp = (int)TimeHours, stopCount = StagingStops().Count * 1000 + StagingStops().Sum();
             if (stamp != haulPlanStamp || stopCount != haulPlanStops) { haulPlanCache.Clear(); haulPlanStamp = stamp; haulPlanStops = stopCount; }
             var key = (from, to, (int)Math.Round(cargoKg / 10.0));
             if (!haulPlanCache.TryGetValue(key, out HaulPlan plan)) haulPlanCache[key] = plan = ComputeHaulPlan(from, to, cargoKg);
@@ -110,7 +129,7 @@ namespace KardashevAscent.Simulation.Game
         {
             if (Routes == null) return new HaulPlan(false, new List<int>(), double.PositiveInfinity);
             double budget = LegBudgetWh;
-            var stops = new List<int>(ShelterTiles());
+            var stops = new List<int>(StagingStops());
             stops.Sort();
             bool Fits(int a, int b2, double kg) { if (a == b2) return true; var leg = HaulLegCost(a, b2, kg); return leg.Reachable && leg.TotalWh <= budget; }
             // the robot starts at a stop and must be able to reach the pick-up, and to get back to a stop after the drop

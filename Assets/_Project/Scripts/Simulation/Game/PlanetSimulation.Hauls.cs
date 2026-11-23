@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using KardashevAscent.Simulation.Logistics;
 using KardashevAscent.Simulation.Resources;
 using KardashevAscent.Simulation.Robots;
@@ -48,6 +49,10 @@ namespace KardashevAscent.Simulation.Game
         }
 
         /// <summary>The hauls under way: where from and to, what, how much, and who carries it once loaded.</summary>
+        /// <summary>Why a haul is waiting (its plan no longer holds), or null; and the stops it is staged through.</summary>
+        public string HaulBlockedReason(int haulId) { foreach (HaulOrder o in haulBook.Orders) if (o.Id == haulId) return o.Blocked; return null; }
+        public IReadOnlyList<int> HaulStops(int haulId) { foreach (HaulOrder o in haulBook.Orders) if (o.Id == haulId) return o.Stops; return new List<int>(); }
+
         public IReadOnlyList<(int Id, int From, int To, Material Material, double Kg, bool Loaded, int RobotId)> HaulOrders()
         {
             var list = new List<(int, int, int, Material, double, bool, int)>();
@@ -121,9 +126,14 @@ namespace KardashevAscent.Simulation.Game
                 if (RobotCatalog.CanDo(r.Kind, TaskKind.Haul, UnlockLevel))
                     capacity = Math.Max(capacity, r.Attribute(RobotAttribute.TransportCapacity));
             // Sources are ranked by what the haul really costs: driving hours plus the climb and the heater, as hours (logistics-routes.md).
-            double Hours(int a, int b) => Routes == null ? double.PositiveInfinity : HaulCostHours(a, b, BasePayloadKg * capacity);
-            foreach (PlannedHaul h in HaulPlanner.Plan(demands, sources, Available, Hours, BasePayloadKg * capacity, MaxHaulsPerDemand))
-                haulBook.Add(h.From, h.To, h.Material, h.Kg);
+            // A load a robot's battery cannot carry through the stops is split into smaller loads (more trips), down to a quarter (L5, 2026-11-24).
+            double PayloadBetween(int a, int b) => Routes == null ? 0.0 : FeasiblePayloadKg(a, b, BasePayloadKg * capacity);
+            double Hours(int a, int b) => Routes == null ? double.PositiveInfinity : HaulCostHours(a, b, PayloadBetween(a, b));
+            foreach (PlannedHaul h in HaulPlanner.Plan(demands, sources, Available, Hours, BasePayloadKg * capacity, MaxHaulsPerDemand, PayloadBetween))
+            {
+                HaulOrder made = haulBook.Add(h.From, h.To, h.Material, h.Kg);
+                if (made != null) made.Stops = PlanHaul(h.From, h.To, h.Kg).Stops;
+            }
         }
 
         /// <summary>The open haul tasks: a load at each source, and an unload at the target of each loaded haul.</summary>
@@ -132,7 +142,24 @@ namespace KardashevAscent.Simulation.Game
             if (!LogisticsEnabled) return;
             int i = 0;
             foreach (HaulOrder o in haulBook.Orders)
+            {
+                // A robot starts only if the plan still holds: a load not yet picked up whose stops or battery chain failed waits, with its reason.
+                if (o.Stage == 0)
+                {
+                    HaulPlan plan = PlanHaul(o.FromTile, o.ToTile, o.Kg);
+                    string was = o.Blocked;
+                    if (!plan.Feasible)
+                    {
+                        string stopsDown = o.Stops.Count > 0 && o.Stops.Any(s => !StagingStops().Contains(s)) ? "a stop on its route lost power or is gone" : "no chain of legs between chargers or shelters fits the battery now";
+                        o.Blocked = stopsDown;
+                    }
+                    else { o.Blocked = null; o.Stops = plan.Stops; }
+                    if (o.Blocked != null && was == null)
+                        Log($"Haul {o.Id}", "Haul waiting", 0.0, "", $"H{o.Id}", $"Haul {o.Id} ({Resources.Materials.Name(o.Material)} {o.FromTile} to {o.ToTile}) is waiting: {o.Blocked}.", -1);
+                    if (o.Blocked != null) { i++; continue; }
+                }
                 tasks.Add(HaulTaskOf(o, i++));
+            }
         }
 
         // ---- doing the work (called from the field work of a step) ----

@@ -17,6 +17,10 @@ namespace KardashevAscent.Simulation.Logistics
         public int Stage;
         /// <summary>The robot carrying it once loaded (-1 before).</summary>
         public int RobotId = -1;
+        /// <summary>The stops (chargers and shelters) the haul is staged through, from the plan made when it was ordered or last checked (not saved: a load re-plans).</summary>
+        public List<int> Stops = new List<int>();
+        /// <summary>Why the plan no longer holds (a stop lost power, no chain fits the battery), or null. A blocked haul is not offered to robots.</summary>
+        public string Blocked;
     }
 
     /// <summary>A wish to hold at least some kg of a material at a depot: hauls are generated until it is met.</summary>
@@ -170,7 +174,7 @@ namespace KardashevAscent.Simulation.Logistics
         /// <param name="maxPerDemand">At most this many hauls are planned for one demand in one pass.</param>
         public static List<PlannedHaul> Plan(IEnumerable<HaulDemand> demands, IReadOnlyList<int> sourceTiles,
                                              Func<int, Material, double> availableKg, Func<int, int, double> hoursBetween,
-                                             double payloadKg, int maxPerDemand = 4)
+                                             double payloadKg, int maxPerDemand = 4, Func<int, int, double> payloadBetween = null)
         {
             var plan = new List<PlannedHaul>();
             var taken = new Dictionary<(int, Material), double>();
@@ -192,7 +196,9 @@ namespace KardashevAscent.Simulation.Logistics
                         if (h < bestHours - 1e-12) { best = s; bestHours = h; bestAvail = avail; }
                     }
                     if (best < 0) break;
-                    double kg = Math.Min(Math.Min(remaining, payloadKg), bestAvail);
+                    double pairPayload = payloadBetween != null ? Math.Min(payloadKg, payloadBetween(best, d.Tile)) : payloadKg;
+                    if (pairPayload <= 1e-9) break;
+                    double kg = Math.Min(Math.Min(remaining, pairPayload), bestAvail);
                     plan.Add(new PlannedHaul(best, d.Tile, d.Material, kg));
                     taken[(best, d.Material)] = (taken.TryGetValue((best, d.Material), out double t0) ? t0 : 0.0) + kg;
                     remaining -= kg;

@@ -422,7 +422,7 @@ namespace KardashevAscent.Presentation.UI
             var targets = sim.StockTargets();
             foreach (var t in targets) lines.Add($"Target: tile {t.Tile} keeps {t.Kg:0} kg {Materials.Name(t.Material).ToLowerInvariant()} (now {sim.KgAt(t.Tile, t.Material):0})");
             var haul = sim.HaulOrders();
-            foreach (var h in haul) lines.Add($"Haul {h.Id}: {h.Kg:0} kg {Materials.Name(h.Material).ToLowerInvariant()} from tile {h.From} to {h.To}: {sim.HaulCostText(h.From, h.To, h.Kg)}");
+            foreach (var h in haul) lines.Add($"Haul {h.Id}: {h.Kg:0} kg {Materials.Name(h.Material).ToLowerInvariant()} from tile {h.From} to {h.To}: {sim.HaulCostText(h.From, h.To, h.Kg)}" + (sim.HaulBlockedReason(h.Id) != null ? " · WAITING: " + sim.HaulBlockedReason(h.Id) : ""));
             foreach (var site in sim.DepotSites(3))
             {
                 double have = sim.Materials[KardashevAscent.Simulation.Resources.Material.Copper];
