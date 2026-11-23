@@ -199,6 +199,17 @@ namespace KardashevAscent.EditorTools
                     if (picker != null) picker.Select(path[3]);
                     return true;
                 }
+                case "fitpuzzle":
+                {
+                    // fitpuzzle <ExperimentKind>: pretend the experiment's robot hours finished, so its fit puzzle appears.
+                    var sim = Runner()?.Simulation;
+                    if (sim == null || !Enum.TryParse(argument, true, out KardashevAscent.Simulation.Planet.ExperimentKind kind)) { Log("fitpuzzle: no sim or kind"); return true; }
+                    const System.Reflection.BindingFlags F = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance;
+                    sim.GetType().GetMethod("LearnExperimentForTests", F).Invoke(sim, new object[] { kind });
+                    sim.GetType().GetMethod("OnExperimentFinished", F).Invoke(sim, new object[] { kind });
+                    Log("fit puzzle pending: " + kind);
+                    return true;
+                }
                 case "coldrobot":
                 {
                     // coldrobot: a General robot on a land tile away from the lander, battery emptied; logs its state. "coldrobot status" logs the robots.

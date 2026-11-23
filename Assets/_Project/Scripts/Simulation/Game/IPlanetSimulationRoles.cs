@@ -494,6 +494,13 @@ namespace KardashevAscent.Simulation.Game
         double ExperimentProgress(Planet.ExperimentKind kind);
         /// <summary>What an experiment found, for the player, or null when not done.</summary>
         string ExperimentResult(Planet.ExperimentKind kind);
+        /// <summary>Experiments whose fit puzzle is waiting (RS-13).</summary>
+        System.Collections.Generic.IReadOnlyList<Planet.ExperimentKind> PendingPuzzles { get; }
+        Planet.FitPuzzle PuzzleFor(Planet.ExperimentKind kind);
+        string AnswerFitPuzzle(Planet.ExperimentKind kind, double[] handles);
+        string AutoFitPuzzle(Planet.ExperimentKind kind);
+        /// <summary>The share of an experiment's original range still left: 1 when just done, 0.1 after a good fit.</summary>
+        double ExperimentRangeShare(Planet.ExperimentKind kind);
         /// <summary>What the colony believes about five quantities: a range until measured, exact after (RS-14).</summary>
         Planet.KnowledgeEstimate PressureEstimate { get; }
         Planet.KnowledgeEstimate TemperatureEstimate { get; }

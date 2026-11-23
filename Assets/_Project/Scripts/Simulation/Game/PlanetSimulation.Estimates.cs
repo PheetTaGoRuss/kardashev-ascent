@@ -30,7 +30,7 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>Air pressure at the base, Pa: exact once measured, else the orbit brief's range.</summary>
         public KnowledgeEstimate PressureEstimate =>
-            KnowledgeEstimate.Of(PressurePaAt(KnowledgeTile), PressurePaAt(KnowledgeTile) * OrbitalBrief.PressureSpreadShare, IsExperimentKnown(ExperimentKind.AirPressure), EstimateKey(1));
+            KnowledgeEstimate.Of(PressurePaAt(KnowledgeTile), PressurePaAt(KnowledgeTile) * OrbitalBrief.PressureSpreadShare * ExperimentRangeShare(ExperimentKind.AirPressure), false, EstimateKey(1));
 
         /// <summary>Mean air temperature at the base over a year, C: exact once measured, else the orbit brief's range.</summary>
         public KnowledgeEstimate TemperatureEstimate
@@ -38,7 +38,7 @@ namespace KardashevAscent.Simulation.Game
             get
             {
                 var (lo, hi) = SurfaceTemperatureRange(KnowledgeTile);
-                return KnowledgeEstimate.Of((lo + hi) / 2.0, OrbitalBrief.TemperatureSpreadC, IsExperimentKnown(ExperimentKind.SurfaceTemperature), EstimateKey(2));
+                return KnowledgeEstimate.Of((lo + hi) / 2.0, OrbitalBrief.TemperatureSpreadC * ExperimentRangeShare(ExperimentKind.SurfaceTemperature), false, EstimateKey(2));
             }
         }
 
@@ -50,7 +50,7 @@ namespace KardashevAscent.Simulation.Game
                 string id = (PlanetId ?? "").ToLowerInvariant();
                 double spread = id == "mars" || id == "earth" || id == "viridia" ? ReliefSpreadWell : ReliefSpreadAssumed;
                 double max = Relief.MaxM;
-                return KnowledgeEstimate.Of(max, max * spread, IsExperimentKnown(ExperimentKind.ReliefSurvey), EstimateKey(3));
+                return KnowledgeEstimate.Of(max, max * spread * ExperimentRangeShare(ExperimentKind.ReliefSurvey), false, EstimateKey(3));
             }
         }
 
@@ -60,7 +60,7 @@ namespace KardashevAscent.Simulation.Game
             get
             {
                 double open = Tides.EquilibriumRangeM(Moon, planetRadiusM);
-                return KnowledgeEstimate.Of(open, open * TideSpreadShare, IsExperimentKnown(ExperimentKind.TideGauge), EstimateKey(4));
+                return KnowledgeEstimate.Of(open, open * TideSpreadShare * ExperimentRangeShare(ExperimentKind.TideGauge), false, EstimateKey(4));
             }
         }
 
@@ -68,7 +68,7 @@ namespace KardashevAscent.Simulation.Game
         public KnowledgeEstimate GradeEstimate(int tileId, Material material)
         {
             double g = Deposits.GradeOf(tileId, material);
-            return KnowledgeEstimate.Of(g, g * GradeSpreadShare, IsExperimentKnown(ExperimentKind.OreAssay), unchecked(EstimateKey(5) + tileId * 7 + (int)material));
+            return KnowledgeEstimate.Of(g, g * GradeSpreadShare * ExperimentRangeShare(ExperimentKind.OreAssay), false, unchecked(EstimateKey(5) + tileId * 7 + (int)material));
         }
 
         /// <summary>
@@ -79,10 +79,11 @@ namespace KardashevAscent.Simulation.Game
         {
             get
             {
-                if (!SafetyMarginsEnabled || IsExperimentKnown(ExperimentKind.AirPressure)) return 1.0;
+                double rangeShare = ExperimentRangeShare(ExperimentKind.AirPressure);
+                if (!SafetyMarginsEnabled || rangeShare <= 0.0) return 1.0;
                 double p = planet.SurfacePressureEarth * CableEnvironment.StandardPressurePa;
                 double delta = CableEnvironment.RelativeAirDensity(p, 25.0);
-                double low = CableEnvironment.RelativeAirDensity(p * (1.0 - OrbitalBrief.PressureSpreadShare), 25.0);
+                double low = CableEnvironment.RelativeAirDensity(p * (1.0 - OrbitalBrief.PressureSpreadShare * rangeShare), 25.0);
                 double area = 500e-6;
                 double now = CableEnvironment.VoltageDerate(delta, area, out _), cautious = CableEnvironment.VoltageDerate(low, area, out _);
                 return now <= 0.0 ? 1.0 : Math.Max(MinimumCableShare, Math.Min(1.0, cautious / now));

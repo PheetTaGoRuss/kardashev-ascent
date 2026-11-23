@@ -170,6 +170,7 @@ namespace KardashevAscent.Simulation.Game
                 research.Orders.Remove(o);
                 Workforce.Release(t);
                 research.Known.Add(o.Kind);
+                OnExperimentFinished(o.Kind);
                 if (o.Kind == ExperimentKind.SeismicSurvey) Deposits.DeepScanned = true;
                 ExperimentDone?.Invoke(o.Kind);
             }
@@ -398,6 +399,7 @@ namespace KardashevAscent.Simulation.Game
             foreach (ExperimentKind k in research.Known)
                 state.KnownExperiments.Add((int)k);
             state.KnownExperiments.Sort();
+            CaptureFitPuzzles(state);
             foreach (var o in research.Orders)
                 state.ExperimentOrders.Add(new ExperimentOrderRecord { Kind = o.Kind, Tile = o.Tile });
         }
@@ -415,6 +417,7 @@ namespace KardashevAscent.Simulation.Game
                     if (o.Tile >= 0 && o.Tile < TileCount && !research.Known.Contains(o.Kind) && !IsExperimentOrdered(o.Kind))
                         research.Orders.Add((o.Kind, o.Tile));
             Deposits.DeepScanned = research.Known.Contains(ExperimentKind.SeismicSurvey);
+            RestoreFitPuzzles(state);
         }
     }
 }
