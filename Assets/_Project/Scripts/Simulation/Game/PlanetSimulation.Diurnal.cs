@@ -6,8 +6,11 @@ namespace KardashevAscent.Simulation.Game
 {
     /// <summary>
     /// The day-night swing of the air temperature (decided 2026-11-24, director delegated): the annual temperature of a tile plus an amplitude times
-    /// the sine of the Sun's height, so afternoons are warmer and nights colder. The amplitude is the one the temperature puzzle measures
-    /// (10 K plus a tenth of the annual range: a game rule, TBD, to be replaced by a real diurnal model). A tidally locked planet has no day, so no swing.
+    /// the sine of the Sun's height, so afternoons are warmer and nights colder. The amplitude depends on how much air there is to hold the
+    /// day's heat: 10 K under a thick atmosphere, rising to 35 K under a thin one (game rule, TBD: amplitude = 10 K + 25 K x (1 - pressure in
+    /// Earth atmospheres, at most 1)). It matches Mars: Curiosity's REMS saw daily air temperatures from about -70 C to 0 C at Gale crater, a range of
+    /// about 70 K, so an amplitude of 35 K [JPL, PIA16913, "Steady temperatures at Mars' Gale crater"; REMS overview: Gomez-Elvira et al. 2014, JGR Planets 119].
+    /// The temperature puzzle measures this amplitude. A tidally locked planet has no day, so no swing.
     /// On for new missions; a save before version 54 keeps the yearly temperature.
     /// </summary>
     public sealed partial class PlanetSimulation
@@ -23,14 +26,13 @@ namespace KardashevAscent.Simulation.Game
             diurnalAmps ??= new double[TileCount];
             if (diurnalAmps[tileId] <= 0.0)
             {
-                var (lo, hi) = SurfaceTemperatureRange(tileId);
-                diurnalAmps[tileId] = DiurnalBaseK + DiurnalRangeShare * (hi - lo);
+                diurnalAmps[tileId] = DiurnalBaseK + DiurnalThinAirK * (1.0 - Math.Max(0.0, Math.Min(1.0, planet.SurfacePressureEarth)));
             }
             return diurnalAmps[tileId];
         }
 
-        /// <summary>Game rule, TBD: the swing is this many kelvin plus this share of the annual range.</summary>
-        public const double DiurnalBaseK = 10.0, DiurnalRangeShare = 0.1;
+        /// <summary>Game rule, TBD: the swing is this many kelvin under thick air, plus up to this many more under no air.</summary>
+        public const double DiurnalBaseK = 10.0, DiurnalThinAirK = 25.0;
 
         /// <summary>The sine of the Sun's height above the horizon at a tile at a game time (negative at night).</summary>
         public double SunHeightSine(int tileId, double timeHours)
