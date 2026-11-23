@@ -175,7 +175,7 @@ namespace KardashevAscent.Simulation.Game
             double meanAnomaly = CurrentMeanAnomaly();
             var shelter = ShelterTiles();
             Upkeep.Apply(Workforce, dt, grid.DockServedW, grid.PriorityServedW - networkServedW, topUpW, IsFlaringStar, moving,
-                         Materials, AirTemperatureAt(BaseTileId, meanAnomaly), tile => AirTemperatureAt(tile, meanAnomaly), shelter.Contains);
+                         Materials, DiurnalAirTemperatureAt(BaseTileId, TimeHours), tile => DiurnalAirTemperatureAt(tile, TimeHours), shelter.Contains);
             HandleRobotWeather();
             RobotChargingW = Upkeep.ChargingW;
             Network.SetPowered(!Grid.IsBrownout);

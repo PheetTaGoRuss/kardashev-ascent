@@ -34,3 +34,10 @@ Logistics now uses them.
 ## Depot with a charging bay (Decided 2026-11-24, director delegated)
 
 A storage yard can be given a charging bay: a charging station on the yard's tile at its own, lower bill (iron 60, rock 10, copper 12, half the build time; TBD). A depot with a bay is a stop: robots recharge there and hauls are staged through it (L2 counts every finished charger and shelter as a stop). Depot advice reads "build a depot (storage yard) with a charging bay at tile N". The tile info shows an "Add charging bay" button on a yard's tile.
+
+## Balance, day-night heater and what was seen (2026-11-24)
+
+- **Balance (OQ-12):** `ClimbEffortShare` 0.15 -> 0.075; battery (2.4 kWh, Perseverance-class) and payload (490 kg) unchanged. A mine 2 hops away is hauled directly always, 3 hops in about 70 % of cases; farther mines need a depot with a charging bay every 2 to 3 hops. Full table in `balance-findings.md`.
+- **Day-night temperature (save version 54):** the air temperature swings by an amplitude (10 K plus a tenth of the annual range, TBD) times the sine of the Sun's height; none on a tidally locked planet. Robot weather and the haul heater cost use it; the haul text suggests a later start when that saves heater energy ("starting in 6 h would save N Wh of heater"). In mild air the heater does not run, so night and day cost the same there; in the cold a unit test finds a start that saves energy.
+- **A charging bay needs power:** on the wired grid a charger goes only where a power line reaches, so a depot far out needs a line to it first (the cable bill applies).
+- **Seen in Play mode:** a mine 24 h (6 hops) away hauled "direct" (1 696 Wh round trip); a 40 h haul refused, then "staged via tile 5611" after two yards with charging bays were built on its power-lined route; on Viridia the air swung from 29.6 C to 23.7 C over half a day. Not seen in Play mode: a night haul costing more heater (the test planets in the chooser are mild or tidally locked); covered by a unit test.

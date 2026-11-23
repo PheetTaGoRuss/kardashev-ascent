@@ -93,3 +93,26 @@ The decision of 2026-11-20 was the flat bill now and real mass times a tuned sha
 So one mine yields about **450 kg of copper a day** while it lasts (a day of mining at 150 kg ore an hour times the grade). The real conductor mass of one tile of 500 mm2 copper line is 1 333 500 kg, so a line at "one day of one mine" would be a share of 3.4e-4 (450 kg).
 
 Finding: 450 kg is more than the **250 kg of copper the lander carries**, and stations only go where the grid reaches, so a full-day line would block the first copper mine (a deadlock). The share is therefore set to **8.4e-5 (112.5 kg a tile, about a quarter of a mine day)**: the lander's copper pays for two lines. The full-day rule needs the lander's starting copper raised to about 1 t (a balance change for the director). All values TBD. Effects: a power line or a high-voltage line costs 112.5 kg of copper (was 15 and 60), an AC line three times that (three conductors); iron and rock of the lines and the converters are unchanged.
+
+## 2026-11-24: the haul economy (OQ-12), robot battery, payload, climb and charger spacing
+
+Question: with the climb term on (KI-42) and the range check (L2), most distant mines are refused. Target set by the design session: a mine 2 to 3 hops from the lander can be hauled directly; anything farther can be reached through one or two charging depots.
+
+**Correction of a premise.** The robot battery is not 350 Wh. `RobotSpecs.BatteryCapacityWh` is 2.0 x 43 Ah x 28 V = 2 408 Wh (Perseverance's two packs; Curiosity's pair is about the same, 2 x 42 Ah at 28 V). The 350 Wh figure came from an old comment in `HaulPhysics.cs`, now corrected. The usable charge for one leg is 80 % of it, 1 926 Wh. Payload is 490 kg (the Apollo lunar rover's rating) against the 1 025 kg robot; Curiosity weighs about 900 kg and Perseverance 1 025 kg, so the payload is rover-class already.
+
+**Run** (a test on the Earth-like test planet, seed 7, contour routes, lander at tile 471; each row is the share of tiles at that many hops whose loaded leg out and empty leg back each fit one charge; the climb is the cost term set by `ClimbEffortShare`):
+
+| Hops | Battery x1, climb x1 (0.15) | x1, climb x0.5 (0.075) | x1, climb x0.25 | x2, climb x1 | x3, climb x1 |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 100 % | 100 % | 100 % | 100 % | 100 % |
+| 2 | 100 % | 100 % | 100 % | 100 % | 100 % |
+| 3 | 14 % | 71 % | 100 % | 100 % | 100 % |
+| 4 | 0 % | 7 % | 13 % | 20 % | 53 % |
+| 6 | 0 % | 0 % | 0 % | 4 % | 54 % |
+| 8 | 0 % | 0 % | 0 % | 0 % | 33 % |
+
+Mean round trip at 3 hops: driving 1 579 Wh, climbing 1 743 Wh (at the old 0.15). Climbing is the larger half, and a hop is 4 h at 50 W, 200 Wh flat.
+
+**Choice.** Not a bigger battery: it is already rover-class, and doubling it would have no real counterpart. The climb share is the free game rule (the real m g dh is for a robot the game does not model), so **ClimbEffortShare 0.15 -> 0.075**. A mine at 2 hops is then hauled directly in all cases and at 3 hops in about 70 %. Farther mines need chargers: a leg of 2 to 3 hops fits one charge, so depots with charging bays every 2 to 3 hops (about 600 to 900 km) reach 8 hops with two or three bays. Payload and battery stay. A test (`HaulCostTests`) keeps 60 % direct at hops 2 and 3. All TBD; the climb share and the 80 % usable share are the knobs.
+
+**Also built with this pass:** a day-night temperature swing so a night haul costs more heater than a day haul (decided 2026-11-24): amplitude = 10 K plus a tenth of the annual range (the amplitude the temperature puzzle measures; TBD), none on a tidally locked planet; the haul text suggests starting later when that saves heater energy. Save version 54.

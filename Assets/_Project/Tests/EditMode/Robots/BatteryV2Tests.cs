@@ -182,7 +182,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         [Test]
         public void ColdPlanet_RobotsHaveLessUsableBattery_InsulationHelps()
         {
-            var sim = new PlanetSimulation(Sphere, Surface, Planet(-20.0)) { ConstructionTimeEnabled = false };
+            var sim = new PlanetSimulation(Sphere, Surface, Planet(-20.0)) { ConstructionTimeEnabled = false, DiurnalTemperature = false };   // a steady -20 C
             // A robot in shelter keeps its battery warm (KI-43); the cold costs capacity once it is out in the open, so use a far tile.
             int far = System.Linq.Enumerable.First(System.Linq.Enumerable.Range(0, sim.TileCount),
                 t => t != sim.BaseTileId && !sim.GetTile(t).IsWater && System.Array.IndexOf(Sphere.Neighbors[sim.BaseTileId], t) < 0);
