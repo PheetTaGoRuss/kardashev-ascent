@@ -116,6 +116,8 @@ namespace KardashevAscent.Presentation.UI
         IPlanetSimulation watched;
         int milestonesSeen;
         string milestoneMessage;
+        VisualElement toastStack;
+        Label toastMilestone, toastSave, toastWeather;
         int weatherSerial;
         string weatherMessage;
         float weatherTime;
@@ -154,6 +156,16 @@ namespace KardashevAscent.Presentation.UI
             milestoneTime = Time.unscaledTime;
         }
 
+        /// <summary>A toast line in the shared stack: the HUD toast style, one line each.</summary>
+        static Label NewToast()
+        {
+            var l = new Label { pickingMode = PickingMode.Ignore };
+            l.AddToClassList("toast");
+            l.AddToClassList("hidden");
+            l.style.marginTop = 4f;
+            return l;
+        }
+
         void Update()
         {
             if (ScreenInput.KeyDown(KeyCode.K) && document != null && document.rootVisualElement != null)
@@ -167,20 +179,27 @@ namespace KardashevAscent.Presentation.UI
             }
             if (toast != null)
             {
+                // One stack of toasts below the system tab bar: the milestone, the save and the weather each have a line and never cover each other.
+                if (toastStack == null)
+                {
+                    toast.style.display = DisplayStyle.None;   // the old single toast sat under the tab bar
+                    toastStack = new VisualElement { pickingMode = PickingMode.Ignore };
+                    toastStack.style.position = Position.Absolute;
+                    toastStack.style.left = 0; toastStack.style.right = 0;
+                    toastStack.style.alignItems = Align.Center;
+                    foreach (Label l in new[] { toastMilestone = NewToast(), toastSave = NewToast(), toastWeather = NewToast() }) toastStack.Add(l);
+                    document.rootVisualElement.Add(toastStack);
+                }
+                toastStack.style.top = UiLayout.WindowTop + 2f;
                 bool milestone = !string.IsNullOrEmpty(milestoneMessage) && Time.unscaledTime - milestoneTime < MilestoneSeconds;
-                bool save = saveGame != null && !string.IsNullOrEmpty(saveGame.Message)
-                    && Time.unscaledTime - saveGame.MessageTime < 2.5f
-                    && (!milestone || saveGame.MessageTime > milestoneTime);
+                bool save = saveGame != null && !string.IsNullOrEmpty(saveGame.Message) && Time.unscaledTime - saveGame.MessageTime < 2.5f;
                 bool weather = !string.IsNullOrEmpty(weatherMessage) && Time.unscaledTime - weatherTime < WeatherToastSeconds;
-                toast.EnableInClassList("hidden", !milestone && !save && !weather);
-                if (save)
-                    toast.text = saveGame.Message;
-                else if (weather)
-                    toast.text = weatherMessage;
-                else if (milestone)
-                    toast.text = milestoneMessage;
-                // the weather toast sits below the system tab bar, which lies over the top of the usual toast place
-                toast.style.marginTop = weather && !save ? 46f : 8f;
+                toastMilestone.EnableInClassList("hidden", !milestone);
+                if (milestone) toastMilestone.text = milestoneMessage;
+                toastSave.EnableInClassList("hidden", !save);
+                if (save) toastSave.text = saveGame.Message;
+                toastWeather.EnableInClassList("hidden", !weather);
+                if (weather) toastWeather.text = weatherMessage;
             }
             IPlanetSimulation sim = runner != null ? runner.Simulation : null;
             if (sim == null || date == null)
