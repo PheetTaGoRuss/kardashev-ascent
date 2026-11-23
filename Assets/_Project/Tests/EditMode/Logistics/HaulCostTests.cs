@@ -142,5 +142,27 @@ namespace KardashevAscent.Simulation.Tests.Logistics
             old.RestoreState(state);
             Assert.IsFalse(old.ContourRouting);
         }
+
+        [Test]
+        public void AChargeingBayGoesOnAStorageYard_CostsLessThanAStation_AndCountsAsAStop()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { ConstructionTimeEnabled = false };
+            sim.Debug.UnlockAll = true;
+            int tile = Enumerable.Range(0, sim.TileCount).First(t => t != sim.BaseTileId && !sim.GetTile(t).IsWater && sim.IsOpenGround(t) && !double.IsInfinity(sim.Routes.HoursBetween(sim.BaseTileId, t)));
+            StringAssert.Contains("storage yard", sim.ChargingBayBlocker(tile));
+            sim.Debug.FreeBuilding = true;
+            Assert.IsTrue(sim.PlaceStorage(KardashevAscent.Simulation.Game.BuildingType.StorageYard, tile, 0));
+            Assert.IsNull(sim.ChargingBayBlocker(tile));
+            sim.Debug.FreeBuilding = false;
+            sim.Materials.Add(KardashevAscent.Simulation.Resources.Material.Iron, 1000.0);
+            sim.Materials.Add(KardashevAscent.Simulation.Resources.Material.Copper, 1000.0);
+            sim.Materials.Add(KardashevAscent.Simulation.Resources.Material.Rock, 1000.0);
+            bool placed = false;
+            for (int slot = 0; slot < sim.SlotCount(tile) && !placed; slot++) placed = sim.PlaceChargingBay(tile, slot);
+            Assert.IsTrue(placed);
+            Assert.IsTrue(sim.HasChargingBay(tile));
+            Assert.Less(KardashevAscent.Simulation.Resources.BuildCosts.ChargingBay.Items().First(x => x.Item1 == KardashevAscent.Simulation.Resources.Material.Iron).Item2, KardashevAscent.Simulation.Resources.BuildCosts.ChargingStation.Items().First(x => x.Item1 == KardashevAscent.Simulation.Resources.Material.Iron).Item2);
+            StringAssert.Contains("already", sim.ChargingBayBlocker(tile));
+        }
     }
 }

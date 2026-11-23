@@ -30,3 +30,7 @@ Logistics now uses them.
 - A haul of 192 h is refused ("no chain of legs between chargers or shelters fits the battery": the biggest battery gives 1926 Wh above the return level; the round trip needs 27 kWh, mostly climbing).
 - Contour against straight routes from the lander: for example tile 2743, climb 10 911 Wh against 23 268 Wh for 41 h more driving.
 - Depot advice with mines 20 to 90 h away: "tile 312 saves 36 808 Wh a day". For a refused haul the advice names a site where a charger would make both halves fit one charge. With mines 190 h away no single site helps, so there is no advice.
+
+## Depot with a charging bay (Decided 2026-11-24, director delegated)
+
+A storage yard can be given a charging bay: a charging station on the yard's tile at its own, lower bill (iron 60, rock 10, copper 12, half the build time; TBD). A depot with a bay is a stop: robots recharge there and hauls are staged through it (L2 counts every finished charger and shelter as a stop). Depot advice reads "build a depot (storage yard) with a charging bay at tile N". The tile info shows an "Add charging bay" button on a yard's tile.
