@@ -766,6 +766,9 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>The tile has a line end and is on a network separate from the lander's.</summary>
         bool IsOnElectricalIsland(int tileId);
 
+        /// <summary>Every building that makes or takes power (the ones a wire connects), with where it stands.</summary>
+        System.Collections.Generic.IEnumerable<(int Tile, int Slot, BuildingType Type)> WireableBuildings();
+
         /// <summary>The state of a building's electrical terminal (none when it is not wired or has no terminal).</summary>
         BuildingElectricalState BuildingElectrical(int tileId, int slot);
     }
