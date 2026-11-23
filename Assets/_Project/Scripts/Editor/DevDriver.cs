@@ -128,6 +128,25 @@ namespace KardashevAscent.EditorTools
                         picker.Select(runner.Simulation.BaseTileId);
                     return true;
                 }
+                case "land":
+                {
+                    // land: put the lander on the buildable land tile nearest the equator (or on tile N when given).
+                    SimulationRunner runner = Runner();
+                    var sim = runner?.Simulation;
+                    if (sim == null) return true;
+                    if (int.TryParse(argument, out int given)) { Log($"land tile={given} -> {runner.LandAt(given, true) ?? "ok"}"); return true; }
+                    // otherwise try buildable land tiles from the equator outward until the lander accepts one
+                    var candidates = new List<int>();
+                    for (int t = 0; t < sim.TileCount; t++) if (sim.GetTile(t).IsBuildableLand) candidates.Add(t);
+                    candidates.Sort((x, y) => Math.Abs(sim.GetTile(x).Latitude).CompareTo(Math.Abs(sim.GetTile(y).Latitude)));
+                    foreach (int t in candidates)
+                    {
+                        string why = runner.LandAt(t, true);
+                        if (string.IsNullOrEmpty(why)) { Log($"land tile={t} ok"); return true; }
+                    }
+                    Log("land: no tile accepted");
+                    return true;
+                }
                 case "planet":
                     UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.TilePicker>()?.Select(-1);
                     return true;
