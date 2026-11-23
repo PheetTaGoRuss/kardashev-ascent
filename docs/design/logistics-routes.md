@@ -13,8 +13,8 @@ Logistics now uses them.
 | Stage | What | Status |
 | --- | --- | --- |
 | L1 | Haul cost: for a leg, driving Wh, climbing Wh (planned at the high end of the relief range until surveyed) and heater Wh along the route; the planner ranks sources by driving hours plus the extra energy as hours of flat driving (Wh over drive power); the Operations window shows each haul's cost split | Built |
-| L2 | Range check: refuse or stage a haul whose round-trip energy exceeds a robot's battery, routing through a charger or shelter | Not started |
-| L3 | Depot siting: suggest the depot tile that minimises the energy of hauling from the mines and to the sites, on contours and in shelter | Not started |
+| L2 | Range check: a haul is refused only when no chain of legs between chargers or shelters fits the usable battery (after the climb reserve and the heater); otherwise it is staged through the stops; the Operations window shows "direct", "staged via tile ..." or "REFUSED". Robots recharge at the stops with the existing charging rules | Built |
+| L3 | Depot siting: advice only, the top sites by Wh per day saved over hauling each mine's ore direct to the lander (a depot D turns the haul into mine-to-D plus D-to-lander); candidates lie within 2 hops of the mines' routes; the player builds a storage yard where they choose | Built |
 | L4 | Contour-following routes: the route finder weighs climb energy as well as time, so a haul goes round a ridge when that is cheaper | Not started |
 
 ## Rules (L1)

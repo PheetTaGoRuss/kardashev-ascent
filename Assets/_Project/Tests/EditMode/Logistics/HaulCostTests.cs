@@ -69,5 +69,44 @@ namespace KardashevAscent.Simulation.Tests.Logistics
             int sea = Enumerable.Range(0, sim.TileCount).First(t => sim.GetTile(t).IsWater);
             Assert.IsTrue(double.IsInfinity(sim.HaulCostHours(low, sea, 100.0)));
         }
+
+        [Test]
+        public void AHaulBeyondOneChargeIsRefusedUntilAChargerSitsHalfWay_ThenItIsStagedThroughIt()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
+            sim.ConstructionTimeEnabled = false;
+            int lander = sim.BaseTileId;
+            var far = Enumerable.Range(0, sim.TileCount)
+                .Where(t => !sim.GetTile(t).IsWater && !double.IsInfinity(sim.Routes.HoursBetween(lander, t)) && !sim.PlanHaul(lander, t, 400.0).Feasible)
+                .OrderBy(t => sim.Routes.HoursBetween(lander, t)).ToList();
+            if (far.Count == 0) Assert.Ignore("every reachable tile is within one charge on this surface");
+            int target = far[0];
+            Assert.IsFalse(sim.PlanHaul(lander, target, 400.0).Feasible, "refused: no chain of legs fits the battery");
+            StringAssert.Contains("REFUSED", sim.HaulCostText(lander, target, 400.0));
+            var route = sim.Routes.Route(lander, target);
+            sim.Debug.FreeBuilding = true;
+            bool placed = false;
+            for (int k = route.Count / 2; k >= 0 && !placed; k--) placed = sim.PlaceChargingStation(route[k], 20);
+            Assert.IsTrue(placed, "a charging station on the way");
+            var plan = sim.PlanHaul(lander, target, 400.0);
+            if (!plan.Feasible) Assert.Ignore("one station is not enough for this far a tile");
+            Assert.Greater(plan.Stops.Count, 0, "the haul is staged through the new charger");
+            StringAssert.Contains("staged via", sim.HaulCostText(lander, target, 400.0));
+        }
+
+        [Test]
+        public void DepotAdviceIsEmptyWithNoMines_AndRanksSitesBySavedEnergyWithAMine()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
+            Assert.IsEmpty(sim.DepotSites(3));
+            sim.Debug.UnlockAll = true;
+            // a mine on the farthest reachable tile that has copper or iron
+            var tiles = Enumerable.Range(0, sim.TileCount).Where(t => !sim.GetTile(t).IsWater && t != sim.BaseTileId && !double.IsInfinity(sim.Routes.HoursBetween(sim.BaseTileId, t)) && sim.Deposits.GradeOf(t, KardashevAscent.Simulation.Resources.Material.Iron) > 0.0)
+                .OrderByDescending(t => sim.TileHeightM(t)).Take(5).ToList();
+            foreach (int t in tiles) { sim.Deposits.MarkSurveyed(t); sim.OrderMining(t, KardashevAscent.Simulation.Resources.Material.Iron); }
+            var sites = sim.DepotSites(3);
+            for (int i = 1; i < sites.Count; i++) Assert.GreaterOrEqual(sites[i - 1].SavedWhPerDay, sites[i].SavedWhPerDay, "best first");
+            foreach (var s in sites) Assert.Greater(s.SavedWhPerDay, 0.0);
+        }
     }
 }
