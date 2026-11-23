@@ -359,6 +359,7 @@ namespace KardashevAscent.Presentation.UI
                     switch ((KardashevAscent.Simulation.Game.ElectricalAction)(t.Slot / 1000))
                     {
                         case KardashevAscent.Simulation.Game.ElectricalAction.InspectLine: return $"Inspect a power line · tile {t.Tile}";
+                        case KardashevAscent.Simulation.Game.ElectricalAction.InstallMeter: return $"Install a meter on a power line · tile {t.Tile}";
                         case KardashevAscent.Simulation.Game.ElectricalAction.RepairLine: return $"Repair a power line · tile {t.Tile}, slot {t.Slot % 1000}";
                         default: return $"Install a circuit in a charging station · tile {t.Tile}, slot {t.Slot % 1000}";
                     }

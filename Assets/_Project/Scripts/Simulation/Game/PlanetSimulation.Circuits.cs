@@ -113,13 +113,22 @@ namespace KardashevAscent.Simulation.Game
 
         // ---- stepping ----
 
+        /// <summary>What the installed circuits draw from the grid now, W: their supply rail is the station's grid terminal, so the supplies are the station's load.</summary>
+        public double CircuitLoadW { get; private set; }
+
         void StepCircuits(double dtHours)
         {
+            CircuitLoadW = 0.0;
             if (stationCircuits.Count == 0) return;
             foreach (var key in stationCircuits.Keys.ToList())
             {
                 if (!stations.Contains(key)) { RemoveStationCircuit(key.Tile, key.Slot); continue; }
                 EvaluateCircuit(key, dtHours);
+                if (!WiredOrOff(key) || !circuitResults.TryGetValue(key, out var r)) continue;
+                var design = stationCircuits[key].Design;
+                foreach (var c in design.Components)
+                    if (c.Type == CircuitComponentType.DcSupply && r.Of(c.Id) != null)
+                        CircuitLoadW += Math.Max(0.0, -r.Of(c.Id).PowerW);
             }
         }
 

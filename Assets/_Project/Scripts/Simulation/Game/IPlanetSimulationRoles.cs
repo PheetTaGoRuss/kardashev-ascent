@@ -718,6 +718,15 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Sends a robot to install a saved circuit in a charging station. Null when ordered, else why not.</summary>
         string OrderCircuitInstall(int tileId, int slot, int blueprintIndex);
 
+        /// <summary>Sends a robot to put a meter on a line; the price (2 Cu, 1 Fe) is taken when it finishes. Null when ordered, else why not.</summary>
+        string OrderLineMeter(int tileId);
+
+        /// <summary>Electrical jobs waiting for a robot, in order.</summary>
+        System.Collections.Generic.IReadOnlyList<ElectricalOrder> ElectricalOrders();
+
+        /// <summary>Takes back a waiting job.</summary>
+        bool CancelElectricalOrder(ElectricalAction action, int tileId, int slot);
+
         /// <summary>Why the last electrical order was dropped when its robot finished (empty when none was).</summary>
         string LastElectricalProblem { get; }
     }
@@ -759,6 +768,9 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>Opens or closes a switch or button of an installed circuit.</summary>
         bool SetCircuitSwitch(int tileId, int slot, int componentId, bool closed);
+
+        /// <summary>What the installed circuits draw from the grid now, W (their supplies count as the station's load).</summary>
+        double CircuitLoadW { get; }
 
         /// <summary>The finished charging stations, in tile order.</summary>
         System.Collections.Generic.IEnumerable<(int Tile, int Slot)> ChargingStations();

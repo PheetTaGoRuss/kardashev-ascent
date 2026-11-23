@@ -23,7 +23,9 @@ namespace KardashevAscent.Presentation.UI
         VisualElement lineRows;
         readonly System.Collections.Generic.Dictionary<int, (Label Text, Button Meter)> lineRowOf = new System.Collections.Generic.Dictionary<int, (Label, Button)>();
         string lineShape = "";
-        Label failedText;
+        Label failedText, ordersText;
+        VisualElement orderRows;
+        string orderShape = "";
         VisualElement failedRows;
         string failedShape = "";
         const int MaxLineRows = 12;
@@ -54,6 +56,9 @@ namespace KardashevAscent.Presentation.UI
             lineNote.text = "A line's load is only known with a meter or a fresh inspection (a day). Unmetered lines show their rating and a range.";
             lineRows = new VisualElement();
             Body.Add(lineRows);
+            ordersText = Text("caption");
+            orderRows = new VisualElement();
+            Body.Add(orderRows);
             failedText = Text("message");
             failedRows = new VisualElement();
             Body.Add(failedRows);
@@ -90,6 +95,28 @@ namespace KardashevAscent.Presentation.UI
             buildings.text = $"{panels} panel{(panels == 1 ? "" : "s")} · {yards} battery yard{(yards == 1 ? "" : "s")}";
             RefreshLines(sim);
             RefreshFailed(sim);
+            RefreshOrders(sim);
+        }
+
+        void RefreshOrders(IPlanetSimulation sim)
+        {
+            var orders = sim.ElectricalOrders();
+            ordersText.text = orders.Count == 0 ? "" : $"{orders.Count} electrical job{(orders.Count == 1 ? "" : "s")} waiting for a robot:" + (string.IsNullOrEmpty(sim.LastElectricalProblem) ? "" : "\nLast job dropped: " + sim.LastElectricalProblem);
+            string shape = string.Join(",", orders.Select(o => o.Action + ":" + o.Tile + "." + o.Slot));
+            if (shape == orderShape) return;
+            orderShape = shape;
+            orderRows.Clear();
+            foreach (var o in orders)
+            {
+                var order = o;
+                var row = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center } };
+                var name = order.Action == ElectricalAction.InspectLine ? "Inspect line" : order.Action == ElectricalAction.RepairLine ? "Repair line" : order.Action == ElectricalAction.InstallMeter ? "Install meter" : "Install circuit";
+                var text = Label($"{name} · tile {order.Tile}", "caption");
+                text.style.flexGrow = 1;
+                row.Add(text);
+                row.Add(MakeButton("Cancel", () => SystemTabsSim()?.CancelElectricalOrder(order.Action, order.Tile, order.Slot)));
+                orderRows.Add(row);
+            }
         }
 
         void RefreshFailed(IPlanetSimulation sim)
@@ -140,7 +167,7 @@ namespace KardashevAscent.Presentation.UI
                     {
                         var s = SystemTabsSim();
                         if (s == null) return;
-                        if (s.HasLineMeter(t)) s.RemoveLineMeter(t); else s.InstallLineMeter(t);
+                        if (s.HasLineMeter(t)) s.RemoveLineMeter(t); else s.OrderLineMeter(t);
                     });
                     row.Add(meter);
                     row.Add(MakeButton("Send robot to inspect", () => SystemTabsSim()?.OrderLineInspection(t)));

@@ -6,7 +6,7 @@ using KardashevAscent.Simulation.Robots;
 namespace KardashevAscent.Simulation.Game
 {
     /// <summary>What a robot does in an electrical task (saved as integers: append only).</summary>
-    public enum ElectricalAction { InspectLine = 1, RepairLine = 2, InstallCircuit = 3 }
+    public enum ElectricalAction { InspectLine = 1, RepairLine = 2, InstallCircuit = 3, InstallMeter = 4 }
 
     /// <summary>An electrical job waiting for a robot (saved in version 46).</summary>
     public sealed class ElectricalOrder
@@ -44,6 +44,20 @@ namespace KardashevAscent.Simulation.Game
             fieldWork.TryGetValue(ElectricalTask(o), out double h) ? Math.Min(1.0, h / ElectricalWorkHours(o.Action)) : 0.0;
 
         bool HasElectricalOrder(ElectricalAction a, int tile, int slot) => electricalOrders.Exists(o => o.Action == a && o.Tile == tile && o.Slot == slot);
+
+        /// <summary>Orders a robot to put a meter on a line (it costs <see cref="MeterPrice"/>, taken when the robot finishes). Null when ordered, else why not.</summary>
+        public string OrderLineMeter(int tileId)
+        {
+            if (WiredGrid) EnsureWiring();
+            if (!LineExists(tileId)) return "There is no line on the grid there.";
+            if (meteredLines.Contains(tileId)) return "That line already has a meter.";
+            if (HasElectricalOrder(ElectricalAction.InstallMeter, tileId, 0)) return "A robot is already on it.";
+            MaterialBillCheck(MeterPrice, out string missing);
+            if (missing != null) return "Missing " + missing + ".";
+            electricalOrders.Add(new ElectricalOrder { Action = ElectricalAction.InstallMeter, Tile = tileId });
+            Settle(null);
+            return null;
+        }
 
         public bool OrderLineInspection(int tileId)
         {
@@ -125,6 +139,7 @@ namespace KardashevAscent.Simulation.Game
                     case ElectricalAction.InspectLine: if (!InspectLine(o.Tile)) problem = "The line is gone."; break;
                     case ElectricalAction.RepairLine: problem = RepairLine(o.Tile, o.Slot); break;
                     case ElectricalAction.InstallCircuit: problem = InstallStationCircuit(o.Tile, o.Slot, o.Arg); break;
+                    case ElectricalAction.InstallMeter: if (!InstallLineMeter(o.Tile)) problem = "The meter could not be installed (the line is gone or the stock is short)."; break;
                 }
                 LastElectricalProblem = problem ?? "";
             }
