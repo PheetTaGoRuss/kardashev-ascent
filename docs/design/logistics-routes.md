@@ -45,3 +45,7 @@ A storage yard can be given a charging bay: a charging station on the yard's til
 ## Mars and the day-night swing (Decided 2026-11-24, director delegated)
 
 The 10 K plus a tenth of the annual range rule gave Mars about 10 K, far below what Curiosity measured: REMS saw daily air temperatures from about -70 C to 0 C at Gale crater, a range of about 70 K ([JPL PIA16913, "Steady temperatures at Mars' Gale crater"](https://www.jpl.nasa.gov/images/pia16913-steady-temperatures-at-mars-gale-crater/); REMS overview: Gomez-Elvira et al. 2014, JGR Planets 119). The amplitude now follows the air: 10 K + 25 K x (1 - pressure in Earth atmospheres, at most 1), so 10 K on Earth and 34.8 K on Mars (0.00628 atm), a 70 K range (game rule, TBD). In Play mode on Mars: air -35.1 C now and -82.9 C twelve hours later; a 10 h haul showed "starting in 21 h would save 135 Wh of heater"; heater energy was 11 kWh of a 16 kWh round trip on a 144 h haul.
+
+## Depot advice with the full cost (Decided 2026-11-24, director delegated)
+
+Each suggested site carries what it costs: the storage yard, the charging bay, and the power line to the nearest powered tile (the cable is real-mass copper per tile, 112.5 kg, and 1 h of building per tile as for any power line), as copper kg and build hours. Sites are ranked by the energy saved per day per kilogram of everything the site costs. When the colony's copper cannot cover the bill the advice says "needs X kg copper, you have Y: mine first".

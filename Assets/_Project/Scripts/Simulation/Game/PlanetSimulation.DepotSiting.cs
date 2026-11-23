@@ -19,7 +19,43 @@ namespace KardashevAscent.Simulation.Game
         {
             public readonly int Tile;
             public readonly double SavedWhPerDay;
-            public DepotAdvice(int tile, double saved) { Tile = tile; SavedWhPerDay = saved; }
+            /// <summary>The full cost of the site: the yard, the charging bay, and the power line to it (real-mass copper and the build hours).</summary>
+            public readonly double CopperKg, TotalKg, BuildHours;
+            public readonly int LineTiles;
+            public DepotAdvice(int tile, double saved, double copperKg, double totalKg, double hours, int lineTiles)
+            { Tile = tile; SavedWhPerDay = saved; CopperKg = copperKg; TotalKg = totalKg; BuildHours = hours; LineTiles = lineTiles; }
+            /// <summary>The ranking value: energy saved per day per kilogram of everything the site costs.</summary>
+            public double ValueWhPerDayPerKg => TotalKg > 0.0 ? SavedWhPerDay / TotalKg : SavedWhPerDay;
+        }
+
+        /// <summary>The cost of a depot with a charging bay at a tile, with the power line to it: the cable is real-mass copper per tile.</summary>
+        (double CopperKg, double TotalKg, double Hours, int LineTiles) DepotCost(int tile)
+        {
+            int lineTiles = 0;
+            if (WiredGrid && !IsPowered(tile))
+            {
+                // hops over land to the nearest powered tile
+                var seen = new HashSet<int> { tile }; var frontier = new List<int> { tile };
+                for (int hop = 1; hop <= 60 && lineTiles == 0; hop++)
+                {
+                    var next = new List<int>();
+                    foreach (int t in frontier)
+                        foreach (int n in Sphere.Neighbors[t])
+                        {
+                            if (!seen.Add(n) || GetTile(n).IsWater) continue;
+                            if (IsPowered(n)) { lineTiles = hop; break; }
+                            next.Add(n);
+                        }
+                    frontier = next;
+                    if (frontier.Count == 0) break;
+                }
+            }
+            var yard = BuildBill(BuildingType.StorageYard); var bay = Resources.BuildCosts.ChargingBay; var line = BuildBill(BuildingType.PowerLine);
+            double copper = yard[Resources.Material.Copper] + bay[Resources.Material.Copper] + line[Resources.Material.Copper] * lineTiles;
+            double total = 0.0;
+            foreach (var m in Resources.Materials.All) total += yard[m] + bay[m] + line[m] * lineTiles;
+            double hours = BuildTimes.Hours(BuildingType.StorageYard) + BuildTimes.Hours(BuildingType.ChargingStation) * 0.5 + BuildTimes.Hours(BuildingType.PowerLine) * lineTiles;
+            return (copper, total, hours, lineTiles);
         }
 
         /// <summary>How many hops from a mine route a candidate depot may lie (game rule, TBD).</summary>
@@ -35,7 +71,8 @@ namespace KardashevAscent.Simulation.Game
             return outWh + backWh;
         }
 
-        public IReadOnlyList<(int Tile, double SavedWhPerDay)> DepotSites(int max) => DepotSuggestions(max).Select(a => (a.Tile, a.SavedWhPerDay)).ToList();
+        public IReadOnlyList<(int Tile, double SavedWhPerDay, double CopperKg, int LineTiles, double BuildHours)> DepotSites(int max) =>
+            DepotSuggestions(max).Select(a => (a.Tile, a.SavedWhPerDay, a.CopperKg, a.LineTiles, a.BuildHours)).ToList();
 
         /// <summary>The best places for a depot, by the energy per day they save, best first. Empty with no mining orders.</summary>
         public IReadOnlyList<DepotAdvice> DepotSuggestions(int max = 3)
@@ -86,9 +123,12 @@ namespace KardashevAscent.Simulation.Game
                     }
                     else saved += f.KgPerDay * (f.DirectWhPerKg - via);
                 }
-                if (saved > 1.0) result.Add(new DepotAdvice(d, saved));
+                if (saved <= 1.0) continue;
+                var cost = DepotCost(d);
+                result.Add(new DepotAdvice(d, saved, cost.CopperKg, cost.TotalKg, cost.Hours, cost.LineTiles));
             }
-            return result.OrderByDescending(a => a.SavedWhPerDay).ThenBy(a => a.Tile).Take(max).ToList();
+            // ranked by the energy saved per day against everything the site costs
+            return result.OrderByDescending(a => a.ValueWhPerDayPerKg).ThenBy(a => a.Tile).Take(max).ToList();
         }
     }
 }

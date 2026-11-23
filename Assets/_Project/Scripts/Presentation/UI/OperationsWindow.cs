@@ -424,7 +424,12 @@ namespace KardashevAscent.Presentation.UI
             var haul = sim.HaulOrders();
             foreach (var h in haul) lines.Add($"Haul {h.Id}: {h.Kg:0} kg {Materials.Name(h.Material).ToLowerInvariant()} from tile {h.From} to {h.To}: {sim.HaulCostText(h.From, h.To, h.Kg)}");
             foreach (var site in sim.DepotSites(3))
-                lines.Add($"Depot advice: build a depot (storage yard) with a charging bay at tile {site.Tile} (it needs a power line there): it would save or make possible about {site.SavedWhPerDay:0} Wh a day of hauling (advice only: build where you choose)");
+            {
+                double have = sim.Materials[KardashevAscent.Simulation.Resources.Material.Copper];
+                string need = site.CopperKg > have ? $" · needs {site.CopperKg:0} kg copper, you have {have:0}: mine first" : "";
+                lines.Add($"Depot advice: build a depot (storage yard) with a charging bay at tile {site.Tile}" + (site.LineTiles > 0 ? $" and a power line of {site.LineTiles} tile(s)" : "") +
+                          $": {site.CopperKg:0} kg copper, {site.BuildHours:0} h of building; it would save or make possible about {site.SavedWhPerDay:0} Wh a day of hauling (advice only: build where you choose){need}");
+            }
             lines.Add($"{haul.Count} haul(s) under way · {sim.HaulTotals.KgMoved:0} kg moved so far, {sim.HaulTotals.Wh / 1000.0:0.0} kWh spent hauling");
             string shape = string.Join("\n", lines);
             if (shape != shownDepots)
