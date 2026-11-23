@@ -151,7 +151,7 @@ namespace KardashevAscent.Simulation.Game
                     continue;
                 }
                 if (t.Kind != TaskKind.Survey && t.Kind != TaskKind.Mine && t.Kind != TaskKind.Measure && t.Kind != TaskKind.Experiment
-                    && t.Kind != TaskKind.Excavate && t.Kind != TaskKind.Haul)
+                    && t.Kind != TaskKind.Excavate && t.Kind != TaskKind.Haul && t.Kind != TaskKind.Electrical)
                     continue;
                 fieldWork[t] = (fieldWork.TryGetValue(t, out double h) ? h : 0.0) + dt * speed;
             }
@@ -187,6 +187,7 @@ namespace KardashevAscent.Simulation.Game
                         Deliver(finding);
                 }
             }
+            FinishElectricalOrders();
             foreach (var mo in measureOrders.ToArray())
             {
                 WorkTask t = MeasureTask(mo.Parameter, mo.Tile);

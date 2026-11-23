@@ -119,6 +119,10 @@ namespace KardashevAscent.Simulation.Robots
             new Capability(RobotKind.Construction, TaskKind.Salvage),
             new Capability(RobotKind.Construction, TaskKind.Manufacture),
             new Capability(RobotKind.Construction, TaskKind.Adjust),
+            // Inspecting, repairing and equipping the electrical grid: maintenance robots first, builders and general robots too.
+            new Capability(RobotKind.Maintenance, TaskKind.Electrical),
+            new Capability(RobotKind.Construction, TaskKind.Electrical),
+            new Capability(RobotKind.General, TaskKind.Electrical),
             new Capability(RobotKind.Maintenance, TaskKind.Adjust),
             new Capability(RobotKind.Mining, TaskKind.Mine),
             new Capability(RobotKind.Research, TaskKind.Survey),

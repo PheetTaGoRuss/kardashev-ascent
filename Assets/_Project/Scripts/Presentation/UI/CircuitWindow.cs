@@ -121,8 +121,8 @@ namespace KardashevAscent.Presentation.UI
                 if (sim == null || stationChoice.index < 0 || stationChoice.index >= stationKeys.Count) { hint.text = "Build a charging station first."; return; }
                 if (libraryChoice.index < 0) { hint.text = "Save a blueprint first, then pick it under Saved."; return; }
                 var key = stationKeys[stationChoice.index];
-                string why = sim.InstallStationCircuit(key.Tile, key.Slot, libraryChoice.index);
-                hint.text = why ?? "Installed.";
+                string why = sim.OrderCircuitInstall(key.Tile, key.Slot, libraryChoice.index);
+                hint.text = why ?? "A robot is on its way to install it.";
             }));
             instRow.Add(MakeButton("Remove circuit", () =>
             {

@@ -108,7 +108,7 @@ namespace KardashevAscent.Presentation.UI
                 var text = Label($"Line {tile}.{slot}: failed", "caption");
                 text.style.flexGrow = 1;
                 row.Add(text);
-                row.Add(MakeButton("Repair", () => { var s = SystemTabsSim(); string why = s?.RepairLine(tile, slot); if (why != null) text.text = $"Line {tile}.{slot}: {why}"; }));
+                row.Add(MakeButton("Send robot to repair", () => { var s = SystemTabsSim(); string why = s?.OrderLineRepair(tile, slot); text.text = why != null ? $"Line {tile}.{slot}: {why}" : $"Line {tile}.{slot}: a robot is on its way"; }));
                 failedRows.Add(row);
             }
         }
@@ -143,7 +143,7 @@ namespace KardashevAscent.Presentation.UI
                         if (s.HasLineMeter(t)) s.RemoveLineMeter(t); else s.InstallLineMeter(t);
                     });
                     row.Add(meter);
-                    row.Add(MakeButton("Inspect", () => SystemTabsSim()?.InspectLine(t)));
+                    row.Add(MakeButton("Send robot to inspect", () => SystemTabsSim()?.OrderLineInspection(t)));
                     lineRows.Add(row);
                     lineRowOf[t] = (text, meter);
                 }

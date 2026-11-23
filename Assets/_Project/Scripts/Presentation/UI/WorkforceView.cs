@@ -355,6 +355,13 @@ namespace KardashevAscent.Presentation.UI
                 case TaskKind.Build: return $"Build a {BuildingName(sim.GetBuilding(t.Tile, t.Slot))} · tile {t.Tile}, slot {t.Slot}";
                 case TaskKind.Salvage: return $"Take down a {BuildingName(sim.GetBuilding(t.Tile, t.Slot))} · tile {t.Tile}, slot {t.Slot}";
                 case TaskKind.Adjust: return $"Turn a solar panel to new angles · tile {t.Tile}, slot {t.Slot}";
+                case TaskKind.Electrical:
+                    switch ((KardashevAscent.Simulation.Game.ElectricalAction)(t.Slot / 1000))
+                    {
+                        case KardashevAscent.Simulation.Game.ElectricalAction.InspectLine: return $"Inspect a power line · tile {t.Tile}";
+                        case KardashevAscent.Simulation.Game.ElectricalAction.RepairLine: return $"Repair a power line · tile {t.Tile}, slot {t.Slot % 1000}";
+                        default: return $"Install a circuit in a charging station · tile {t.Tile}, slot {t.Slot % 1000}";
+                    }
                 case TaskKind.Survey: return $"Survey tile {t.Tile}";
                 case TaskKind.Mine: return $"Mine {Materials.Name((Material)t.Slot).ToLowerInvariant()} · tile {t.Tile}";
                 case TaskKind.Manufacture:
