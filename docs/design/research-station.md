@@ -75,3 +75,29 @@ The director made these choices:
 - Should a Research robot be required, rather than any General robot?
 - Should experiments sometimes end in a puzzle, like measurements? RS-13 says research always ends in its own puzzle.
 - Should the margins be shown on the HUD as well as in the Research window?
+
+## Research tied to the physics (Decided 2026-11-23, director delegated)
+
+Rule (OQ-4, OQ-5): research gives **knowledge, not buildings**. Until a quantity is measured the game shows an **estimate with a
+range** ("about 5.2 kPa, plus or minus 50 %"), never the exact value, and buildings are designed for the cautious end of the range.
+Measuring replaces the estimate with the exact value and the margin disappears. All ranges, hours and costs below are game rules, TBD.
+God mode (F10) still shows true values; play shows only what the colony observed.
+
+| # | Measurement | Instrument (flavour) | Robot hours | Needs first | Estimate it replaces | What it reveals and what changes |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | Air pressure (exists; extended) | Barometer | 4 | none | Orbit brief: pressure plus or minus 50 % | Air density, so the corona regime (Peek, Paschen or vacuum) and the cable voltage derate. Until measured, cables are derated at the cautious (low) end of the pressure range, so a line is rated lower than it needs to be. |
+| 2 | Surface temperature (exists; extended) | Ground and air thermometers over a day | 24 | none | Orbit brief: mean temperature plus or minus 15 C | The real coldest and warmest months, so the cable thermal rating and the robot night margin. Until measured, robot weather warnings use the cautious end (the colder or hotter bound of the estimate) and the warning says the temperature is an estimate. |
+| 3 | Terrain relief survey (new) | Laser altimeter (the way MOLA mapped Mars) | 12 | Gravity | Assumed relief scale: Earth's relief scaled by 1/g, plus or minus 30 % (Earth twins and Mars: plus or minus 10 %) | The measured highest and lowest point, so the climb term. Until measured, route and haul climb costs show a range and robots plan a climb reserve at the high end. |
+| 4 | Tide gauge (exists; extended) | Tide gauge on the shore | 20 | Gravity | Tide range plus or minus 50 % (moon mass and orbit seen only from orbit) | The measured tide range on coasts, so the tidal output. Until measured, tidal turbines deliver a share of their real output, 1 minus the spread, never below 50 %, like solar panels. |
+| 5 | Ore assay (new) | Sample assay at a surveyed mine | 16 | none (a surveyed tile with ore) | Ore grade shown plus or minus 25 % | The measured grade of every surveyed ore tile, so mine output and the real cost of the cable bill. Until measured, the Resources view and the mine planner show grade as a range. |
+
+How it works in the code: a quantity has a `KnowledgeEstimate` (value, half range). Known: half range 0. The simulation always runs on the true
+value; knowledge decides what is shown and which end of the range the safety margins use. Experiment orders, robot work, saving and the
+station gate are the existing ones (a finished, powered Research Station on a surveyed tile; any General robot). New experiments append to
+`ExperimentKind` (saved as integers).
+
+**Puzzle (RS-13):** every measurement ends in its own short puzzle, read off the instrument: a pendulum timing, a pressure-to-boiling
+reading, a night temperature curve, an altimeter profile, a tide table, an assay line. Not yet built; stage 5 of this work.
+
+**Efficiency gains (OQ-5, "small, cited"):** not in this batch. Candidate: each measurement lifts one related system's efficiency by a
+few percent with a cited reason (for example a measured soil temperature lets cables be rated closer to the limit). Needs a source for each.
