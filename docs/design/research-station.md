@@ -96,8 +96,7 @@ value; knowledge decides what is shown and which end of the range the safety mar
 station gate are the existing ones (a finished, powered Research Station on a surveyed tile; any General robot). New experiments append to
 `ExperimentKind` (saved as integers).
 
-**Puzzle (RS-13):** every measurement ends in its own short puzzle, read off the instrument: a pendulum timing, a pressure-to-boiling
-reading, a night temperature curve, an altimeter profile, a tide table, an assay line. Not yet built; stage 5 of this work.
+**Puzzle (RS-13), decided 2026-11-23 (director delegated): "fit the data".** Finishing an experiment makes the result known with the full range; the experiment's puzzle then offers a noisy series, physically correct for the planet, that the player fits with one to three sliders (residuals drawn). No pass or fail: the fit sets how much of the range is left (the instrument's precision, 10 %, for a perfect fit up to 100 %). "Fit for me" gives the least-squares answer but leaves 30 %. Models: air pressure p = p0 exp(-h/H) with H = RT/(Mg); temperature mean + amplitude sine over a day; relief a spike rejection threshold; tide amplitude and phase with the moon's period; ore assay the number of samples (range t s / sqrt n, 0.5 h each, not yet charged to robot time); gravity T = 2 pi sqrt(L/g); boiling ln P = a - b/(T+233); seismic t = 2d/v; wave heave sine; basin parabola. Save version 51 keeps pending puzzles and range shares; older saves stay exact. Built (`FitPuzzle`, `FitPuzzleView`).
 
 **Efficiency gains (OQ-5, "small, cited"):** not in this batch. Candidate: each measurement lifts one related system's efficiency by a
 few percent with a cited reason (for example a measured soil temperature lets cables be rated closer to the limit). Needs a source for each.

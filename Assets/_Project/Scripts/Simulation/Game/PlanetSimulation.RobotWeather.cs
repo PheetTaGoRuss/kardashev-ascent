@@ -43,11 +43,12 @@ namespace KardashevAscent.Simulation.Game
                 // Until the ground temperature is measured the warning goes by the cautious end of the estimate (decided 2026-11-23).
                 double air = AirTemperatureAt(r.Tile, CurrentMeanAnomaly());
                 double heater = r.HeaterW, hoursLeft = r.ThermalHoursLeft;
-                bool estimated = !IsExperimentKnown(Planet.ExperimentKind.SurfaceTemperature);
+                double tempSpread = Planet.OrbitalBrief.TemperatureSpreadC * ExperimentRangeShare(Planet.ExperimentKind.SurfaceTemperature);
+                bool estimated = tempSpread > 0.0;
                 if (estimated && !r.Sheltered)
                 {
                     double mid = (RobotThermal.OperatingMinC + RobotThermal.OperatingMaxC) / 2.0;
-                    double cautious = air + (air < mid ? -Planet.OrbitalBrief.TemperatureSpreadC : Planet.OrbitalBrief.TemperatureSpreadC);
+                    double cautious = air + (air < mid ? -tempSpread : tempSpread);
                     heater = RobotThermal.HeaterW(cautious, r.Has(RobotModule.ThermalInsulation));
                     hoursLeft = heater > 0.0 ? r.Battery.UsableWh / heater : double.PositiveInfinity;
                 }

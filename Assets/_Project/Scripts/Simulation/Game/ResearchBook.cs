@@ -13,12 +13,18 @@ namespace KardashevAscent.Simulation.Game
         public HashSet<(int Tile, int Slot)> Stations { get; } = new HashSet<(int, int)>();
         public HashSet<ExperimentKind> Known { get; } = new HashSet<ExperimentKind>();
         public List<(ExperimentKind Kind, int Tile)> Orders { get; } = new List<(ExperimentKind, int)>();
+        /// <summary>Experiments whose fit puzzle has not been solved (RS-13).</summary>
+        public List<ExperimentKind> Puzzles { get; } = new List<ExperimentKind>();
+        /// <summary>The share of the original range each done experiment still has (1 to 0.1); a missing entry means exact.</summary>
+        public Dictionary<ExperimentKind, double> Shares { get; } = new Dictionary<ExperimentKind, double>();
 
         /// <summary>Forget known experiments and orders (a load). Stations are rebuilt from the saved buildings.</summary>
         public void ClearExperiments()
         {
             Known.Clear();
             Orders.Clear();
+            Puzzles.Clear();
+            Shares.Clear();
         }
     }
 }

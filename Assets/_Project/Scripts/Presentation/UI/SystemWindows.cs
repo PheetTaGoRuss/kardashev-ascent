@@ -582,7 +582,7 @@ namespace KardashevAscent.Presentation.UI
         protected override void RefreshBody(IPlanetSimulation sim)
         {
             lastSim = sim;
-            int puzzleShape = sim.LatitudePuzzles.Count + sim.ParameterPuzzles.Count * 100 + sim.SurveyPuzzles.Count * 10000;
+            int puzzleShape = sim.LatitudePuzzles.Count + sim.ParameterPuzzles.Count * 100 + sim.SurveyPuzzles.Count * 10000 + sim.PendingPuzzles.Count * 1000000;
             if (puzzleShape != shownPuzzles)
             {
                 shownPuzzles = puzzleShape;
@@ -597,6 +597,12 @@ namespace KardashevAscent.Presentation.UI
                 foreach (SurveyPuzzle p in sim.SurveyPuzzles)
                     puzzles.Add(PuzzleShelf.Wrap(new SurveyPuzzleView(sim, p, result => { solvedText.text = result; effectsTile = -2; }),
                                                  PuzzleShelf.SurveyKey(p.Tile), $"Ground survey of tile #{p.Tile}"));
+                foreach (KardashevAscent.Simulation.Planet.ExperimentKind k in sim.PendingPuzzles)
+                {
+                    var kind = k;
+                    puzzles.Add(PuzzleShelf.Wrap(new FitPuzzleView(sim, kind, result => { solvedText.text = result; effectsTile = -2; shownPuzzles = -1; }),
+                                                 "fit-" + kind, KardashevAscent.Simulation.Planet.Experiments.Name(kind) + " · fit the readings"));
+                }
                 puzzleHead.style.display = shownPuzzles > 0 || solvedText.text.Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
             }
             PuzzleShelf.ShowFocused(puzzles);
