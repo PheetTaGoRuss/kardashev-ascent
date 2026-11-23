@@ -77,7 +77,7 @@ namespace KardashevAscent.PlayModeTests
         IEnumerator Drag(Func<Vector2> from, Func<Vector2> to)
         {
             Mouse(EventType.MouseDown, from()); yield return null;
-            for (int i = 1; i <= 4; i++) { Mouse(EventType.MouseMove, Vector2.Lerp(from(), to(), i / 4f)); yield return null; }
+            for (int i = 1; i <= 4; i++) { Mouse(EventType.MouseDrag, Vector2.Lerp(from(), to(), i / 4f)); yield return null; }
             Mouse(EventType.MouseUp, to()); yield return null;
         }
 
@@ -211,6 +211,59 @@ namespace KardashevAscent.PlayModeTests
             Assert.IsTrue(m.Success);
             Assert.Greater(double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture), 0.0, "current flows round the loop: " + diag.text);
             Assert.IsTrue(labels.Any(l => l.text.StartsWith("BAT")) && labels.Any(l => l.text.StartsWith("LMP")), "both parts are drawn");
+        }
+
+        // ---- the fit puzzle ----
+
+        static void FinishExperiment(PlanetSimulation sim, ExperimentKind kind)
+        {
+            const System.Reflection.BindingFlags F = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance;
+            sim.GetType().GetMethod("LearnExperimentForTests", F).Invoke(sim, new object[] { kind });
+            sim.GetType().GetMethod("OnExperimentFinished", F).Invoke(sim, new object[] { kind });
+        }
+
+        [UnityTest]
+        public IEnumerator Fit_DraggingASliderMovesTheCurve_AndUseThisFitNarrowsTheRange()
+        {
+            PlanetSimulation sim = Colony(out _);
+            FinishExperiment(sim, ExperimentKind.AirPressure);
+            string said = null;
+            var view = new FitPuzzleView(sim, ExperimentKind.AirPressure, r => said = r);
+            view.style.position = Position.Absolute; view.style.left = 10; view.style.top = 10; view.style.width = 700;
+            doc.rootVisualElement.Add(view);
+            for (int i = 0; i < 6; i++) yield return null;
+
+            var sliders = view.Query<Slider>().ToList();
+            Assert.AreEqual(2, sliders.Count, "pressure has two handles");
+            float before0 = sliders[0].value, before1 = sliders[1].value;
+            // Move each handle to the least-squares place. (Unity's own Slider does not follow synthetic pointer drags, so the value is set
+            // directly; the buttons below are pressed with real pointer events.)
+            var puzzle = sim.PuzzleFor(ExperimentKind.AirPressure);
+            for (int k = 0; k < 2; k++) sliders[k].value = (float)puzzle.Best[k];
+            yield return null;
+            Assert.AreNotEqual(before0, sliders[0].value, "the first handle moved");
+            Assert.AreNotEqual(before1, sliders[1].value, "the second handle moved");
+            Assert.AreEqual(1.0, sim.ExperimentRangeShare(ExperimentKind.AirPressure), "nothing changes until the fit is used");
+
+            Button use = view.Query<Button>().ToList().First(b => b.text == "Use this fit");
+            yield return ClickAt(use.worldBound.center);
+            Assert.IsNotNull(said, "the view reported a result");
+            Assert.Less(sim.ExperimentRangeShare(ExperimentKind.AirPressure), 1.0, "a better fit than the starting one narrowed the range");
+            Assert.IsEmpty(sim.PendingPuzzles);
+        }
+
+        [UnityTest]
+        public IEnumerator Fit_FitForMeSettlesTheRangeAtTheAutoShare()
+        {
+            PlanetSimulation sim = Colony(out _);
+            FinishExperiment(sim, ExperimentKind.Gravity);
+            var view = new FitPuzzleView(sim, ExperimentKind.Gravity, null);
+            view.style.position = Position.Absolute; view.style.left = 10; view.style.top = 10; view.style.width = 700;
+            doc.rootVisualElement.Add(view);
+            for (int i = 0; i < 6; i++) yield return null;
+            Button auto = view.Query<Button>().ToList().First(b => b.text == "Fit for me");
+            yield return ClickAt(auto.worldBound.center);
+            Assert.AreEqual(KardashevAscent.Simulation.Planet.FitPuzzle.AutoFitShare, sim.ExperimentRangeShare(ExperimentKind.Gravity), 1e-9);
         }
     }
 }
