@@ -76,6 +76,10 @@ namespace KardashevAscent.Simulation.Circuits
     /// </summary>
     public static class CircuitSolver
     {
+        /// <summary>Round-trip efficiency of a circuit battery: the same figure as the colony Battery (lithium-ion, 0.90; game rule, TBD).</summary>
+        public const double BatteryRoundTrip = 0.90;
+        /// <summary>Charge and discharge limit of a circuit battery, capacity per hour (the colony Battery default is 1; game rule, TBD).</summary>
+        public const double BatteryCRatePerHour = 1.0;
         public const double SwitchOnOhm = 1e-3;
         public const double GMin = 1e-12;
         /// <summary>Game rule, TBD: a wire may carry this many amperes per mm2 (small copper wire in free air).</summary>
@@ -396,8 +400,17 @@ namespace KardashevAscent.Simulation.Circuits
                 var s = state.Find(x => x.Id == c.Id);
                 var cr = at.Of(c.Id);
                 if (s == null || cr == null) continue;
-                double giving = Math.Max(0.0, -cr.PowerW);
-                s.EnergyWh = Math.Max(0.0, s.EnergyWh - giving * hours);
+                if (cr.PowerW <= 0.0)
+                {
+                    double giving = -cr.PowerW;
+                    s.EnergyWh = Math.Max(0.0, s.EnergyWh - giving * hours);
+                }
+                else
+                {
+                    // The solver drove current into it: it charges, like the colony Battery (one-way efficiency = sqrt of the round trip), up to its capacity.
+                    double inW = Math.Min(cr.PowerW, c.P3 * BatteryCRatePerHour);   // limited by the C-rate, as in the colony Battery
+                    s.EnergyWh = Math.Min(c.P3, s.EnergyWh + inW * Math.Sqrt(BatteryRoundTrip) * hours);
+                }
             }
         }
     }

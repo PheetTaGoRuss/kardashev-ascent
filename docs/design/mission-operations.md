@@ -194,3 +194,13 @@ Asked of the director, not decided here:
 - **Q5** Does the climb term ship on, and with what metres per elevation unit? Assumed: off.
 - **Q6** Rule limits: more than 3 conditions, OR, rules per scope? Assumed: 3, AND only, no per-scope limit yet.
 - **Q7** Does a rule edit need a robot to be at a relay to sync, or anywhere in coverage as the network works today? Assumed: anywhere in coverage.
+
+## Decisions of 2026-11-23 on Q1 to Q7 (director delegated, confirmed in chat)
+
+- Q1: no piles on water, ice or wetland tiles; elsewhere bulk solids only, with a placeholder capacity.
+- Q2: cargo stays where a robot stopped.
+- Q3: keep the inert-anode cell (oxygen is the product), labelled emerging technology.
+- Q4: chlorine venting gives a warning and a log record now; a penalty waits for RS-10.
+- Q5: the climb term is on, using the terrain's real metre height scale; if the terrain has none it stays off and a follow-up is logged.
+- Q6: three conditions, AND only.
+- Q7: rule edits sync anywhere in coverage.

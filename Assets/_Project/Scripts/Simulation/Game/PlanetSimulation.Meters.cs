@@ -21,10 +21,19 @@ namespace KardashevAscent.Simulation.Game
 
         bool LineExists(int tileId) => tileId != BaseTileId && poweredTiles.Contains(tileId) && lineParent.TryGetValue(tileId, out int p) && p >= 0;
 
+        /// <summary>A meter costs a current sensor and its electronics: 2 kg copper and 1 kg iron (director 2026-11-23; game rule, TBD).</summary>
+        public static Resources.MaterialBill MeterPrice => new Resources.MaterialBill().Add(Resources.Material.Copper, 2.0).Add(Resources.Material.Iron, 1.0);
+
+        /// <summary>Puts a meter on a line now and takes its price from stock. False when there is no line, it has one, or the stock is short.</summary>
         public bool InstallLineMeter(int tileId)
         {
             if (WiredGrid) EnsureWiring();
-            if (!LineExists(tileId)) return false;
+            if (!LineExists(tileId) || meteredLines.Contains(tileId)) return false;
+            var price = MeterPrice;
+            MaterialBillCheck(price, out string missing);
+            if (missing != null) return false;
+            foreach (Resources.Material m in Enum.GetValues(typeof(Resources.Material)))
+                if (price[m] > 0.0) Materials.TryTake(m, price[m]);
             return meteredLines.Add(tileId);
         }
 

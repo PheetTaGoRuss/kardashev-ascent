@@ -161,7 +161,7 @@ namespace KardashevAscent.Simulation.Game
             // The network hub and relays draw as a priority load: they stay up until the colony itself browns out.
             Grid.Battery.UsableShare = BatteryUsableShare;   // a margin until the surface temperature is known
             GridStep grid = Grid.Step(ComputeGeneration(), dt, TimeHours / Rtg.HoursPerYear,
-                                      Upkeep.CriticalRequestW + Network.PowerW + ComputingLoadW() + WorkshopPowerW, Upkeep.DockRequestW);
+                                      Upkeep.CriticalRequestW + Network.PowerW + ComputingLoadW() + WorkshopPowerW + CircuitLoadW, Upkeep.DockRequestW);
             GenerationW = grid.GenerationW;
             RtgW = grid.RtgW;
             DemandW = grid.DemandW;

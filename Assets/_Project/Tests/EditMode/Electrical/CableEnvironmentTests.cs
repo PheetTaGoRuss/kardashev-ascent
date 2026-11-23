@@ -43,8 +43,12 @@ namespace KardashevAscent.Tests.Electrical
             double mars = CableEnvironment.VoltageDerate(CableEnvironment.RelativeAirDensity(660.0, -60.0), Area500, out bool fallback);
             Assert.IsTrue(fallback);
             Assert.AreEqual(0.1, mars, 1e-12, "floored at 0.1 (game rule, TBD)");
-            Assert.AreEqual(0.1, CableEnvironment.VoltageDerate(0.0, Area500, out bool airless), 1e-12);
-            Assert.IsTrue(airless);
+            Assert.AreEqual(CableEnvironment.Regime.Paschen, CableEnvironment.RegimeOf(1e-3));
+            Assert.AreEqual(CableEnvironment.Regime.Peek, CableEnvironment.RegimeOf(0.5));
+            Assert.AreEqual(CableEnvironment.Regime.Vacuum, CableEnvironment.RegimeOf(1e-9));
+            // an airless world has nothing to ionise: no corona, no derate
+            Assert.AreEqual(1.0, CableEnvironment.VoltageDerate(0.0, Area500, out bool airless), 1e-12);
+            Assert.IsFalse(airless);
         }
 
         [Test]

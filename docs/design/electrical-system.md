@@ -147,3 +147,7 @@ The simulation reports honestly: an unmetered line's flow is NaN, so a window ca
 | C. Show everything as today | true flow, with a small marker for measured lines | Nothing hidden; meters become a cosmetic |
 
 Recommendation: B. Also open: price of a meter, and the robot Inspect task (a robot walks the line and reports condition and faults; needs the cable condition from stage 8 to be worth doing).
+
+## Decisions of 2026-11-23 (director delegated, confirmed in chat)
+
+The AC and airless-world questions, the meter price and the build order are decided and recorded in the registry decision log (EN-35, EN-38). Summary: one 50 Hz AC frequency; AC classes 400 V, 33 kV, 500 kV; DC classes 24 V (DC-only), 400 V, 33 kV, 500 kV; converter efficiencies in `VoltageLadder` (all TBD, recalled from published ranges: they must be checked before tuning); corona in three regimes (Peek, Paschen fallback, none in vacuum); the derate never lowers a voltage class; a meter costs 2 Cu and 1 Fe; a circuit's supply is a grid load. Follow-ups: the AC line type and the Transformer, Inverter and Rectifier buildings; fuses and breakers on lines; drag-to-wire in the grid schematic; a convection term in the cable thermal model (so an airless world cools only by radiation); the real-mass cable bill in the balance pass.

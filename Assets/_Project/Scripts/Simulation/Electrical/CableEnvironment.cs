@@ -37,6 +37,18 @@ namespace KardashevAscent.Simulation.Electrical
         /// </summary>
         public static bool PeekValid(double delta) => delta >= 0.1 && delta <= 2.0;
 
+        /// <summary>Below this relative air density there is effectively no gas to ionise (game rule, TBD): no corona.</summary>
+        public const double VacuumBelowDelta = 1e-6;
+
+        public enum Regime { Peek, Paschen, Vacuum }
+
+        /// <summary>
+        /// Which law governs breakdown (director 2026-11-23): Peek's law in air-like density (0.1 to 2); the Paschen region, where thin gas
+        /// breaks down at the lowest voltage (Mars-like air; game rule, labelled), from 1e-6 to 0.1; and vacuum below that, where there is
+        /// nothing to ionise and no corona.
+        /// </summary>
+        public static Regime RegimeOf(double delta) => delta >= 0.1 ? Regime.Peek : delta >= VacuumBelowDelta ? Regime.Paschen : Regime.Vacuum;
+
         /// <summary>
         /// The share of a cable's standard voltage class that may be used on this planet's air: 1 at Earth sea level (delta = 1, 25 C),
         /// lower in thin air, above 1 in dense air, capped at 1 (a cable never runs above its rating). Outside Peek's validity the
@@ -44,7 +56,9 @@ namespace KardashevAscent.Simulation.Electrical
         /// </summary>
         public static double VoltageDerate(double delta, double areaM2, out bool fallback)
         {
-            fallback = !PeekValid(delta);
+            Regime regime = RegimeOf(delta);
+            fallback = regime == Regime.Paschen;
+            if (regime == Regime.Vacuum) return 1.0;   // no gas, no corona
             if (fallback) return Math.Max(0.1, Math.Min(1.0, delta));
             double r = RadiusCm(areaM2);
             double ratio = CoronaOnsetKvPerCm(delta, r) / CoronaOnsetKvPerCm(1.0, r);
