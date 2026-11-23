@@ -35,6 +35,8 @@ namespace KardashevAscent.Simulation.Robots
         public OperatingProgram CachedProgram;
         public List<PriorityRecord> CachedPriorities = new List<PriorityRecord>();
         public int UnsyncedFindings;
+        /// <summary>Save version 49: hours outside the operating range with an empty battery.</summary>
+        public double ExposedEmptyHours;
         /// <summary>Stage E second part (save version 25): the colony's needs at the last sync.</summary>
         public bool CachedBrownoutRisk;
         public bool CachedSitesWaiting;

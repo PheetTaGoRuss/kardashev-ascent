@@ -481,6 +481,17 @@ namespace KardashevAscent.Simulation.Robots
         // ---- Robots and groups ----
 
         /// <summary>A new robot on a tile; it joins the automatic group of its kind.</summary>
+        /// <summary>A destroyed robot leaves the colony: its place in its group and the task it held go back to the list. False when there is no such robot.</summary>
+        public bool RemoveRobot(int robotId)
+        {
+            Robot r = GetRobot(robotId);
+            if (r == null) return false;
+            if (r.Task.HasValue) Log(r, r.Task, null, "destroyed");
+            GetGroup(r.GroupId)?.MemberIds.Remove(r.Id);
+            robots.Remove(r);
+            return true;
+        }
+
         public Robot AddRobot(RobotKind kind, int tile)
         {
             var r = new Robot(nextRobotId, "R" + nextRobotId, kind, tile);
@@ -1241,6 +1252,7 @@ namespace KardashevAscent.Simulation.Robots
                 rs.SyncedRulebookVersion = r.SyncedRulebookVersion;
                 rs.CachedProgram = r.CachedProgram;
                 rs.UnsyncedFindings = r.UnsyncedFindings;
+                rs.ExposedEmptyHours = r.ExposedEmptyHours;
                 rs.CachedBrownoutRisk = r.CachedNeeds.BrownoutRisk;
                 rs.CachedSitesWaiting = r.CachedNeeds.SitesWaiting;
                 foreach (var kv in r.CachedPriorities)
@@ -1302,6 +1314,7 @@ namespace KardashevAscent.Simulation.Robots
                 r.SyncedRulebookVersion = rs.SyncedRulebookVersion;
                 r.CachedProgram = rs.CachedProgram;
                 r.UnsyncedFindings = rs.UnsyncedFindings;
+                r.ExposedEmptyHours = Math.Max(0.0, rs.ExposedEmptyHours);
                 r.CachedNeeds = new ColonyNeeds(rs.CachedBrownoutRisk, rs.CachedSitesWaiting);
                 if (rs.CachedPriorities != null)
                     foreach (PriorityRecord p in rs.CachedPriorities)
