@@ -22,8 +22,22 @@ namespace KardashevAscent.Simulation.Electrical
         /// <summary>Design life at the temperature limit, hours: 40 years [verified as the usual XLPE design life; game value TBD].</summary>
         public const double DesignLifeHours = 40.0 * 8766.0;
 
-        /// <summary>Thermal resistance from the conductor to the surroundings per metre of cable, K m / W (game rule, TBD; buried cable is about 0.5 to 1).</summary>
+        /// <summary>Thermal resistance from the conductor to the surroundings per metre of cable in Earth air, K m / W (game rule, TBD; buried cable is about 0.5 to 1).</summary>
         public const double ThermalResistanceKmPerW = 0.5;
+
+        /// <summary>
+        /// Heat leaving a cable by radiation, W per metre per kelvin (game rule, TBD): the only way out when there is no air (decision of
+        /// 2026-11-23). The rest of the Earth-air conductance, 1/0.5 - this, is convection and conduction and scales with the relative air
+        /// density (capped at 1).
+        /// </summary>
+        public const double RadiationConductanceWPerMK = 0.2;
+
+        /// <summary>Thermal resistance at a relative air density, K m / W: radiation plus an air path that thins with the air. 0.5 at density 1.</summary>
+        public static double ThermalResistance(double airDensity)
+        {
+            double air = 1.0 / ThermalResistanceKmPerW - RadiationConductanceWPerMK;
+            return 1.0 / (RadiationConductanceWPerMK + air * Math.Max(0.0, Math.Min(1.0, airDensity)));
+        }
 
         /// <summary>Specific heat of copper, J/(kg K) [recalled, TBD]; the conductor's heat capacity stands for the whole cable.</summary>
         public const double CopperSpecificHeat = 385.0;
@@ -36,16 +50,16 @@ namespace KardashevAscent.Simulation.Electrical
         public static double HeatPerM(CableSpec spec, double currentA, double celsius) => currentA * currentA * spec.Material.Rho(celsius) / spec.AreaM2 * spec.ConductorsInLoop;
 
         /// <summary>Temperature the cable settles at, C, for a steady heating per metre.</summary>
-        public static double SteadyCelsius(double airC, double heatPerMW) => airC + heatPerMW * ThermalResistanceKmPerW;
+        public static double SteadyCelsius(double airC, double heatPerMW, double airDensity = 1.0) => airC + heatPerMW * ThermalResistance(airDensity);
 
         /// <summary>Time constant of the link, hours (it does not depend on length: both the resistance and the capacity scale with it).</summary>
-        public static double TimeConstantHours(CableSpec spec) => ThermalResistanceKmPerW * HeatCapacityPerM(spec) / 3600.0;
+        public static double TimeConstantHours(CableSpec spec, double airDensity = 1.0) => ThermalResistance(airDensity) * HeatCapacityPerM(spec) / 3600.0;
 
         /// <summary>The temperature after dt hours, moving exponentially toward the steady value.</summary>
-        public static double Step(double celsius, double airC, double heatPerMW, CableSpec spec, double dtHours)
+        public static double Step(double celsius, double airC, double heatPerMW, CableSpec spec, double dtHours, double airDensity = 1.0)
         {
-            double target = SteadyCelsius(airC, heatPerMW);
-            double k = Math.Exp(-dtHours / TimeConstantHours(spec));
+            double target = SteadyCelsius(airC, heatPerMW, airDensity);
+            double k = Math.Exp(-dtHours / TimeConstantHours(spec, airDensity));
             return target + (celsius - target) * k;
         }
 

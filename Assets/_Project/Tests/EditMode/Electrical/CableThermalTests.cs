@@ -60,6 +60,37 @@ namespace KardashevAscent.Tests.Electrical
             Assert.AreEqual(0.5, CableThermal.ConditionLoss(100.0, hours / 4.0), 1e-12, "twice as fast, a quarter of the time: half used");
         }
 
+        [Test]
+        public void ThermalResistanceIsHalfAKelvinMetrePerWattInEarthAirAndRisesAsTheAirThins()
+        {
+            Assert.AreEqual(0.5, CableThermal.ThermalResistance(1.0), 1e-12);
+            Assert.AreEqual(0.5, CableThermal.ThermalResistance(3.0), 1e-12, "dense air does not cool better than the Earth value");
+            Assert.Greater(CableThermal.ThermalResistance(0.1), CableThermal.ThermalResistance(1.0));
+            // no air: radiation only, 1 / 0.2 = 5 K m/W, ten times the Earth value
+            Assert.AreEqual(1.0 / CableThermal.RadiationConductanceWPerMK, CableThermal.ThermalResistance(0.0), 1e-12);
+            Assert.AreEqual(10.0, CableThermal.ThermalResistance(0.0) / CableThermal.ThermalResistance(1.0), 1e-9);
+        }
+
+        [Test]
+        public void ACableInVacuumRunsMuchHotterAtTheSameCurrentAndRatingDrops()
+        {
+            double heat = CableThermal.HeatPerM(Cu500, 500.0, 20.0);
+            double earth = CableThermal.SteadyCelsius(20.0, heat, 1.0);
+            double vacuum = CableThermal.SteadyCelsius(20.0, heat, 0.0);
+            Assert.AreEqual(heat * 0.5, earth - 20.0, 1e-9);
+            Assert.AreEqual(heat * 5.0, vacuum - 20.0, 1e-9);
+            // the current that reaches the 90 C limit is lower in vacuum by the square root of the resistance ratio
+            double limitEarth = Math.Sqrt((90.0 - 20.0) / 0.5 / (1.7241e-8 * (1 + 0.00393 * 0.0) / 500e-6));
+            double limitVacuum = Math.Sqrt((90.0 - 20.0) / 5.0 / (1.7241e-8 / 500e-6));
+            Assert.AreEqual(Math.Sqrt(10.0), limitEarth / limitVacuum, 1e-9);
+        }
+
+        [Test]
+        public void TheTimeConstantGrowsWithTheThermalResistance()
+        {
+            Assert.AreEqual(10.0, CableThermal.TimeConstantHours(Cu500, 0.0) / CableThermal.TimeConstantHours(Cu500, 1.0), 1e-9);
+        }
+
         // ---- in the colony ----
         static readonly HexSphere Sphere = HexSphere.Create(12);
         static readonly PlanetSurface Surface = PlanetSurface.Generate(Sphere, new SurfaceSettings(7));
