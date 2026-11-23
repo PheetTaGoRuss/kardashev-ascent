@@ -16,6 +16,8 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Experiments whose fit puzzle has not been solved (RS-13).</summary>
         public List<ExperimentKind> Puzzles { get; } = new List<ExperimentKind>();
         /// <summary>The share of the original range each done experiment still has (1 to 0.1); a missing entry means exact.</summary>
+        /// <summary>Sampling in progress for a puzzle that costs robot time (the ore assay): robot hours still to work, and the range share it ends at.</summary>
+        public Dictionary<ExperimentKind, (double Hours, double Share)> Sampling { get; } = new Dictionary<ExperimentKind, (double, double)>();
         public Dictionary<ExperimentKind, double> Shares { get; } = new Dictionary<ExperimentKind, double>();
 
         /// <summary>Forget known experiments and orders (a load). Stations are rebuilt from the saved buildings.</summary>
@@ -25,6 +27,7 @@ namespace KardashevAscent.Simulation.Game
             Orders.Clear();
             Puzzles.Clear();
             Shares.Clear();
+            Sampling.Clear();
         }
     }
 }

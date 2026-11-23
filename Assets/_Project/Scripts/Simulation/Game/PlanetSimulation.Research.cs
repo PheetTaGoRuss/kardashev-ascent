@@ -135,6 +135,7 @@ namespace KardashevAscent.Simulation.Game
                 return false;
             WorkTask t = ExperimentTask(kind, research.Orders[i].Tile);
             research.Orders.RemoveAt(i);
+            if (research.Sampling.Remove(kind)) research.Puzzles.Add(kind);   // sampling stopped: the puzzle waits again
             Workforce.Tasks.MarkCancelled(t);
             fieldWork.Remove(t);
             Settle(null);
@@ -147,8 +148,11 @@ namespace KardashevAscent.Simulation.Game
                 return 1.0;
             int i = research.Orders.FindIndex(o => o.Kind == kind);
             return i >= 0 && fieldWork.TryGetValue(ExperimentTask(kind, research.Orders[i].Tile), out double h)
-                ? Math.Min(1.0, h / Experiments.WorkHours(kind)) : 0.0;
+                ? Math.Min(1.0, h / ExperimentHours(kind)) : 0.0;
         }
+
+        /// <summary>Robot hours an order of this experiment needs: the sampling hours while an assay is being sampled, else the experiment's own.</summary>
+        double ExperimentHours(ExperimentKind kind) => research.Sampling.TryGetValue(kind, out var s) ? s.Hours : Experiments.WorkHours(kind);
 
         static WorkTask ExperimentTask(ExperimentKind kind, int tile) => new WorkTask(TaskKind.Experiment, tile, (int)kind);
 
@@ -164,7 +168,7 @@ namespace KardashevAscent.Simulation.Game
             foreach (var o in research.Orders.ToArray())
             {
                 WorkTask t = ExperimentTask(o.Kind, o.Tile);
-                if (!fieldWork.TryGetValue(t, out double h) || h < Experiments.WorkHours(o.Kind) - 1e-9)
+                if (!fieldWork.TryGetValue(t, out double h) || h < ExperimentHours(o.Kind) - 1e-9)
                     continue;
                 fieldWork.Remove(t);
                 research.Orders.Remove(o);
@@ -412,12 +416,12 @@ namespace KardashevAscent.Simulation.Game
                 foreach (int k in state.KnownExperiments)
                     if (Enum.IsDefined(typeof(ExperimentKind), k))
                         research.Known.Add((ExperimentKind)k);
+            RestoreFitPuzzles(state);   // before the orders: an assay being sampled is a done experiment with an order
             if (state.ExperimentOrders != null)
                 foreach (ExperimentOrderRecord o in state.ExperimentOrders)
-                    if (o.Tile >= 0 && o.Tile < TileCount && !research.Known.Contains(o.Kind) && !IsExperimentOrdered(o.Kind))
+                    if (o.Tile >= 0 && o.Tile < TileCount && (!research.Known.Contains(o.Kind) || research.Sampling.ContainsKey(o.Kind)) && !IsExperimentOrdered(o.Kind))
                         research.Orders.Add((o.Kind, o.Tile));
             Deposits.DeepScanned = research.Known.Contains(ExperimentKind.SeismicSurvey);
-            RestoreFitPuzzles(state);
         }
     }
 }

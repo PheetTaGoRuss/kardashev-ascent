@@ -510,6 +510,8 @@ namespace KardashevAscent.Simulation.Game
         Planet.KnowledgeEstimate TideRangeEstimate { get; }
         /// <summary>The grade of an ore at a surveyed tile: a range until the ore assay is done.</summary>
         Planet.KnowledgeEstimate GradeEstimate(int tileId, Resources.Material material);
+        /// <summary>What one mining robot digs out of this tile, kg per hour: a range until the ore assay.</summary>
+        Planet.KnowledgeEstimate MiningRateEstimate(int tileId, Resources.Material material);
         /// <summary>The share of its rating a cable is given while the air pressure is unmeasured.</summary>
         double CableDesignShare { get; }
         /// <summary>Share of their real output solar panels deliver while values are unknown (a safety margin).</summary>

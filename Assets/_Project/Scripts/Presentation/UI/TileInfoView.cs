@@ -369,7 +369,7 @@ namespace KardashevAscent.Presentation.UI
                     g.style.fontSize = 14;
                     if (empty) g.style.color = UiPalette.Muted;
                     chip.Add(g);
-                    chip.tooltip = $"{Materials.Name(d.Material)}: grade {d.Grade:0.00} (1 = an ordinary deposit on Earth); {Left(map, tile, d.Material)}";
+                    chip.tooltip = $"{Materials.Name(d.Material)}: grade {GradeText(sim, tile, d, rough)} (1 = an ordinary deposit on Earth); {Left(map, tile, d.Material)}";
                     groundChips.Add(chip);
                 }
             if (water)
@@ -436,7 +436,9 @@ namespace KardashevAscent.Presentation.UI
                     continue;
                 Material material = m;
                 bool on = sim.IsMiningOrdered(tile, m);
-                AddGroundButton(on ? $"Stop mining {Materials.Name(m).ToLowerInvariant()}" : $"Mine {Materials.Name(m).ToLowerInvariant()}", on,
+                var rate = sim.MiningRateEstimate(tile, m);
+                string rateText = rate.IsExact ? $" · {rate.Value:0.#} kg/h" : $" · about {rate.Value:0.#} ± {rate.HalfRange:0.#} kg/h";
+                AddGroundButton(on ? $"Stop mining {Materials.Name(m).ToLowerInvariant()}" : $"Mine {Materials.Name(m).ToLowerInvariant()}{rateText}", on,
                                 () => { if (sim.IsMiningOrdered(tile, material)) sim.CancelMining(tile, material); else sim.OrderMining(tile, material); groundShape = null; });
             }
             // A mining or survey order out of a robot's one-charge range is never worked: say so (balance pass 2026-11-20).

@@ -71,6 +71,13 @@ namespace KardashevAscent.Simulation.Game
             return KnowledgeEstimate.Of(g, g * GradeSpreadShare * ExperimentRangeShare(ExperimentKind.OreAssay), false, unchecked(EstimateKey(5) + tileId * 7 + (int)material));
         }
 
+        /// <summary>What one mining robot digs out of a tile, kg per hour: the nominal rate times the grade, as a range until the assay.</summary>
+        public KnowledgeEstimate MiningRateEstimate(int tileId, Material material)
+        {
+            KnowledgeEstimate g = GradeEstimate(tileId, material);
+            return new KnowledgeEstimate(Robots.RobotSpecs.MiningKgPerHour * g.Value, Robots.RobotSpecs.MiningKgPerHour * g.HalfRange);
+        }
+
         /// <summary>
         /// The share of its rating a cable is given while the air is unmeasured: the voltage derate at the cautious (thin) end of the
         /// pressure range over the derate at the true pressure, never below <see cref="MinimumCableShare"/>. 1 once the air pressure is measured.
