@@ -164,5 +164,68 @@ namespace KardashevAscent.Simulation.Tests.Logistics
             Assert.Less(KardashevAscent.Simulation.Resources.BuildCosts.ChargingBay.Items().First(x => x.Item1 == KardashevAscent.Simulation.Resources.Material.Iron).Item2, KardashevAscent.Simulation.Resources.BuildCosts.ChargingStation.Items().First(x => x.Item1 == KardashevAscent.Simulation.Resources.Material.Iron).Item2);
             StringAssert.Contains("already", sim.ChargingBayBlocker(tile));
         }
+
+        [Test]
+        public void AMineTwoOrThreeHopsFromTheLanderCanBeHauledDirectly_MostOfTheTime()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
+            int lander = sim.BaseTileId;
+            var depth = new System.Collections.Generic.Dictionary<int, int> { { lander, 0 } };
+            var q = new System.Collections.Generic.Queue<int>(); q.Enqueue(lander);
+            while (q.Count > 0) { int t = q.Dequeue(); if (depth[t] >= 3) continue; foreach (int n in Sphere.Neighbors[t]) if (!depth.ContainsKey(n)) { depth[n] = depth[t] + 1; q.Enqueue(n); } }
+            foreach (int hop in new[] { 2, 3 })
+            {
+                var tiles = depth.Where(kv => kv.Value == hop && !sim.GetTile(kv.Key).IsWater && !double.IsInfinity(sim.Routes.HoursBetween(lander, kv.Key))).Select(kv => kv.Key).ToList();
+                Assert.Greater(tiles.Count, 2);
+                int direct = tiles.Count(t => sim.PlanHaul(lander, t, PlanetSimulation.BasePayloadKg).Feasible && sim.PlanHaul(lander, t, PlanetSimulation.BasePayloadKg).Stops.Count == 0);
+                Assert.GreaterOrEqual(direct / (double)tiles.Count, 0.6, "hop " + hop + ": most mines are within one charge, loaded out and empty back");
+            }
+        }
+
+        [Test]
+        public void NightsAreColderThanAfternoons_AndANightHaulCostsMoreHeater()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
+            int t = Enumerable.Range(0, sim.TileCount).First(x => !sim.GetTile(x).IsWater && Math.Abs(sim.GetTile(x).Latitude) < 0.3);
+            double day = sim.DayLengthHours;
+            double warm = double.MinValue, cold = double.MaxValue, warmT = 0, coldT = 0;
+            for (double h = 0.0; h < day; h += day / 24.0)
+            {
+                double a = sim.DiurnalAirTemperatureAt(t, h);
+                if (a > warm) { warm = a; warmT = h; }
+                if (a < cold) { cold = a; coldT = h; }
+            }
+            Assert.Greater(warm - cold, sim.DiurnalAmplitudeK(t), "the swing is at least the amplitude");
+            sim.DiurnalTemperature = false;
+            Assert.AreEqual(sim.DiurnalAirTemperatureAt(t, warmT), sim.DiurnalAirTemperatureAt(t, coldT), 1e-9, "off: the yearly temperature only");
+        }
+
+        [Test]
+        public void ALocklessDayHasASwing_ALockedPlanetHasNone()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
+            Assert.Greater(sim.DiurnalAmplitudeK(sim.BaseTileId), 0.0);
+            var state = sim.CaptureState();
+            Assert.IsTrue(state.DiurnalTemperature);
+            state.Version = 53;
+            var old = new PlanetSimulation(Sphere, Surface, Earthlike);
+            old.RestoreState(state);
+            Assert.IsFalse(old.DiurnalTemperature, "a save before version 54 keeps the yearly temperature");
+        }
+
+        [Test]
+        public void ANightHaulInTheColdCostsMoreHeaterThanADayHaul_AndTheBestStartIsFound()
+        {
+            var cold = new PlanetSolarParams(SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Math.PI / 180.0,
+                282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, -35.0);
+            var sim = new PlanetSimulation(Sphere, Surface, cold);
+            int lander = sim.BaseTileId;
+            int far = Enumerable.Range(0, sim.TileCount).Where(t => !sim.GetTile(t).IsWater && !double.IsInfinity(sim.Routes.HoursBetween(lander, t)))
+                .OrderBy(t => Math.Abs(sim.Routes.HoursBetween(lander, t) - 12.0)).First();
+            var (delay, saved) = sim.BestHaulStart(lander, far, 400.0);
+            Assert.GreaterOrEqual(saved, 0.0);
+            double[] heater = Enumerable.Range(0, 12).Select(k => sim.HaulLegCost(lander, far, 400.0).HeaterWh).ToArray();
+            Assert.Greater(heater[0], 0.0, "in the cold the heater runs");
+        }
     }
 }

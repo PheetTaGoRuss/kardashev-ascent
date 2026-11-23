@@ -32,9 +32,9 @@ namespace KardashevAscent.Simulation.Game
         }
 
         /// <summary>The energy of driving a given route (the tiles after the start, in order) with this much cargo.</summary>
-        HaulLeg LegAlong(int from, List<int> route, double cargoKg)
+        HaulLeg LegAlong(int from, List<int> route, double cargoKg, double startDelayHours = 0.0)
         {
-            double mean = CurrentMeanAnomaly();
+            double clock = TimeHours + startDelayHours;
             double hours = 0.0, drive = 0.0, climb = 0.0, heater = 0.0;
             double power = cargoKg > 0.0 ? Routes.DrivePowerW * HaulPhysics.LoadFactor(HaulPhysics.DefaultRobotMassKg, cargoKg) : Routes.DrivePowerW;
             double[] heights = ClimbEnabled ? TileHeightsM() : null;
@@ -49,7 +49,8 @@ namespace KardashevAscent.Simulation.Game
                 drive += power * step;
                 if (heights != null)
                     climb += HaulPhysics.ClimbEnergyWh(HaulPhysics.DefaultRobotMassKg, cargoKg, SurfaceGravityMs2, heights[t] - heights[at], 1.0) * HaulPhysics.ClimbEffortShare * scale;
-                heater += RobotThermal.HeaterW(AirTemperatureAt(t, mean), false) * step;
+                heater += RobotThermal.HeaterW(DiurnalAirTemperatureAt(t, clock), false) * step;
+                clock += step;
                 at = t;
             }
             return new HaulLeg(hours, drive, climb, heater);
@@ -63,7 +64,9 @@ namespace KardashevAscent.Simulation.Game
             string staging = !plan.Feasible ? " · REFUSED: no chain of legs between chargers or shelters fits the battery"
                            : plan.Stops.Count == 0 ? " · direct" : " · staged via tile " + string.Join(", ", plan.Stops);
             double drive = o.DriveWh + back.DriveWh, climb = o.ClimbWh + back.ClimbWh, heater = o.HeaterWh + back.HeaterWh;
-            return $"{o.Hours + back.Hours:0} h, {drive + climb + heater:0} Wh round trip (driving {drive:0}, climbing {climb:0}, heater {heater:0}){staging}";
+            var (delay, saved) = BestHaulStart(from, to, cargoKg);
+            string start = delay > 0.0 && saved > 0.05 * Math.Max(1.0, heater) && saved > 20.0 ? $" · starting in {delay:0} h would save {saved:0} Wh of heater" : "";
+            return $"{o.Hours + back.Hours:0} h, {drive + climb + heater:0} Wh round trip (driving {drive:0}, climbing {climb:0}, heater {heater:0}){staging}{start}";
         }
 
         /// <summary>
@@ -142,6 +145,29 @@ namespace KardashevAscent.Simulation.Game
             for (int i = prev[n - 1]; i > 0; i = prev[i]) via.Add(nodes[i]);
             via.Reverse();
             return new HaulPlan(true, via, dist[n - 1]);
+        }
+
+        /// <summary>
+        /// When to start a haul to spend the least heater energy (decided 2026-11-24): the delay in hours, within one day, that minimises the heater
+        /// energy of the whole round trip, and what it saves against starting now. Zero delay and zero saving when no start is better.
+        /// </summary>
+        public (double DelayHours, double SavedWh) BestHaulStart(int from, int to, double cargoKg)
+        {
+            if (Routes == null || DayLengthHours <= 0.0) return (0.0, 0.0);
+            List<int> there = Routes.Route(from, to), back = Routes.Route(to, from);
+            if (there == null || back == null) return (0.0, 0.0);
+            double Heater(double delay)
+            {
+                var o = LegAlong(from, there, cargoKg, delay);
+                return o.HeaterWh + LegAlong(to, back, 0.0, delay + o.Hours).HeaterWh;
+            }
+            double now = Heater(0.0), best = now, bestDelay = 0.0;
+            for (int k = 1; k < 12; k++)
+            {
+                double d = DayLengthHours * k / 12.0, h = Heater(d);
+                if (h < best - 1e-9) { best = h; bestDelay = d; }
+            }
+            return (bestDelay, now - best);
         }
 
         /// <summary>The round trip of a haul: loaded out, empty back.</summary>

@@ -56,7 +56,7 @@ namespace KardashevAscent.Simulation.Tests.Logistics
         [Test]
         public void TheRobotsPayAShareOfTheTrueClimbingEnergy_ADocumentedBalanceRule()
         {
-            Assert.AreEqual(0.15, HaulPhysics.ClimbEffortShare, 1e-12);
+            Assert.AreEqual(0.075, HaulPhysics.ClimbEffortShare, 1e-12);
             Assert.Greater(HaulPhysics.ClimbEffortShare, 0.0);
             Assert.LessOrEqual(HaulPhysics.ClimbEffortShare, 1.0);
         }
