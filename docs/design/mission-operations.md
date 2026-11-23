@@ -204,3 +204,7 @@ Asked of the director, not decided here:
 - Q5: the climb term is on, using the terrain's real metre height scale; if the terrain has none it stays off and a follow-up is logged.
 - Q6: three conditions, AND only.
 - Q7: rule edits sync anywhere in coverage.
+
+## Logistics on the climb and weather costs (Decided 2026-11-24, director delegated)
+
+Spec in `docs/design/logistics-routes.md`. The haul planner chooses sources by what a haul really costs a robot, not by driving hours alone.

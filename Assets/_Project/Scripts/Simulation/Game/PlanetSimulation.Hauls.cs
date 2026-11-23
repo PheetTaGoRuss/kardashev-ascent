@@ -116,12 +116,12 @@ namespace KardashevAscent.Simulation.Game
             sources.Sort();
             double Available(int tile, Material m) =>
                 StockAt(tile)[m] - (wanted.TryGetValue((tile, m), out double keep) ? keep : 0.0) - haulBook.ReservedAt(tile, m);
-            double Hours(int a, int b) => Routes == null ? double.PositiveInfinity : Routes.HoursBetween(a, b);
-
             double capacity = 1.0;   // plan loads the biggest hauler can carry
             foreach (Robot r in Workforce.Robots)
                 if (RobotCatalog.CanDo(r.Kind, TaskKind.Haul, UnlockLevel))
                     capacity = Math.Max(capacity, r.Attribute(RobotAttribute.TransportCapacity));
+            // Sources are ranked by what the haul really costs: driving hours plus the climb and the heater, as hours (logistics-routes.md).
+            double Hours(int a, int b) => Routes == null ? double.PositiveInfinity : HaulCostHours(a, b, BasePayloadKg * capacity);
             foreach (PlannedHaul h in HaulPlanner.Plan(demands, sources, Available, Hours, BasePayloadKg * capacity, MaxHaulsPerDemand))
                 haulBook.Add(h.From, h.To, h.Material, h.Kg);
         }
