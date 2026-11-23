@@ -233,6 +233,26 @@ namespace KardashevAscent.EditorTools
                 case "planet":
                     UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.TilePicker>()?.Select(-1);
                     return true;
+                case "scrollto":
+                {
+                    // Scroll the window that holds the first visible label containing the argument so that label shows.
+                    foreach (var doc in UnityEngine.Object.FindObjectsByType<UnityEngine.UIElements.UIDocument>(FindObjectsSortMode.None))
+                    {
+                        if (doc.rootVisualElement == null) continue;
+                        UnityEngine.UIElements.Label hit = null;
+                        UnityEngine.UIElements.UQueryExtensions.Query<UnityEngine.UIElements.Label>(doc.rootVisualElement).ForEach(l =>
+                        {
+                            if (hit == null && l.resolvedStyle.display != UnityEngine.UIElements.DisplayStyle.None && l.text != null && l.text.IndexOf(argument, StringComparison.OrdinalIgnoreCase) >= 0)
+                                hit = l;
+                        });
+                        if (hit == null) continue;
+                        var sv = hit.GetFirstAncestorOfType<UnityEngine.UIElements.ScrollView>();
+                        sv?.ScrollTo(hit);
+                        return true;
+                    }
+                    Log("no label: " + argument);
+                    return true;
+                }
                 case "click":
                 {
                     // Press the first visible UI Toolkit button whose text contains the argument.

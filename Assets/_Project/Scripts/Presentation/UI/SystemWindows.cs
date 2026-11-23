@@ -389,6 +389,9 @@ namespace KardashevAscent.Presentation.UI
             tree = new ResearchTreeView(ToggleExperiment, ToggleStationSurvey);
             Body.Add(tree);
 
+            Heading("WHAT THE COLONY BELIEVES · UNTIL MEASURED");
+            beliefs = Text();
+
             Heading("VALUES");
             foreach (SolarParameter p in (SolarParameter[])System.Enum.GetValues(typeof(SolarParameter)))
             {
@@ -430,6 +433,7 @@ namespace KardashevAscent.Presentation.UI
         }
 
         ResearchTreeView tree;
+        Label beliefs;
 
         void ToggleStationSurvey()
         {
@@ -655,6 +659,12 @@ namespace KardashevAscent.Presentation.UI
             marginNote.text = $"Margins · panels {design * 100.0:0} % · batteries {battery * 100.0:0} %";
 
             tree?.Refresh(sim);
+            if (beliefs != null)
+                beliefs.text =
+                    "Air pressure: " + sim.PressureEstimate.Say("0.#", "kPa", 0.001) + (sim.PressureEstimate.IsExact ? "" : " (cables are rated at " + (sim.CableDesignShare * 100.0).ToString("0") + " % until measured)") + "\n" +
+                    "Mean ground temperature: " + sim.TemperatureEstimate.Say("0", "C") + (sim.TemperatureEstimate.IsExact ? "" : " (robot warnings take the worse end)") + "\n" +
+                    "Highest point: " + sim.HighestPointEstimate.Say("0.#", "km", 0.001) + "\n" +
+                    "Open-sea tide: " + sim.TideRangeEstimate.Say("0.##", "m");
         }
     }
 

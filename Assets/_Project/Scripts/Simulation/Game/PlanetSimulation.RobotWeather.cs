@@ -40,14 +40,26 @@ namespace KardashevAscent.Simulation.Game
             // The warning: a robot outside its range whose battery will not last the night.
             foreach (Robot r in Workforce.Robots)
             {
-                if (r.HeaterW > 0.0 && r.ThermalHoursLeft < RobotThermal.WarnWithinHours && !r.ThermalWarned)
+                // Until the ground temperature is measured the warning goes by the cautious end of the estimate (decided 2026-11-23).
+                double air = AirTemperatureAt(r.Tile, CurrentMeanAnomaly());
+                double heater = r.HeaterW, hoursLeft = r.ThermalHoursLeft;
+                bool estimated = !IsExperimentKnown(Planet.ExperimentKind.SurfaceTemperature);
+                if (estimated && !r.Sheltered)
+                {
+                    double mid = (RobotThermal.OperatingMinC + RobotThermal.OperatingMaxC) / 2.0;
+                    double cautious = air + (air < mid ? -Planet.OrbitalBrief.TemperatureSpreadC : Planet.OrbitalBrief.TemperatureSpreadC);
+                    heater = RobotThermal.HeaterW(cautious, r.Has(RobotModule.ThermalInsulation));
+                    hoursLeft = heater > 0.0 ? r.Battery.UsableWh / heater : double.PositiveInfinity;
+                }
+                if (heater > 0.0 && hoursLeft < RobotThermal.WarnWithinHours && !r.ThermalWarned)
                 {
                     r.ThermalWarned = true;
-                    RobotWeatherNews = $"Robot {r.Id} is outside its range: battery lasts {r.ThermalHoursLeft:0.0} h. It needs shelter.";
+                    RobotWeatherNews = estimated
+                        ? $"Robot {r.Id} may be outside its range (ground temperature not measured, plus or minus {Planet.OrbitalBrief.TemperatureSpreadC:0} C): battery may last only {hoursLeft:0.0} h. It needs shelter, or measure the surface temperature."
+                        : $"Robot {r.Id} is outside its range: battery lasts {hoursLeft:0.0} h. It needs shelter.";
                     RobotWeatherNewsSerial++;
-                    double air = AirTemperatureAt(r.Tile, CurrentMeanAnomaly());
-                    Log($"Robot {r.Id}", "Cold or heat warning", r.ThermalHoursLeft, "h",
-                        $"R{r.Id}", $"Robot {r.Id} is outside its operating range ({air:0} C) and its battery lasts about {r.ThermalHoursLeft:0.0} h at the heater draw ({r.HeaterW:0} W). It needs shelter.", r.Id);
+                    Log($"Robot {r.Id}", "Cold or heat warning", hoursLeft, "h",
+                        $"R{r.Id}", $"Robot {r.Id} is {(estimated ? "possibly " : "")}outside its operating range ({air:0} C{(estimated ? ", unmeasured" : "")}) and its battery lasts about {hoursLeft:0.0} h at the heater draw ({heater:0} W). It needs shelter.", r.Id);
                 }
             }
             if (Upkeep.DestroyedRobotIds.Count == 0) return;

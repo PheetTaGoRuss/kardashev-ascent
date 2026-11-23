@@ -102,7 +102,7 @@ namespace KardashevAscent.Simulation.Game
                 double lengthM = ElectricalGraph.CableLengthM(Sphere.Centers[fe.A], Sphere.Centers[fe.B], planetRadiusM);
                 double ratio = PlainLineVolts / fe.Volts;
                 // Per-unit on the plain-line base: resistance scales with (Vbase/V)^2, current with V/Vbase.
-                branches[e] = new FlowBranch(index[fe.A], index[fe.B], spec.ResistanceOhm(lengthM, CableCelsius(fe.A, fe.B)) * ratio * ratio, spec.RatingA * KindRatingFactor(fe.Kind) * fe.Volts / PlainLineVolts);
+                branches[e] = new FlowBranch(index[fe.A], index[fe.B], spec.ResistanceOhm(lengthM, CableCelsius(fe.A, fe.B)) * ratio * ratio, spec.RatingA * KindRatingFactor(fe.Kind) * fe.Volts / PlainLineVolts * CableDesignShare);
             }
 
             int slack = index[BaseTileId];

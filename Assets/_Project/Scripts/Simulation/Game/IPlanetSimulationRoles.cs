@@ -494,6 +494,13 @@ namespace KardashevAscent.Simulation.Game
         double ExperimentProgress(Planet.ExperimentKind kind);
         /// <summary>What an experiment found, for the player, or null when not done.</summary>
         string ExperimentResult(Planet.ExperimentKind kind);
+        /// <summary>What the colony believes about five quantities: a range until measured, exact after (RS-14).</summary>
+        Planet.KnowledgeEstimate PressureEstimate { get; }
+        Planet.KnowledgeEstimate TemperatureEstimate { get; }
+        Planet.KnowledgeEstimate HighestPointEstimate { get; }
+        Planet.KnowledgeEstimate TideRangeEstimate { get; }
+        /// <summary>The share of its rating a cable is given while the air pressure is unmeasured.</summary>
+        double CableDesignShare { get; }
         /// <summary>Share of their real output solar panels deliver while values are unknown (a safety margin).</summary>
         double SolarDesignShare { get; }
         /// <summary>Share of battery capacity in use until the surface temperature is known.</summary>
