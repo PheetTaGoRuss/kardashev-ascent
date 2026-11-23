@@ -77,6 +77,23 @@ namespace KardashevAscent.Simulation.Robots
 
         public double GravityMs2 { get; }
 
+        /// <summary>
+        /// Contour routing (L4, decided 2026-11-24): the extra energy, Wh, of entering a tile from a neighbour (climb with no downhill
+        /// regeneration, plus the heater). With a weight, the cheapest route trades time against energy; null means time only.
+        /// </summary>
+        public Func<int, int, double, double> ExtraWh { get; private set; }
+
+        /// <summary>Hours of driving one Wh is worth when choosing a route: the single weight, TBD (0: time only).</summary>
+        public double HoursPerWh { get; private set; }
+
+        /// <summary>Set (or clear, with null) the energy weighing. Every cached route is worked out again.</summary>
+        public void SetEnergyCost(Func<int, int, double, double> extraWh, double hoursPerWh)
+        {
+            ExtraWh = extraWh; HoursPerWh = hoursPerWh;
+            cache.Clear();
+            if (amphibious != null) amphibious.SetEnergyCost(extraWh, hoursPerWh);
+        }
+
         /// <summary>True for routes of robots with a boat module: they cross open water as well as land.</summary>
         public bool OnWater { get; }
 
@@ -84,7 +101,14 @@ namespace KardashevAscent.Simulation.Robots
 
         /// <summary>The same planet's routes for a robot that can go on water (made once, then kept).</summary>
         public RouteFinder Amphibious() =>
-            OnWater ? this : amphibious ?? (amphibious = new RouteFinder(sphere, surface, GravityMs2, true, opened, dammed));
+            OnWater ? this : amphibious ?? (amphibious = MakeAmphibious());
+
+        RouteFinder MakeAmphibious()
+        {
+            var a = new RouteFinder(sphere, surface, GravityMs2, true, opened, dammed);
+            a.ExtraWh = ExtraWh; a.HoursPerWh = HoursPerWh;
+            return a;
+        }
 
         /// <summary>
         /// Hours to cross a tile of open water with a boat module (game rule, TBD): shallow sea 1.5 flat tiles, deep
@@ -165,35 +189,39 @@ namespace KardashevAscent.Simulation.Robots
         (double[] Hours, int[] Previous) Dijkstra(List<int> starts)
         {
             int n = sphere.TileCount;
+            // cost orders the search (time, plus the energy weighing when it is on); hours is the driving time along the route found
             var hours = new double[n];
+            var cost = new double[n];
             var previous = new int[n];
-            for (int i = 0; i < n; i++) { hours[i] = double.PositiveInfinity; previous[i] = -1; }
-            var heap = new SortedSet<(double H, int T)>();
+            for (int i = 0; i < n; i++) { hours[i] = double.PositiveInfinity; cost[i] = double.PositiveInfinity; previous[i] = -1; }
+            var heap = new SortedSet<(double C, int T)>();
             foreach (int s in starts)
             {
                 if (s < 0 || s >= n) continue;
-                hours[s] = 0.0;
+                hours[s] = 0.0; cost[s] = 0.0;
                 heap.Add((0.0, s));
             }
+            bool weighing = ExtraWh != null && HoursPerWh > 0.0;
             while (heap.Count > 0)
             {
-                var (h, t) = heap.Min;
+                var (c, t) = heap.Min;
                 heap.Remove(heap.Min);
-                if (h > hours[t]) continue;
+                if (c > cost[t]) continue;
                 // A closed barrier is a dead end: robots reach its edge but don't drive on across it (a start is fine:
                 // a robot working there drives back out).
-                if (h > 0.0 && !IsPassable(t)) continue;
+                if (hours[t] > 0.0 && !IsPassable(t)) continue;
                 foreach (int nb in sphere.Neighbors[t])
                 {
                     double step = Hop(surface.Terrain[nb]);
                     if (double.IsInfinity(step)) continue;
-                    double nh = h + step;
-                    if (nh < hours[nb])
+                    double nc = c + step + (weighing ? HoursPerWh * Math.Max(0.0, ExtraWh(t, nb, step)) : 0.0);
+                    if (nc < cost[nb])
                     {
-                        if (!double.IsInfinity(hours[nb])) heap.Remove((hours[nb], nb));
-                        hours[nb] = nh;
+                        if (!double.IsInfinity(cost[nb])) heap.Remove((cost[nb], nb));
+                        cost[nb] = nc;
+                        hours[nb] = hours[t] + step;
                         previous[nb] = t;
-                        heap.Add((nh, nb));
+                        heap.Add((nc, nb));
                     }
                 }
             }

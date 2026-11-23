@@ -13,7 +13,47 @@ namespace KardashevAscent.Simulation.Game
     public sealed partial class PlanetSimulation
     {
         /// <summary>Driving routes on this planet (terrain pace, drive power ∝ surface gravity).</summary>
-        public RouteFinder Routes { get; private set; }
+        RouteFinder routes;
+        bool routeCostSet;
+
+        public RouteFinder Routes
+        {
+            get { if (!routeCostSet && routes != null) ConfigureRouteCost(); return routes; }
+            private set { routes = value; routeCostSet = false; }
+        }
+
+        /// <summary>
+        /// Contour-following routes (L4, decided 2026-11-24, director delegated): the route finder weighs the climb and the heater against time
+        /// with one weight. On for new missions; an older save keeps time-only routes. Game rule, TBD.
+        /// </summary>
+        public bool ContourRouting
+        {
+            get => contourRouting;
+            set { contourRouting = value; routeCostSet = false; movement = null; }
+        }
+        bool contourRouting = true;
+
+        /// <summary>Hours of driving one Wh is worth when choosing a route (game rule, TBD): one Wh costs as much as the time to drive it at the drive power.</summary>
+        double RouteHoursPerWh => routes.DrivePowerW > 0.0 ? 1.0 / routes.DrivePowerW : 0.0;
+
+        void ConfigureRouteCost()
+        {
+            routeCostSet = true;
+            movement = null;
+            if (!contourRouting || !ClimbEnabled) { routes.SetEnergyCost(null, 0.0); return; }
+            double[] heights = TileHeightsM();
+            double g = SurfaceGravityMs2;
+            double[] meanAirC = new double[TileCount];
+            for (int t = 0; t < TileCount; t++) meanAirC[t] = double.NaN;
+            routes.SetEnergyCost((from, to, hopHours) =>
+            {
+                double up = heights[to] - heights[from];
+                double wh = up > 0.0 ? Logistics.HaulPhysics.ClimbEnergyWh(Logistics.HaulPhysics.DefaultRobotMassKg, 0.0, g, up, 1.0) * Logistics.HaulPhysics.ClimbEffortShare : 0.0;
+                if (double.IsNaN(meanAirC[to])) meanAirC[to] = AnnualAirTemperature(to);
+                wh += RobotThermal.HeaterW(meanAirC[to], false) * hopHours;
+                return wh;
+            }, RouteHoursPerWh);
+        }
 
         /// <summary>Robots drive between tiles (true) or work any tile from where they are (false, as before movement).</summary>
         public bool MovementEnabled { get; set; } = true;
@@ -62,7 +102,8 @@ namespace KardashevAscent.Simulation.Game
         }
 
         /// <summary>Whether hauling pays for climbing (KI-42, decided 2026-11-23). On by default.</summary>
-        public bool ClimbEnabled { get; set; } = true;
+        public bool ClimbEnabled { get => climbEnabled; set { climbEnabled = value; routeCostSet = false; } }
+        bool climbEnabled = true;
 
         double[] tileHeightsM;
 

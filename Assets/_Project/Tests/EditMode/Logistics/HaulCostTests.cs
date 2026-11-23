@@ -108,5 +108,39 @@ namespace KardashevAscent.Simulation.Tests.Logistics
             for (int i = 1; i < sites.Count; i++) Assert.GreaterOrEqual(sites[i - 1].SavedWhPerDay, sites[i].SavedWhPerDay, "best first");
             foreach (var s in sites) Assert.Greater(s.SavedWhPerDay, 0.0);
         }
+
+        [Test]
+        public void ContourRoutesCostNoMoreEnergyThanTimeOnlyRoutes_AndNoLessTime_AndSomeDiffer()
+        {
+            var contour = new PlanetSimulation(Sphere, Surface, Earthlike) { ContourRouting = true };
+            var straight = new PlanetSimulation(Sphere, Surface, Earthlike) { ContourRouting = false };
+            int from = contour.BaseTileId, differ = 0, tested = 0;
+            for (int t = 0; t < contour.TileCount && tested < 150; t += 11)
+            {
+                if (contour.GetTile(t).IsWater || t == from) continue;
+                var a = contour.Routes.Route(from, t); var b = straight.Routes.Route(from, t);
+                if (a == null || b == null) continue;
+                tested++;
+                double ea = contour.HaulLegCost(from, t, 0.0).ClimbWh, eb = straight.HaulLegCost(from, t, 0.0).ClimbWh;
+                Assert.LessOrEqual(ea, eb + 1e-6, "tile " + t + ": the contour route never climbs more");
+                Assert.GreaterOrEqual(contour.Routes.HoursBetween(from, t), straight.Routes.HoursBetween(from, t) - 1e-9, "and never takes less time");
+                if (!a.SequenceEqual(b)) differ++;
+            }
+            Assert.Greater(tested, 20);
+            Assert.Greater(differ, 0, "on rough ground some route goes round a climb");
+        }
+
+        [Test]
+        public void ContourRoutingIsSaved_AndAnOldSaveKeepsTimeOnlyRoutes()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
+            Assert.IsTrue(sim.ContourRouting, "new missions use contour routes");
+            var state = sim.CaptureState();
+            Assert.IsTrue(state.ContourRouting);
+            state.Version = 52;   // an older save
+            var old = new PlanetSimulation(Sphere, Surface, Earthlike);
+            old.RestoreState(state);
+            Assert.IsFalse(old.ContourRouting);
+        }
     }
 }
