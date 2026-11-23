@@ -159,6 +159,17 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>Survey and measurement results it found while cut off, waiting to sync (counts; the data itself lands at once in this stage).</summary>
         public int UnsyncedFindings { get; internal set; }
 
+        /// <summary>Heater or cooler power now, W (0 inside the operating range or in shelter).</summary>
+        public double HeaterW { get; internal set; }
+        /// <summary>The robot stands at the lander, a battery yard, a charging station or a Workshop.</summary>
+        public bool Sheltered { get; internal set; }
+        /// <summary>Hours the battery lasts at the heater draw (infinity when there is none).</summary>
+        public double ThermalHoursLeft { get; internal set; } = double.PositiveInfinity;
+        /// <summary>Hours spent outside the range with an empty battery (saved from version 49); the robot is destroyed at <see cref="RobotThermal.DestroyAfterHours"/>.</summary>
+        public double ExposedEmptyHours { get; internal set; }
+        /// <summary>The warning for this stretch of cold or heat has been given.</summary>
+        public bool ThermalWarned { get; internal set; }
+
         /// <summary>
         /// The rulebook version the colony network last synced to this robot (0: none yet). It follows that version while cut
         /// off, whatever the player publishes meanwhile (mission operations 5.2, U2).

@@ -172,8 +172,11 @@ namespace KardashevAscent.Simulation.Game
             CurtailedW = grid.CurtailedW - topUpW;
             // The network's hub and relays are served first from the priority power; robots' critical charging gets the rest.
             double networkServedW = Math.Min(Network.PowerW, grid.PriorityServedW);
+            double meanAnomaly = CurrentMeanAnomaly();
+            var shelter = ShelterTiles();
             Upkeep.Apply(Workforce, dt, grid.DockServedW, grid.PriorityServedW - networkServedW, topUpW, IsFlaringStar, moving,
-                         Materials, AirTemperatureAt(BaseTileId, CurrentMeanAnomaly()));
+                         Materials, AirTemperatureAt(BaseTileId, meanAnomaly), tile => AirTemperatureAt(tile, meanAnomaly), shelter.Contains);
+            HandleRobotWeather();
             RobotChargingW = Upkeep.ChargingW;
             Network.SetPowered(!Grid.IsBrownout);
             Workforce.UpdateConnections(dt);

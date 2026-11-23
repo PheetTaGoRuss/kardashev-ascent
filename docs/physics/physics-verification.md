@@ -769,3 +769,11 @@ Code: `Simulation/Electrical/CableThermal.cs`; tests `CableThermalTests`.
 - Lumped thermal circuit: $C\,dT/dt = I^2 R - (T - T_{air})/R_{th}$, solved exactly over a step, so $T 	o T_{air} + I^2 R\,R_{th}$ with time constant $	au = R_{th} C$ (length cancels: both scale with it). Form as in IEC 60287 thermal circuits [form verified; the values are game rules, TBD: $R_{th}$ = 0.5 K m/W, conductor heat capacity only, copper 385 J/(kg K) recalled, aluminium 900 J/(kg K) recalled].
 - XLPE continuous conductor limit 90 C [verified: IEC 60840 and 62067 through cable-engineering sources; emergency 105 C is not modelled].
 - Ageing: insulation life halves for each 8 to 10 K above the limit (Montsinger's rule, the 10-degree rule) [verified as an empirical rule of thumb, less accurate than Arrhenius; the game takes 10 K, TBD]. The same rule runs below the limit (a cool cable lasts longer). Design life 40 years at 90 C [verified as the usual XLPE design life; TBD].
+
+## Robots and the weather (KI-43)
+
+Code: `Simulation/Robots/RobotThermal.cs`; tests `RobotWeatherTests`.
+
+- Operating range of the electronics and battery: about -40 to +40 C, from rover practice (the Mars rovers keep their electronics and batteries in this band with heaters) [recalled, TBD; check against the Mars 2020 / MSL thermal design papers before tuning].
+- Heater or cooler power: 2 W per kelvin outside the range (game rule, TBD; the real heaters of a rover are a few tens of watts at night).
+- Destruction by an empty battery outside the range for an hour (game rule, TBD); the heater needs the battery, as with Opportunity (dust, a long storm) and InSight (dust on the panels).

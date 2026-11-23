@@ -153,8 +153,10 @@ namespace KardashevAscent.Simulation.Robots
         /// </summary>
         public void Apply(Workforce workforce, double hours, double dockServedW, double criticalServedW, double topUpServedW,
                           bool flaringStar, Movement movement = null,
-                          Resources.MaterialStock materials = null, double airTemperatureC = 25.0)
+                          Resources.MaterialStock materials = null, double airTemperatureC = 25.0,
+                          System.Func<int, double> airTemperatureAt = null, System.Func<int, bool> isShelter = null)
         {
+            destroyed.Clear();
             // Cold locks part of each battery's capacity; insulated batteries stay warmer (spec v2 §11).
             foreach (Robot r in workforce.Robots)
             {
@@ -205,11 +207,37 @@ namespace KardashevAscent.Simulation.Robots
                                            / r.Attribute(RobotAttribute.Durability);
                         break;
                 }
+                if (airTemperatureAt != null)
+                    ApplyWeather(r, hours, airTemperatureAt(r.Tile), isShelter != null && isShelter(r.Tile));
                 if (flaringStar && r.Activity != RobotActivity.Maintenance)
                     r.Condition -= RobotSpecs.FlareWearPerHour * hours * (r.Has(RobotModule.Shielding) ? RobotTech.ShieldingFactor : 1.0)
                                    / r.Attribute(RobotAttribute.Durability);
                 r.Condition = Math.Max(0.0, Math.Min(1.0, r.Condition));
             }
+        }
+
+        readonly System.Collections.Generic.List<int> destroyed = new System.Collections.Generic.List<int>();
+
+        /// <summary>Robots whose battery ran out outside their operating range in the last <see cref="Apply"/> long enough to destroy them.</summary>
+        public System.Collections.Generic.IReadOnlyList<int> DestroyedRobotIds => destroyed;
+
+        /// <summary>The heater or cooler of a robot outside its range runs from its battery; shelter removes the draw (KI-43).</summary>
+        void ApplyWeather(Robot r, double hours, double airC, bool sheltered)
+        {
+            double heater = sheltered ? 0.0 : RobotThermal.HeaterW(airC, r.Has(RobotModule.ThermalInsulation));
+            r.Sheltered = sheltered;
+            r.HeaterW = heater;
+            if (heater <= 0.0)
+            {
+                r.ExposedEmptyHours = 0.0;
+                r.ThermalHoursLeft = double.PositiveInfinity;
+                r.ThermalWarned = false;
+                return;
+            }
+            r.Battery.Draw(heater, hours);
+            if (r.Battery.UsableWh <= 1e-6) r.ExposedEmptyHours += hours; else r.ExposedEmptyHours = 0.0;
+            r.ThermalHoursLeft = r.Battery.UsableWh / heater;
+            if (r.ExposedEmptyHours >= RobotThermal.DestroyAfterHours - 1e-12) destroyed.Add(r.Id);
         }
 
         /// <summary>Drive along the route: draw drive power and cross tiles at their terrain's pace.</summary>
