@@ -210,6 +210,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         public void Curtailment_StopsAtTheRating_NotBelow()
         {
             var sim = Wired();
+            sim.LearnExperimentForTests(KardashevAscent.Simulation.Planet.ExperimentKind.AirPressure);   // the cable rating is cut by the unmeasured-air margin until then
             int a = OverloadedLineTile(sim);
             RunToNoon(sim, () => sim.IsLineOverloaded(a));
             Assert.IsTrue(sim.IsLineOverloaded(a));

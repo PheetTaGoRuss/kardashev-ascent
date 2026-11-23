@@ -255,6 +255,14 @@ namespace KardashevAscent.Simulation.Game
                     return deep > 0 ? $"Deep ore shows on surveyed tiles: rare earths on {deep} so far. Survey mountains, canyons and caves for more."
                                     : "Deep ore now shows on surveyed tiles. None yet: survey mountains, canyons and caves.";
                 }
+                case ExperimentKind.ReliefSurvey:
+                {
+                    var r = Relief;
+                    double kmWh = Logistics.HaulPhysics.ClimbEnergyWh(Logistics.HaulPhysics.DefaultRobotMassKg, 0.0, SurfaceGravityMs2, 1000.0, 1.0) * Logistics.HaulPhysics.ClimbEffortShare;
+                    return $"The land runs from {r.MinM / 1000.0:0.#} km (deepest basin) to +{r.MaxM / 1000.0:0.#} km (highest point). A robot climbing 1 km pays about {kmWh:0} Wh of its battery here.";
+                }
+                case ExperimentKind.OreAssay:
+                    return "Every surveyed ore now shows its true grade.";
                 case ExperimentKind.SurfaceTemperature:
                 {
                     var (lo, hi) = SurfaceTemperatureRange(tile);
