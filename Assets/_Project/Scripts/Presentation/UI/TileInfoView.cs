@@ -441,6 +441,16 @@ namespace KardashevAscent.Presentation.UI
                 AddGroundButton(on ? $"Stop mining {Materials.Name(m).ToLowerInvariant()}" : $"Mine {Materials.Name(m).ToLowerInvariant()}{rateText}", on,
                                 () => { if (sim.IsMiningOrdered(tile, material)) sim.CancelMining(tile, material); else sim.OrderMining(tile, material); groundShape = null; });
             }
+            // A storage yard can be given a charging bay: robots recharge at the depot and hauls can be staged through it (L2, 2026-11-24).
+            if (sim.ChargingBayBlocker(tile) == null)
+            {
+                int bayTile = tile;
+                AddGroundButton("Add charging bay to this depot (iron 60, rock 10, copper 12)", false, () =>
+                {
+                    for (int slot = 0; slot < sim.SlotCount(bayTile); slot++) if (sim.PlaceChargingBay(bayTile, slot)) break;
+                    groundShape = null;
+                });
+            }
             // A mining or survey order out of a robot's one-charge range is never worked: say so (balance pass 2026-11-20).
             string reach = groundActions.childCount > 0 ? sim.WorkReachProblem(tile) : null;
             if (reach != null)

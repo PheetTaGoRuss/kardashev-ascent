@@ -76,6 +76,13 @@ namespace KardashevAscent.Simulation.Resources
         public static readonly MaterialBill ChargingStation = new MaterialBill()
             .Add(Material.Iron, 150.0).Add(Material.Rock, 50.0).Add(Material.Copper, 20.0);
 
+        /// <summary>
+        /// The charging bay a storage yard can be given (decided 2026-11-24, director delegated): a depot that robots can recharge at, so hauls can be
+        /// staged through it. Cheaper than a full station because the yard already has the ground works and the shelter (game rule, TBD).
+        /// </summary>
+        public static readonly MaterialBill ChargingBay = new MaterialBill()
+            .Add(Material.Iron, 60.0).Add(Material.Rock, 10.0).Add(Material.Copper, 12.0);
+
         public static readonly MaterialBill Relay = new MaterialBill()
             .Add(Material.Iron, 60.0).Add(Material.Rock, 30.0).Add(Material.Copper, 10.0);
 

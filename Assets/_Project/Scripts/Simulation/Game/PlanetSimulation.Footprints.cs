@@ -91,6 +91,33 @@ namespace KardashevAscent.Simulation.Game
             Settle((tileId, slot));
             return true;
         }
+        /// <summary>Why a charging bay can't be added to this tile's storage yard, or null when it can.</summary>
+        public string ChargingBayBlocker(int tileId)
+        {
+            if (StorageCount(tileId, BuildingType.StorageYard) < 1) return "A charging bay goes on a storage yard: build a yard here first.";
+            if (HasChargingBay(tileId)) return "This depot already has a charging bay.";
+            return null;
+        }
+
+        /// <summary>True when a storage yard's tile has a charger (a charging station finished or being built): a depot with a charging bay.</summary>
+        public bool HasChargingBay(int tileId)
+        {
+            foreach (var s in stations) if (s.Tile == tileId) return true;
+            return false;
+        }
+
+        /// <summary>Add a charging bay to a storage yard's tile: a charging station at the bay's own, lower cost.</summary>
+        public bool PlaceChargingBay(int tileId, int slot)
+        {
+            if (ChargingBayBlocker(tileId) != null || !CanPlace(BuildingType.ChargingStation, tileId, slot))
+                return false;
+            StartSite(tileId, slot, Debug.FreeBuilding ? new MaterialBill() : BuildCosts.ChargingBay, BuildTimes.Hours(BuildingType.ChargingStation) * 0.5);
+            stations.Add((tileId, slot));
+            Occupy(tileId, FootprintFor(BuildingType.ChargingStation, tileId, slot));
+            Settle((tileId, slot));
+            return true;
+        }
+
         readonly List<ManufacturingJob> jobs = new List<ManufacturingJob>();
         readonly IndustrialReportLog industrialReports = new IndustrialReportLog();
     }
