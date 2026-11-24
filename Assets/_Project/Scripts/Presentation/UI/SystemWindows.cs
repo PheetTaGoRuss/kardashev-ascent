@@ -40,6 +40,8 @@ namespace KardashevAscent.Presentation.UI
             Body.Add(corona);
             brownoutWhy = new WhyChain();
             Body.Add(brownoutWhy);
+            stormWhy = new WhyChain();
+            Body.Add(stormWhy);
             Heading("ENERGY FLOW");
             flowBar = new FlowBar();
             Body.Add(flowBar);
@@ -104,6 +106,16 @@ namespace KardashevAscent.Presentation.UI
             buildings.text = $"{panels} panel{(panels == 1 ? "" : "s")} · {yards} battery yard{(yards == 1 ? "" : "s")}";
             RefreshFlow(sim, solar, tidal, waves, barrage);
             corona.style.display = sim.CableOutsideModel ? DisplayStyle.Flex : DisplayStyle.None;
+            // a storm at the base, as a why? chain from the day's wind and the local threshold (Weather W5)
+            {
+                var w = sim.WeatherAt(sim.BaseTileId);
+                stormWhy.Set("Storm at the base", sim.HasWeather && w.Storm ? new System.Collections.Generic.List<string>
+                {
+                    $"the wind is {w.WindMs:0.#} m/s, above the local 98th percentile ({sim.StormThresholdMs(sim.BaseTileId):0.#} m/s)",
+                    "robots stop outdoor work and go to shelter until it passes",
+                    "wind chill makes a robot's heater work harder in the open",
+                } : null, "Open Robots (G)", () => SystemTabs.Open("robots"));
+            }
             // a brownout, as a why? chain from the numbers the simulation reports
             double stored = sim.BatteryCapacityWh > 0.0 ? sim.BatteryStoredWh / sim.BatteryCapacityWh : 0.0;
             brownoutWhy.Set("Brownout", sim.IsBrownout ? new System.Collections.Generic.List<string>
@@ -119,7 +131,7 @@ namespace KardashevAscent.Presentation.UI
 
         FlowBar flowBar;
         Button corona;
-        WhyChain brownoutWhy;
+        WhyChain brownoutWhy, stormWhy;
         Label flowHistory;
 
         /// <summary>Sources above, where it goes below, on one scale; the 7-day history under it (UI information design, stage 4). Only values the simulation reports.</summary>

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using KardashevAscent.Simulation.Climate;
 using KardashevAscent.Simulation.Planet;
+using KardashevAscent.Simulation.Robots;
 using KardashevAscent.Simulation.Solar;
 
 namespace KardashevAscent.Simulation.Game
@@ -10,9 +11,12 @@ namespace KardashevAscent.Simulation.Game
     public readonly struct WeatherSample
     {
         public readonly double CloudFactor, AirC, PressurePa, WindMs, DustTau;
+        /// <summary>A wind storm: the wind is above the local 98th percentile. Robots stop outdoor work.</summary>
         public readonly bool Storm;
-        public WeatherSample(double cloud, double airC, double pressurePa, double windMs, double dustTau, bool storm)
-        { CloudFactor = cloud; AirC = airC; PressurePa = pressurePa; WindMs = windMs; DustTau = dustTau; Storm = storm; }
+        /// <summary>A dust storm: the extra optical depth is above <see cref="PlanetSimulation.DustStormTau"/> (it dims the panels but does not stop robots).</summary>
+        public readonly bool DustStorm;
+        public WeatherSample(double cloud, double airC, double pressurePa, double windMs, double dustTau, bool storm, bool dustStorm = false)
+        { CloudFactor = cloud; AirC = airC; PressurePa = pressurePa; WindMs = windMs; DustTau = dustTau; Storm = storm; DustStorm = dustStorm; }
     }
 
     public sealed partial class PlanetSimulation
@@ -25,6 +29,41 @@ namespace KardashevAscent.Simulation.Game
         public bool WeatherEnabled { get; set; } = true;
 
         WeatherModel WeatherModel => weatherModel ??= new WeatherModel(TerrainSeed, planetRadiusM, planet.SurfacePressureEarth, Clouds == CloudModel.EarthClimatology);
+
+        /// <summary>The wind speed, m/s, above which today is a storm day at this tile.</summary>
+        public double StormThresholdMs(int tileId) => WeatherModel.StormWindMs(Sphere.Latitude(tileId), YearFractionNow);
+
+        /// <summary>A wind storm over a tile now.</summary>
+        public bool StormAt(int tileId) => HasWeather && AnomalyAt(tileId).Storm;
+
+        bool baseStormLogged;
+        readonly HashSet<int> stormHeld = new HashSet<int>();
+
+        /// <summary>
+        /// Storm days (W5): a robot under a storm does no outdoor work and goes to the nearest shelter (the lander, a charger, a battery yard or a workshop).
+        /// The colony is told once when a storm reaches the base. A sheltered robot just waits it out; the existing destroyed-when-unsheltered rule is unchanged.
+        /// </summary>
+        void HandleStorms()
+        {
+            if (!HasWeather) { foreach (Robot r0 in Workforce.Robots) r0.StormHold = false; return; }
+            bool baseStorm = StormAt(BaseTileId);
+            if (baseStorm && !baseStormLogged)
+            {
+                var w = WeatherAt(BaseTileId);
+                Log("Colony", "Storm", w.WindMs, "m/s", "Weather", $"A storm reaches the base: wind {w.WindMs:0.#} m/s, above the local 98th percentile. Robots stop outdoor work and shelter until it passes.");
+            }
+            baseStormLogged = baseStorm;
+            var shelters = ShelterTiles();
+            foreach (Robot r in Workforce.Robots)
+            {
+                bool storm = StormAt(r.Tile);
+                r.StormHold = storm;
+                if (!storm || shelters.Contains(r.Tile) || r.ManualTarget.HasValue || Routes == null) continue;
+                int best = -1; double bestH = double.PositiveInfinity;
+                foreach (int s in shelters) { double h = Routes.HoursBetween(r.Tile, s); if (h < bestH) { bestH = h; best = s; } }
+                if (best >= 0 && !double.IsInfinity(bestH)) Workforce.SendTo(r.Id, best);
+            }
+        }
 
         /// <summary>The extra optical depth above which a dust storm counts as a storm day (game rule, TBD).</summary>
         public const double DustStormTau = 1.5;
@@ -82,7 +121,7 @@ namespace KardashevAscent.Simulation.Game
             }
             double cloud = Math.Max(0.02, Math.Min(1.2, CloudFactor(tileId, mean) + a.CloudFactor));
             return new WeatherSample(cloud, AirTemperatureAt(tileId, mean) + a.TemperatureK, Math.Max(0.0, PressurePaAt(tileId) * pressureFactor + a.PressurePa),
-                                     a.WindMs, dust, a.Storm || dustStorm);
+                                     a.WindMs, dust, a.Storm, dustStorm);
         }
     }
 }

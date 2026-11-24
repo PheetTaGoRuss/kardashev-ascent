@@ -147,6 +147,9 @@ namespace KardashevAscent.Simulation.Climate
             return table[i0][month] + f * (table[i0 + 1][month] - table[i0][month]);
         }
 
+        /// <summary>The wind speed above which a day is a storm day here (the local 98th percentile), m/s.</summary>
+        public static double StormWindMs(double latRad, double yearFraction) => Row(WeatherVariabilityTable.WindP98, latRad, (int)Math.Floor((yearFraction - Math.Floor(yearFraction)) * 12.0) % 12);
+
         /// <summary>The day's weather at a place: <paramref name="yearFraction"/> is the time of year (0 = 1 January) for the monthly table row.</summary>
         public WeatherAnomaly At(double latRad, double lonRad, double timeHours, double yearFraction)
         {

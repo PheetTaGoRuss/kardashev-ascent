@@ -321,6 +321,16 @@ namespace KardashevAscent.EditorTools
                     Log("heavy haul to tile " + far + " added: " + (book != null));
                     return true;
                 }
+                case "weather":
+                {
+                    // weather [days]: print the base's weather now; "weather storm" advances (hour steps) to the next storm at the base.
+                    var sim = Runner()?.Simulation as KardashevAscent.Simulation.Game.PlanetSimulation;
+                    if (sim == null) return true;
+                    if (argument == "storm") { for (int i = 0; i < 24 * 365 * 3 && !sim.StormAt(sim.BaseTileId); i++) sim.Tick(1.0); }
+                    var w = sim.WeatherAt(sim.BaseTileId);
+                    Log($"weather at base: cloud {w.CloudFactor:0.00} air {w.AirC:0.0} C pressure {w.PressurePa / 1000.0:0.00} kPa wind {w.WindMs:0.0} m/s dust tau {w.DustTau:0.00} storm {w.Storm} dust storm {w.DustStorm} (threshold {sim.StormThresholdMs(sim.BaseTileId):0.0}) day {sim.TimeHours / 24.0:0}");
+                    return true;
+                }
                 case "overlay":
                     Presentation.Planet.InstrumentOverlay.Set(argument != "off");
                     return true;

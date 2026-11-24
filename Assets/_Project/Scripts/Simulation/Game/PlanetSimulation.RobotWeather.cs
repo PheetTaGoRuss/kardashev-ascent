@@ -37,6 +37,7 @@ namespace KardashevAscent.Simulation.Game
 
         void HandleRobotWeather()
         {
+            HandleStorms();
             // The warning: a robot outside its range whose battery will not last the night.
             foreach (Robot r in Workforce.Robots)
             {
