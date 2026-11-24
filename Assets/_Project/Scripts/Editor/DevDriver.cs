@@ -349,6 +349,16 @@ namespace KardashevAscent.EditorTools
                     Log($"storm robot {r.Id}: far tile {far} after {h} h storm {sim.StormAt(far)} hold {r.StormHold} target {r.ManualTarget} tile {r.Tile}");
                     return true;
                 }
+                case "dustwatch":
+                {
+                    // dustwatch: step the colony until a dust WATCH entry (dusty season or global storm) is in the log.
+                    var sim = Runner()?.Simulation as KardashevAscent.Simulation.Game.PlanetSimulation;
+                    if (sim == null) return true;
+                    int h = 0;
+                    for (; h < 24 * 700 * 3 && !System.Linq.Enumerable.Any(sim.OperationsLog, r => r.Quantity == "Dusty season"); h++) sim.Tick(1.0);
+                    Log("dustwatch after " + h + " h: " + System.Linq.Enumerable.FirstOrDefault(sim.OperationsLog, r => r.Quantity == "Dusty season")?.Text);
+                    return true;
+                }
                 case "overlay":
                     Presentation.Planet.InstrumentOverlay.Set(argument != "off");
                     return true;
