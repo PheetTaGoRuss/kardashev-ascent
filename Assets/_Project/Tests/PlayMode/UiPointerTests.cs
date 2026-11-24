@@ -363,5 +363,19 @@ namespace KardashevAscent.PlayModeTests
             Assert.AreEqual(2, WhyChain.PlantSteps("OutputStorageUnavailable").Steps.Count);
             Assert.AreEqual(0, WhyChain.PlantSteps("None").Steps.Count);
         }
+
+        [Test]
+        public void Overlay_ATileTagsOnlyWhatTheSimulationReports()
+        {
+            PlanetSimulation sim = Colony(out int t1);
+            var none = new System.Collections.Generic.HashSet<int>();
+            Assert.IsEmpty(KardashevAscent.Presentation.Planet.InstrumentOverlay.TagsOf(sim, t1, none), "a tile with nothing to report has no tag");
+            Assert.IsTrue(sim.PlaceWire(sim.BaseTileId, t1, false));
+            var tags = KardashevAscent.Presentation.Planet.InstrumentOverlay.TagsOf(sim, t1, none);
+            Assert.IsTrue(tags.Any(t => t.StartsWith("⚡")), "a line shows its power state: " + string.Join(" | ", tags));
+            Assert.IsTrue(KardashevAscent.Presentation.Planet.InstrumentOverlay.TagsOf(sim, sim.BaseTileId, none).Any(t => t.StartsWith("R")), "the lander's robots show");
+            var failed = new System.Collections.Generic.HashSet<int> { t1 };
+            Assert.IsTrue(KardashevAscent.Presentation.Planet.InstrumentOverlay.TagsOf(sim, t1, failed).Any(t => t.Contains("FAILED")));
+        }
     }
 }

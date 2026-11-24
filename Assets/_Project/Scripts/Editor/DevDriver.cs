@@ -282,6 +282,15 @@ namespace KardashevAscent.EditorTools
                     // guide <page title>: open the Guide at a page.
                     Presentation.UI.GuideWindow.Open(argument);
                     return true;
+                case "flyback":
+                {
+                    var cam = UnityEngine.Object.FindFirstObjectByType<Presentation.CameraControl.OrbitCamera>();
+                    if (cam != null) { cam.LeaveSite(); cam.ResetView(true); }
+                    return true;
+                }
+                case "overlay":
+                    Presentation.Planet.InstrumentOverlay.Set(argument != "off");
+                    return true;
                 case "uiscale":
                 {
                     // uiscale <0.8..1.5>: set the UI size (saved like the player's own setting).
