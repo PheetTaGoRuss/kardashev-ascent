@@ -178,5 +178,31 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.AreEqual(BuildingType.None, other.GetBuilding(sea, 0));
             Assert.AreEqual(0.0, other.WavePowerW());
         }
+
+        /// <summary>Mean wave energy flux over the sea tiles for a game year (daily samples).</summary>
+        static double YearMeanFlux(bool weather)
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { WeatherEnabled = weather, Clouds = CloudModel.EarthClimatology };
+            var seas = Enumerable.Range(0, sim.TileCount).Where(t => sim.MeanWaveHeightAtM(t) > 0.0 && t % 5 == 0).ToArray();
+            double sum = 0.0; int n = 0;
+            for (int d = 0; d < 365; d++)
+            {
+                sim.Tick(24.0);
+                foreach (int t in seas)
+                {
+                    double h = sim.WaveHeightAtM(t);
+                    sum += Waves.EnergyFluxWPerM(h, Waves.EnergyPeriodShare * Waves.PeakPeriodS(Math.Sqrt(h / (Waves.DevelopmentShare * 2.0 * Math.Sqrt(8.1e-3 / 0.74) / 9.81)) , 9.81), 9.81); n++;
+                }
+            }
+            return sum / n;
+        }
+
+        [Test]
+        public void P1_TheRealWind_KeepsTheLongRunWavePowerWithin30PercentOfTheOldRule()
+        {
+            double old = YearMeanFlux(false), real = YearMeanFlux(true);
+            TestContext.WriteLine($"wave flux old {old:0} W/m, real wind {real:0} W/m, ratio {real / old:0.00}");
+            Assert.AreEqual(1.0, real / old, 0.30);
+        }
     }
 }

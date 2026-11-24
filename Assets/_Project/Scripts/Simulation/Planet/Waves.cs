@@ -43,6 +43,12 @@ namespace KardashevAscent.Simulation.Planet
             return RhoSeaWater * gravityMs2 * gravityMs2 * heightM * heightM * energyPeriodS / (64.0 * Math.PI);
         }
 
+        /// <summary>
+        /// The wind at the 19.5 m height of the Pierson-Moskowitz sea from the 10 m wind: the 1/7 power law of the neutral boundary layer,
+        /// U(z) = U10 (z / 10)^(1/7), so U19.5 = 1.10 U10 (Hsu, Meindl and Gilhousen 1994, J. Appl. Meteorol. 33).
+        /// </summary>
+        public static double WindAt195FromAt10(double wind10Ms) => wind10Ms * Math.Pow(19.5 / 10.0, 1.0 / 7.0);
+
         // ---- game rules (TBD) ----
 
         /// <summary>Wind at 19.5 m, m/s, by latitude: calm at the equator and poles, strongest in the mid-latitudes (about 45 degrees). Game rule, TBD.</summary>

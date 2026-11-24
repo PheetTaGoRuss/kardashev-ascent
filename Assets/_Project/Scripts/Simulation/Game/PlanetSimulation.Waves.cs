@@ -14,9 +14,20 @@ namespace KardashevAscent.Simulation.Game
         {
             double airRatio = PressurePaAt(tileId) / Experiments.StandardPressurePa;
             if (airRatio <= 0.0) return 0.0;
+            double thin = Math.Min(1.0, Math.Pow(airRatio, 1.0 / 3.0));
+            if (HasWeather)   // P1: the climatology of the real wind (NASA POWER 10 m), raised to 19.5 m
+                return Waves.WindAt195FromAt10(WeatherModel.SpreadAt(Sphere.Latitude(tileId), YearFractionNow).WindMean) * thin;
             uint h = unchecked((uint)(tileId * 2246822519u) ^ (uint)(TerrainSeed * 3266489917u));
             double jitter = 0.75 + 0.5 * ((h >> 8) & 0xFFFF) / 65535.0;
             return Waves.WindMs(Sphere.Latitude(tileId)) * jitter * Math.Min(1.0, Math.Pow(airRatio, 1.0 / 3.0));
+        }
+
+        /// <summary>The day's wind at 19.5 m now (the weather's 10 m wind raised by the power law); weaker where the air is thin.</summary>
+        double LiveWindAt(int tileId)
+        {
+            double airRatio = PressurePaAt(tileId) / Experiments.StandardPressurePa;
+            if (airRatio <= 0.0) return 0.0;
+            return Waves.WindAt195FromAt10(AnomalyAt(tileId).WindMs) * Math.Min(1.0, Math.Pow(airRatio, 1.0 / 3.0));
         }
 
         public double MeanWaveHeightAtM(int tileId)
@@ -30,12 +41,13 @@ namespace KardashevAscent.Simulation.Game
         {
             double mean = MeanWaveHeightAtM(tileId);
             if (mean <= 0.0) return 0.0;
+            if (HasWeather) return Waves.DevelopmentShare * Waves.SignificantHeightM(LiveWindAt(tileId), SurfaceGravityMs2);   // the real wind's own swings
             double phase = (tileId % 97) * 0.37;
             double swing = 1.0 + 0.45 * Math.Sin(2.0 * Math.PI * TimeHours / 72.0 + phase) + 0.2 * Math.Sin(2.0 * Math.PI * TimeHours / 29.0 + phase * 1.7);
             return mean * Math.Max(0.1, swing);
         }
 
-        double EnergyPeriodAt(int tileId) => Waves.EnergyPeriodShare * Waves.PeakPeriodS(WindAt(tileId), SurfaceGravityMs2);
+        double EnergyPeriodAt(int tileId) => Waves.EnergyPeriodShare * Waves.PeakPeriodS(HasWeather ? LiveWindAt(tileId) : WindAt(tileId), SurfaceGravityMs2);
 
         public bool PlaceWaveConverter(int tileId, int slot)
         {
