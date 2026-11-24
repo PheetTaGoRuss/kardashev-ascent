@@ -156,6 +156,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             {
                 var sim = Colony(rec, panels: 60);
                 int tile = Sphere.Neighbors[sim.BaseTileId].First(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
+                // With the strict round-trip rule (KI-46) a loaded robot does not drive to a drop with no charger unless the whole trip fits one charge: the player builds the charger at the drop.
+                sim.Debug.FreeBuilding = true; for (int sl = 0; sl < sim.SlotCount(tile); sl++) if (sim.PlaceChargingStation(tile, sl)) break; sim.Debug.FreeBuilding = false;
                 sim.SetStockTarget(tile, Material.Iron, 400.0);
                 RunChecked(sim, 60.0);
                 Assert.AreEqual(400.0, sim.KgAt(tile, Material.Iron), 1e-6, rec.id + ": the target was met");
@@ -167,7 +169,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             // Rolling-resistance energy per hop grows with gravity; a hop is as long as the planet is wide, so per kg-km it goes as g / radius.
             double g = 18.333831659114153 / 3.7044004790761145, radius = 11034113.0 / 3393149.2;
             double perMars = marsWh / marsKgKm, perLhs = lhsWh / lhsKgKm;
-            Assert.AreEqual(g / radius, perLhs / perMars, g / radius * 0.25, "per kg-km, haulage goes as g over the planet's radius");
+            // With the strict round-trip rule (KI-46) a robot on the heavy planet cannot carry a full load on one charge, so it takes smaller loads: the robot's own mass is then spread over fewer kg and the energy per kg-km is higher than g over the radius alone.
+            Assert.GreaterOrEqual(perLhs / perMars, g / radius * 0.75, "per kg-km, haulage costs at least g over the planet's radius");
             Assert.Greater(lhsWh, marsWh * 3.0, "and the same haul costs far more energy on the heavy planet");
         }
 

@@ -146,3 +146,14 @@ Caveat: the Mars 60-day aluminium logistics scenario runs with weather off; with
 
 Dust warnings (W8.3): one WATCH entry when the dusty season starts and one when a global storm begins, with the estimated optical depth and the sunlight share left.
 
+## 2026-11-25: KI-46 closed, honest haul numbers
+
+| Check | Before the strict round-trip rule | After |
+| --- | --- | --- |
+| Mines 2 hops from the lander hauled directly | 100 % (legs checked one by one) | 20 % on the test surface |
+| Mines 3 hops away hauled directly | 71 % at climb 0.075 (the 2026-11-24 table) | 0 %: from 3 hops the player builds a depot with a charger |
+| Field campaign, Earth-like 60 N winter, 3 seeds | robots lost 3 of 3 | 0 lost, 1500 kg hauled in each |
+| Field campaign, Mars southern winter, 3 seeds | 0 lost, no haul possible (cold capacity) | 0 lost, no direct haul is possible; with a depot and charging bay at the refused tile (the advice) the haul runs: 1500 kg in each of 3 runs, 0 lost |
+| Heavy planet haulage per kg-km | about g over the radius | at least that: loads are smaller (quarter loads), so the robot's own mass is spread over fewer kg |
+
+The climb share (0.075) is unchanged by decision; the numbers above are the honest cost of the safety rule.

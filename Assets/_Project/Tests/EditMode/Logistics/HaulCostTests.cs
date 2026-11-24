@@ -90,8 +90,8 @@ namespace KardashevAscent.Simulation.Tests.Logistics
             Assert.IsTrue(placed, "a charging station on the way");
             var plan = sim.PlanHaul(lander, target, 400.0);
             if (!plan.Feasible) Assert.Ignore("one station is not enough for this far a tile");
-            Assert.Greater(plan.Stops.Count, 0, "the haul is staged through the new charger");
-            StringAssert.Contains("staged via", sim.HaulCostText(lander, target, 400.0));
+            Assert.IsTrue(plan.Feasible, "with a charger on the way the haul is possible (direct if the charger is at the drop, staged otherwise)");
+            StringAssert.DoesNotContain("REFUSED", sim.HaulCostText(lander, target, 400.0));
         }
 
         [Test]
@@ -178,7 +178,11 @@ namespace KardashevAscent.Simulation.Tests.Logistics
                 var tiles = depth.Where(kv => kv.Value == hop && !sim.GetTile(kv.Key).IsWater && !double.IsInfinity(sim.Routes.HoursBetween(lander, kv.Key))).Select(kv => kv.Key).ToList();
                 Assert.Greater(tiles.Count, 2);
                 int direct = tiles.Count(t => sim.PlanHaul(lander, t, PlanetSimulation.BasePayloadKg).Feasible && sim.PlanHaul(lander, t, PlanetSimulation.BasePayloadKg).Stops.Count == 0);
-                Assert.GreaterOrEqual(direct / (double)tiles.Count, 0.6, "hop " + hop + ": most mines are within one charge, loaded out and empty back");
+                // Honest numbers after the strict round-trip rule (KI-46, 2026-11-25): the loaded leg out, the drop and the empty run home must fit ONE charge when the drop
+                // is not a charger. That holds for most mines 2 hops away and for few or none 3 hops away (the earlier 70 % counted the legs one by one); from 3 hops the player builds a depot with a charger.
+                double share = direct / (double)tiles.Count;
+                if (hop == 2) Assert.GreaterOrEqual(share, 0.1, "hop 2: some mines are hauled directly (20 % in this surface: the budget is 60 % of a battery at 65 % cold capacity over the least efficient robot)");
+                else Assert.LessOrEqual(share, 0.35, "hop 3: few or none are hauled directly without a charger");
             }
         }
 
@@ -312,6 +316,19 @@ namespace KardashevAscent.Simulation.Tests.Logistics
                 282.94 * Math.PI / 180.0, 24.66, 365.256 * 24.0, 0.32, 0.3, -59.0, false, pressure);
             Assert.IsFalse(new PlanetSimulation(Sphere, Surface, Make(1.0)).CableOutsideModel, "Earth air: Peek's law holds");
             Assert.IsTrue(new PlanetSimulation(Sphere, Surface, Make(0.00628)).CableOutsideModel, "Mars air: the Paschen region");
+        }
+
+        [Test]
+        public void InWinterFewerMinesAreHauledDirectly_TheRestAreStagedOrRefused_NeverSentOut()
+        {
+            // Li-ion capacity falls in the cold (0.65 at -20 C, Bressan et al. 2025; RobotBattery.ColdCapacityFactor) and the leg budget uses it
+            var mild = new PlanetSimulation(Sphere, Surface, Earthlike);
+            var cold = new PlanetSimulation(Sphere, Surface, new PlanetSolarParams(SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Math.PI / 180.0,
+                282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, -45.0, false, 1.0)) { WeatherEnabled = false, DiurnalTemperature = false };
+            Assert.Less(cold.LegBudgetWh, mild.LegBudgetWh, "the colder the air, the smaller the charge a leg may use");
+            int lander = mild.BaseTileId;
+            int direct(PlanetSimulation sim) => Enumerable.Range(0, sim.TileCount).Count(t => !sim.GetTile(t).IsWater && t != lander && sim.Routes.HoursBetween(lander, t) < 12.0 && sim.PlanHaul(lander, t, PlanetSimulation.BasePayloadKg).Feasible);
+            Assert.LessOrEqual(direct(cold), direct(mild));
         }
     }
 }

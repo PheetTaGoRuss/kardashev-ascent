@@ -54,7 +54,9 @@ namespace KardashevAscent.Simulation.Game
                 clock += step;
                 at = t;
             }
-            return new HaulLeg(hours, drive, climb, heater);
+            // the battery pays the drive and the climb over the robot's drive efficiency (the planner assumes the least efficient robot)
+            double eff = PlanningEfficiency;
+            return new HaulLeg(hours, drive / eff, climb / eff, heater);
         }
 
         public string HaulCostText(int from, int to, double cargoKg)
@@ -127,8 +129,22 @@ namespace KardashevAscent.Simulation.Game
             bool Fits(int a, int b2, double kg) { if (a == b2) return true; var leg = HaulLegCost(a, b2, kg); return leg.Reachable && leg.TotalWh <= budget; }
             bool startOk = false, endOk = false;
             foreach (int st in stops) { startOk |= Fits(st, from, 0.0); endOk |= Fits(to, st, 0.0); }
-            double need = HaulLegCost(from, to, cargoKg).TotalWh;
+            // what one charge must cover with no stop at the pick-up or the drop: the run out empty, the loaded leg, the run home (cheapest stop each way)
+            double runOut = double.MaxValue, runHome = double.MaxValue;
+            foreach (int st in stops) { runOut = Math.Min(runOut, st == from ? 0.0 : HaulLegCost(st, from, 0.0).TotalWh); runHome = Math.Min(runHome, st == to ? 0.0 : HaulLegCost(to, st, 0.0).TotalWh); }
+            double need = HaulLegCost(from, to, cargoKg).TotalWh + (double.IsInfinity(runOut) || runOut == double.MaxValue ? 0.0 : runOut) + (runHome == double.MaxValue ? 0.0 : runHome);
             return new HaulWhy(!startOk ? HaulWhyKind.NoStartStop : !endOk ? HaulWhyKind.NoEndStop : HaulWhyKind.LegTooLong, need, budget);
+        }
+
+        /// <summary>The drive efficiency a plan assumes: the lowest of the colony's robots (1 with none).</summary>
+        double PlanningEfficiency
+        {
+            get
+            {
+                double e = 1.0; bool any = false;
+                foreach (Robot r in Workforce.Robots) { double x = r.Attribute(RobotAttribute.EnergyEfficiency); if (x > 0.0) { e = any ? Math.Min(e, x) : x; any = true; } }
+                return Math.Max(0.05, e);
+            }
         }
 
         long coldShareHour = long.MinValue; double coldShare = 1.0;
@@ -156,7 +172,7 @@ namespace KardashevAscent.Simulation.Game
             {
                 double best = 0.0;
                 foreach (Robot r in Workforce.Robots) best = Math.Max(best, r.Battery.CapacityWh);
-                return best <= 0.0 ? double.PositiveInfinity : best * (1.0 - RobotSpecs.ReturnToChargeFraction) * ColdCapacityShare();
+                return best <= 0.0 ? double.PositiveInfinity : best * (RobotSpecs.ResumeWorkFraction - RobotSpecs.ReturnToChargeFraction) * ColdCapacityShare();   // a robot sets off from the 80 % charge and keeps its 20 % floor
             }
         }
 
@@ -184,8 +200,10 @@ namespace KardashevAscent.Simulation.Game
             bool startOk = false, endOk = false;
             foreach (int st in stops) { startOk |= Fits(st, from, 0.0); endOk |= Fits(to, st, 0.0); }
             if (!startOk || !endOk) return new HaulPlan(false, new List<int>(), double.PositiveInfinity);
-            // OPEN (KI-46): the legs are checked one by one; a loaded robot that does the leg out may have too little left for the way home when the drop is not a stop.
-            double startWh = 0.0, endWh = 0.0;
+            // A safety rule (KI-46, decided 2026-11-25): a robot is on one charge from the stop it leaves until the next stop. The empty run to the pick-up counts with the
+            // first loaded leg when the pick-up is not itself a stop, and the run home from the drop counts with the last loaded leg when the drop is not a stop.
+            double startWh = double.MaxValue, endWh = double.MaxValue;
+            foreach (int st in stops) { startWh = Math.Min(startWh, st == from ? 0.0 : HaulLegCost(st, from, 0.0).TotalWh); endWh = Math.Min(endWh, st == to ? 0.0 : HaulLegCost(to, st, 0.0).TotalWh); }
             // shortest chain from the pick-up to the drop over the stops, loaded legs only
             var nodes = new List<int> { from };
             foreach (int st in stops) if (st != from && st != to) nodes.Add(st);
