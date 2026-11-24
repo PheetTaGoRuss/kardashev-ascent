@@ -323,5 +323,23 @@ namespace KardashevAscent.PlayModeTests
             yield return ClickAt(more.worldBound.center);
             Assert.AreEqual(longText, tip.Detail.text, "More shows all of it");
         }
+
+        [UnityTest]
+        public IEnumerator FlowBar_BothRowsAreOnOneScale_AndSegmentsAreNamedWithTheirWatts()
+        {
+            var bar = new FlowBar();
+            bar.style.width = 600;
+            doc.rootVisualElement.Add(bar);
+            bar.Set(new[] { new FlowBar.Segment("Solar", 6000.0, Color.yellow), new FlowBar.Segment("RTG", 440.0, Color.cyan) },
+                    new[] { new FlowBar.Segment("Colony", 5000.0, Color.blue), new FlowBar.Segment("Battery in", 1000.0, Color.green) });
+            for (int i = 0; i < 3; i++) yield return null;
+            var labels = bar.Query<Label>().ToList().Select(l => l.text).ToList();
+            Assert.IsTrue(labels.Any(t => t.Contains("Solar 6 kW") && t.Contains("RTG 440 W")), string.Join(" | ", labels));
+            Assert.IsTrue(labels.Any(t => t.Contains("Colony 5 kW") && t.Contains("Battery in 1 kW")));
+            // the shorter row (6.0 kW used against 6.44 kW made) leaves an empty tail on the common scale
+            var rows = bar.Query<VisualElement>().Where(e => e.style.height == 18).ToList();
+            Assert.AreEqual(2, rows.Count);
+            Assert.Greater(rows[0].childCount, 1);
+        }
     }
 }

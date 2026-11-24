@@ -35,6 +35,10 @@ namespace KardashevAscent.Presentation.UI
         {
             now = Text();
             nowTip = InfoTip.After(now, "");
+            Heading("ENERGY FLOW");
+            flowBar = new FlowBar();
+            Body.Add(flowBar);
+            flowHistory = Text("caption");
             Heading("MADE");
             sources = Text();
             InfoTip.After(sources, "Solar: all your panels now (0 at night). RTG: the lander's nuclear battery, steady day and night. " +
@@ -93,9 +97,50 @@ namespace KardashevAscent.Presentation.UI
                 yards += sim.BatteryCount(t);
             }
             buildings.text = $"{panels} panel{(panels == 1 ? "" : "s")} · {yards} battery yard{(yards == 1 ? "" : "s")}";
+            RefreshFlow(sim, solar, tidal, waves, barrage);
             RefreshLines(sim);
             RefreshFailed(sim);
             RefreshOrders(sim);
+        }
+
+        FlowBar flowBar;
+        Label flowHistory;
+
+        /// <summary>Sources above, where it goes below, on one scale; the 7-day history under it (UI information design, stage 4). Only values the simulation reports.</summary>
+        void RefreshFlow(IPlanetSimulation sim, double solar, double tidal, double waves, double barrage)
+        {
+            if (flowBar == null) return;
+            double rtg = sim.RtgW, bat = sim.BatteryPowerW;
+            var made = new System.Collections.Generic.List<FlowBar.Segment>
+            {
+                new FlowBar.Segment("Solar", System.Math.Max(0.0, solar), FlowBar.SolarColour), new FlowBar.Segment("RTG", rtg, FlowBar.RtgColour),
+                new FlowBar.Segment("Tidal", tidal, FlowBar.SeaColour), new FlowBar.Segment("Waves", waves, FlowBar.SeaColour), new FlowBar.Segment("Barrage", barrage, FlowBar.SeaColour),
+                new FlowBar.Segment("Battery out", bat < 0.0 ? -bat : 0.0, FlowBar.BatteryColour),
+            };
+            double loss = sim.WiredGrid ? sim.TransmissionLossW + sim.ConverterLossW : 0.0;
+            var used = new System.Collections.Generic.List<FlowBar.Segment>
+            {
+                new FlowBar.Segment("Colony", sim.DemandW, FlowBar.LoadColour), new FlowBar.Segment("Workshop", sim.WorkshopPowerW, FlowBar.LoadColour),
+                new FlowBar.Segment("Robot charging", sim.RobotChargingW, FlowBar.LoadColour), new FlowBar.Segment("Battery in", bat > 0.0 ? bat : 0.0, FlowBar.BatteryColour),
+                new FlowBar.Segment("Line and converter loss", loss, FlowBar.LossColour), new FlowBar.Segment("Curtailed", sim.CurtailedW, FlowBar.CurtailColour),
+            };
+            double madeTotal = 0.0, usedTotal = 0.0;
+            foreach (var s in made) madeTotal += s.Watts;
+            foreach (var s in used) usedTotal += s.Watts;
+            double gap = madeTotal - usedTotal;
+            // what the rows do not account for is shown, not hidden
+            if (gap > 0.02 * System.Math.Max(1.0, madeTotal)) used.Add(new FlowBar.Segment("Not accounted", gap, FlowBar.UnaccountedColour));
+            flowBar.Set(made, used);
+            string shortBy = gap < -0.02 * System.Math.Max(1.0, usedTotal) ? $" · short by {Format.Power(-gap)}" + (sim.IsBrownout ? " (brownout)" : "") : "";
+            var h = sim.History;
+            string week = "";
+            if (h != null && h.Count > 1)
+            {
+                double made7 = 0.0, need7 = 0.0; int n = h.Count;
+                for (int i = 0; i < n; i++) { made7 += h[i].GenerationW; need7 += h[i].DemandW; }
+                week = $"Over the last {n * h.SampleHours / 24.0:0.#} days: made {Format.Power(made7 / n)} on average, needed {Format.Power(need7 / n)}.";
+            }
+            flowHistory.text = week + shortBy + " Robot heaters and climbing draw from the robots' own batteries, not the grid, so they are not in this bar.";
         }
 
         void RefreshOrders(IPlanetSimulation sim)
