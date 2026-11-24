@@ -662,6 +662,8 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>Rule firings, syncs, notices and other operations records, oldest first.</summary>
         System.Collections.Generic.IReadOnlyList<Operations.OperationRecord> OperationsLog { get; }
+        /// <summary>Put an event (a save, a milestone) into the field log; its priority follows its kind.</summary>
+        void NoteEvent(string subject, string quantity, string text);
 
         /// <summary>A plant a rule paused.</summary>
         bool IsPlantPaused(int tileId, int slot);

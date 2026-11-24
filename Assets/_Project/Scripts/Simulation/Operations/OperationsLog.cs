@@ -11,9 +11,35 @@ namespace KardashevAscent.Simulation.Operations
     /// colony came to know it. A record observed by a robot that was cut off has no "known at" until that robot syncs.
     /// </summary>
     [Serializable]
+    /// <summary>
+    /// How much a log entry needs the player (UI information design, stage 7, decided 2026-11-24): act now (a toast shows too), watch, or info. Saved as an
+    /// integer: append new members at the end only; a record from an older save is Info.
+    /// </summary>
+    public enum LogPriority { Info = 0, Watch = 1, ActNow = 2 }
+
+    /// <summary>The priority of each kind of record, by what it is about.</summary>
+    public static class OperationPriority
+    {
+        public static LogPriority Of(string quantity)
+        {
+            switch (quantity)
+            {
+                case "Robot destroyed":
+                case "Cold or heat warning":
+                case "Notice": return LogPriority.ActNow;
+                case "Haul waiting":
+                case "Player order wins":
+                case "Milestone reached": return LogPriority.Watch;
+                default: return LogPriority.Info;
+            }
+        }
+    }
+
     public sealed class OperationRecord
     {
         public int Id;
+        /// <summary>Version 55: how much the entry needs the player.</summary>
+        public LogPriority Priority;
         /// <summary>"Robot 12", "Plant 471.5", "Colony".</summary>
         public string Subject = "";
         /// <summary>What the record is about: "Rule fired", "Rulebook synced", "Plant blocked", "Vent".</summary>

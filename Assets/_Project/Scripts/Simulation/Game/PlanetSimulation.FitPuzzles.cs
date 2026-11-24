@@ -104,6 +104,7 @@ namespace KardashevAscent.Simulation.Game
 
         void OnExperimentFinished(ExperimentKind kind)
         {
+            Log("Research Station", "Experiment done", 0.0, "", Experiments.Name(kind), $"{Experiments.Name(kind)} measured: {ExperimentResult(kind)}");
             if (research.Sampling.TryGetValue(kind, out var s))
             {
                 research.Sampling.Remove(kind);
