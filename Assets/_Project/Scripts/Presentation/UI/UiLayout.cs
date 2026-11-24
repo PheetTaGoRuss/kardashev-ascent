@@ -88,6 +88,8 @@ namespace KardashevAscent.Presentation.UI
                 VisualElement hints = root.Q("hints");
                 if (hints != null)
                 {
+                    // At a large UI size the hints bar would sit over the foot of a floating window: hide it while a window is open.
+                    hints.style.display = UiScale.Value > 1.3f && SystemTabs.AnyOpen ? DisplayStyle.None : StyleKeyword.Null;
                     hints.style.bottom = Bottom;
                     if (Shown(hints)) hintsHeight = Mathf.Max(hintsHeight, hints.worldBound.height + 8f);
                 }

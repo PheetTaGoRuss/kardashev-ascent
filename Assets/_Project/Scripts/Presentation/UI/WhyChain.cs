@@ -29,9 +29,12 @@ namespace KardashevAscent.Presentation.UI
             action.AddToClassList("small-button");
             action.AddToClassList(UiType.Secondary);
             action.style.alignSelf = Align.FlexStart;
-            action.style.marginTop = 3;
+            action.style.marginLeft = 10;
             action.clicked += () => onAction?.Invoke();
-            Add(headline); Add(steps); Add(action);
+            // the action sits on the header line, so it is always in view when the chain is
+            var header = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, alignItems = Align.Center } };
+            header.Add(headline); header.Add(action);
+            Add(header); Add(steps);
             style.display = DisplayStyle.None;
         }
 
