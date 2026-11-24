@@ -355,6 +355,8 @@ namespace KardashevAscent.Simulation.Game
         IReadOnlyList<(int Tile, double SavedWhPerDay, double CopperKg, int LineTiles, double BuildHours)> DepotSites(int max);
         /// <summary>Why a haul is waiting (a stop lost power, no chain fits), or null.</summary>
         string HaulBlockedReason(int haulId);
+        /// <summary>The structured reason behind a haul (0 ok, 1 no route, 2 no stop to start from, 3 no stop to end at, 4 a leg longer than one charge, 5 a planned stop was lost), the energy of its longest leg, one charge, and the lost stop.</summary>
+        (int Kind, double NeedWh, double BudgetWh, int StopTile) HaulWhyOf(int haulId);
         IReadOnlyList<int> HaulStops(int haulId);
         /// <summary>One line on what a haul costs a robot: round-trip energy split into driving, climbing and the heater.</summary>
         string HaulCostText(int fromTile, int toTile, double cargoKg);

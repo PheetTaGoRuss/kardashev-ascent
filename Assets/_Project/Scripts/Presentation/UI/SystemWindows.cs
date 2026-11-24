@@ -35,6 +35,8 @@ namespace KardashevAscent.Presentation.UI
         {
             now = Text();
             nowTip = InfoTip.After(now, "");
+            brownoutWhy = new WhyChain();
+            Body.Add(brownoutWhy);
             Heading("ENERGY FLOW");
             flowBar = new FlowBar();
             Body.Add(flowBar);
@@ -98,12 +100,21 @@ namespace KardashevAscent.Presentation.UI
             }
             buildings.text = $"{panels} panel{(panels == 1 ? "" : "s")} · {yards} battery yard{(yards == 1 ? "" : "s")}";
             RefreshFlow(sim, solar, tidal, waves, barrage);
+            // a brownout, as a why? chain from the numbers the simulation reports
+            double stored = sim.BatteryCapacityWh > 0.0 ? sim.BatteryStoredWh / sim.BatteryCapacityWh : 0.0;
+            brownoutWhy.Set("Brownout", sim.IsBrownout ? new System.Collections.Generic.List<string>
+            {
+                $"making {Format.Power(sim.GenerationW)}, the colony needs {Format.Power(sim.DemandW)}",
+                $"the battery holds {stored * 100.0:0} % of {Format.Energy(sim.BatteryCapacityWh)} and cannot cover the gap",
+                "the colony stops growing until a full day passes without a brownout",
+            } : null, "Open Overview (C)", () => SystemTabs.Open("overview"));
             RefreshLines(sim);
             RefreshFailed(sim);
             RefreshOrders(sim);
         }
 
         FlowBar flowBar;
+        WhyChain brownoutWhy;
         Label flowHistory;
 
         /// <summary>Sources above, where it goes below, on one scale; the 7-day history under it (UI information design, stage 4). Only values the simulation reports.</summary>
