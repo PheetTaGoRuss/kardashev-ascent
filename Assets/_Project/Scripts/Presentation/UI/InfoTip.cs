@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -40,8 +41,20 @@ namespace KardashevAscent.Presentation.UI
 
         string Shown() => expanded || full.Length <= ClampChars ? full : full.Substring(0, ClampChars).TrimEnd() + "…";
 
+        static System.Collections.Generic.List<string> guideTitles;
+
+        /// <summary>The Guide page a tip is about, when its text names one (a page title of 6 or more letters): every tip with a matching page gets a link.</summary>
+        static string MatchingPage(string text)
+        {
+            guideTitles ??= KardashevAscent.Simulation.Game.GuideBook.All().Select(p => p.Title).Where(t => t.Length >= 6).OrderByDescending(t => t.Length).ToList();
+            foreach (string t in guideTitles)
+                if (text.IndexOf(t, System.StringComparison.OrdinalIgnoreCase) >= 0) return t;
+            return null;
+        }
+
         void RefreshLinks()
         {
+            if (string.IsNullOrEmpty(GuidePage) && !string.IsNullOrEmpty(full)) GuidePage = MatchingPage(full);
             more.style.display = full.Length > ClampChars ? DisplayStyle.Flex : DisplayStyle.None;
             more.text = expanded ? "Less ‹" : "More ›";
             guide.style.display = string.IsNullOrEmpty(GuidePage) ? DisplayStyle.None : DisplayStyle.Flex;
