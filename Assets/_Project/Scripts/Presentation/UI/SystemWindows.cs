@@ -390,7 +390,8 @@ namespace KardashevAscent.Presentation.UI
             Body.Add(tree);
 
             Heading("WHAT THE COLONY BELIEVES · UNTIL MEASURED");
-            beliefs = Text();
+            beliefsBox = new VisualElement();
+            Body.Add(beliefsBox);
 
             Heading("VALUES");
             foreach (SolarParameter p in (SolarParameter[])System.Enum.GetValues(typeof(SolarParameter)))
@@ -433,7 +434,43 @@ namespace KardashevAscent.Presentation.UI
         }
 
         ResearchTreeView tree;
-        Label beliefs;
+        VisualElement beliefsBox;
+        readonly System.Collections.Generic.Dictionary<string, (Label Name, ValueLabel Value, Label Note)> beliefRows = new System.Collections.Generic.Dictionary<string, (Label, ValueLabel, Label)>();
+
+        void BeliefRow(string key, string title)
+        {
+            if (beliefRows.ContainsKey(key)) return;
+            var name = Label(title, "caption");
+            name.style.marginTop = 4;
+            var value = new ValueLabel();
+            var note = Label("", "caption");
+            note.AddToClassList("wrap");
+            beliefsBox.Add(name); beliefsBox.Add(value); beliefsBox.Add(note);
+            beliefRows[key] = (name, value, note);
+        }
+
+        /// <summary>The four quantities the colony may only estimate, each with its mark and a "Measure" way out (UI information design, stage 2).</summary>
+        void RefreshBeliefs(IPlanetSimulation sim)
+        {
+            if (beliefsBox == null) return;
+            foreach (string k in new[] { "p", "t", "h", "tide" }) BeliefRow(k, k == "p" ? "Air pressure" : k == "t" ? "Mean ground temperature" : k == "h" ? "Highest point" : "Open-sea tide");
+            void Show(string key, KardashevAscent.Simulation.Planet.KnowledgeEstimate e, string format, string unit, double scale, KardashevAscent.Simulation.Planet.ExperimentKind kind, string note)
+            {
+                string blocker = sim.IsExperimentOrdered(kind) ? "Being measured." : sim.ExperimentBlocker(kind);
+                bool offer = !e.IsExact && !sim.IsExperimentOrdered(kind) && !sim.IsExperimentKnown(kind);
+                var row = beliefRows[key];
+                row.Value.SetEstimate(e, format, unit, scale, offer ? "Measure" : null, offer ? (System.Action)(() => { if (sim.ExperimentBlocker(kind) == null) sim.OrderExperiment(kind, Tile(sim)); }) : null,
+                                      offer ? (blocker ?? "Order this experiment: " + KardashevAscent.Simulation.Planet.Experiments.Name(kind)) : null);
+                row.Note.text = e.IsExact ? "" : note;
+                row.Note.style.display = e.IsExact ? DisplayStyle.None : DisplayStyle.Flex;
+            }
+            double cable = sim.CableDesignShare;
+            Show("p", sim.PressureEstimate, "0.#", "kPa", 0.001, KardashevAscent.Simulation.Planet.ExperimentKind.AirPressure,
+                 "Cables are rated at " + (cable * 100.0).ToString("0") + " % until it is measured.");
+            Show("t", sim.TemperatureEstimate, "0", "C", 1.0, KardashevAscent.Simulation.Planet.ExperimentKind.SurfaceTemperature, "Robot warnings take the worse end.");
+            Show("h", sim.HighestPointEstimate, "0.#", "km", 0.001, KardashevAscent.Simulation.Planet.ExperimentKind.ReliefSurvey, "Climb costs are planned at the high end.");
+            Show("tide", sim.TideRangeEstimate, "0.##", "m", 1.0, KardashevAscent.Simulation.Planet.ExperimentKind.TideGauge, "Tidal output is only a range until the gauge reads it.");
+        }
 
         void ToggleStationSurvey()
         {
@@ -662,15 +699,10 @@ namespace KardashevAscent.Presentation.UI
                 : "No Research Station · build one (Stations)";
             stationNote.style.display = sim.HasResearchStation ? DisplayStyle.None : DisplayStyle.Flex;
             double design = sim.SolarDesignShare, battery = sim.BatteryUsableShare;
-            marginNote.text = $"Margins · panels {design * 100.0:0} % · batteries {battery * 100.0:0} %";
+            marginNote.text = $"Margins · panels {design * 100.0:0} % {(design < 1.0 ? Marks.Glyph(Mark.Estimated) : Marks.Glyph(Mark.Measured))} · batteries {battery * 100.0:0} % {(battery < 1.0 ? Marks.Glyph(Mark.Estimated) : Marks.Glyph(Mark.Measured))}   (◐ estimate: a margin until the values are measured)";
 
             tree?.Refresh(sim);
-            if (beliefs != null)
-                beliefs.text =
-                    "Air pressure: " + sim.PressureEstimate.Say("0.#", "kPa", 0.001) + (sim.PressureEstimate.IsExact ? "" : " (cables are rated at " + (sim.CableDesignShare * 100.0).ToString("0") + " % until measured)") + "\n" +
-                    "Mean ground temperature: " + sim.TemperatureEstimate.Say("0", "C") + (sim.TemperatureEstimate.IsExact ? "" : " (robot warnings take the worse end)") + "\n" +
-                    "Highest point: " + sim.HighestPointEstimate.Say("0.#", "km", 0.001) + "\n" +
-                    "Open-sea tide: " + sim.TideRangeEstimate.Say("0.##", "m");
+            RefreshBeliefs(sim);
         }
     }
 
