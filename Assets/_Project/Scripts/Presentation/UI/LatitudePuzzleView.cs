@@ -54,7 +54,7 @@ namespace KardashevAscent.Presentation.UI
             buttons.AddToClassList("button-row");
             var check = new Button(Submit) { text = "Check" };
             check.AddToClassList("small-button");
-            check.style.fontSize = PuzzleGuide.BodySize;
+            check.style.fontSize = UiType.Px(PuzzleGuide.BodySize);
             buttons.Add(check);
             buttons.Add(CalculatorPad.OpenButton());
             Add(buttons);
@@ -83,7 +83,7 @@ namespace KardashevAscent.Presentation.UI
             CalculatorPad.TrackAnswer(f);
             f.AddToClassList("puzzle-field");
             f.style.width = 110;
-            f.style.fontSize = PuzzleGuide.BodySize;
+            f.style.fontSize = UiType.Px(PuzzleGuide.BodySize);
             row.Add(f);
             Add(row);
             return f;

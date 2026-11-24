@@ -56,7 +56,7 @@
 .build-item .action-button { margin-right: 0; }
 .info-button {
     width: 20px; height: 20px; margin: 0 0 0 2px; padding: 0;
-    font-size: 12px; -unity-font-style: bold;
+    font-size: 14px; -unity-font-style: bold;
     color: var(--accent); background-color: rgba(255, 199, 92, 0.12);
     border-width: 1px; border-color: rgba(255, 199, 92, 0.5); border-radius: 0;
 }
@@ -70,8 +70,8 @@
 
 /* Bigger, easier-to-read inspect and info text (director 2026-11-14). */
 .box .value { font-size: 19px; }
-.box .caption { font-size: 13px; }
-.box .heading { font-size: 12px; }
+.box .caption { font-size: 14px; }
+.box .heading { font-size: 14px; }
 .bottom-left { width: 390px; }
 
 .build-slide { max-width: 640px; }

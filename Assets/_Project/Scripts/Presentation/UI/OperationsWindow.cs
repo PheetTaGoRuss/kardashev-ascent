@@ -46,7 +46,7 @@ namespace KardashevAscent.Presentation.UI
         protected override void BuildBody()
         {
             banner = Text("value");
-            banner.style.fontSize = 15;
+            banner.AddToClassList(UiType.Body);
             InfoTip.After(banner, "Real expeditions cannot be run from home: the light from Earth takes years. So this colony runs on a written rulebook " +
                                   "of decisions made in advance, each with its reason, and reports what happened. The distance is from the NASA Exoplanet Archive.");
             Heading("UPLINK");

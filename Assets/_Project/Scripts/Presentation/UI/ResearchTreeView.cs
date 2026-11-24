@@ -113,7 +113,7 @@ namespace KardashevAscent.Presentation.UI
             var result = new Label("");
             result.AddToClassList("job-text");
             result.style.whiteSpace = WhiteSpace.Normal;
-            result.style.fontSize = 12;
+            result.AddToClassList(UiType.Secondary);
             result.style.color = UiPalette.Good;
             box.Add(result);
 

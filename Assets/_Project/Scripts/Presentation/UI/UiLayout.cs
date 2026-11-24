@@ -96,7 +96,7 @@ namespace KardashevAscent.Presentation.UI
                     info.style.bottom = Bottom;
                 VisualElement left = root.Q("left");
                 if (left != null)
-                    left.style.top = Top + 4f;
+                    left.style.top = WindowTop - 2f;   // under the tabs: a wider tab strip (bigger type, larger UI size) would otherwise cover the panel title
             }
             ClearBottom = Bottom + hintsHeight;
 
@@ -113,7 +113,7 @@ namespace KardashevAscent.Presentation.UI
                 VisualElement tileInfo = root.Q(className: "tile-info");
                 if (tileInfo != null)
                 {
-                    tileInfo.style.top = Top + 4f;
+                    tileInfo.style.top = WindowTop - 2f;
                     tileInfo.style.maxHeight = Mathf.Max(160f, panelHeight - Top - Bottom - 12f);
                 }
             }

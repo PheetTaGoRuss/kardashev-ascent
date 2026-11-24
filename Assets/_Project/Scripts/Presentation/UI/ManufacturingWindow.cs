@@ -40,7 +40,7 @@ namespace KardashevAscent.Presentation.UI
         protected override void BuildBody()
         {
             status = Label("", "value");
-            status.style.fontSize = 16;
+            status.AddToClassList(UiType.Body);
             status.style.whiteSpace = WhiteSpace.Normal;
             Body.Add(status);
             InfoTip.After(status, "Robot Workshops build robots and upgrades. Refinery modules (Alumina plant, Electrolysis cell) go in " +
@@ -59,7 +59,7 @@ namespace KardashevAscent.Presentation.UI
                 Tab chosen = t;
                 var b = new Button(() => { tab = chosen; shownShape = null; }) { text = t.ToString() };
                 b.AddToClassList("tab");
-                b.style.fontSize = 15;
+                b.AddToClassList(UiType.Body);
                 b.style.height = 30;
                 b.style.minWidth = 110;
                 tabs.Add(b);
@@ -141,7 +141,7 @@ namespace KardashevAscent.Presentation.UI
             mid.style.flexGrow = 1;
             mid.style.flexShrink = 1;
             var title = new Label(name);
-            title.style.fontSize = 17;
+            title.AddToClassList(UiType.Section);
             title.style.unityFontStyleAndWeight = FontStyle.Bold;
             mid.Add(title);
             InfoTip.After(title, info);
@@ -156,7 +156,7 @@ namespace KardashevAscent.Presentation.UI
             if (makes != null && !makes.IsEmpty)
             {
                 var arrow = new Label("→");
-                arrow.style.fontSize = 18;
+                arrow.AddToClassList(UiType.Section);
                 arrow.style.marginLeft = 6;
                 arrow.style.marginRight = 6;
                 flow.Add(arrow);
@@ -166,14 +166,14 @@ namespace KardashevAscent.Presentation.UI
             }
             mid.Add(flow);
             var factLine = new Label(facts);
-            factLine.style.fontSize = 13;
+            factLine.AddToClassList(UiType.Secondary);
             factLine.style.color = UiPalette.Muted;
             factLine.style.marginTop = 2;
             mid.Add(factLine);
             if (blocker != null)
             {
                 var why = new Label(blocker);
-                why.style.fontSize = 13;
+                why.AddToClassList(UiType.Secondary);
                 why.style.color = new Color(1f, 0.45f, 0.4f);
                 why.style.whiteSpace = WhiteSpace.Normal;
                 mid.Add(why);
@@ -186,7 +186,7 @@ namespace KardashevAscent.Presentation.UI
             {
                 b.style.minWidth = 130;
                 b.style.height = 30;
-                b.style.fontSize = 14;
+                b.AddToClassList(UiType.Secondary);
                 b.style.marginBottom = 3;
                 buttons.Add(b);
             }
@@ -317,7 +317,7 @@ namespace KardashevAscent.Presentation.UI
             string what = !l.Built ? "being built" : l.Process.HasValue ? Refining.Of(l.Process.Value).Name : "idle";
             var name = new Label($"Tile {l.Tile} · slot {l.Slot}: {what}");
             name.style.width = 330;
-            name.style.fontSize = 14;
+            name.AddToClassList(UiType.Secondary);
             row.Add(name);
             var bar = new VisualElement();
             bar.style.flexGrow = 1;
@@ -331,7 +331,7 @@ namespace KardashevAscent.Presentation.UI
             row.Add(bar);
             var left = new Label(l.Process.HasValue ? $" {Days(l.HoursLeft)} left" : "");
             left.style.width = 110;
-            left.style.fontSize = 13;
+            left.AddToClassList(UiType.Secondary);
             row.Add(left);
             return row;
         }
@@ -371,7 +371,7 @@ namespace KardashevAscent.Presentation.UI
             row.style.marginBottom = 3;
             var l = new Label(text);
             l.style.flexGrow = 1;
-            l.style.fontSize = 14;
+            l.AddToClassList(UiType.Secondary);
             l.style.whiteSpace = WhiteSpace.Normal;
             row.Add(l);
             row.Add(button);
@@ -386,7 +386,7 @@ namespace KardashevAscent.Presentation.UI
             {
                 var l = new Label($"Day {(int)(list[i].TimeHours / 24.0) + 1} · {list[i].Facility}: {list[i].Message}");
                 l.style.whiteSpace = WhiteSpace.Normal;
-                l.style.fontSize = 14;
+                l.AddToClassList(UiType.Secondary);
                 l.style.marginBottom = 3;
                 if (list[i].IsProblem) l.style.color = new Color(1f, 0.6f, 0.45f);
                 content.Add(l);

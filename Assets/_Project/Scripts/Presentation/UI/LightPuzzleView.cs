@@ -14,15 +14,15 @@ namespace KardashevAscent.Presentation.UI
     public static class PuzzleGuide
     {
         public const float BodySize = 14f;
-        public const float TitleSize = 17f;
-        public const float SmallSize = 12f;
+        public const float TitleSize = 18f;
+        public const float SmallSize = 14f;
 
         static readonly Color ExampleTint = UiPalette.Good;
 
         public static Label Text(string text, bool bold = false, float size = BodySize)
         {
             var l = new Label(text);
-            l.style.fontSize = size;
+            l.style.fontSize = UiType.Px(size);
             l.style.whiteSpace = WhiteSpace.Normal;
             l.style.marginTop = 2;
             l.style.paddingLeft = l.style.paddingRight = 0;
@@ -280,11 +280,11 @@ namespace KardashevAscent.Presentation.UI
             CalculatorPad.TrackAnswer(answer);
             answer.AddToClassList("puzzle-field");
             answer.style.width = 110;
-            answer.style.fontSize = PuzzleGuide.BodySize;
+            answer.style.fontSize = UiType.Px(PuzzleGuide.BodySize);
             row.Add(answer);
             var submit = new Button(Submit) { text = "Check" };
             submit.AddToClassList("small-button");
-            submit.style.fontSize = PuzzleGuide.BodySize;
+            submit.style.fontSize = UiType.Px(PuzzleGuide.BodySize);
             row.Add(submit);
             row.Add(CalculatorPad.OpenButton());
             Add(row);
@@ -326,7 +326,7 @@ namespace KardashevAscent.Presentation.UI
                 for (int i = 0; i < cells.Length; i++)
                 {
                     var l = new Label(cells[i]);
-                    l.style.fontSize = PuzzleGuide.BodySize - 1f;
+                    l.style.fontSize = UiType.Px(PuzzleGuide.BodySize - 1f);
                     l.style.whiteSpace = WhiteSpace.Normal;
                     l.style.width = 140;
                     l.style.flexGrow = 0;
@@ -366,8 +366,8 @@ namespace KardashevAscent.Presentation.UI
                 style.height = 140;
                 style.marginTop = 4;
                 generateVisualContent += Draw;
-                Add(new Label("brightness ↑") { style = { position = Position.Absolute, left = 0, top = 0, fontSize = 12 } });
-                Add(new Label("wavelength →") { style = { position = Position.Absolute, right = 0, bottom = 0, fontSize = 12 } });
+                Add(new Label("brightness ↑") { style = { position = Position.Absolute, left = 0, top = 0, fontSize = UiType.Px(12) } });
+                Add(new Label("wavelength →") { style = { position = Position.Absolute, right = 0, bottom = 0, fontSize = UiType.Px(12) } });
             }
 
             void Draw(MeshGenerationContext ctx)
@@ -413,9 +413,9 @@ namespace KardashevAscent.Presentation.UI
                 style.height = 140;
                 style.marginTop = 4;
                 generateVisualContent += Draw;
-                Add(new Label("ln DNI ↑") { style = { position = Position.Absolute, left = 0, top = 0, fontSize = 12 } });
-                Add(new Label("air mass m →") { style = { position = Position.Absolute, right = 0, bottom = 0, fontSize = 12 } });
-                Add(new Label("yellow: readings · blue: G₀ at m = 0") { style = { position = Position.Absolute, right = 0, top = 0, fontSize = 12 } });
+                Add(new Label("ln DNI ↑") { style = { position = Position.Absolute, left = 0, top = 0, fontSize = UiType.Px(12) } });
+                Add(new Label("air mass m →") { style = { position = Position.Absolute, right = 0, bottom = 0, fontSize = UiType.Px(12) } });
+                Add(new Label("yellow: readings · blue: G₀ at m = 0") { style = { position = Position.Absolute, right = 0, top = 0, fontSize = UiType.Px(12) } });
             }
 
             void Draw(MeshGenerationContext ctx)

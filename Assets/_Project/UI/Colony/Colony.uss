@@ -34,7 +34,7 @@
 .wrap { white-space: normal; }
 
 .section { margin-top: 12px; }
-.body { font-size: 12px; padding: 0; margin: 2px 0 0 0; white-space: normal; }
+.body { font-size: 14px; padding: 0; margin: 2px 0 0 0; white-space: normal; }
 .tiles { margin-top: 6px; color: var(--text-muted); }
 
 .chart {
@@ -43,7 +43,7 @@
     border-radius: 0;
 }
 .power-chart { height: 150px; }
-.axis-label { position: absolute; font-size: 9px; color: var(--text-muted); padding: 0; margin: 0; }
+.axis-label { position: absolute; font-size: 14px; color: var(--text-muted); padding: 0; margin: 0; }
 
 .legend { flex-direction: row; flex-wrap: wrap; margin-top: 4px; }
 .legend-item { flex-direction: row; align-items: center; margin-right: 10px; }

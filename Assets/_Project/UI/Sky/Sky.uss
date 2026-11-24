@@ -2,7 +2,7 @@
 .labels { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
 .dome-label {
     position: absolute;
-    font-size: 11px;
+    font-size: 14px;
     -unity-font-style: bold;
     padding: 0;
     margin: 0;
@@ -39,7 +39,7 @@
 .action {
     margin: 4px 0 0 0;
     height: 26px;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--on-accent);
     background-color: var(--accent);
     border-width: 0;
@@ -48,9 +48,9 @@
 .action:hover { background-color: rgb(255, 220, 140); }
 .action:disabled { background-color: rgba(255, 255, 255, 0.10); color: var(--text-muted); }
 .log { margin-top: 2px; }
-.orbit-label { position: absolute; font-size: 9px; color: var(--text-muted); padding: 0; margin: 0; }
+.orbit-label { position: absolute; font-size: 14px; color: var(--text-muted); padding: 0; margin: 0; }
 
 /* Bigger, easier-to-read captions in the sky panel (director 2026-11-14). */
-.sky .caption { font-size: 13px; }
-.sky .heading { font-size: 12px; }
+.sky .caption { font-size: 14px; }
+.sky .heading { font-size: 14px; }
 .sky .value { font-size: 18px; }

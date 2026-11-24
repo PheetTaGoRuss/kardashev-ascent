@@ -274,7 +274,7 @@ namespace KardashevAscent.Presentation.UI
                         foreach (var material in more) rest += (rest.Length > 0 ? " · " : "") + $"{KardashevAscent.Simulation.Resources.Materials.Name(material)} {MaterialChips.Kg(m[material])}";
                         var overflow = new Label($"+{more.Count}");
                         overflow.style.color = UiPalette.Muted;
-                        overflow.style.fontSize = 12;
+                        overflow.AddToClassList(UiType.Secondary);
                         overflow.style.marginLeft = 4;
                         overflow.tooltip = rest;
                         stockChips.Add(overflow);

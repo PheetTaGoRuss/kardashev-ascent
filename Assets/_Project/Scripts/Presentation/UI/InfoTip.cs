@@ -28,7 +28,7 @@ namespace KardashevAscent.Presentation.UI
         {
             Detail = new Label();
             Detail.style.whiteSpace = WhiteSpace.Normal;
-            Detail.style.fontSize = 13;
+            Detail.AddToClassList(UiType.Secondary);
             Detail.style.color = UiPalette.Muted;
             Detail.style.marginTop = 3;
             Detail.style.marginBottom = 3;
@@ -46,7 +46,7 @@ namespace KardashevAscent.Presentation.UI
             Button.style.paddingLeft = Button.style.paddingRight = Button.style.paddingTop = Button.style.paddingBottom = 0;
             Button.style.marginLeft = 6;
             Button.style.marginRight = 0;
-            Button.style.fontSize = 12;
+            Button.AddToClassList(UiType.Secondary);
             Button.style.unityFontStyleAndWeight = FontStyle.Bold;   // upright: italic "i" reads as "/"
             Button.style.color = UiPalette.Accent;
             Button.style.borderTopWidth = Button.style.borderBottomWidth = Button.style.borderLeftWidth = Button.style.borderRightWidth = 1;
