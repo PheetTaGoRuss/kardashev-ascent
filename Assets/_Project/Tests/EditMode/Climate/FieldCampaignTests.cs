@@ -22,12 +22,14 @@ namespace KardashevAscent.Simulation.Tests.Climate
         static PlanetSolarParams MarsParams => new PlanetSolarParams(SolarConstants.SolarLuminosity, 227956038589.7, 0.0935, 25.19 * Math.PI / 180.0, 250.87 * Math.PI / 180.0, 24.6597, 16487.52, 0.5, 0.3, -59.0, false, 0.00628);
         static PlanetSolarParams EarthParams => new PlanetSolarParams(SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Math.PI / 180.0, 282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 15.0, false, 1.0);
 
+        public static double LastShelterHours, LastWaitHours;
+
         /// <summary>(robot lost, storm days seen at the target, why it was lost or what it hauled)</summary>
-        public static (bool Lost, int Storms, string Note, double HauledKg) Run(PlanetSolarParams p, CloudModel clouds, double latDeg, bool southernWinter, int seed, bool followAdvice = false)
+        public static (bool Lost, int Storms, string Note, double HauledKg) Run(PlanetSolarParams p, CloudModel clouds, double latDeg, bool southernWinter, int seed, bool followAdvice = false, bool forecast = true)
         {
             double wantLat = latDeg * Math.PI / 180.0;
             int baseTile = Enumerable.Range(0, Sphere.TileCount).Where(t => !Surface.Terrain[t].ToString().Contains("Ocean")).OrderBy(t => Math.Abs(Sphere.Latitude(t) - wantLat)).First();
-            var sim = new PlanetSimulation(Sphere, Surface, p, Kardashev.EarthRadiusM, baseTile) { ConstructionTimeEnabled = false, LogisticsEnabled = true, Clouds = clouds, TerrainSeed = 7 + seed * 101 };
+            var sim = new PlanetSimulation(Sphere, Surface, p, Kardashev.EarthRadiusM, baseTile) { ConstructionTimeEnabled = false, LogisticsEnabled = true, Clouds = clouds, TerrainSeed = 7 + seed * 101, ForecastPlanningEnabled = forecast };
             sim.Workforce.Reset(sim.BaseTileId, 0);
             sim.Debug.UnlockAll = true;
             sim.Debug.FreeBuilding = true;
@@ -62,6 +64,7 @@ namespace KardashevAscent.Simulation.Tests.Climate
             int storms = 0; double startH = sim.TimeHours;
             var trace = new System.Text.StringBuilder();
             for (int h = 0; h < 24 * 30; h++) { sim.Tick(1.0); if (h < 24) { trace.Append($"[{h}h"); foreach (var rr in sim.Workforce.Robots) trace.Append($" R{rr.Id}@{rr.Tile} {(int)(rr.Battery.StateOfCharge * 100)}% {rr.Activity}/{(rr.Task.HasValue ? rr.Task.Value.Kind.ToString() : "-")} route{rr.Route.Count}"); trace.Append("]"); } if (h % 24 == 0 && sim.StormAt(target)) storms++; }
+            LastShelterHours = sim.StormShelterRobotHours; LastWaitHours = sim.HaulStormWaitHours;
             bool lost = sim.RobotsDestroyed > 0;
             string robots = string.Join(",", sim.Workforce.Robots.Select(r => r.Kind.ToString() + ":" + r.State + ":" + r.Shutdown + ":" + (int)(r.Battery.StateOfCharge * 100) + "%@" + r.Tile));
             string note = lost ? "base " + sim.BaseTileId + " target " + target + " " + trace + string.Join(" | ", sim.OperationsLog.Where(r => r.Quantity == "Robot destroyed").Select(r => (r.ObservedAtHours - startH).ToString("0") + "h " + r.Text))
@@ -93,6 +96,31 @@ namespace KardashevAscent.Simulation.Tests.Climate
             // KNOWN ISSUE KI-46: robots on a loaded haul are lost near the base on lumpy ground; this run REPORTS the losses, it does not assert them yet.
             Assert.AreEqual(0, runs.Count(r => r.Lost), "a robot is never lost because the planner sent it out: " + string.Join(" || ", runs.Select(r => r.Note)));
             TestContext.WriteLine("Earth-like 60 N winter: " + string.Join(" || ", runs.Select(r => $"lost={r.Lost} storms={r.Storms} {r.Note}")));
+        }
+
+        [Test]
+        public void ForecastPlanning_CampaignTable_AgainstTheOldRule_NoRobotLost()
+        {
+            var rows = new System.Text.StringBuilder("P-test (3 seeds, 30 days): scenario | planning | hauled kg per seed | robot-hours sheltering | haul-hours waiting | lost\n");
+            var scenarios = new (string Name, PlanetSolarParams P, CloudModel C, double Lat, bool South, bool Advice)[]
+            {
+                ("Earth-like 60 N winter", EarthParams, CloudModel.EarthClimatology, 60.0, false, false),
+                ("Mars southern winter", MarsParams, CloudModel.None, -10.0, true, false),
+                ("Mars winter, advice followed", MarsParams, CloudModel.None, -10.0, true, true),
+            };
+            foreach (var sc in scenarios)
+                foreach (bool forecast in new[] { false, true })
+                {
+                    double shelter = 0, wait = 0; int lost = 0; var kg = new System.Collections.Generic.List<string>();
+                    for (int seed = 0; seed < 3; seed++)
+                    {
+                        var run = Run(sc.P, sc.C, sc.Lat, sc.South, seed, sc.Advice, forecast);
+                        shelter += LastShelterHours; wait += LastWaitHours; if (run.Lost) lost++; kg.Add(run.HauledKg.ToString("0"));
+                    }
+                    rows.Append($"{sc.Name} | {(forecast ? "forecast" : "old rule")} | {string.Join("/", kg)} | {shelter:0} | {wait:0} | {lost}\n");
+                    if (forecast) Assert.AreEqual(0, lost, sc.Name);
+                }
+            TestContext.WriteLine(rows.ToString());
         }
     }
 }
