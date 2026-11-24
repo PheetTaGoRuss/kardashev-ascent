@@ -36,6 +36,34 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>A wind storm over a tile now.</summary>
         public bool StormAt(int tileId) => HasWeather && AnomalyAt(tileId).Storm;
 
+        bool dustySeasonLogged, globalStormLogged;
+
+        /// <summary>The share of direct sunlight left when the optical depth rises by this much (Beer-Lambert along a vertical path; a rough guide, ignores the diffuse light).</summary>
+        public static double SolarShareForExtraTau(double extraTau) => Math.Exp(-Math.Max(0.0, extraTau));
+
+        /// <summary>
+        /// Dust warnings from state the simulation already has (W8): one WATCH entry when the dusty season starts (Ls 180) and one when a global storm begins.
+        /// The outlook is a range (a thin-air planet's own seasonal factor, regional storms up to +2, global storms up to the model's peak), marked estimated.
+        /// </summary>
+        void HandleDustWarnings()
+        {
+            if (!ThinCo2Air) return;
+            double ls = SolarLongitudeDegAt(TimeHours);
+            bool dusty = ls >= 180.0 && ls < 360.0;
+            if (dusty && !dustySeasonLogged)
+            {
+                double tau = OpticalDepthAt(BaseTileId, CurrentMeanAnomaly()) * ThinAirClimate.SeasonFactor(270.0);
+                double now = OpticalDepthAt(BaseTileId, CurrentMeanAnomaly());
+                Log("Colony", "Dusty season", tau, "tau", "Weather", $"The dusty season begins (Ls 180): ◐ optical depth about {tau:0.0}, up to {tau + 2.0:0.0} in a regional storm; the panels' sunlight about {SolarShareForExtraTau(tau - now) * 100.0:0} % of the clear half, down to {SolarShareForExtraTau(tau + 2.0 - now) * 100.0:0} % in a storm. A global storm is possible (about 1 year in 3).");
+            }
+            dustySeasonLogged = dusty;
+            double global = ThinAirClimate.GlobalStormTau(TerrainSeed, TimeHours, YearLengthHours, DayLengthHours);
+            bool storm = global > 1.0;
+            if (storm && !globalStormLogged)
+                Log("Colony", "Global dust storm", global, "tau", "Weather", $"A global dust storm begins: optical depth now +{global:0.0}, ◐ it may reach {ThinAirClimate.GlobalPeakMin:0} to {ThinAirClimate.GlobalPeakMax:0} within about {ThinAirClimate.RiseDays:0} sols and decay over weeks to months; panels would make about {SolarShareForExtraTau(ThinAirClimate.GlobalPeakMin) * 100.0:0.0} to {SolarShareForExtraTau(ThinAirClimate.GlobalPeakMax) * 100.0:0.00} % of their usual sunlight at the peak. Rely on the RTG and the battery.");
+            globalStormLogged = storm;
+        }
+
         bool baseStormLogged;
         readonly HashSet<int> stormHeld = new HashSet<int>();
 
@@ -45,6 +73,7 @@ namespace KardashevAscent.Simulation.Game
         /// </summary>
         void HandleStorms()
         {
+            HandleDustWarnings();
             if (!HasWeather) { foreach (Robot r0 in Workforce.Robots) r0.StormHold = false; return; }
             bool baseStorm = StormAt(BaseTileId);
             if (baseStorm && !baseStormLogged)

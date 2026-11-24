@@ -40,14 +40,17 @@ namespace KardashevAscent.Simulation.Robots
         public double ChargingW { get; private set; }
 
         /// <summary>Charge a robot keeps to climb back to the nearest charger: the climb from its tile up to the charger's height, at the high end of the relief estimate.</summary>
-        static double ClimbReserveWh(Movement movement, Robot r)
+        double ClimbReserveWh(Movement movement, Robot r)
         {
             if (movement.HeightM == null || movement.NearestChargerHeightM == null) return 0.0;
-            double up = movement.NearestChargerHeightM[r.Tile] - movement.HeightM[r.Tile];
+            double up = movement.AscentHomeM != null ? movement.AscentHomeM[r.Tile] : movement.NearestChargerHeightM[r.Tile] - movement.HeightM[r.Tile];
             if (up <= 0.0) return 0.0;
-            return Logistics.HaulPhysics.ClimbEnergyWh(Logistics.HaulPhysics.DefaultRobotMassKg, 0.0, movement.GravityMs2, up, r.Attribute(RobotAttribute.EnergyEfficiency))
+            return Logistics.HaulPhysics.ClimbEnergyWh(Logistics.HaulPhysics.DefaultRobotMassKg, CargoKgOf != null ? CargoKgOf(r) : 0.0, movement.GravityMs2, up, r.Attribute(RobotAttribute.EnergyEfficiency))
                    * Logistics.HaulPhysics.ClimbEffortShare * movement.ReliefReserveScale;
         }
+
+        /// <summary>The trip-home reserve is kept this many times over (game rule, TBD): a lumpy climb is paid when a tile is entered, and the cargo makes the drive dearer; a field campaign (Weather W8) lost robots that kept the bare estimate.</summary>
+        public const double ReserveSafety = 1.0;
 
         public void Plan(Workforce workforce, IReadOnlyList<RobotFacility> facilities, double hours, Movement movement = null)
         {
@@ -62,7 +65,7 @@ namespace KardashevAscent.Simulation.Robots
             {
                 double toCharger = movement != null ? movement.HoursToChargerFor(r)[r.Tile] / r.Attribute(RobotAttribute.Speed) : 0.0;
                 r.ReserveFraction = movement != null && r.Battery.CapacityWh > 0.0 && !double.IsInfinity(toCharger)
-                    ? (movement.EnergyWh(toCharger) + ClimbReserveWh(movement, r) + r.HeaterW * toCharger) / r.Battery.CapacityWh : 0.0;   // the way back also runs the heater (Weather W8: robots were lost on Mars driving home on an empty battery)
+                    ? ReserveSafety * (movement.EnergyWh(toCharger) / r.Attribute(RobotAttribute.EnergyEfficiency) * Logistics.HaulPhysics.LoadFactor(Logistics.HaulPhysics.DefaultRobotMassKg, CargoKgOf != null ? CargoKgOf(r) : 0.0) + ClimbReserveWh(movement, r) + r.HeaterW * toCharger) / Math.Max(1e-9, r.Battery.CapacityWh * r.Battery.ColdFactor) : 0.0;   // a cold battery holds less: the state of charge is a share of what it can hold now   // the way back also runs the heater (Weather W8: robots were lost on Mars driving home on an empty battery)
                 r.IsStranded = movement != null && r.Battery.UsableWh <= 1e-6 && toCharger > 1e-9;
                 r.ChargerExists = movement == null ? HasChargingFacility(facilities) : movement.HasCharger;
             }

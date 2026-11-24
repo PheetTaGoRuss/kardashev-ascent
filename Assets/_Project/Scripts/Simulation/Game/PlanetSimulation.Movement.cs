@@ -92,6 +92,7 @@ namespace KardashevAscent.Simulation.Game
                         near[t] = bestTile >= 0 ? movement.HeightM[bestTile] : movement.HeightM[t];
                     }
                     movement.NearestChargerHeightM = near;
+                    movement.AscentHomeM = Routes.AscentToNearest(tiles, movement.HeightM);
                 }
                 chargerKey = key;
             }
