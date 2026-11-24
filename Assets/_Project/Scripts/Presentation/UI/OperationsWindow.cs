@@ -27,7 +27,7 @@ namespace KardashevAscent.Presentation.UI
         public override int Order => 35;
         protected override float Width => 760f;
 
-        enum LogFilter { All, Rules, Syncs, Plants, Notices }
+        enum LogFilter { All, ActNow, Watch, Rules, Syncs, Plants, Notices }
 
         Label banner, uplink, plants, depots, history, message;
         VisualElement rulebook, editor, logList, targetRow;
@@ -478,6 +478,8 @@ namespace KardashevAscent.Presentation.UI
         {
             switch (filter)
             {
+                case LogFilter.ActNow: return r.Priority == LogPriority.ActNow;
+                case LogFilter.Watch: return r.Priority >= LogPriority.Watch;
                 case LogFilter.Rules: return r.Quantity == "Rule fired" || r.Quantity == "Player order wins";
                 case LogFilter.Syncs: return r.Quantity == "Rulebook synced" || r.Quantity == "Rulebook published";
                 case LogFilter.Plants: return r.Subject.StartsWith("Plant");
@@ -488,14 +490,25 @@ namespace KardashevAscent.Presentation.UI
 
         void RefreshLog(IPlanetSimulation sim)
         {
-            var records = sim.OperationsLog.Where(Shown).Reverse().Take(30).ToList();
+            // ranked into three priorities, newest first within each; a quiet colony shows its info lines, a troubled one shows what to do first
+            var records = sim.OperationsLog.Where(Shown).Reverse().Take(60).OrderByDescending(r => r.Priority).ThenByDescending(r => r.Id).Take(40).ToList();
             string shape = filter + "|" + string.Join("|", records.Select(r => r.Id + (r.IsKnown ? "k" : "u")));
             if (shape == shownLog) return;
             shownLog = shape;
             logList.Clear();
             if (records.Count == 0) logList.Add(Label("Nothing logged yet.", "caption"));
+            LogPriority? lastPriority = null;
             foreach (OperationRecord r in records)
             {
+                if (lastPriority != r.Priority)
+                {
+                    lastPriority = r.Priority;
+                    var head = Label(r.Priority == LogPriority.ActNow ? "▲ ACT NOW" : r.Priority == LogPriority.Watch ? "● WATCH" : "· INFO", "heading");
+                    head.style.marginTop = 6;
+                    if (r.Priority == LogPriority.ActNow) head.style.color = UiPalette.Critical;
+                    else if (r.Priority == LogPriority.Watch) head.style.color = UiPalette.Warning;
+                    logList.Add(head);
+                }
                 string known = r.IsKnown ? (r.KnownAtHours > r.ObservedAtHours + 0.01 ? $" · known at hour {r.KnownAtHours:0}" : "") : " · not known yet (the robot is cut off)";
                 var l = Label($"hour {r.ObservedAtHours:0} · {r.Subject} · {r.Text}{known}", r.IsKnown ? "body" : "caption");
                 l.AddToClassList("wrap");

@@ -67,9 +67,12 @@ namespace KardashevAscent.Simulation.Game
             {
                 Subject = subject, Quantity = quantity, Value = value, Unit = unit, Source = source, Text = text,
                 ObservedAtHours = TimeHours, KnownAtHours = robotId >= 0 && !(Workforce.GetRobot(robotId)?.Connected ?? true) ? -1.0 : TimeHours,
-                RobotId = robotId, RuleId = ruleId, RulebookVersion = version,
+                RobotId = robotId, RuleId = ruleId, RulebookVersion = version, Priority = OperationPriority.Of(quantity),
             });
         }
+
+        /// <summary>Put an event into the field log (a save, a milestone): the one place the player reads what happened. Its priority follows its kind.</summary>
+        public void NoteEvent(string subject, string quantity, string text) => Log(subject, quantity, 0.0, "", "Colony", text);
 
         // ---- step 7a ----
 

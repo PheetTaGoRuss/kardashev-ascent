@@ -118,6 +118,7 @@ namespace KardashevAscent.Presentation.UI
         string milestoneMessage;
         VisualElement toastStack;
         Label toastMilestone, toastSave, toastWeather;
+        float lastLoggedSave = -1f;
         int weatherSerial;
         string weatherMessage;
         float weatherTime;
@@ -154,6 +155,7 @@ namespace KardashevAscent.Presentation.UI
                                         $"{PanelTiers.All[unlocked].Scale:#,0}× the ground per slot. Rebuild old panels to grow them.";
             }
             milestoneTime = Time.unscaledTime;
+            sim.NoteEvent("Colony", "Milestone reached", milestoneMessage.Replace("\n", " "));
         }
 
         /// <summary>A toast line in the shared stack: the HUD toast style, one line each.</summary>
@@ -177,6 +179,12 @@ namespace KardashevAscent.Presentation.UI
                 weatherMessage = runner.Simulation.RobotWeatherNews;
                 weatherTime = Time.unscaledTime;
             }
+            // Saves and milestones go to the field log (Operations, I), not to a toast: a toast is for "act now" only (UI information design, stage 7).
+            if (runner != null && runner.Simulation != null && saveGame != null && !string.IsNullOrEmpty(saveGame.Message) && saveGame.MessageTime != lastLoggedSave)
+            {
+                lastLoggedSave = saveGame.MessageTime;
+                runner.Simulation.NoteEvent("Colony", "Game saved", saveGame.Message);
+            }
             if (toast != null)
             {
                 // One stack of toasts below the system tab bar: the milestone, the save and the weather each have a line and never cover each other.
@@ -194,10 +202,8 @@ namespace KardashevAscent.Presentation.UI
                 bool milestone = !string.IsNullOrEmpty(milestoneMessage) && Time.unscaledTime - milestoneTime < MilestoneSeconds;
                 bool save = saveGame != null && !string.IsNullOrEmpty(saveGame.Message) && Time.unscaledTime - saveGame.MessageTime < 2.5f;
                 bool weather = !string.IsNullOrEmpty(weatherMessage) && Time.unscaledTime - weatherTime < WeatherToastSeconds;
-                toastMilestone.EnableInClassList("hidden", !milestone);
-                if (milestone) toastMilestone.text = milestoneMessage;
-                toastSave.EnableInClassList("hidden", !save);
-                if (save) toastSave.text = saveGame.Message;
+                toastMilestone.EnableInClassList("hidden", true);   // the milestone is in the field log; only warnings toast
+                toastSave.EnableInClassList("hidden", true);
                 toastWeather.EnableInClassList("hidden", !weather);
                 if (weather) toastWeather.text = weatherMessage;
             }
