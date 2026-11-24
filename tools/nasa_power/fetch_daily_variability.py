@@ -167,7 +167,7 @@ def write_csharp(table: dict[str, list[list[float]]], retrieved: str) -> None:
     parts = [
         block("TemperatureSd", "Standard deviation of the daily air-temperature anomaly, K.", "t_sd", ".2f"),
         block("TemperatureRho", "Lag-1 autocorrelation of the daily air-temperature anomaly.", "t_rho", ".3f"),
-        block("PressureSd", "Standard deviation of the daily surface-pressure anomaly, Pa.", "p_sd", ".0f"),
+        block("PressureSd", "Standard deviation of the daily surface-pressure anomaly, Pa.", "p_sd", ".1f"),
         block("PressureRho", "Lag-1 autocorrelation of the daily surface-pressure anomaly.", "p_rho", ".3f"),
         block("CloudSd", "Standard deviation of the daily cloud-factor anomaly (all-sky over clear-sky sunlight).", "c_sd", ".3f"),
         block("CloudRho", "Lag-1 autocorrelation of the daily cloud-factor anomaly.", "c_rho", ".3f"),

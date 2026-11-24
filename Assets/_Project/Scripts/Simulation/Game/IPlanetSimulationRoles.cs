@@ -664,6 +664,9 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>Rule firings, syncs, notices and other operations records, oldest first.</summary>
         System.Collections.Generic.IReadOnlyList<Operations.OperationRecord> OperationsLog { get; }
+        /// <summary>The weather at a tile now (climatology plus the day's anomaly).</summary>
+        WeatherSample WeatherAt(int tileId);
+        bool HasWeather { get; }
         /// <summary>Put an event (a save, a milestone) into the field log; its priority follows its kind.</summary>
         void NoteEvent(string subject, string quantity, string text);
 

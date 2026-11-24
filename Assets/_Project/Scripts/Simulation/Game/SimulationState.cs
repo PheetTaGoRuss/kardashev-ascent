@@ -9,7 +9,7 @@ namespace KardashevAscent.Simulation.Game
     public sealed class SimulationState
     {
         /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished. 7 added robots; 8 their batteries and condition; 9 resources; 10 the Workshop; 11 programs (facility, ranking, queue); 12 movement; 13 critical damage (stage A); 14 reservations and tasks to go back to (stage B); 15 battery ageing by depth, maintenance rules (stage D); 16 building footprints. 23 industry reports. 29 experiments. 30 survey puzzles answered one material at a time. 31 stand-ins (aluminium, sodium) in building bills. 32 deposits run out (what was mined from each). 33 mountains and canyons opened (tunnel, blast, bridge). 34 refinery modules, batches, queue and auto targets.</summary>
-        public const int CurrentVersion = 55;   // 55: log priorities; 54: day-night temperature; 51: experiment fit puzzles and range shares; 52: assay sampling in progress; 53: contour routing
+        public const int CurrentVersion = 56;   // 56: weather on; 55: log priorities; 54: day-night temperature; 51: experiment fit puzzles and range shares; 52: assay sampling in progress; 53: contour routing
 
         /// <summary>Wired grid (version 35): generators and stations need power lines to the lander tile. Older saves are not wired.</summary>
         public bool WiredGrid;
@@ -19,6 +19,9 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>Version 54: the air temperature swings between day and night (older saves: the yearly temperature only).</summary>
         public bool DiurnalTemperature;
+
+        /// <summary>Version 56: day-to-day weather (older saves: none).</summary>
+        public bool WeatherOn;
 
         /// <summary>The version this state was saved with (<see cref="CurrentVersion"/> for a new one).</summary>
         public int Version = CurrentVersion;
