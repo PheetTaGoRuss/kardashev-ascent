@@ -123,12 +123,13 @@ namespace KardashevAscent.Simulation.Game
             double hourAngle = (Sphere.Longitude(tileId) - PlanetFrame.Longitude(StarDirection)) * deg;
             hourAngle = (hourAngle + 540.0) % 360.0 - 180.0;
             Double3 sun = SunAt(tileId);
-            double cloud = CloudFactor(tileId, meanAnomaly);
+            WeatherSample weather = WeatherAt(tileId);   // the sky right now includes the day's weather
+            double cloud = weather.CloudFactor;
             PanelParams p = InSeason(MakePanel(tileId, tilt, azimuth, cloud, NewPanelAreaM2(tileId)), tileId, meanAnomaly);
-            double air = AirTemperatureAt(tileId, meanAnomaly);
+            double air = weather.AirC;
             double dni = 0.0, dhi = 0.0, poa = 0.0, cellT = air, power = 0.0;
             if (sun.Up > 0.0)
-                power = PanelPowerNow(p, sun, air, OpticalDepthAt(tileId, meanAnomaly), out dni, out dhi, out poa, out cellT);
+                power = PanelPowerNow(p, sun, air, weather.DustTau, out dni, out dhi, out poa, out cellT);
             return new SkyReport(planet.TidallyLocked, Sphere.Latitude(tileId) * deg, planet.Obliquity * deg, lambda,
                                  declination, hourAngle, planet.TidallyLocked ? double.NaN : SimClock.LocalTime24(hourAngle / deg),
                                  Math.Asin(Math.Max(-1.0, Math.Min(1.0, sun.Up))) * deg, SunPosition.AzimuthDegrees(sun),

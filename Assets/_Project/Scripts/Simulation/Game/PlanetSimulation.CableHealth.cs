@@ -55,12 +55,12 @@ namespace KardashevAscent.Simulation.Game
                 var fe = edges[e];
                 var key = (Math.Min(fe.A, fe.B), Math.Max(fe.A, fe.B));
                 var spec = KindSpec(fe.Kind);
-                double air = 0.5 * (AirTemperatureAt(fe.A, mean) + AirTemperatureAt(fe.B, mean));
+                double air = 0.5 * (WeatherAt(fe.A).AirC + WeatherAt(fe.B).AirC);   // climatology plus the day's weather
                 double actualA = Math.Abs(baseCurrentA[e]) * PlainLineVolts / fe.Volts / KindRatingFactor(fe.Kind);   // a three-phase line carries 1/sqrt(3) of the flow current in each conductor
                 double t = edgeTemperature.TryGetValue(key, out double known) ? known : air;
                 if (dt > 0.0)
                 {
-                    double density = CableEnvironment.RelativeAirDensity(planet.SurfacePressureEarth * CableEnvironment.StandardPressurePa, air);
+                    double density = CableEnvironment.RelativeAirDensity(0.5 * (WeatherAt(fe.A).PressurePa + WeatherAt(fe.B).PressurePa), air);
                     t = CableThermal.Step(t, air, CableThermal.HeatPerM(spec, actualA, t), spec, dt, density);
                     edgeTemperature[key] = t;
                     if (CableThermal.Overheated(t) && lineProtection.TryGetValue(key, out var guard) && guard != ProtectionKind.None)

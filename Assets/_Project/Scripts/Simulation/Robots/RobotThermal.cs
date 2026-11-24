@@ -55,6 +55,34 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>How many kelvin outside the operating range a temperature is (0 inside).</summary>
         public static double ExcessK(double celsius) => Math.Max(0.0, Math.Max(OperatingMinC - celsius, celsius - OperatingMaxC));
 
+        /// <summary>
+        /// Wind chill on the heater (Weather, decided 2026-11-24). The convective heat-transfer coefficient of a body in wind follows the Siple and Passel
+        /// formula h = 10.45 - v + 10 sqrt(v) (kcal per m2 per hour per degree, v in m/s; Siple and Passel 1945, "Measurements of dry atmospheric cooling in
+        /// subfreezing temperatures"), so the loss grows by h(v)/h(0) with the wind. Game rules, TBD: the wind is capped at 20 m/s (the formula is fitted to
+        /// walkers' winds); convection is 70 % of a robot's loss (the rest is radiation, which wind does not change); in thin air the convective gain is
+        /// scaled by the square root of the pressure (forced convection falls with air density). The heater constant is for a reference wind of 4 m/s, so a
+        /// planet with its usual wind keeps its old balance and only gusts and storms cost more.
+        /// </summary>
+        public const double ReferenceWindMs = 4.0, MaxWindMs = 20.0, ConvectiveShare = 0.7;
+
+        public static double SiplePassel(double windMs)
+        {
+            double v = Math.Max(0.0, Math.Min(MaxWindMs, windMs));
+            return (10.45 - v + 10.0 * Math.Sqrt(v)) / 10.45;
+        }
+
+        static double RawWindFactor(double windMs, double pressureEarth)
+        {
+            double conv = 1.0 + (SiplePassel(windMs) - 1.0) * Math.Sqrt(Math.Max(0.0, Math.Min(1.0, pressureEarth)));
+            return (1.0 - ConvectiveShare) + ConvectiveShare * conv;
+        }
+
+        /// <summary>The factor on the heater for this wind, 1 at the reference wind.</summary>
+        public static double WindFactor(double windMs, double pressureEarth) => RawWindFactor(windMs, pressureEarth) / RawWindFactor(ReferenceWindMs, pressureEarth);
+
+        /// <summary>Heater or cooler power at an air temperature with a wind factor, W.</summary>
+        public static double HeaterW(double airC, bool insulated, double windFactor) => HeaterWPerK * ExcessK(EffectiveC(airC, insulated)) * windFactor;
+
         /// <summary>Heater or cooler power at an air temperature, W.</summary>
         public static double HeaterW(double airC, bool insulated) => HeaterWPerK * ExcessK(EffectiveC(airC, insulated));
 
