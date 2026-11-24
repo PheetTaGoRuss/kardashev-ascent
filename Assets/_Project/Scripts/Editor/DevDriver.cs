@@ -301,6 +301,26 @@ namespace KardashevAscent.EditorTools
                         root.Query(className: "workforce").ForEach(w => Log("  window " + w.name + " " + w.worldBound + " pinned=" + w.ClassListContains("drag-pinned") + " maxW=" + w.resolvedStyle.maxWidth));
                     }
                     return true;
+                case "emptybattery":
+                {
+                    var sim = Runner()?.Simulation as KardashevAscent.Simulation.Game.PlanetSimulation;
+                    sim?.ForceBrownoutForTests();
+                    return true;
+                }
+                case "heavyhaul":
+                {
+                    // heavyhaul: put a haul to a tile too far for one charge into the book (reflection: no public way), so the planner marks it waiting.
+                    var sim = Runner()?.Simulation as KardashevAscent.Simulation.Game.PlanetSimulation;
+                    if (sim == null) return true;
+                    int lander = sim.BaseTileId, far = -1;
+                    for (int t = 0; t < sim.TileCount && far < 0; t++)
+                        if (!sim.GetTile(t).IsWater && t != lander && !double.IsInfinity(sim.Routes.HoursBetween(lander, t)) && sim.Routes.HoursBetween(lander, t) > 30.0 && !sim.PlanHaul(lander, t, 400.0).Feasible) far = t;
+                    const System.Reflection.BindingFlags F = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+                    object book = sim.GetType().GetField("haulBook", F)?.GetValue(sim);
+                    book?.GetType().GetMethod("Add")?.Invoke(book, new object[] { lander, far, KardashevAscent.Simulation.Resources.Material.Iron, 400.0 });
+                    Log("heavy haul to tile " + far + " added: " + (book != null));
+                    return true;
+                }
                 case "overlay":
                     Presentation.Planet.InstrumentOverlay.Set(argument != "off");
                     return true;

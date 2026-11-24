@@ -51,5 +51,10 @@ namespace KardashevAscent.Simulation.Game
                 }
             return n;
         }
+        /// <summary>Empty the colony battery (a dev command, to see a brownout).</summary>
+        public void EmptyBatteryForTests() { Grid.Battery.SetStored(0.0); }
+
+        /// <summary>Make the colony want far more power than it makes (a dev command, to see a brownout).</summary>
+        public void ForceBrownoutForTests() { Grid.Battery.SetStored(0.0); Grid.DemandW = Math.Max(Grid.DemandW, 50.0 * Math.Max(1.0, GenerationW)); DemandW = Grid.DemandW; }
     }
 }

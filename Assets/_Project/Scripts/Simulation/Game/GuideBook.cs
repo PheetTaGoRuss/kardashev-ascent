@@ -75,7 +75,36 @@ namespace KardashevAscent.Simulation.Game
             pages.AddRange(ResearchPages());
             pages.AddRange(OperationPages());
             pages.AddRange(GuideScience.Pages());
+            // the older categories take the same page template as the new ones (UI information design, finish round)
+            var titles = pages.Select(p => p.Title).Distinct().ToList();
+            for (int i = 0; i < pages.Count; i++)
+                if (pages[i].Category == Materials || pages[i].Category == Ground || pages[i].Category == Buildings || pages[i].Category == Robots)
+                    pages[i] = ToTemplate(pages[i], titles);
             return pages;
+        }
+
+        /// <summary>
+        /// Reshape a page into the template: In play (every game fact, each line keeping its old heading so nothing is lost), How to use (the headings that
+        /// say what to do), Real science (the headings that explain why) and Related (titles of other pages the text mentions). A section with nothing is left out.
+        /// </summary>
+        public static GuidePage ToTemplate(GuidePage old, IList<string> allTitles)
+        {
+            var page = new GuidePage(old.Category, old.Title, old.Summary) { Material = old.Material, Ground = old.Ground };
+            var inPlay = new List<string>(); var howTo = new List<string>(); var science = new List<string>();
+            foreach (var (heading, lines) in old.Sections)
+            {
+                bool use = heading == "How to get it" || heading == "How to find it" || heading == "What to do" || heading == "Choosing where to land" || heading == "How to use";
+                bool why = heading == "Why" || heading == "Good to know" || heading == "Real science";
+                foreach (string line in lines)
+                    (use ? howTo : why ? science : inPlay).Add(use || why || heading == "In play" ? line : heading + ": " + line);
+            }
+            if (inPlay.Count > 0) page.Add("In play", inPlay.ToArray());
+            if (howTo.Count > 0) page.Add("How to use", howTo.ToArray());
+            if (science.Count > 0) page.Add("Real science", science.ToArray());
+            string text = string.Join(" ", old.Sections.SelectMany(s => s.Lines));
+            var related = allTitles.Where(t => t != old.Title && t.Length >= 4 && text.IndexOf(t, StringComparison.OrdinalIgnoreCase) >= 0).Take(6).ToArray();
+            if (related.Length > 0) page.Add("Related", related);
+            return page;
         }
 
         // ---- materials ----

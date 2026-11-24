@@ -51,5 +51,23 @@ namespace KardashevAscent.Simulation.Tests.Game
             string swing = string.Join(" ", GuideScience.Pages().First(p => p.Title == "Temperature and the day-night swing").Sections.SelectMany(s => s.Lines));
             StringAssert.Contains("REMS", swing);
         }
+
+        [Test]
+        public void TheOlderCategoriesFollowTheTemplateToo_AndNoLineIsLost()
+        {
+            var all = GuideBook.All();
+            var templ = new[] { "In play", "How to use", "Real science", "Related" };
+            foreach (GuidePage p in all.Where(x => x.Category == GuideBook.Materials || x.Category == GuideBook.Ground || x.Category == GuideBook.Buildings || x.Category == GuideBook.Robots))
+            {
+                CollectionAssert.IsSubsetOf(p.Sections.Select(s => s.Heading).ToArray(), templ, p.Title);
+                Assert.IsNotEmpty(p.Summary, p.Title);
+            }
+            // the template keeps every fact: reshape a page by hand and count its lines
+            var old = new GuidePage("Materials", "Iron", "Ore.").Add("Where", "Everywhere.").Add("How to get it", "Mine it.").Add("Why", "Stars.").Add("Used for", "Steel and Copper wiring.");
+            var shaped = GuideBook.ToTemplate(old, new[] { "Iron", "Copper" });
+            Assert.AreEqual(old.Sections.Sum(s => s.Lines.Count), shaped.Sections.Where(s => s.Heading != "Related").Sum(s => s.Lines.Count));
+            StringAssert.Contains("Where: Everywhere.", string.Join("|", shaped.Sections.First(s => s.Heading == "In play").Lines));
+            Assert.Contains("Copper", shaped.Sections.First(s => s.Heading == "Related").Lines);
+        }
     }
 }
