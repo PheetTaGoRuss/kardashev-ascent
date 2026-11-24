@@ -116,3 +116,20 @@ Mean round trip at 3 hops: driving 1 579 Wh, climbing 1 743 Wh (at the old 0.15)
 **Choice.** Not a bigger battery: it is already rover-class, and doubling it would have no real counterpart. The climb share is the free game rule (the real m g dh is for a robot the game does not model), so **ClimbEffortShare 0.15 -> 0.075**. A mine at 2 hops is then hauled directly in all cases and at 3 hops in about 70 %. Farther mines need chargers: a leg of 2 to 3 hops fits one charge, so depots with charging bays every 2 to 3 hops (about 600 to 900 km) reach 8 hops with two or three bays. Payload and battery stay. A test (`HaulCostTests`) keeps 60 % direct at hops 2 and 3. All TBD; the climb share and the 80 % usable share are the knobs.
 
 **Also built with this pass:** a day-night temperature swing so a night haul costs more heater than a day haul (decided 2026-11-24): amplitude = 10 K plus a tenth of the annual range (the amplitude the temperature puzzle measures; TBD), none on a tidally locked planet; the haul text suggests starting later when that saves heater energy. Save version 54.
+
+## 2026-11-24: weather (PL-07), two game years on each planet type
+
+A test colony (3 robots, one panel at the base, default simulation) run for 2 game years per planet type, weather on against weather off.
+
+| Planet type | Solar from weather | Wind-storm days a year | Dust-storm days a year | Robots lost |
+| --- | --- | --- | --- | --- |
+| Earth-like 1 atm, NASA clouds | +0.7 % (the mean cloud factor is the climatology; panels are slightly nonlinear in light) | 6.5 | 0 | 0 of 3 |
+| Cold Earth-like (-25 C mean) | +0.7 % | 6.5 | 0 | 0 of 3 |
+| Mars-like 0.006 atm | -5.0 % (one global storm in this seed's two years; 45 dust-storm days a year on average) | 11.5 | 45.5 | 0 of 3 |
+| Hot thick air 2 atm | 0.0 % (no cloud climatology for non-Earth worlds) | 6.5 | 0 | 0 of 3 |
+| Airless | 0 (no weather) | 0 | 0 | 0 |
+
+Nothing absurd: solar on Earth-like planets does not fall (the climate was already in it); a storm day is 2 % of days by construction (6.5 in a year against the expected 7.3); Mars loses a few per cent in two years but nearly all the sun for weeks in a global storm (tau up to 11); no robot is lost because the colony robots shelter at the lander. A robot left out in the open with an empty battery is still destroyed by the KI-43 rule, and the wind only makes its heater cost more (up to 3.4 times at 20 m/s). Not measured: a long field campaign with exposed robots, since the starting colony keeps its robots at the base. Wind turbines are listed as next, not built.
+
+Caveat: the Mars 60-day aluminium logistics scenario runs with weather off; with the dust on, that chain would take longer, which the next logistics balance should look at.
+

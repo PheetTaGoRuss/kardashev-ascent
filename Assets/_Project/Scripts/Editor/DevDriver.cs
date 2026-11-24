@@ -331,6 +331,9 @@ namespace KardashevAscent.EditorTools
                     Log($"weather at base: cloud {w.CloudFactor:0.00} air {w.AirC:0.0} C pressure {w.PressurePa / 1000.0:0.00} kPa wind {w.WindMs:0.0} m/s dust tau {w.DustTau:0.00} storm {w.Storm} dust storm {w.DustStorm} (threshold {sim.StormThresholdMs(sim.BaseTileId):0.0}) day {sim.TimeHours / 24.0:0}");
                     return true;
                 }
+                case "weathermap":
+                    Presentation.Planet.WeatherOverlay.Set(argument != "off");
+                    return true;
                 case "overlay":
                     Presentation.Planet.InstrumentOverlay.Set(argument != "off");
                     return true;

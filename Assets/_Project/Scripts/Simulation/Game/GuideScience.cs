@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using KardashevAscent.Simulation.Climate;
 using KardashevAscent.Simulation.Electrical;
 using KardashevAscent.Simulation.Logistics;
 using KardashevAscent.Simulation.Planet;
@@ -84,6 +85,36 @@ namespace KardashevAscent.Simulation.Game
                 .Add("How to use", "Research (T) ► Tide gauge ► fit the amplitude and phase of the sea-level series (the moon's period is known).")
                 .Add("Real science", "The equilibrium tide is the sea's response to the moon's pull; its range falls as the cube of the moon's distance and rises with its mass.")
                 .Add("Related", "Relief and climbing");
+
+            yield return new GuidePage(Science, "Weather", "Day-to-day weather is noise around the climate: it moves clouds, temperature, pressure and wind.")
+                .Add("In play",
+                     "Weather is a pure function of the map seed, the place and the time, so it is the same every run and nothing about it is saved. Its long-run mean is the climate the game already had.",
+                     $"{Rule}Weather systems are about {WeatherModel.RegionKm:0} km across; the spread and the day-to-day persistence come from NASA data for Earth and are used for other worlds with air (pressure scaled by the planet pressure). A world with almost no air ({WeatherModel.MinPressureEarth * 100.0:0.#} % of Earth or less) has none.",
+                     "Where it matters: panels use the day clouds and dust; robots feel the day temperature and wind; cables use the day pressure and temperature; a storm sends robots to shelter.",
+                     "A tile weather is measured (●) at the lander, at a Research Station and wherever a robot stands; elsewhere you only have the climate with a range (◐). From a measured today the colony forecasts 1 to 5 days, with a range that grows with lead time.")
+                .Add("How to use", "Open a tile (tile info, WEATHER) to read it. F6 shows the weather map: white cloud, brown dust, red storm.")
+                .Add("Real science",
+                     "Daily air temperature, pressure, wind and sunlight from NASA POWER (MERRA-2, 2001 to 2025): the game takes the standard deviation and the one-day autocorrelation of each, by latitude and month. Synoptic weather systems are 1 000 to 2 000 km across (Holton, An Introduction to Dynamic Meteorology).",
+                     "A forecast has an error of sigma times the square root of (1 minus rho to the power 2k) at k days, where rho is the one-day autocorrelation: today predicts tomorrow well and next week hardly at all.")
+                .Add("Related", "Wind chill and storms", "Mars dust storms", "Temperature and the day-night swing");
+
+            yield return new GuidePage(Science, "Wind chill and storms", "Wind makes a robot heater work harder, and a strong enough wind stops outdoor work.")
+                .Add("In play",
+                     $"{Rule}A storm day is a day when the wind at a tile is above the local 98th percentile (about 2 days in 100). Robots there do no new outdoor work and go to the nearest shelter; the colony gets an ACT NOW entry in the log.",
+                     $"{Rule}The heater cost grows with the wind (capped at {RobotThermal.MaxWindMs:0} m/s). The heater constant is for a {RobotThermal.ReferenceWindMs:0} m/s wind, so the usual weather of a planet costs what it always did and only gusts and storms cost more. In thin air the effect is weaker.",
+                     "A robot is still destroyed if its battery is empty while it is out in the cold with no shelter, as before.")
+                .Add("How to use", "Keep robots charged and near shelter in storm season; the Power window shows a Storm chain when one reaches the base.")
+                .Add("Real science", "The convective heat-transfer coefficient of a body in wind: h = 10.45 - v + 10 sqrt(v) (Siple and Passel 1945), so the loss grows by h(v) / h(0).")
+                .Add("Related", "Weather", "Temperature and the day-night swing");
+
+            yield return new GuidePage(Science, "Mars dust storms", "Thin CO2 air has a seasonal pressure cycle and dust that dims the panels, sometimes for months.")
+                .Add("In play",
+                     $"{Rule}A world with a thin air (from {ThinAirClimate.MinPressureEarth * 100.0:0.#} to {ThinAirClimate.MaxPressureEarth * 100.0:0} % of Earth pressure) gets the Mars-like climate: the pressure follows the CO2 cycle, the dust is heavier in the second half of the year, regional storms come and go in days, and about one year in three a global storm raises the optical depth to between {ThinAirClimate.GlobalPeakMin:0} and {ThinAirClimate.GlobalPeakMax:0}.",
+                     "Which years have a global storm is fixed by the map seed and the year number. A dust storm dims panels but does not stop robots.")
+                .Add("How to use", "Keep battery storage for a long storm; panels at tau 10 make almost nothing, and the RTG keeps the colony alive.")
+                .Add("Real science",
+                     $"Viking Lander 1 saw the pressure run from about {ThinAirClimate.MinHPa:0.0} to {ThinAirClimate.MaxHPa:0.0} hPa over the year as CO2 freezes onto and sublimes from the poles (Hess et al. 1980; Tillman et al. 1993). Global dust storms come in about one Mars year in three (Zurek and Martin 1993; Montabone et al. 2015); in 2018 Opportunity measured an optical depth of about 10.8 (NASA/JPL).")
+                .Add("Related", "Weather", "Air pressure and density");
 
             yield return new GuidePage(Science, "Relief and climbing", "How high the land rises decides what a haul costs a robot.")
                 .Add("In play",
