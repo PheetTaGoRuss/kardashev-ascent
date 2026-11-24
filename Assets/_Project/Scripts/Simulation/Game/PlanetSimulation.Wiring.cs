@@ -463,9 +463,11 @@ namespace KardashevAscent.Simulation.Game
                 Double3 sun = SunAt(pair.Key.Tile);
                 if (sun.Up <= 0.0)
                     continue;
+                // the day's weather: cloud, air temperature and dust on top of the climatology (Weather, PL-07)
+                WeatherSample w = WeatherAt(pair.Key.Tile);
                 PanelParams p = InSeason(MakePanel(pair.Key.Tile, pair.Value.Tilt, pair.Value.Azimuth,
-                                                   CloudFactor(pair.Key.Tile, meanAnomaly), pair.Value.Area), pair.Key.Tile, meanAnomaly);
-                double power = PanelPowerNow(p, sun, AirTemperatureAt(pair.Key.Tile, meanAnomaly), OpticalDepthAt(pair.Key.Tile, meanAnomaly),
+                                                   w.CloudFactor, pair.Value.Area), pair.Key.Tile, meanAnomaly);
+                double power = PanelPowerNow(p, sun, w.AirC, w.DustTau,
                                              out _, out _, out _, out _);
                 double raw = floatingPanels.Contains(pair.Key) ? power * (1.0 + FloatingCoolingGain) : power;
                 // Designed for the cautious end of whatever the colony hasn't measured yet (director 2026-11-14).

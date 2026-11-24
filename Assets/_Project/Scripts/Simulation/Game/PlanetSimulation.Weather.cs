@@ -41,6 +41,13 @@ namespace KardashevAscent.Simulation.Game
             return a;
         }
 
+        /// <summary>The air temperature now at a tile: the climatology, the day-night swing and the day's weather. For robots, in play (not for plans, which cannot know the weather ahead).</summary>
+        public double LiveAirTemperatureAt(int tileId)
+        {
+            Upkeep.WindFactorAt ??= tile => HasWeather ? Robots.RobotThermal.WindFactor(AnomalyAt(tile).WindMs, planet.SurfacePressureEarth) : 1.0;
+            return DiurnalAirTemperatureAt(tileId, TimeHours) + AnomalyAt(tileId).TemperatureK;
+        }
+
         /// <summary>The weather at a tile now: cloud factor, air temperature, pressure, wind and dust, climatology plus the day's anomaly.</summary>
         public WeatherSample WeatherAt(int tileId)
         {

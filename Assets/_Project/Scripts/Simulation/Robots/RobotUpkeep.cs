@@ -161,6 +161,9 @@ namespace KardashevAscent.Simulation.Robots
         /// and <paramref name="topUpServedW"/> are what the grid gave the three kinds of charging (shared in proportion
         /// to what each robot asked for).
         /// </summary>
+        /// <summary>The wind factor on a robot's heater at a tile (null: 1). Set by the simulation from the day's wind.</summary>
+        public System.Func<int, double> WindFactorAt { get; set; }
+
         public void Apply(Workforce workforce, double hours, double dockServedW, double criticalServedW, double topUpServedW,
                           bool flaringStar, Movement movement = null,
                           Resources.MaterialStock materials = null, double airTemperatureC = 25.0,
@@ -237,7 +240,7 @@ namespace KardashevAscent.Simulation.Robots
         void ApplyWeather(Robot r, double hours, double airC, bool sheltered)
         {
             bool insulated = r.Has(RobotModule.ThermalInsulation);
-            double heater = sheltered ? 0.0 : RobotThermal.HeaterW(airC, insulated);
+            double heater = sheltered ? 0.0 : RobotThermal.HeaterW(airC, insulated, WindFactorAt != null ? WindFactorAt(r.Tile) : 1.0);
             r.Sheltered = sheltered;
             r.HeaterW = heater;
             // the battery follows its surroundings; the heater (while the battery has energy) holds it at the limit it would pass first

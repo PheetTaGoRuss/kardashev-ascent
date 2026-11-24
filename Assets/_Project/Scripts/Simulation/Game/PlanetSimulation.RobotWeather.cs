@@ -41,7 +41,7 @@ namespace KardashevAscent.Simulation.Game
             foreach (Robot r in Workforce.Robots)
             {
                 // Until the ground temperature is measured the warning goes by the cautious end of the estimate (decided 2026-11-23).
-                double air = DiurnalAirTemperatureAt(r.Tile, TimeHours);
+                double air = LiveAirTemperatureAt(r.Tile);
                 double heater = r.HeaterW, hoursLeft = r.ThermalHoursLeft;
                 double tempSpread = Planet.OrbitalBrief.TemperatureSpreadC * ExperimentRangeShare(Planet.ExperimentKind.SurfaceTemperature);
                 bool estimated = tempSpread > 0.0;
