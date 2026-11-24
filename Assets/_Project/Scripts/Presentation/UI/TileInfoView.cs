@@ -248,7 +248,7 @@ namespace KardashevAscent.Presentation.UI
                 b.AddToClassList("land-here");
                 b.style.flexGrow = 1;
                 b.style.height = 48;
-                b.style.fontSize = 20;
+                b.AddToClassList(UiType.Value);
                 b.style.marginTop = 6;
                 b.style.unityFontStyleAndWeight = FontStyle.Bold;
                 b.style.letterSpacing = 2;
@@ -366,7 +366,7 @@ namespace KardashevAscent.Presentation.UI
                     string share = map.IsEndless(tile, d.Material) ? "" : empty ? " · empty" : $" · {map.RemainingShare(tile, d.Material) * 100.0:0}%";
                     var g = new Label($"×{GradeText(sim, tile, d, rough)}{share}{(sim.IsMiningOrdered(tile, d.Material) ? " · mining" : "")}");
                     g.style.marginLeft = 4;
-                    g.style.fontSize = 14;
+                    g.AddToClassList(UiType.Secondary);
                     if (empty) g.style.color = UiPalette.Muted;
                     chip.Add(g);
                     chip.tooltip = $"{Materials.Name(d.Material)}: grade {GradeText(sim, tile, d, rough)} (1 = an ordinary deposit on Earth); {Left(map, tile, d.Material)}";
@@ -385,7 +385,7 @@ namespace KardashevAscent.Presentation.UI
                 go.AddToClassList("primary-button");
                 go.style.flexGrow = 1;
                 go.style.height = 30;
-                go.style.fontSize = 14;
+                go.AddToClassList(UiType.Secondary);
                 go.style.marginTop = 4;
                 go.tooltip = "A robot brought back rock cores. Work out each material's grade to finish surveying this tile.";
                 groundActions.Add(go);

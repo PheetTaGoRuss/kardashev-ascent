@@ -63,7 +63,7 @@ namespace KardashevAscent.Presentation.UI
             icon.style.color = UiPalette.OnAccent;
             icon.style.unityTextAlign = TextAnchor.MiddleCenter;
             icon.style.unityFontStyleAndWeight = FontStyle.Bold;
-            icon.style.fontSize = size * (SymbolOf(m).Length > 2 ? 0.42f : 0.55f);
+            icon.style.fontSize = UiType.Px(size * (SymbolOf(m).Length > 2 ? 0.42f : 0.55f));
             icon.style.paddingLeft = icon.style.paddingRight = icon.style.paddingTop = icon.style.paddingBottom = 0;
             icon.style.marginLeft = icon.style.marginRight = icon.style.marginTop = icon.style.marginBottom = 0;
             icon.tooltip = Materials.Name(m);
@@ -82,7 +82,7 @@ namespace KardashevAscent.Presentation.UI
             var amount = new Label(Kg(kg));
             amount.style.marginLeft = 4;
             amount.style.paddingLeft = amount.style.paddingRight = 0;
-            amount.style.fontSize = size * 0.78f;
+            amount.style.fontSize = UiType.Px(size * 0.78f);
             amount.style.color = isShort ? UiPalette.Critical : UiPalette.Text;
             if (isShort) amount.style.unityFontStyleAndWeight = FontStyle.Bold;
             chip.Add(amount);

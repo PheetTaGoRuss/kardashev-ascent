@@ -37,7 +37,7 @@ namespace KardashevAscent.Presentation.UI
             Button b = null;
             b = new Button(() => Toggle(b)) { text = "Calculator" };
             b.AddToClassList("small-button");
-            b.style.fontSize = PuzzleGuide.BodySize;
+            b.style.fontSize = UiType.Px(PuzzleGuide.BodySize);
             return b;
         }
 
@@ -221,14 +221,14 @@ namespace KardashevAscent.Presentation.UI
             bar.Add(title);
             var close = new Button(() => w.style.display = DisplayStyle.None) { text = "×" };
             close.AddToClassList("close-button");
-            close.style.fontSize = 16;
+            close.AddToClassList(UiType.Body);
             bar.Add(close);
             w.Add(bar);
             PanelDrag.Attach(bar, w);
 
             display = new TextField { maxLength = 80 };
             display.AddToClassList("puzzle-field");
-            display.style.fontSize = PuzzleGuide.TitleSize;
+            display.style.fontSize = UiType.Px(PuzzleGuide.TitleSize);
             display.style.marginTop = 4;
             display.RegisterValueChangedCallback(_ => { justEvaluated = false; Preview(); });
             display.RegisterCallback<KeyDownEvent>(e =>
@@ -267,7 +267,7 @@ namespace KardashevAscent.Presentation.UI
                     b.style.flexGrow = 1;
                     b.style.flexBasis = 0;
                     b.style.height = 30;
-                    b.style.fontSize = PuzzleGuide.BodySize;
+                    b.style.fontSize = UiType.Px(PuzzleGuide.BodySize);
                     b.style.marginLeft = b.style.marginRight = 2;
                     b.style.marginTop = b.style.marginBottom = 2;
                     if (key == "=") { b.AddToClassList("primary-button"); }
@@ -293,7 +293,7 @@ namespace KardashevAscent.Presentation.UI
             {
                 b.AddToClassList("small-button");
                 b.style.flexGrow = 1;
-                b.style.fontSize = PuzzleGuide.BodySize;
+                b.style.fontSize = UiType.Px(PuzzleGuide.BodySize);
                 actions.Add(b);
             }
             w.Add(actions);

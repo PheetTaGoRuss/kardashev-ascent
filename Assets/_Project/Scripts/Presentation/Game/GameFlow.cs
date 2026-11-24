@@ -305,6 +305,7 @@ namespace KardashevAscent.Presentation.Game
 
         void Update()
         {
+            if (Time.frameCount % 90 == 5) UiScale.Apply();   // the saved UI size, on every panel (documents appear over time)
             AnimateMenu();
             if (setupPanel != null) setupPanel.style.top = KardashevAscent.Presentation.UI.UiLayout.WindowTop;   // under the tabs, wherever the top bar ends
             if (Phase == GamePhase.Setup && Time.unscaledTime >= nextSetupRefresh)
@@ -382,7 +383,7 @@ namespace KardashevAscent.Presentation.Game
             pauseMenu = Screen(dim: 0.55f);
             VisualElement pbox = Box(pauseMenu, 300);
             var ptitle = new Label("Paused");
-            ptitle.style.fontSize = 22; ptitle.style.unityFontStyleAndWeight = FontStyle.Bold;
+            ptitle.AddToClassList(UiType.Value); ptitle.style.unityFontStyleAndWeight = FontStyle.Bold;
             ptitle.style.unityTextAlign = TextAnchor.MiddleCenter; ptitle.style.marginBottom = 10;
             pbox.Add(ptitle);
             pbox.Add(MenuButton("Resume (Esc)", ClosePause, primary: true));
@@ -406,6 +407,7 @@ namespace KardashevAscent.Presentation.Game
             mute.RegisterValueChangedCallback(e => KardashevAscent.Presentation.Audio.GameAudio.SetMuted(e.newValue));
             mute.style.marginTop = 4;
             pbox.Add(mute);
+            pbox.Add(UiSizeRow());
             pauseMessage = new Label(""); pauseMessage.AddToClassList("caption");
             pauseMessage.style.unityTextAlign = TextAnchor.MiddleCenter; pauseMessage.style.marginTop = 6;
             pbox.Add(pauseMessage);
@@ -420,7 +422,7 @@ namespace KardashevAscent.Presentation.Game
             landingBanner.style.paddingLeft = landingBanner.style.paddingRight = 14;
             landingBanner.style.paddingTop = landingBanner.style.paddingBottom = 8;
             var lt = new Label("Choose where to land");
-            lt.style.fontSize = 16; lt.style.unityFontStyleAndWeight = FontStyle.Bold;
+            lt.AddToClassList(UiType.Body); lt.style.unityFontStyleAndWeight = FontStyle.Bold;
             landingBanner.Add(lt);
             var lb = new Label("Click a land tile and press Land here in its panel. Time starts when the lander is down, " +
                                "and the colony can't move afterwards. M shows where sunlight is best; L picks another planet.");
@@ -444,7 +446,7 @@ namespace KardashevAscent.Presentation.Game
             setupPanel.style.paddingLeft = setupPanel.style.paddingRight = 14;
             setupPanel.style.paddingTop = setupPanel.style.paddingBottom = 10;
             var st = new Label("Set up your colony");
-            st.style.fontSize = 16; st.style.unityFontStyleAndWeight = FontStyle.Bold;
+            st.AddToClassList(UiType.Body); st.style.unityFontStyleAndWeight = FontStyle.Bold;
             setupPanel.Add(st);
             setupNow = new Label("");
             setupNow.AddToClassList("body"); setupNow.style.whiteSpace = WhiteSpace.Normal; setupNow.style.marginTop = 4;
@@ -453,7 +455,7 @@ namespace KardashevAscent.Presentation.Game
             setupSteps.AddToClassList("body"); setupSteps.style.whiteSpace = WhiteSpace.Normal; setupSteps.style.marginTop = 6;
             setupPanel.Add(setupSteps);
             Button skip = MenuButton("Skip: place the rest for me", SkipSetup);
-            skip.style.height = 30; skip.style.fontSize = 13; skip.style.marginTop = 8;
+            skip.style.height = 30; skip.AddToClassList(UiType.Secondary); skip.style.marginTop = 8;
             setupPanel.Add(skip);
             root.Add(setupPanel);
 
@@ -507,14 +509,14 @@ namespace KardashevAscent.Presentation.Game
             mainMenu.Add(menuHome);
 
             menuKicker = new Label("A PLANETARY ENGINEERING GAME");
-            menuKicker.style.fontSize = 14; menuKicker.style.letterSpacing = 8;
+            menuKicker.AddToClassList(UiType.Secondary); menuKicker.style.letterSpacing = 8;
             menuKicker.style.color = UiPalette.Accent; menuKicker.style.marginBottom = 6;
             menuHome.Add(menuKicker);
             titleWords.Clear();
             foreach (string word in new[] { "KARDASHEV", "ASCENT" })
             {
                 var t = new Label(word);
-                t.style.fontSize = 80; t.style.unityFontStyleAndWeight = FontStyle.Bold;
+                t.AddToClassList(UiType.Hero); t.style.unityFontStyleAndWeight = FontStyle.Bold;
                 t.style.letterSpacing = 16; t.style.color = Color.white;
                 t.style.marginTop = -10; t.style.marginBottom = -10;
                 t.style.textShadow = new TextShadow { offset = Vector2.zero, blurRadius = 22, color = new Color(0.4f, 0.7f, 1f, 0.6f) };
@@ -528,7 +530,7 @@ namespace KardashevAscent.Presentation.Game
             menuLine.style.marginTop = 20; menuLine.style.marginBottom = 14;
             menuHome.Add(menuLine);
             menuTag = new Label("From one lander to a civilisation that harnesses its star.\nReal exoplanets · NASA data · real physics.");
-            menuTag.style.fontSize = 17; menuTag.style.whiteSpace = WhiteSpace.Normal;
+            menuTag.AddToClassList(UiType.Section); menuTag.style.whiteSpace = WhiteSpace.Normal;
             menuTag.style.color = new Color(0.82f, 0.86f, 0.92f);
             menuTag.style.marginBottom = 30;
             menuHome.Add(menuTag);
@@ -550,7 +552,7 @@ namespace KardashevAscent.Presentation.Game
             menuItems.Add(SpaceButton("QUIT", Quit));
             foreach (Button b in menuItems) menuButtons.Add(b);
             menuMessage = new Label("");
-            menuMessage.style.fontSize = 13; menuMessage.style.color = new Color(0.65f, 0.7f, 0.78f);
+            menuMessage.AddToClassList(UiType.Secondary); menuMessage.style.color = new Color(0.65f, 0.7f, 0.78f);
             menuMessage.style.marginTop = 8; menuMessage.style.paddingLeft = 18;
             menuButtons.Add(menuMessage);
 
@@ -558,7 +560,7 @@ namespace KardashevAscent.Presentation.Game
             menuFooter.style.position = Position.Absolute;
             menuFooter.style.left = new Length(7, LengthUnit.Percent);
             menuFooter.style.bottom = 28;
-            menuFooter.style.fontSize = 12; menuFooter.style.letterSpacing = 3;
+            menuFooter.AddToClassList(UiType.Secondary); menuFooter.style.letterSpacing = 3;
             menuFooter.style.color = new Color(0.6f, 0.65f, 0.75f, 0.9f);
             mainMenu.Add(menuFooter);
 
@@ -751,7 +753,7 @@ namespace KardashevAscent.Presentation.Game
             var b = new Button(onClick) { text = text };
             b.style.height = 44;
             b.style.marginTop = 2; b.style.marginBottom = 2;
-            b.style.fontSize = primary ? 24 : 20;
+            b.AddToClassList(primary ? UiType.Title : UiType.Value);
             b.style.letterSpacing = 6;
             b.style.unityFontStyleAndWeight = primary ? FontStyle.Bold : FontStyle.Normal;
             b.style.unityTextAlign = TextAnchor.MiddleLeft;
@@ -772,7 +774,7 @@ namespace KardashevAscent.Presentation.Game
             var chevron = new Label("›") { pickingMode = PickingMode.Ignore };
             chevron.style.position = Position.Absolute;
             chevron.style.left = 0; chevron.style.top = 4;
-            chevron.style.fontSize = 26; chevron.style.color = UiPalette.Accent;
+            chevron.AddToClassList(UiType.Title); chevron.style.color = UiPalette.Accent;
             chevron.style.opacity = 0f;
             chevron.style.transitionDuration = Seconds(0.2f);
             b.Add(chevron);
@@ -826,7 +828,7 @@ namespace KardashevAscent.Presentation.Game
             kicker.style.color = UiPalette.Cool;
             panel.Add(kicker);
             var t = new Label(title.ToUpperInvariant());
-            t.style.fontSize = 30; t.style.unityFontStyleAndWeight = FontStyle.Bold; t.style.letterSpacing = 10;
+            t.AddToClassList(UiType.Hero); t.style.unityFontStyleAndWeight = FontStyle.Bold; t.style.letterSpacing = 10;
             t.style.marginTop = 4;
             t.style.color = UiPalette.Text;
             panel.Add(t);
@@ -880,7 +882,7 @@ namespace KardashevAscent.Presentation.Game
         {
             var h = new Label(text.ToUpperInvariant());
             h.AddToClassList("heading");
-            h.style.marginTop = 14; h.style.marginBottom = 4; h.style.letterSpacing = 3;
+            h.style.marginTop = 14; h.style.marginBottom = 4; h.style.letterSpacing = 1;
             h.style.color = UiPalette.Accent;
             to.Add(h);
             return h;
@@ -890,7 +892,7 @@ namespace KardashevAscent.Presentation.Game
         {
             var l = new Label(text);
             l.style.whiteSpace = WhiteSpace.Normal;
-            l.style.fontSize = size;
+            l.style.fontSize = UiType.Px(size);
             l.style.marginTop = 2;
             to.Add(l);
             return l;
@@ -914,6 +916,7 @@ namespace KardashevAscent.Presentation.Game
             body.Add(mute);
 
             Heading(body, "Display");
+            body.Add(UiSizeRow());
             var full = new Toggle("Fullscreen") { value = UnityEngine.Screen.fullScreen };
             full.RegisterValueChangedCallback(e => UnityEngine.Screen.fullScreen = e.newValue);
             body.Add(full);
@@ -1008,10 +1011,22 @@ namespace KardashevAscent.Presentation.Game
             var b = new Button(onClick) { text = text };
             b.style.height = 36;
             b.style.marginTop = 4; b.style.marginBottom = 4;
-            b.style.fontSize = 15;
+            b.AddToClassList(UiType.Body);
             // Square grey blocks from the theme; the main choice is the solid amber one.
             if (primary) b.AddToClassList("primary-button");
             return b;
+        }
+
+        /// <summary>The UI size setting, 80 to 150 %, kept between games (UI information design, stage 1).</summary>
+        static VisualElement UiSizeRow()
+        {
+            var row = VolumeSlider("UI size", UiScale.Value, v => UiScale.Set(Mathf.Round(v * 20f) / 20f));
+            var slider = row.Q<Slider>();
+            slider.lowValue = UiScale.Min; slider.highValue = UiScale.Max;
+            slider.SetValueWithoutNotify(UiScale.Value);
+            foreach (Label l in row.Query<Label>().ToList()) if (l.text.EndsWith("%")) { l.text = $"{UiScale.Value * 100f:0} %"; }
+            slider.RegisterValueChangedCallback(e => { foreach (Label l in row.Query<Label>().ToList()) if (l.text.EndsWith("%")) l.text = $"{Mathf.Round(e.newValue * 20f) * 5f:0} %"; });
+            return row;
         }
 
         static VisualElement VolumeSlider(string name, float value, System.Action<float> changed)

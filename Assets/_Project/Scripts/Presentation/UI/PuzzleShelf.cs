@@ -50,7 +50,7 @@ namespace KardashevAscent.Presentation.UI
                 Apply(card, waiting, toggle, key);
             });
             toggle.AddToClassList("small-button");
-            toggle.style.fontSize = PuzzleGuide.BodySize;
+            toggle.style.fontSize = UiType.Px(PuzzleGuide.BodySize);
             bar.Add(toggle);
             frame.Add(bar);
             frame.Add(card);

@@ -357,7 +357,7 @@ namespace KardashevAscent.Presentation.UI
                     l.style.position = Position.Absolute;
                     Vector2 p = CellCentre(c.X, c.Y);
                     l.style.left = p.x - 16; l.style.top = p.y - 8;
-                    l.style.fontSize = 11;
+                    l.AddToClassList(UiType.Secondary);
                     l.style.color = c.Id == w.selectedComponent ? new Color(1f, 0.85f, 0.3f) : new Color(0.85f, 0.88f, 0.92f);
                     Add(l);
                 }

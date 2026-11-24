@@ -35,23 +35,23 @@
 }
 
 .heading {
-    font-size: 10px;
+    font-size: 14px;
     color: var(--accent);
     -unity-font-style: bold;
-    letter-spacing: 3px;
+    letter-spacing: 1px;
     padding: 0;
     margin: 0;
 }
 
 .value {
-    font-size: 15px;
+    font-size: 18px;
     -unity-font-style: bold;
     padding: 0;
     margin: 0;
 }
 
 .caption {
-    font-size: 11px;
+    font-size: 14px;
     color: var(--text-muted);
     padding: 0;
     margin: 0;
@@ -105,7 +105,7 @@
     height: 26px;
     margin: 0 2px 0 0;
     padding: 0 10px;
-    font-size: 11px;
+    font-size: 14px;
     letter-spacing: 1px;
     color: var(--text-muted);
     background-color: rgba(0, 0, 0, 0);
@@ -191,3 +191,12 @@
 .unity-scroller .unity-base-slider__dragger { background-color: rgba(120, 190, 255, 0.35); border-width: 0; border-radius: 2px; }
 .unity-scroller .unity-base-slider__dragger:hover { background-color: var(--accent); }
 .unity-scroller .unity-repeat-button { display: none; }
+
+/* The type scale (UI information design, stage 1; decided 2026-11-24). Nothing below 14 px at UI scale 100 %.
+   Kept last so these beat the older text classes. Code names a size (UiType.*), never a pixel number. */
+.t-hero { font-size: 32px; }
+.t-title { font-size: 24px; }
+.t-section { font-size: 18px; }
+.t-value { font-size: 20px; }
+.t-body { font-size: 16px; }
+.t-secondary { font-size: 14px; }

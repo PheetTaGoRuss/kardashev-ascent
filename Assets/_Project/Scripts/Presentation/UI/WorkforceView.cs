@@ -515,7 +515,7 @@ namespace KardashevAscent.Presentation.UI
             l.style.height = size;
             l.style.minWidth = size;
             l.style.unityTextAlign = TextAnchor.MiddleCenter;
-            l.style.fontSize = size >= 22f ? 12 : 10;
+            l.style.fontSize = UiType.Px(size >= 22f ? 12 : 10);
             l.style.unityFontStyleAndWeight = FontStyle.Bold;
             l.style.backgroundColor = fill;
             l.style.color = text;
@@ -542,7 +542,7 @@ namespace KardashevAscent.Presentation.UI
             track.Add(fill);
             row.Add(track);
             var value = new Label("");
-            value.style.fontSize = 10;
+            value.AddToClassList(UiType.Secondary);
             value.style.color = UiPalette.Muted;
             value.style.marginLeft = 3;
             row.Add(value);
@@ -714,7 +714,7 @@ namespace KardashevAscent.Presentation.UI
                 order.style.width = 22; order.style.height = 22; order.style.minWidth = 22;
                 order.style.paddingLeft = order.style.paddingRight = order.style.paddingTop = order.style.paddingBottom = 0;
                 order.style.marginLeft = 0; order.style.marginRight = 3; order.style.marginTop = order.style.marginBottom = 0;
-                order.style.fontSize = 11;
+                order.AddToClassList(UiType.Secondary);
                 order.style.backgroundColor = new Color(0f, 0f, 0f, 0f);
                 order.style.color = locked ? UiPalette.Muted : colour;
                 order.style.borderTopWidth = order.style.borderBottomWidth = order.style.borderLeftWidth = order.style.borderRightWidth = 1;
@@ -748,7 +748,7 @@ namespace KardashevAscent.Presentation.UI
             var c = new Label(caption);
             c.style.width = 16;
             c.style.color = colour;
-            c.style.fontSize = 11;
+            c.AddToClassList(UiType.Secondary);
             c.tooltip = tip;
             zone.Add(c);
             return zone;

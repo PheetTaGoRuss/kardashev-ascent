@@ -67,12 +67,12 @@ namespace KardashevAscent.Presentation.UI
             card.style.borderTopColor = UiPalette.Accent;
             card.style.borderBottomColor = card.style.borderLeftColor = card.style.borderRightColor = UiPalette.Border;
             title = new Label { pickingMode = PickingMode.Ignore };
-            title.style.fontSize = 15;
+            title.AddToClassList(UiType.Body);
             title.style.unityFontStyleAndWeight = FontStyle.Bold;
             title.style.color = UiPalette.Accent;
             title.style.whiteSpace = WhiteSpace.Normal;
             body = new Label { pickingMode = PickingMode.Ignore };
-            body.style.fontSize = 14;
+            body.AddToClassList(UiType.Secondary);
             body.style.color = new Color(0.92f, 0.92f, 0.93f);
             body.style.whiteSpace = WhiteSpace.Normal;
             body.style.marginTop = 2;

@@ -279,7 +279,7 @@ namespace KardashevAscent.Presentation.UI
             b.style.color = new Color(0.05f, 0.06f, 0.10f);
             b.style.unityTextAlign = TextAnchor.MiddleCenter;
             b.style.unityFontStyleAndWeight = FontStyle.Bold;
-            b.style.fontSize = size * 0.55f;
+            b.style.fontSize = UiType.Px(size * 0.55f);
             b.style.marginRight = 8;
             b.style.paddingLeft = b.style.paddingRight = b.style.paddingTop = b.style.paddingBottom = 0;
             return b;
@@ -521,7 +521,7 @@ namespace KardashevAscent.Presentation.UI
             if (step == 1)
             {
                 var play = new Label("►");
-                play.style.fontSize = 16;
+                play.AddToClassList(UiType.Body);
                 play.style.color = ParameterLook.Colour(p);
                 box.Add(play);
                 return box;
@@ -534,7 +534,7 @@ namespace KardashevAscent.Presentation.UI
             if (step == 2)
             {
                 var q = new Label("? = ?");
-                q.style.fontSize = 11;
+                q.AddToClassList(UiType.Secondary);
                 q.style.color = ParameterLook.Colour(p);
                 box.Add(q);
             }

@@ -51,7 +51,7 @@ namespace KardashevAscent.Presentation.UI
             searchField = new TextField { maxLength = 40 };
             searchField.AddToClassList("puzzle-field");
             searchField.style.marginTop = 2;
-            searchField.style.fontSize = 14;
+            searchField.AddToClassList(UiType.Secondary);
             searchField.RegisterValueChangedCallback(e => { search = e.newValue ?? ""; open = null; Rebuild(); });
             var searchRow = new VisualElement();
             searchRow.style.flexDirection = FlexDirection.Row;
@@ -115,7 +115,7 @@ namespace KardashevAscent.Presentation.UI
                     item.Add(thumb);
                 }
                 var name = new Label(searching ? $"{p.Title} · {p.Category}" : p.Title);
-                name.style.fontSize = 14;
+                name.AddToClassList(UiType.Secondary);
                 name.style.unityTextAlign = TextAnchor.MiddleLeft;
                 name.pickingMode = PickingMode.Ignore;
                 item.Add(name);
@@ -148,12 +148,12 @@ namespace KardashevAscent.Presentation.UI
                 head.Add(chip);
             }
             var title = new Label(open.Title);
-            title.style.fontSize = 22;
+            title.AddToClassList(UiType.Value);
             title.style.unityFontStyleAndWeight = FontStyle.Bold;
             head.Add(title);
             page.Add(head);
             Label summary = Line(open.Summary);
-            summary.style.fontSize = 15;
+            summary.AddToClassList(UiType.Body);
             summary.style.marginTop = 4;
             page.Add(summary);
             foreach (var (heading, lines) in open.Sections)
@@ -161,7 +161,7 @@ namespace KardashevAscent.Presentation.UI
                 var h = new Label(heading.ToUpperInvariant());
                 h.AddToClassList("heading");
                 h.style.marginTop = 12;
-                h.style.fontSize = 12;
+                h.AddToClassList(UiType.Secondary);
                 page.Add(h);
                 foreach (string line in lines)
                     page.Add(Line(line));
@@ -172,7 +172,7 @@ namespace KardashevAscent.Presentation.UI
         {
             var l = new Label(text);
             l.style.whiteSpace = WhiteSpace.Normal;
-            l.style.fontSize = 14;
+            l.AddToClassList(UiType.Secondary);
             l.style.marginTop = 2;
             if (muted) l.style.color = UiPalette.Muted;
             return l;

@@ -302,7 +302,7 @@ namespace KardashevAscent.Presentation.UI
             {
                 var l = new Label(text) { pickingMode = PickingMode.Ignore };
                 l.style.position = Position.Absolute;
-                l.style.left = x; l.style.top = y; l.style.fontSize = size; l.style.color = colour;
+                l.style.left = x; l.style.top = y; l.style.fontSize = UiType.Px(size); l.style.color = colour;
                 Add(l);
             }
 

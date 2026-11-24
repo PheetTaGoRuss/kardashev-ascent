@@ -28,7 +28,7 @@ namespace KardashevAscent.Presentation.UI
         protected override void BuildBody()
         {
             closure = Label("", "value");
-            closure.style.fontSize = 18;
+            closure.AddToClassList(UiType.Section);
             Body.Add(closure);
             InfoTip.After(closure, "Everything a plant takes in comes out as product, slag, gas it keeps or gas it vents: nothing is created or lost. " +
                                    "A batch is counted when it finishes, input and outputs together, so any figure other than 100 % would mean mass was lost.");
@@ -167,7 +167,7 @@ namespace KardashevAscent.Presentation.UI
                 l.pickingMode = PickingMode.Ignore;
                 l.style.position = Position.Absolute;
                 l.style.top = n.Y + Mathf.Max(0f, n.H / 2f - 8f);
-                l.style.fontSize = 11;
+                l.AddToClassList(UiType.Secondary);
                 if (column == 0f) l.style.left = 12;
                 else if (column == 1f) l.style.right = 12;
                 else { l.style.left = new Length(50, LengthUnit.Percent); l.style.translate = new Translate(new Length(-50, LengthUnit.Percent), 0); }

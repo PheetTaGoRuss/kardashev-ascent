@@ -278,6 +278,12 @@ namespace KardashevAscent.EditorTools
                     }
                     return true;
                 }
+                case "uiscale":
+                {
+                    // uiscale <0.8..1.5>: set the UI size (saved like the player's own setting).
+                    if (float.TryParse(argument, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float sc)) Presentation.UI.UiScale.Set(sc);
+                    return true;
+                }
                 case "coldrobot":
                 {
                     // coldrobot: a General robot on a land tile away from the lander, battery emptied; logs its state. "coldrobot status" logs the robots.

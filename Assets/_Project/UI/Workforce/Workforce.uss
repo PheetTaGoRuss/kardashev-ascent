@@ -27,14 +27,14 @@
 .workforce-scroll { flex-grow: 1; flex-shrink: 1; margin-top: 4px; }
 .workforce-scroll .unity-scroll-view__content-container { width: 100%; }
 .robot-line, .robot-name, .job-text { max-width: 100%; }
-.body { font-size: 12px; padding: 0; margin: 2px 0 0 0; white-space: normal; }
+.body { font-size: 14px; padding: 0; margin: 2px 0 0 0; white-space: normal; }
 .wrap { white-space: normal; }
 .notes { margin-top: 10px; }
 .section-head { margin-top: 12px; }
 .message { color: var(--warning); margin-top: 4px; }
 .button-row { flex-direction: row; flex-wrap: wrap; align-items: center; margin-top: 4px; }
 .job { flex-direction: row; align-items: center; margin-top: 3px; }
-.job-text { flex-grow: 1; font-size: 11px; padding: 0; margin: 0; white-space: normal; }
+.job-text { flex-grow: 1; font-size: 14px; padding: 0; margin: 0; white-space: normal; }
 .name-field { width: 150px; margin: 0 4px 0 0; padding: 0; }
 .name-field .unity-base-text-field__input,
 .name-field .unity-text-field__input {
@@ -42,14 +42,14 @@
     background-color: rgb(30, 30, 34);
     border-color: rgb(84, 84, 92);
     -unity-font-style: normal;
-    font-size: 11px;
+    font-size: 14px;
     min-height: 20px;
     padding: 0 4px;
     margin: 0;
 }
 .name-field .unity-text-element { color: var(--text); }
 .task-row { flex-direction: row; flex-wrap: wrap; align-items: center; margin-top: 2px; }
-.task-text { flex-grow: 1; flex-shrink: 1; flex-basis: 60%; min-width: 0; font-size: 11px; padding: 0; margin: 0; white-space: normal; }
+.task-text { flex-grow: 1; flex-shrink: 1; flex-basis: 60%; min-width: 0; font-size: 14px; padding: 0; margin: 0; white-space: normal; }
 .task-text.blocked { color: var(--warning); }
 .small-button.selected { color: var(--accent); background-color: rgba(255, 199, 92, 0.16); border-color: var(--accent); -unity-font-style: bold; }
 .small-button.locked { color: var(--text-muted); background-color: rgba(255, 255, 255, 0.08); }
@@ -61,19 +61,19 @@
     border-radius: 0;
 }
 .group-head { flex-direction: row; align-items: center; }
-.group-name { flex-grow: 1; font-size: 13px; -unity-font-style: bold; padding: 0; margin: 0; }
-.group-state { font-size: 11px; padding: 0; margin: 0 6px 0 0; color: var(--text-muted); }
+.group-name { flex-grow: 1; font-size: 14px; -unity-font-style: bold; padding: 0; margin: 0; }
+.group-state { font-size: 14px; padding: 0; margin: 0 6px 0 0; color: var(--text-muted); }
 .group-state.paused { color: var(--warning); }
 .group-state.interrupted { color: var(--accent); }
 
 .priority-row { flex-direction: row; flex-wrap: wrap; align-items: center; margin-top: 4px; }
-.priority-label { font-size: 11px; padding: 0; margin: 0 4px 0 0; color: var(--text-muted); }
+.priority-label { font-size: 14px; padding: 0; margin: 0 4px 0 0; color: var(--text-muted); }
 
 .small-button {
     height: 20px;
     margin: 0 4px 0 0;
     padding: 0 6px;
-    font-size: 11px;
+    font-size: 14px;
     color: var(--on-accent);
     background-color: var(--accent);
     border-width: 0;
@@ -87,10 +87,10 @@
 
 .robot { margin-top: 5px; padding-left: 6px; border-left-width: 2px; border-color: rgba(255, 255, 255, 0.12); }
 .robot.working { border-color: var(--good); }
-.robot-name { font-size: 12px; -unity-font-style: bold; padding: 0; margin: 0; }
-.robot-line { font-size: 11px; padding: 0; margin: 1px 0 0 0; white-space: normal; }
+.robot-name { font-size: 14px; -unity-font-style: bold; padding: 0; margin: 0; }
+.robot-line { font-size: 14px; padding: 0; margin: 1px 0 0 0; white-space: normal; }
 .muted { color: var(--text-muted); }
 
 /* Long help text sits in a folded section so the window starts with what matters. */
 .how-it-works { margin-top: 10px; }
-.how-it-works .unity-foldout__text { font-size: 11px; color: var(--text-muted); }
+.how-it-works .unity-foldout__text { font-size: 14px; color: var(--text-muted); }

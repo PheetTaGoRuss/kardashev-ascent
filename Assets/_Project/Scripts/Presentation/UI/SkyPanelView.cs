@@ -405,7 +405,7 @@ namespace KardashevAscent.Presentation.UI
             CalculatorPad.TrackAnswer(f);
             f.AddToClassList("puzzle-field");
             f.style.width = 110;
-            f.style.fontSize = PuzzleGuide.BodySize;
+            f.style.fontSize = UiType.Px(PuzzleGuide.BodySize);
             row.Add(f);
             parent.Add(row);
             return f;
@@ -521,7 +521,7 @@ namespace KardashevAscent.Presentation.UI
             tutorialPicture.Clear();
             tutorialPicture.Add(s.Picture == 1 ? (VisualElement)new GnomonPlot(1.0, 0.6) { style = { height = 70 } }
                                 : s.Picture == 2 ? new QuadrantPlot(55.0) { style = { height = 70 } }
-                                : new Label("δ") { style = { fontSize = 34, unityTextAlign = TextAnchor.MiddleCenter, color = new Color(1f, 0.85f, 0.35f) } });
+                                : new Label("δ") { style = { fontSize = UiType.Px(34), unityTextAlign = TextAnchor.MiddleCenter, color = new Color(1f, 0.85f, 0.35f) } });
         }
 
         void CloseTutorial()
