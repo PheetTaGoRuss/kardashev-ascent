@@ -133,3 +133,16 @@ Nothing absurd: solar on Earth-like planets does not fall (the climate was alrea
 
 Caveat: the Mars 60-day aluminium logistics scenario runs with weather off; with the dust on, that chain would take longer, which the next logistics balance should look at.
 
+## 2026-11-25: weather W8, Mars with weather on and the exposed field campaign
+
+**Mars aluminium outpost, 60 days, weather on** (`Mars_WithWeatherOn_TheSameSiteIsBuilt_AndNoRobotIsLost`; the weather-off test stays as the control). First run: all 3 robots destroyed in the open at -46 to -59 C within 17 h of the start (the weather-off control also lost 2 of 3 but finished the site first, which hid it). Causes found: the trip-home reserve counted the drive but not the heater; a cold battery that cannot charge still asked the grid for power (an energy-ledger leak, 440 W). Fixes use existing planning: the reserve includes the heater, the cold battery's smaller capacity and the cargo, and a cold battery asks for no charge power. The site is built within 60 days with no robot lost. No cited figure or physics was changed.
+
+**Exposed field campaign** (one hauling robot, 30 days, three weather seeds): see KI-46 in `known-issues.md`.
+
+| Run | Robots lost of 3 runs | Cause |
+| --- | --- | --- |
+| Mars southern winter | 0 (the planner refuses every haul beyond the lander's short cold-battery range, so no robot leaves) | the cold capacity share (65 % at the -20 C operating limit) cut the leg budget |
+| Earth-like 60 deg N winter | 3 of 3 (each run loses both robots in 16 to 65 h, near the base) | OPEN: a loaded robot may do the leg out and have too little for the way home when the drop is not a charger; fixing the plan check removes the 2 to 3 hop direct-haul balance of 2026-11-24, which needs re-tuning |
+
+Dust warnings (W8.3): one WATCH entry when the dusty season starts and one when a global storm begins, with the estimated optical depth and the sunlight share left.
+

@@ -152,6 +152,26 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>Driving hours from <paramref name="from"/> to every tile (∞ where unreachable).</summary>
         public double[] HoursFrom(int from) => Search(from).Hours;
 
+        /// <summary>
+        /// The total ascent, m, of the cheapest route from every tile to the nearest of several tiles (chargers): every uphill step on the way counts, not only the
+        /// net climb (a robot driving home over a ridge pays for the ridge). Weather W8: a field campaign lost robots that had reserved only the net climb.
+        /// </summary>
+        public double[] AscentToNearest(IEnumerable<int> starts, double[] heightM)
+        {
+            var (hours, previous) = Dijkstra(new List<int>(starts));
+            int n = hours.Length;
+            var order = new List<int>();
+            for (int t = 0; t < n; t++) if (!double.IsInfinity(hours[t])) order.Add(t);
+            order.Sort((a, b) => hours[a].CompareTo(hours[b]));
+            var ascent = new double[n];
+            foreach (int t in order)
+            {
+                int p = previous[t];
+                ascent[t] = p < 0 ? 0.0 : ascent[p] + Math.Max(0.0, heightM[p] - heightM[t]);   // going from t toward the charger, the next tile is p
+            }
+            return ascent;
+        }
+
         /// <summary>Driving hours from the nearest of several tiles to every tile.</summary>
         public double[] HoursFromNearest(IEnumerable<int> starts)
         {
@@ -249,6 +269,24 @@ namespace KardashevAscent.Simulation.Robots
 
         /// <summary>The height of the nearest charger for each tile, m (null: no climb reserve).</summary>
         public double[] NearestChargerHeightM { get; set; }
+
+        /// <summary>
+        /// The climbing energy, Wh, of a trip out to a tile and home again for a robot (Weather W8): every uphill step of the route out, and the ascent of the route home,
+        /// at the game's climb share. The range checks used the flat drive only, so a robot with 25 % charge set off over a ridge and was lost.
+        /// </summary>
+        public double TripClimbWh(Robot r, int fromTile, int toTile)
+        {
+            if (HeightM == null) return 0.0;
+            var route = RoutesFor(r).Route(fromTile, toTile);
+            double up = 0.0; int at = fromTile;
+            if (route != null) foreach (int t in route) { up += Math.Max(0.0, HeightM[t] - HeightM[at]); at = t; }
+            if (AscentHomeM != null) up += AscentHomeM[toTile];
+            return Logistics.HaulPhysics.ClimbEnergyWh(Logistics.HaulPhysics.DefaultRobotMassKg, 0.0, GravityMs2, up, r.Attribute(RobotAttribute.EnergyEfficiency))
+                   * Logistics.HaulPhysics.ClimbEffortShare * ReliefReserveScale;
+        }
+
+        /// <summary>Total ascent, m, along the cheapest route home from each tile (null: use the net climb).</summary>
+        public double[] AscentHomeM { get; set; }
 
         /// <summary>The climb reserve is scaled by this while the relief is only an estimate: the high end of its range over its centre (1 once surveyed).</summary>
         public double ReliefReserveScale { get; set; } = 1.0;

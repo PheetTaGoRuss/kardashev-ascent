@@ -256,7 +256,7 @@ namespace KardashevAscent.Simulation.Robots
                 return false;
             double usableCapacity = r.Battery.ColdFactor * r.Battery.CapacityWh;
             double spare = r.Battery.UsableWh - RobotSpecs.ReturnToChargeFraction * usableCapacity;
-            return Movement.EnergyWh(go + back) <= spare + 1e-9;
+            return Movement.EnergyWh(go + back) / r.Attribute(RobotAttribute.EnergyEfficiency) + Movement.TripClimbWh(r, r.Tile, t.Tile) <= spare + 1e-9;
         }
 
         // ---- Phase 4 settings ----
@@ -1103,7 +1103,7 @@ namespace KardashevAscent.Simulation.Robots
             double usableCapacity = r.Battery.ColdFactor * r.Battery.CapacityWh;
             if (double.IsInfinity(go) || double.IsInfinity(back) || usableCapacity <= 0.0)
                 return double.PositiveInfinity;
-            return RobotSpecs.ReturnToChargeFraction + Movement.EnergyWh(go + back) / usableCapacity;
+            return RobotSpecs.ReturnToChargeFraction + (Movement.EnergyWh(go + back) / r.Attribute(RobotAttribute.EnergyEfficiency) + Movement.TripClimbWh(r, r.Tile, t.Tile)) / usableCapacity;
         }
 
         /// <summary>

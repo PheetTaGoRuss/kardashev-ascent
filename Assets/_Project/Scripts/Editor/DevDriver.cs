@@ -334,6 +334,21 @@ namespace KardashevAscent.EditorTools
                 case "weathermap":
                     Presentation.Planet.WeatherOverlay.Set(argument != "off");
                     return true;
+                case "stormrobot":
+                {
+                    // stormrobot: put a robot on a far land tile, then step the colony until a wind storm is over that tile; the robot should shelter.
+                    var sim = Runner()?.Simulation as KardashevAscent.Simulation.Game.PlanetSimulation;
+                    if (sim == null) return true;
+                    sim.Debug.FullBattery = true;
+                    int far = -1;
+                    for (int t = 0; t < sim.TileCount && far < 0; t++) if (!sim.GetTile(t).IsWater && sim.Routes.HoursBetween(sim.BaseTileId, t) > 8.0 && sim.Routes.HoursBetween(sim.BaseTileId, t) < 20.0) far = t;
+                    int h = 0;
+                    for (; h < 24 * 365 * 3 && !sim.StormAt(far); h++) sim.Tick(1.0);
+                    var r = sim.Workforce.AddRobot(KardashevAscent.Simulation.Robots.RobotKind.General, far);   // the robot arrives as the storm does
+                    sim.Tick(0.01);
+                    Log($"storm robot {r.Id}: far tile {far} after {h} h storm {sim.StormAt(far)} hold {r.StormHold} target {r.ManualTarget} tile {r.Tile}");
+                    return true;
+                }
                 case "overlay":
                     Presentation.Planet.InstrumentOverlay.Set(argument != "off");
                     return true;

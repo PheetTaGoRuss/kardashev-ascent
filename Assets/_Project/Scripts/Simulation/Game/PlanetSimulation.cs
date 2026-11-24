@@ -34,7 +34,7 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Which planet this is (the id in planets.json); saves remember it.</summary>
         public string PlanetId { get; set; } = "";
         /// <summary>The noise seed of this planet's map: its continents and its deposits (saved, version 28).</summary>
-        public int TerrainSeed { get; } = DefaultTerrainSeed;
+        public int TerrainSeed { get; set; } = DefaultTerrainSeed;   // settable so tests can vary the weather
 
         /// <summary>The seed a map uses when nothing else sets one.</summary>
         public const int DefaultTerrainSeed = 7;

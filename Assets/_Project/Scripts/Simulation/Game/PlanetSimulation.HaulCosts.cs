@@ -131,6 +131,24 @@ namespace KardashevAscent.Simulation.Game
             return new HaulWhy(!startOk ? HaulWhyKind.NoStartStop : !endOk ? HaulWhyKind.NoEndStop : HaulWhyKind.LegTooLong, need, budget);
         }
 
+        long coldShareHour = long.MinValue; double coldShare = 1.0;
+
+        /// <summary>
+        /// The share of a battery that is usable out in the cold (Weather W8): a battery loses capacity when cold, and a heater only holds it at the
+        /// operating limit (-20 C), so in the coldest hour of the next day at the base a leg gets the capacity factor at that limit. 1 in mild air.
+        /// A field campaign on Mars lost robots whose legs were planned against the full capacity.
+        /// </summary>
+        double ColdCapacityShare()
+        {
+            long hour = (long)Math.Floor(TimeHours);
+            if (hour == coldShareHour) return coldShare;
+            coldShareHour = hour;
+            double coldest = double.MaxValue;
+            for (int k = 0; k < 12; k++) coldest = Math.Min(coldest, DiurnalAirTemperatureAt(BaseTileId, TimeHours + k * 2.0));
+            coldShare = RobotBattery.ColdCapacityFactor(Math.Max(RobotThermal.OperatingMinC, coldest));
+            return coldShare;
+        }
+
         /// <summary>Usable charge for one leg between stops, Wh (infinity when the colony has no robots: nothing to limit).</summary>
         public double LegBudgetWh
         {
@@ -138,7 +156,7 @@ namespace KardashevAscent.Simulation.Game
             {
                 double best = 0.0;
                 foreach (Robot r in Workforce.Robots) best = Math.Max(best, r.Battery.CapacityWh);
-                return best <= 0.0 ? double.PositiveInfinity : best * (1.0 - RobotSpecs.ReturnToChargeFraction);
+                return best <= 0.0 ? double.PositiveInfinity : best * (1.0 - RobotSpecs.ReturnToChargeFraction) * ColdCapacityShare();
             }
         }
 
@@ -166,6 +184,8 @@ namespace KardashevAscent.Simulation.Game
             bool startOk = false, endOk = false;
             foreach (int st in stops) { startOk |= Fits(st, from, 0.0); endOk |= Fits(to, st, 0.0); }
             if (!startOk || !endOk) return new HaulPlan(false, new List<int>(), double.PositiveInfinity);
+            // OPEN (KI-46): the legs are checked one by one; a loaded robot that does the leg out may have too little left for the way home when the drop is not a stop.
+            double startWh = 0.0, endWh = 0.0;
             // shortest chain from the pick-up to the drop over the stops, loaded legs only
             var nodes = new List<int> { from };
             foreach (int st in stops) if (st != from && st != to) nodes.Add(st);
@@ -184,7 +204,8 @@ namespace KardashevAscent.Simulation.Game
                 {
                     if (done[v]) continue;
                     var leg = HaulLegCost(nodes[u], nodes[v], cargoKg);
-                    if (!leg.Reachable || leg.TotalWh > budget) continue;
+                    double carried = leg.TotalWh + (u == 0 ? startWh : 0.0) + (v == n - 1 ? endWh : 0.0);
+                    if (!leg.Reachable || carried > budget) continue;
                     double nd = dist[u] + leg.Hours + (Routes.DrivePowerW > 0.0 ? (leg.ClimbWh + leg.HeaterWh) / Routes.DrivePowerW : 0.0);
                     if (nd < dist[v]) { dist[v] = nd; prev[v] = u; }
                 }

@@ -30,7 +30,9 @@ namespace KardashevAscent.Simulation.Operations
                 case "Notice": return LogPriority.ActNow;
                 case "Haul waiting":
                 case "Player order wins":
-                case "Milestone reached": return LogPriority.Watch;
+                case "Milestone reached":
+                case "Dusty season":
+                case "Global dust storm": return LogPriority.Watch;
                 default: return LogPriority.Info;
             }
         }
