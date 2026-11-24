@@ -51,6 +51,13 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>The hauls under way: where from and to, what, how much, and who carries it once loaded.</summary>
         /// <summary>Why a haul is waiting (its plan no longer holds), or null; and the stops it is staged through.</summary>
         public string HaulBlockedReason(int haulId) { foreach (HaulOrder o in haulBook.Orders) if (o.Id == haulId) return o.Blocked; return null; }
+        public (int Kind, double NeedWh, double BudgetWh, int StopTile) HaulWhyOf(int haulId)
+        {
+            foreach (HaulOrder o in haulBook.Orders)
+                if (o.Id == haulId) { var w = WhyHaul(o.FromTile, o.ToTile, o.Kg, o.Stops); return ((int)w.Kind, w.NeedWh, w.BudgetWh, w.StopTile); }
+            return ((int)HaulWhyKind.Ok, 0.0, 0.0, -1);
+        }
+
         public IReadOnlyList<int> HaulStops(int haulId) { foreach (HaulOrder o in haulBook.Orders) if (o.Id == haulId) return o.Stops; return new List<int>(); }
 
         public IReadOnlyList<(int Id, int From, int To, Material Material, double Kg, bool Loaded, int RobotId)> HaulOrders()

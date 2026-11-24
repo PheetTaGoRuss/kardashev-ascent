@@ -36,7 +36,8 @@ namespace KardashevAscent.Presentation.UI
         Rule editing;
         string note = "";
         LogFilter filter = LogFilter.All;
-        string shownLog, shownPlants, shownDepots;
+        string shownLog, shownPlants, shownDepots, shownWhy;
+        VisualElement depotsWhy;
         VisualElement plantRows;
         float nextRebuild;
         int targetTile;
@@ -65,6 +66,8 @@ namespace KardashevAscent.Presentation.UI
             Body.Add(plantRows);
             Heading("DEPOTS AND STOCK TARGETS");
             depots = Text();
+            depotsWhy = new VisualElement();
+            Body.Add(depotsWhy);
             targetRow = new VisualElement();
             targetRow.style.flexDirection = FlexDirection.Row;
             targetRow.style.flexWrap = Wrap.Wrap;
@@ -374,7 +377,7 @@ namespace KardashevAscent.Presentation.UI
 
         void RefreshPlants(IPlanetSimulation sim)
         {
-            var lines = new List<(int Tile, int Slot, string Text, ByproductPolicy Policy)>();
+            var lines = new List<(int Tile, int Slot, string Text, ByproductPolicy Policy, string Blocker)>();
             foreach (RefineryLine line in sim.RefineryLines())
             {
                 if (!line.Built) continue;
@@ -383,9 +386,9 @@ namespace KardashevAscent.Presentation.UI
                 string state = sim.IsPlantPaused(line.Tile, line.Slot) ? "PAUSED by a rule" : rep.Blocker != IndustrialBlocker.None ? "BLOCKED: " + rep.Reason
                              : line.Process.HasValue ? $"running {line.Progress * 100.0:0} %" : "idle";
                 lines.Add((line.Tile, line.Slot, $"{Refining.ModuleName(line.Kind)} {line.Tile}.{line.Slot} · {state} · buffers in {rep.InputBufferKg:0} / out {rep.OutputBufferKg:0} kg"
-                                                 + (rep.WasteHeatW > 0.0 ? $" · heat {Format.Power(rep.WasteHeatW)}" : ""), rep.Policy));
+                                                 + (rep.WasteHeatW > 0.0 ? $" · heat {Format.Power(rep.WasteHeatW)}" : ""), rep.Policy, rep.Blocker.ToString()));
             }
-            string shape = string.Join("|", lines.Select(l => l.Text + l.Policy));
+            string shape = string.Join("|", lines.Select(l => l.Text + l.Policy + l.Blocker));
             if (shape == shownPlants) return;
             shownPlants = shape;
             plantRows.Clear();
@@ -409,6 +412,13 @@ namespace KardashevAscent.Presentation.UI
                 toggle.tooltip = "Store: the gas goes to a gas tank and a full store stops the plant. Vent: it is released (logged; chlorine is toxic).";
                 row.Add(toggle);
                 plantRows.Add(row);
+                var (plantSteps, window, actionText) = WhyChain.PlantSteps(l.Blocker);
+                if (plantSteps.Count > 0)
+                {
+                    var chain = new WhyChain();
+                    chain.Set($"Plant {l.Tile}.{l.Slot} is blocked", plantSteps, actionText, () => SystemTabs.Open(window));
+                    plantRows.Add(chain);
+                }
             }
         }
 
@@ -436,6 +446,21 @@ namespace KardashevAscent.Presentation.UI
             {
                 shownDepots = shape;
                 depots.text = shape;
+            }
+            // why? chains for hauls that are waiting, from the simulation's structured reason (UI information design, stage 5)
+            var waiting = haul.Where(h => sim.HaulBlockedReason(h.Id) != null).Select(h => (h.Id, h.From, h.To, Why: sim.HaulWhyOf(h.Id))).ToList();
+            string whyShape = string.Join("|", waiting.Select(w => $"{w.Id}:{w.Why.Kind}:{w.Why.StopTile}:{w.Why.NeedWh:0}"));
+            if (whyShape != shownWhy)
+            {
+                shownWhy = whyShape;
+                depotsWhy.Clear();
+                foreach (var w in waiting)
+                {
+                    var chain = new WhyChain();
+                    chain.Set($"Haul {w.Id} is waiting (tile {w.From} to {w.To})", WhyChain.HaulSteps(w.Why.Kind, w.Why.NeedWh, w.Why.BudgetWh, w.Why.StopTile),
+                              "Show depot advice", () => depots.parent?.Q<ScrollView>()?.ScrollTo(depots));
+                    depotsWhy.Add(chain);
+                }
             }
             if (targetRow.childCount == 0)
             {

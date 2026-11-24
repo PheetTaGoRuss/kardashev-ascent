@@ -285,5 +285,24 @@ namespace KardashevAscent.Simulation.Tests.Logistics
             Assert.Greater(plan.Count, 4, "a load split into many small trips");
             foreach (var h in plan) Assert.LessOrEqual(h.Kg, 100.0 + 1e-9);
         }
+
+        [Test]
+        public void TheWhyOfAHaulIsAStructuredReason_OkNearRefusedFarAndALostStop()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike);
+            int lander = sim.BaseTileId;
+            int near = Enumerable.Range(0, sim.TileCount).Where(t => !sim.GetTile(t).IsWater && t != lander && sim.Routes.HoursBetween(lander, t) > 3.0 && sim.Routes.HoursBetween(lander, t) < 6.0).First();
+            Assert.AreEqual(PlanetSimulation.HaulWhyKind.Ok, sim.WhyHaul(lander, near, 100.0).Kind);
+            int far = Enumerable.Range(0, sim.TileCount).Where(t => !sim.GetTile(t).IsWater && !double.IsInfinity(sim.Routes.HoursBetween(lander, t)) && !sim.PlanHaul(lander, t, 400.0).Feasible).OrderBy(t => sim.Routes.HoursBetween(lander, t)).First();
+            var why = sim.WhyHaul(lander, far, 400.0);
+            Assert.AreNotEqual(PlanetSimulation.HaulWhyKind.Ok, why.Kind);
+            Assert.AreEqual(sim.LegBudgetWh, why.BudgetWh, 1e-9);
+            if (why.Kind == PlanetSimulation.HaulWhyKind.LegTooLong) Assert.Greater(why.NeedWh, why.BudgetWh);
+            var lost = sim.WhyHaul(lander, near, 100.0, new[] { 9999 });
+            Assert.AreEqual(PlanetSimulation.HaulWhyKind.StopLost, lost.Kind);
+            Assert.AreEqual(9999, lost.StopTile);
+            int sea = Enumerable.Range(0, sim.TileCount).First(t => sim.GetTile(t).IsWater);
+            Assert.AreEqual(PlanetSimulation.HaulWhyKind.NoRoute, sim.WhyHaul(lander, sea, 100.0).Kind);
+        }
     }
 }

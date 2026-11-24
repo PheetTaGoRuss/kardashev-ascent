@@ -101,6 +101,36 @@ namespace KardashevAscent.Simulation.Game
             return 0.0;
         }
 
+        /// <summary>Why a haul can or cannot be done: a small structured reason the interface turns into a why? chain (UI stage 5), not text to parse.</summary>
+        public enum HaulWhyKind { Ok, NoRoute, NoStartStop, NoEndStop, LegTooLong, StopLost }
+
+        public readonly struct HaulWhy
+        {
+            public readonly HaulWhyKind Kind;
+            /// <summary>The energy of the longest leg the haul needs (the loaded leg from pick-up to drop), Wh, and what one charge gives, Wh.</summary>
+            public readonly double NeedWh, BudgetWh;
+            /// <summary>The planned stop that lost power or is gone, for <see cref="HaulWhyKind.StopLost"/>.</summary>
+            public readonly int StopTile;
+            public HaulWhy(HaulWhyKind kind, double need, double budget, int stop = -1) { Kind = kind; NeedWh = need; BudgetWh = budget; StopTile = stop; }
+        }
+
+        /// <summary>The reason behind a haul's plan. <paramref name="plannedStops"/> are the stops it was planned through, to tell a stop that was lost.</summary>
+        public HaulWhy WhyHaul(int from, int to, double cargoKg, IReadOnlyList<int> plannedStops = null)
+        {
+            double budget = LegBudgetWh;
+            if (Routes == null || Routes.Route(from, to) == null) return new HaulWhy(HaulWhyKind.NoRoute, 0.0, budget);
+            var stops = StagingStops();
+            if (plannedStops != null)
+                foreach (int s in plannedStops)
+                    if (!stops.Contains(s)) return new HaulWhy(HaulWhyKind.StopLost, 0.0, budget, s);
+            if (PlanHaul(from, to, cargoKg).Feasible) return new HaulWhy(HaulWhyKind.Ok, 0.0, budget);
+            bool Fits(int a, int b2, double kg) { if (a == b2) return true; var leg = HaulLegCost(a, b2, kg); return leg.Reachable && leg.TotalWh <= budget; }
+            bool startOk = false, endOk = false;
+            foreach (int st in stops) { startOk |= Fits(st, from, 0.0); endOk |= Fits(to, st, 0.0); }
+            double need = HaulLegCost(from, to, cargoKg).TotalWh;
+            return new HaulWhy(!startOk ? HaulWhyKind.NoStartStop : !endOk ? HaulWhyKind.NoEndStop : HaulWhyKind.LegTooLong, need, budget);
+        }
+
         /// <summary>Usable charge for one leg between stops, Wh (infinity when the colony has no robots: nothing to limit).</summary>
         public double LegBudgetWh
         {

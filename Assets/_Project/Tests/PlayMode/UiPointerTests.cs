@@ -341,5 +341,27 @@ namespace KardashevAscent.PlayModeTests
             Assert.AreEqual(2, rows.Count);
             Assert.Greater(rows[0].childCount, 1);
         }
+
+        [UnityTest]
+        public IEnumerator Why_AChainHasStepsAndOneAction_AnEmptyChainIsHidden_AndTheActionIsPressedByPointer()
+        {
+            var chain = new WhyChain();
+            chain.style.position = Position.Absolute; chain.style.left = 10; chain.style.top = 10; chain.style.width = 500;
+            doc.rootVisualElement.Add(chain);
+            int pressed = 0;
+            chain.Set("Haul 3 is waiting", WhyChain.HaulSteps(4, 2705.0, 1926.0, -1), "Show depot advice", () => pressed++);
+            for (int i = 0; i < 3; i++) yield return null;
+            StringAssert.Contains("⚠ Haul 3 is waiting", chain.Shown);
+            StringAssert.Contains("needs 2705 Wh in one leg, one charge gives 1926 Wh", chain.Shown);
+            StringAssert.Contains("[Show depot advice]", chain.Shown);
+            Button b = chain.Query<Button>().ToList().First();
+            yield return ClickAt(b.worldBound.center);
+            Assert.AreEqual(1, pressed);
+            chain.Set("Nothing", new System.Collections.Generic.List<string>(), null, null);
+            Assert.AreEqual(DisplayStyle.None, chain.resolvedStyle.display == DisplayStyle.None ? DisplayStyle.None : chain.style.display.value);
+            Assert.AreEqual(0, WhyChain.HaulSteps(0, 0, 0, -1).Count, "a haul that is fine has no chain");
+            Assert.AreEqual(2, WhyChain.PlantSteps("OutputStorageUnavailable").Steps.Count);
+            Assert.AreEqual(0, WhyChain.PlantSteps("None").Steps.Count);
+        }
     }
 }
