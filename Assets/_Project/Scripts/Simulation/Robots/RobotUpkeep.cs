@@ -62,7 +62,7 @@ namespace KardashevAscent.Simulation.Robots
             {
                 double toCharger = movement != null ? movement.HoursToChargerFor(r)[r.Tile] / r.Attribute(RobotAttribute.Speed) : 0.0;
                 r.ReserveFraction = movement != null && r.Battery.CapacityWh > 0.0 && !double.IsInfinity(toCharger)
-                    ? (movement.EnergyWh(toCharger) + ClimbReserveWh(movement, r)) / r.Battery.CapacityWh : 0.0;
+                    ? (movement.EnergyWh(toCharger) + ClimbReserveWh(movement, r) + r.HeaterW * toCharger) / r.Battery.CapacityWh : 0.0;   // the way back also runs the heater (Weather W8: robots were lost on Mars driving home on an empty battery)
                 r.IsStranded = movement != null && r.Battery.UsableWh <= 1e-6 && toCharger > 1e-9;
                 r.ChargerExists = movement == null ? HasChargingFacility(facilities) : movement.HasCharger;
             }
@@ -132,6 +132,8 @@ namespace KardashevAscent.Simulation.Robots
             {
                 if (r.Activity != RobotActivity.Charging || r.IsTravelling || (movement != null && r.Tile != r.Facility.Value.Tile))
                     continue;
+                if (!RobotThermal.CanCharge(r.BatteryTempC))
+                    continue;   // a battery too cold or hot to charge is warmed first and asks for no power (otherwise the grid would serve energy nobody takes)
                 double req = r.Battery.ChargeRequestW(byKey[r.Facility.Value].Capability.PowerW, hours);
                 // A charger on the landing tile is wired to the lander: its RTGs serve it first, so robots can always
                 // recover there (D10; the lander itself no longer charges: director 2026-11-15).
