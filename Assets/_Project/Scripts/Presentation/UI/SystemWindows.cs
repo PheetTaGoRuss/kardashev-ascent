@@ -35,6 +35,9 @@ namespace KardashevAscent.Presentation.UI
         {
             now = Text();
             nowTip = InfoTip.After(now, "");
+            corona = new Button(() => GuideWindow.Open("Corona and air density")) { text = "⚠ outside model: Peek's law is not valid in this thin air, cable ratings use a labelled fallback. Guide ›" };
+            corona.AddToClassList("small-button"); corona.AddToClassList(UiType.Secondary); corona.style.whiteSpace = WhiteSpace.Normal; corona.style.height = StyleKeyword.Auto; corona.style.minHeight = 22; corona.style.paddingTop = corona.style.paddingBottom = 3; corona.style.display = DisplayStyle.None;
+            Body.Add(corona);
             brownoutWhy = new WhyChain();
             Body.Add(brownoutWhy);
             Heading("ENERGY FLOW");
@@ -100,6 +103,7 @@ namespace KardashevAscent.Presentation.UI
             }
             buildings.text = $"{panels} panel{(panels == 1 ? "" : "s")} · {yards} battery yard{(yards == 1 ? "" : "s")}";
             RefreshFlow(sim, solar, tidal, waves, barrage);
+            corona.style.display = sim.CableOutsideModel ? DisplayStyle.Flex : DisplayStyle.None;
             // a brownout, as a why? chain from the numbers the simulation reports
             double stored = sim.BatteryCapacityWh > 0.0 ? sim.BatteryStoredWh / sim.BatteryCapacityWh : 0.0;
             brownoutWhy.Set("Brownout", sim.IsBrownout ? new System.Collections.Generic.List<string>
@@ -114,6 +118,7 @@ namespace KardashevAscent.Presentation.UI
         }
 
         FlowBar flowBar;
+        Button corona;
         WhyChain brownoutWhy;
         Label flowHistory;
 
@@ -755,7 +760,7 @@ namespace KardashevAscent.Presentation.UI
                 : "No Research Station · build one (Stations)";
             stationNote.style.display = sim.HasResearchStation ? DisplayStyle.None : DisplayStyle.Flex;
             double design = sim.SolarDesignShare, battery = sim.BatteryUsableShare;
-            marginNote.text = $"Margins · panels {design * 100.0:0} % {(design < 1.0 ? Marks.Glyph(Mark.Estimated) : Marks.Glyph(Mark.Measured))} · batteries {battery * 100.0:0} % {(battery < 1.0 ? Marks.Glyph(Mark.Estimated) : Marks.Glyph(Mark.Measured))}   (◐ estimate: a margin until the values are measured)";
+            marginNote.text = $"Margins · panels {design * 100.0:0} % {(design < 1.0 ? Marks.Glyph(Mark.Estimated) : Marks.Glyph(Mark.Measured))} · batteries {battery * 100.0:0} % {(battery < 1.0 ? Marks.Glyph(Mark.GameRule) : Marks.Glyph(Mark.Measured))}   (◐ estimate: until the light values are measured; ◆ rule: batteries charge to 80 % until the temperature is measured)";
 
             tree?.Refresh(sim);
             RefreshBeliefs(sim);

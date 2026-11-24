@@ -440,6 +440,7 @@ namespace KardashevAscent.Presentation.UI
                 lines.Add($"Depot advice: build a depot (storage yard) with a charging bay at tile {site.Tile}" + (site.LineTiles > 0 ? $" and a power line of {site.LineTiles} tile(s)" : "") +
                           $": {site.CopperKg:0} kg copper, {site.BuildHours:0} h of building; it would save or make possible about {site.SavedWhPerDay:0} Wh a day of hauling (advice only: build where you choose){need}");
             }
+            lines.Add($"◆ rules: climbing costs {HaulPhysics.ClimbEffortShare * 100.0:0.#} % of m·g·Δh; a leg may use {(1.0 - KardashevAscent.Simulation.Robots.RobotSpecs.ReturnToChargeFraction) * 100.0:0} % of a battery; a load that does not fit is split to a quarter.");
             lines.Add($"{haul.Count} haul(s) under way · {sim.HaulTotals.KgMoved:0} kg moved so far, {sim.HaulTotals.Wh / 1000.0:0.0} kWh spent hauling");
             string shape = string.Join("\n", lines);
             if (shape != shownDepots)

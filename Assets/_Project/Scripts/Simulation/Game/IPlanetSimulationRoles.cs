@@ -523,6 +523,8 @@ namespace KardashevAscent.Simulation.Game
         Planet.KnowledgeEstimate GradeEstimate(int tileId, Resources.Material material);
         /// <summary>What one mining robot digs out of this tile, kg per hour: a range until the ore assay.</summary>
         Planet.KnowledgeEstimate MiningRateEstimate(int tileId, Resources.Material material);
+        /// <summary>True where Peek's law does not apply (thin air, the Paschen region): cable ratings there use a labelled fallback.</summary>
+        bool CableOutsideModel { get; }
         /// <summary>The share of its rating a cable is given while the air pressure is unmeasured.</summary>
         double CableDesignShare { get; }
         /// <summary>Share of their real output solar panels deliver while values are unknown (a safety margin).</summary>

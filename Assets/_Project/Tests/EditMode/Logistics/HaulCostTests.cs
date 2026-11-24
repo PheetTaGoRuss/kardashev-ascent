@@ -304,5 +304,14 @@ namespace KardashevAscent.Simulation.Tests.Logistics
             int sea = Enumerable.Range(0, sim.TileCount).First(t => sim.GetTile(t).IsWater);
             Assert.AreEqual(PlanetSimulation.HaulWhyKind.NoRoute, sim.WhyHaul(lander, sea, 100.0).Kind);
         }
+
+        [Test]
+        public void TheCableModelIsOutsideItsLawOnlyInThinAir()
+        {
+            PlanetSolarParams Make(double pressure) => new PlanetSolarParams(SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Math.PI / 180.0,
+                282.94 * Math.PI / 180.0, 24.66, 365.256 * 24.0, 0.32, 0.3, -59.0, false, pressure);
+            Assert.IsFalse(new PlanetSimulation(Sphere, Surface, Make(1.0)).CableOutsideModel, "Earth air: Peek's law holds");
+            Assert.IsTrue(new PlanetSimulation(Sphere, Surface, Make(0.00628)).CableOutsideModel, "Mars air: the Paschen region");
+        }
     }
 }
