@@ -100,6 +100,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         {
             PlanetRecord mars = Mars();
             var sim = Colony(mars);
+            sim.WeatherEnabled = false;   // this scenario tests the logistics chain; the dust of Mars is tested in ThinAirClimateTests and the balance run
             Assert.IsFalse(mars.HasLiquidWater, "Mars is dry: no seas, so no copper or lithium ore");
             int baseTile = sim.BaseTileId;
             int outpost = Sphere.Neighbors[baseTile].First(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
