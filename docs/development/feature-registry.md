@@ -69,7 +69,7 @@ Basis abbreviations: **V** = the director's vision statement of 2026-11-12; **PR
 | PL-13 | Level of detail: peaks and forest canopy from orbit; trees, reeds and rocks close up on the open site | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `Presentation/Planet/TerrainFeatures.cs`, `SiteDecor.cs` |
 | PL-14 | Buildings clear nature on their slots (visual only, no regrowth); from orbit a tile's canopy thins with the share built on | CONFIRMED (director 2026-11-14) | chat 2026-11-14 | Seen in Play mode | `SiteDecor.cs`, `TerrainFeatures.cs` |
 | EN-14 | Floating solar on shallow sea and wetland: 1.5 times the cost of a land panel (game rule), 4 % more output from cooler cells (game rule, TBD), built and taken down by a robot with a boat hull (director 2026-11-14; before, raft crews); turned without a robot | CONFIRMED (director's choice, 2026-11-13; boats 2026-11-14) | chat 2026-11-13, 2026-11-14 | Tested | `Game/PlanetSimulation.Buildings.cs`, `RobotsAtWork.cs` |
-| PL-07 | Atmosphere, climate, temperature and pressure simulation | FUTURE | V | Not started | — |
+| PL-07 | Atmosphere, climate, temperature and pressure simulation | CONFIRMED (director 2026-11-24) | V | In progress: W1 data tool and table built | — |
 | PL-08 | Subsurface exploration | FUTURE | V | Not started | — |
 | PL-09 | Greenhouse offset for air temperature of real planets | PROPOSED | physics report P1 item 14 | Not started | — |
 

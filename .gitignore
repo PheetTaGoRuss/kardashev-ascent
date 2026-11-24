@@ -54,3 +54,4 @@ __pycache__/
 !/tools/simtests/SimTests.csproj
 /tools/simtests/bin/
 /tools/simtests/obj/
+tools/nasa_power/cache/daily_variability_points.json
