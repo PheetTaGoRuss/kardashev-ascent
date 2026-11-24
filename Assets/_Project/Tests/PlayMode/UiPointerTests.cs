@@ -302,5 +302,26 @@ namespace KardashevAscent.PlayModeTests
             }
             Assert.AreEqual(5, System.Enum.GetValues(typeof(Mark)).Length);
         }
+
+        [UnityTest]
+        public IEnumerator Tips_ALongTipShowsTwoLinesWithMoreAndAGuideLink_NothingIsLost()
+        {
+            string longText = string.Concat(Enumerable.Repeat("Until a value is measured, buildings are designed for the cautious end of its range. ", 4)).Trim();
+            var host2 = new VisualElement { style = { position = Position.Absolute, left = 10, top = 10, width = 600 } };
+            var row = new Label("A value");
+            host2.Add(row);
+            doc.rootVisualElement.Add(host2);
+            InfoTip tip = InfoTip.After(row, longText, "Cables and ratings");
+            for (int i = 0; i < 4; i++) yield return null;
+            yield return ClickAt(tip.Button.worldBound.center);
+            for (int i = 0; i < 2; i++) yield return null;
+            Assert.Less(tip.Detail.text.Length, longText.Length, "the tip is cut to about two lines");
+            StringAssert.EndsWith("…", tip.Detail.text);
+            var labels = host2.Query<Label>().ToList();
+            Label more = labels.First(l => l.text.StartsWith("More"));
+            Assert.IsTrue(labels.Any(l => l.text.StartsWith("Guide")), "a Guide link points to the page");
+            yield return ClickAt(more.worldBound.center);
+            Assert.AreEqual(longText, tip.Detail.text, "More shows all of it");
+        }
     }
 }

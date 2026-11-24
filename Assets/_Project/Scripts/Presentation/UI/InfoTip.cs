@@ -12,20 +12,56 @@ namespace KardashevAscent.Presentation.UI
         public Button Button { get; }
         public Label Detail { get; }
 
+        /// <summary>The Guide page this tip points to, if any: shows a "Guide ›" link.</summary>
+        public string GuidePage { get; set; }
+
+        /// <summary>A tip shows at most this many lines until "More ›" is pressed (UI information design, stage 3); the rest is never removed.</summary>
+        public const int ClampLines = 2;
+        const int ClampChars = 150;
+        readonly VisualElement box = new VisualElement();
+        readonly Label more = new Label("More ›"), guide = new Label("Guide ›");
+        bool expanded;
+
         /// <summary>The full text (can change while the box is open).</summary>
         public string Text
         {
             get => Detail.text;
             set
             {
-                Detail.text = value ?? "";
+                full = value ?? "";
+                Detail.text = Shown();
+                RefreshLinks();
                 Button.tooltip = string.IsNullOrEmpty(value) ? "" : "How it works";
                 Button.style.display = string.IsNullOrEmpty(value) ? DisplayStyle.None : DisplayStyle.Flex;
             }
         }
 
+        string full = "";
+
+        string Shown() => expanded || full.Length <= ClampChars ? full : full.Substring(0, ClampChars).TrimEnd() + "…";
+
+        void RefreshLinks()
+        {
+            more.style.display = full.Length > ClampChars ? DisplayStyle.Flex : DisplayStyle.None;
+            more.text = expanded ? "Less ‹" : "More ›";
+            guide.style.display = string.IsNullOrEmpty(GuidePage) ? DisplayStyle.None : DisplayStyle.Flex;
+        }
+
         InfoTip(string text)
         {
+            foreach (Label l in new[] { more, guide })
+            {
+                l.AddToClassList(UiType.Secondary);
+                l.style.color = UiPalette.Accent;
+                l.style.marginRight = 12;
+                l.style.unityFontStyleAndWeight = FontStyle.Bold;
+            }
+            more.RegisterCallback<ClickEvent>(_ => { expanded = !expanded; Detail.text = Shown(); RefreshLinks(); });
+            guide.RegisterCallback<ClickEvent>(_ => { if (!string.IsNullOrEmpty(GuidePage)) GuideWindow.Open(GuidePage); });
+            var links = new VisualElement { style = { flexDirection = FlexDirection.Row } };
+            links.Add(more); links.Add(guide);
+            box.Add(Detail); box.Add(links);
+            box.style.display = DisplayStyle.None;
             Detail = new Label();
             Detail.style.whiteSpace = WhiteSpace.Normal;
             Detail.AddToClassList(UiType.Secondary);
@@ -37,7 +73,7 @@ namespace KardashevAscent.Presentation.UI
             Detail.style.backgroundColor = UiPalette.AccentA(0.07f);
             Detail.style.borderLeftWidth = 2;
             Detail.style.borderLeftColor = UiPalette.AccentA(0.6f);
-            Detail.style.display = DisplayStyle.None;
+            Detail.style.display = DisplayStyle.Flex;
 
             Button = new Button(Toggle) { text = "i" };
             Button.style.width = 18;
@@ -56,8 +92,9 @@ namespace KardashevAscent.Presentation.UI
 
         void Toggle()
         {
-            bool open = Detail.style.display == DisplayStyle.None;
-            Detail.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
+            bool open = box.style.display == DisplayStyle.None;
+            box.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
+            RefreshLinks();
             Button.style.backgroundColor = open ? UiPalette.AccentA(0.25f) : StyleKeyword.Null;
         }
 
@@ -65,9 +102,10 @@ namespace KardashevAscent.Presentation.UI
         /// Put an "i" at the end of <paramref name="row"/> (a row element, or a label that is wrapped into one) and its
         /// box right after it.
         /// </summary>
-        public static InfoTip After(VisualElement row, string text)
+        public static InfoTip After(VisualElement row, string text, string guidePage = null)
         {
-            var tip = new InfoTip(text);
+            var tip = new InfoTip(text) { GuidePage = guidePage };
+            tip.RefreshLinks();
             if (row is Label && row.parent != null)
             {
                 // One block holds the line (label + "i") and its box, so whatever shows or hides the line (a window's
@@ -83,12 +121,12 @@ namespace KardashevAscent.Presentation.UI
                 line.Add(row);
                 row.style.flexShrink = 1;
                 line.Add(tip.Button);
-                block.Add(tip.Detail);
+                block.Add(tip.box);
                 return tip;
             }
             row.Add(tip.Button);
             if (row.parent != null)
-                row.parent.Insert(row.parent.IndexOf(row) + 1, tip.Detail);
+                row.parent.Insert(row.parent.IndexOf(row) + 1, tip.box);
             return tip;
         }
     }

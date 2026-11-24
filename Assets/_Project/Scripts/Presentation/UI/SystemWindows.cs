@@ -46,7 +46,7 @@ namespace KardashevAscent.Presentation.UI
             Heading("BATTERY");
             battery = Text();
             InfoTip.After(battery, "Charges from surplus by day, carries the colony through the night. Until the surface " +
-                                   "temperature experiment is done, it only charges to 80 % (safety margin).");
+                                   "temperature experiment is done, it only charges to 80 % (safety margin).", "Batteries and charging");
             Heading("GRID");
             var wire = MakeButton("⚡  Wire tool (X)", () => KardashevAscent.Presentation.Planet.WireTool.Toggle());
             wire.tooltip = "Click a tile, then the next tile along, to run a wire between them. Generators and stations only work on tiles the wires join to the lander tile.";
@@ -375,7 +375,7 @@ namespace KardashevAscent.Presentation.UI
             Body.Add(marginNote);
             InfoTip.After(marginNote, "Until a value is measured, buildings are designed for the cautious end of its range. " +
                                       "Panels deliver 1 minus the combined spread of the unknown light values (never below half). " +
-                                      "Batteries charge only to 80 % until the surface temperature experiment says how hot or cold the cells get.");
+                                      "Batteries charge only to 80 % until the surface temperature experiment says how hot or cold the cells get.", "Temperature and the day-night swing");
 
             puzzleHead = Heading("PUZZLES");
             puzzles = new VisualElement();

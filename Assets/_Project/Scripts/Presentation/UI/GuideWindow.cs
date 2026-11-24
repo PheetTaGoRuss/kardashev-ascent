@@ -22,6 +22,15 @@ namespace KardashevAscent.Presentation.UI
         const string Controls = "Controls";
         static readonly string[] Topics = GuideBook.Categories.Concat(new[] { Controls }).ToArray();
 
+        static string pendingPage;
+
+        /// <summary>Open the Guide at a page by its title (from an InfoTip, a card or another page's Related links).</summary>
+        public static void Open(string title)
+        {
+            pendingPage = title;
+            SystemTabs.Open("guide");
+        }
+
         List<GuidePage> pages;
         string topic = GuideBook.Materials;
         GuidePage open;
@@ -83,7 +92,15 @@ namespace KardashevAscent.Presentation.UI
 
         TextField searchField;
 
-        protected override void RefreshBody(IPlanetSimulation sim) { }
+        protected override void RefreshBody(IPlanetSimulation sim)
+        {
+            if (pendingPage == null) return;
+            GuidePage target = pages.FirstOrDefault(p => p.Title == pendingPage);
+            pendingPage = null;
+            if (target == null) return;
+            topic = target.Category; search = ""; searchField?.SetValueWithoutNotify(""); open = target;
+            Rebuild();
+        }
 
         void Rebuild()
         {
@@ -104,7 +121,7 @@ namespace KardashevAscent.Presentation.UI
                 item.style.flexDirection = FlexDirection.Row;
                 item.style.alignItems = Align.Center;
                 item.style.justifyContent = Justify.FlexStart;
-                item.style.height = 28;
+                item.style.minHeight = 28;
                 item.style.marginBottom = 3;
                 item.style.paddingLeft = 6;
                 VisualElement thumb = p.Material.HasValue ? new GuidePicture(p.Material.Value, 24f)
@@ -117,6 +134,8 @@ namespace KardashevAscent.Presentation.UI
                 var name = new Label(searching ? $"{p.Title} · {p.Category}" : p.Title);
                 name.AddToClassList(UiType.Secondary);
                 name.style.unityTextAlign = TextAnchor.MiddleLeft;
+                name.style.whiteSpace = WhiteSpace.Normal;
+                name.style.flexShrink = 1;
                 name.pickingMode = PickingMode.Ignore;
                 item.Add(name);
                 if (p == open)
@@ -164,7 +183,16 @@ namespace KardashevAscent.Presentation.UI
                 h.AddToClassList(UiType.Secondary);
                 page.Add(h);
                 foreach (string line in lines)
-                    page.Add(Line(line));
+                {
+                    GuidePage linked = heading == "Related" ? pages.FirstOrDefault(p => p.Title == line) : null;
+                    if (linked == null) { page.Add(Line(line)); continue; }
+                    var link = new Button(() => { open = linked; topic = linked.Category; Rebuild(); }) { text = linked.Title + " ›" };
+                    link.AddToClassList("small-button");
+                    link.AddToClassList(UiType.Secondary);
+                    link.style.alignSelf = Align.FlexStart;
+                    link.style.marginTop = 2;
+                    page.Add(link);
+                }
             }
         }
 

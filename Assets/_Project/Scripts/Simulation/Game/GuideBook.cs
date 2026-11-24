@@ -55,7 +55,7 @@ namespace KardashevAscent.Simulation.Game
     public static class GuideBook
     {
         public const string Materials = "Materials", Ground = "Ground", Buildings = "Buildings", Robots = "Robots", Research = "Research", Operations = "Operations";
-        public static readonly string[] Categories = { Materials, Ground, Buildings, Robots, Research, Operations };
+        public static readonly string[] Categories = { Materials, Ground, Buildings, Robots, GuideScience.Energy, GuideScience.Science, Research, Operations };
 
         /// <summary>Battery yard size used for its cost line (the game's default yard).</summary>
         public const double DefaultBatteryWh = 20_000_000.0;
@@ -74,6 +74,7 @@ namespace KardashevAscent.Simulation.Game
             pages.AddRange(RobotPages());
             pages.AddRange(ResearchPages());
             pages.AddRange(OperationPages());
+            pages.AddRange(GuideScience.Pages());
             return pages;
         }
 
