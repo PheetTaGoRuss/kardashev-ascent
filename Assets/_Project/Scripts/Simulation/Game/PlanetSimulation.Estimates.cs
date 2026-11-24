@@ -79,6 +79,16 @@ namespace KardashevAscent.Simulation.Game
             return new KnowledgeEstimate(Robots.RobotSpecs.MiningKgPerHour * g.Value, Robots.RobotSpecs.MiningKgPerHour * g.HalfRange);
         }
 
+        /// <summary>True where Peek's law is not valid (the Paschen region, with a labelled fallback): the cable rating there is a game rule, not the law's result (UI marks, outside model).</summary>
+        public bool CableOutsideModel
+        {
+            get
+            {
+                double p = planet.SurfacePressureEarth * CableEnvironment.StandardPressurePa;
+                return CableEnvironment.RegimeOf(CableEnvironment.RelativeAirDensity(p, 25.0)) == CableEnvironment.Regime.Paschen;
+            }
+        }
+
         /// <summary>
         /// The share of its rating a cable is given while the air is unmeasured: the voltage derate at the cautious (thin) end of the
         /// pressure range over the derate at the true pressure, never below <see cref="MinimumCableShare"/>. 1 once the air pressure is measured.

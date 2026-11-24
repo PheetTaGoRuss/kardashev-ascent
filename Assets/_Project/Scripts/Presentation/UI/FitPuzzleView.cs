@@ -72,7 +72,7 @@ namespace KardashevAscent.Presentation.UI
             double s = puzzle.Share(handles);
             share.text = puzzle.ExtraHours != null
                 ? $"Range left: {s * 100.0:0} % of the original · robot time for these samples: {puzzle.ExtraHours(handles):0.#} h"
-                : $"Range left: {s * 100.0:0} % of the original (lower is better; {FitPuzzle.PrecisionShare * 100.0:0} % is the instrument's precision)";
+                : $"Range left: {s * 100.0:0} % of the original (lower is better; ◆ rule: {FitPuzzle.PrecisionShare * 100.0:0} % is the instrument's precision, Fit for me leaves {FitPuzzle.AutoFitShare * 100.0:0} %)";
             plot.MarkDirtyRepaint();
         }
 

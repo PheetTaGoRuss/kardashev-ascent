@@ -339,7 +339,7 @@ namespace KardashevAscent.Presentation.UI
                 groundTip.Text = text.Trim();
             ground.text = water ? "Sea floor · can't reach yet"
                 : !surveyed ? (sim.IsSurveyOrdered(tile) ? $"Surveying {sim.SurveyProgress(tile) * 100.0:0} %"
-                               : CoresWaiting(sim, tile) ? "Cores waiting" : "Not surveyed · only rock known")
+                               : CoresWaiting(sim, tile) ? "Cores waiting" : Marks.Glyph(Mark.Unknown) + " unknown · not surveyed, only rock known")
                 : sim.IsRoughSurvey(tile) ? "Surveyed (rough ±)" : "Surveyed";
 
             string shape = $"{tile}|{water}|{surveyed}|{sim.IsSurveyOrdered(tile)}|{CoresWaiting(sim, tile)}|{map.DeepScanned}" +

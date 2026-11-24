@@ -236,13 +236,15 @@ namespace KardashevAscent.Presentation.UI
             time.text = double.IsNaN(local)
                 ? "Star fixed in the sky"
                 : $"{(int)local:00}:{(int)(local % 1.0 * 60.0):00} at base · {(sim.IsDayAtBase ? "day" : "night")}";
+            string airMark = "";
+            { var air = sim.TemperatureEstimate; airMark = $" · air {Marks.Glyph(Marks.Of(air))} {air.Value:0} °C"; }
             string planetName = runner.Record != null && !string.IsNullOrEmpty(runner.Record.displayName) ? runner.Record.displayName + " · " : "";
             if (runner.SolarParams.Obliquity < 0.5 * Math.PI / 180.0)
-                season.text = planetName + "no seasons";
+                season.text = planetName + "no seasons" + airMark;
             else
             {
                 Season s = SimClock.SeasonFromEclipticLongitude(SimClock.EclipticLongitude(runner.SolarParams, t));
-                season.text = $"{planetName}northern {s.ToString().ToLowerInvariant()}";
+                season.text = $"{planetName}northern {s.ToString().ToLowerInvariant()}{airMark}";
             }
 
             power.text = Format.Power(sim.GenerationW);
