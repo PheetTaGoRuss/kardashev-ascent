@@ -667,6 +667,8 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>The weather at a tile now (climatology plus the day's anomaly).</summary>
         WeatherSample WeatherAt(int tileId);
         bool HasWeather { get; }
+        bool StormAt(int tileId);
+        double StormThresholdMs(int tileId);
         /// <summary>Put an event (a save, a milestone) into the field log; its priority follows its kind.</summary>
         void NoteEvent(string subject, string quantity, string text);
 

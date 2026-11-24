@@ -587,7 +587,8 @@ namespace KardashevAscent.Presentation.UI
         static string ShortTask(IPlanetSimulation sim, Robot r)
         {
             if (r.WarmingUp) return $"warming its battery ({r.BatteryTempC:0} C) before charging";
-            string cold = r.HeaterW > 0.0 ? $" · outside its range: heater {r.HeaterW:0} W, {r.ThermalHoursLeft:0.0} h left" : "";
+            string storm = r.StormHold ? " · storm: sheltering, no outdoor work" : "";
+            string cold = (r.HeaterW > 0.0 ? $" · outside its range: heater {r.HeaterW:0} W, {r.ThermalHoursLeft:0.0} h left" : "") + storm;
             if (r.IsStranded) return "stranded: battery empty" + cold;
             if (r.ManualTarget.HasValue) return $"→ tile {r.ManualTarget.Value} · {r.HopsLeft} to go";
             string what = DoingText(sim, r);

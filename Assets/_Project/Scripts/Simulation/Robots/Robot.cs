@@ -187,7 +187,10 @@ namespace KardashevAscent.Simulation.Robots
         public int? ExchangeVia { get; internal set; }
 
         /// <summary>Free to take colony work: not shut down, charging, in maintenance or low on charge.</summary>
-        public bool Available => Activity == RobotActivity.None && !IsShutDown && !NeedsCharge && !ManualTarget.HasValue;
+        public bool Available => Activity == RobotActivity.None && !IsShutDown && !NeedsCharge && !ManualTarget.HasValue && !StormHold;
+
+        /// <summary>A storm is over this robot (wind above the local 98th percentile): it does no outdoor work and goes to shelter (Weather W5, decided 2026-11-24). Not saved: set again each step.</summary>
+        public bool StormHold { get; internal set; }
 
         public RobotState State =>
             IsShutDown ? RobotState.Shutdown
