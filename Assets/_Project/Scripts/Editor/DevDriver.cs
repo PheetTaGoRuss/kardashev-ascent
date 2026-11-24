@@ -278,6 +278,10 @@ namespace KardashevAscent.EditorTools
                     }
                     return true;
                 }
+                case "guide":
+                    // guide <page title>: open the Guide at a page.
+                    Presentation.UI.GuideWindow.Open(argument);
+                    return true;
                 case "uiscale":
                 {
                     // uiscale <0.8..1.5>: set the UI size (saved like the player's own setting).
