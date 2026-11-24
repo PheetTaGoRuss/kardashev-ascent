@@ -377,5 +377,21 @@ namespace KardashevAscent.PlayModeTests
             var failed = new System.Collections.Generic.HashSet<int> { t1 };
             Assert.IsTrue(KardashevAscent.Presentation.Planet.InstrumentOverlay.TagsOf(sim, t1, failed).Any(t => t.Contains("FAILED")));
         }
+
+        [Test]
+        public void Overlay_FarTagsClusterWithACountAndTheWorstState_NearTagsStayApart()
+        {
+            var tags = new System.Collections.Generic.List<(Vector2 Pos, string Text)>
+            {
+                (new Vector2(100, 100), "R1 idle"), (new Vector2(110, 105), "⚡ OVERLOAD"), (new Vector2(120, 98), "⚡ ok"),
+                (new Vector2(500, 500), "◐ iron"),
+            };
+            var far = KardashevAscent.Presentation.Planet.InstrumentOverlay.Cluster(tags, 90f);
+            Assert.AreEqual(2, far.Count, "three tags in one cell become one");
+            var cluster = far.First(c => c.Text.StartsWith("3"));
+            StringAssert.Contains("worst: ⚡ OVERLOAD", cluster.Text);
+            Assert.IsTrue(far.Any(c => c.Text == "◐ iron"), "a lone tag stays as it is");
+            Assert.AreEqual(4, KardashevAscent.Presentation.Planet.InstrumentOverlay.Cluster(tags, 4f).Count, "near (a tiny cell): every tag shows in full");
+        }
     }
 }

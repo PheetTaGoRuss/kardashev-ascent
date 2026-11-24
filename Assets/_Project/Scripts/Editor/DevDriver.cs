@@ -288,6 +288,9 @@ namespace KardashevAscent.EditorTools
                     if (cam != null) { cam.LeaveSite(); cam.ResetView(true); }
                     return true;
                 }
+                case "savegame":
+                    UnityEngine.Object.FindFirstObjectByType<Presentation.Game.SaveGameController>()?.Save();
+                    return true;
                 case "overlay":
                     Presentation.Planet.InstrumentOverlay.Set(argument != "off");
                     return true;

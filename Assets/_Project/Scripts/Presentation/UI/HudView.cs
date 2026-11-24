@@ -118,7 +118,9 @@ namespace KardashevAscent.Presentation.UI
         string milestoneMessage;
         VisualElement toastStack;
         Label toastMilestone, toastSave, toastWeather;
-        float lastLoggedSave = -1f;
+        float lastLoggedSave = -1f, savedAt = -100f;
+        Label savedLine;
+        const float SavedSeconds = 4f;
         int weatherSerial;
         string weatherMessage;
         float weatherTime;
@@ -183,6 +185,13 @@ namespace KardashevAscent.Presentation.UI
             if (runner != null && runner.Simulation != null && saveGame != null && !string.IsNullOrEmpty(saveGame.Message) && saveGame.MessageTime != lastLoggedSave)
             {
                 lastLoggedSave = saveGame.MessageTime;
+                savedAt = Time.unscaledTime;
+                if (savedLine != null)
+                {
+                    bool ok = saveGame.Message.StartsWith("Saved");
+                    savedLine.text = ok ? "Saved " + System.DateTime.Now.ToString("HH:mm") : saveGame.Message;   // a failed save or load says why
+                    savedLine.style.color = ok ? UiPalette.Good : UiPalette.Critical;
+                }
                 runner.Simulation.NoteEvent("Colony", "Game saved", saveGame.Message);
             }
             if (toast != null)
@@ -199,6 +208,18 @@ namespace KardashevAscent.Presentation.UI
                     document.rootVisualElement.Add(toastStack);
                 }
                 toastStack.style.top = UiLayout.WindowTop + 2f;
+                // Feedback on the player's own action (a save) is a small line in the status area that fades, not a toast (UI information design, finish).
+                if (savedLine == null)
+                {
+                    savedLine = new Label { pickingMode = PickingMode.Ignore };
+                    savedLine.AddToClassList("caption");
+                    savedLine.style.position = Position.Absolute;
+                    savedLine.style.right = 16;
+                    document.rootVisualElement.Add(savedLine);
+                }
+                savedLine.style.top = UiLayout.Top - 2f;
+                float age = Time.unscaledTime - savedAt;
+                savedLine.style.opacity = age < SavedSeconds ? Mathf.Clamp01((SavedSeconds - age) / 1.5f) : 0f;
                 bool milestone = !string.IsNullOrEmpty(milestoneMessage) && Time.unscaledTime - milestoneTime < MilestoneSeconds;
                 bool save = saveGame != null && !string.IsNullOrEmpty(saveGame.Message) && Time.unscaledTime - saveGame.MessageTime < 2.5f;
                 bool weather = !string.IsNullOrEmpty(weatherMessage) && Time.unscaledTime - weatherTime < WeatherToastSeconds;

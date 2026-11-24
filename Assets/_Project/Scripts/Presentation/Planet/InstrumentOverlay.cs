@@ -73,6 +73,34 @@ namespace KardashevAscent.Presentation.Planet
             return tags;
         }
 
+        /// <summary>How bad a tag is, for picking the worst of a cluster: a failed or overloaded line, then an unmetered line or a value not yet measured, then the rest.</summary>
+        public static int Severity(string tag) => tag.Contains("FAILED") || tag.Contains("OVERLOAD") ? 3 : tag.Contains("unmetered") || tag.Contains("◐") || tag.Contains("○") ? 1 : 0;
+
+        /// <summary>
+        /// Far away tiles are small and their tags pile up: group the tags by screen cell and show how many there are and the worst of them. Near, every tag
+        /// shows in full (UI information design, finish round).
+        /// </summary>
+        public static List<(Vector2 Pos, string Text)> Cluster(IList<(Vector2 Pos, string Text)> tags, float cellPx)
+        {
+            var cells = new Dictionary<(int, int), List<(Vector2 Pos, string Text)>>();
+            foreach (var t in tags)
+            {
+                var key = ((int)Mathf.Floor(t.Pos.x / cellPx), (int)Mathf.Floor(t.Pos.y / cellPx));
+                if (!cells.TryGetValue(key, out var list)) cells[key] = list = new List<(Vector2, string)>();
+                list.Add(t);
+            }
+            var result = new List<(Vector2, string)>();
+            foreach (var list in cells.Values)
+            {
+                if (list.Count == 1) { result.Add(list[0]); continue; }
+                var worst = list.OrderByDescending(x => Severity(x.Text)).First();
+                Vector2 centre = Vector2.zero;
+                foreach (var x in list) centre += x.Pos;
+                result.Add((centre / list.Count, $"{list.Count} tags · worst: {worst.Text}"));
+            }
+            return result;
+        }
+
         void OnGUI()
         {
             IPlanetSimulation sim = runner != null ? runner.Simulation : null;
@@ -85,7 +113,9 @@ namespace KardashevAscent.Presentation.Planet
             var tiles = new HashSet<int>(sim.LineTiles());
             foreach (Robot r in sim.Workforce.Robots) tiles.Add(r.Tile);
             foreach (int t in sim.Deposits.Surveyed) tiles.Add(t);
+            bool far = Vector3.Distance(cam.transform.position, planet.transform.position) > planet.Radius * 2.2f;
             var drawn = new List<(float Dist, Rect Box, string Text)>();
+            var raw = new List<(Vector2 Pos, string Text)>();
             foreach (int t in tiles)
             {
                 var c = planet.Sphere.Centers[t];
@@ -96,9 +126,16 @@ namespace KardashevAscent.Presentation.Planet
                 var tags = TagsOf(sim, t, failed);
                 if (tags.Count == 0) continue;
                 string text = string.Join(" · ", tags);
+                if (far) { raw.Add((new Vector2(s.x, Screen.height - s.y), text)); continue; }
                 float w = 16f + text.Length * 8f;
                 drawn.Add((s.z, new Rect(s.x - w / 2f, Screen.height - s.y - 14f, w, 24f), text));
             }
+            if (far)
+                foreach (var c in Cluster(raw, 90f))
+                {
+                    float w = 16f + c.Text.Length * 8f;
+                    drawn.Add((0f, new Rect(c.Pos.x - w / 2f, c.Pos.y - 14f, w, 24f), c.Text));
+                }
             foreach (var d in drawn.OrderBy(x => x.Dist).Take(MaxTags))
                 GUI.Box(d.Box, d.Text, tag);
             GUI.Box(new Rect(10f, UiLayout.ClearBottomY - 36f, 460f, 26f), "Instrument overlay (F4): ⚡ power · R robots · ●◐ ore knowledge", tag);
