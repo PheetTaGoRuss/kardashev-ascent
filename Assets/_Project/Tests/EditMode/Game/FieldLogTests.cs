@@ -59,7 +59,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             sim.NoteEvent("Colony", "Milestone reached", "Milestone 1");
             var state = sim.CaptureState();
             Assert.AreEqual(LogPriority.Watch, state.OperationsLog.First(r => r.Quantity == "Milestone reached").Priority);
-            Assert.AreEqual(55, SimulationState.CurrentVersion);
+            Assert.GreaterOrEqual(SimulationState.CurrentVersion, 55);
             foreach (var r in state.OperationsLog) r.Priority = LogPriority.Info;   // what an older save has: the field is missing, so it reads as 0
             var loaded = new PlanetSimulation(Sphere, Surface, Earthlike);
             loaded.RestoreState(state);

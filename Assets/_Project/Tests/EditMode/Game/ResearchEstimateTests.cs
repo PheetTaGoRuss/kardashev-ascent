@@ -151,5 +151,30 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.IsTrue(sim.GradeEstimate(tile, Material.Rock).IsExact);
             Assert.IsTrue(sim.MiningRateEstimate(tile, Material.Rock).IsExact);
         }
+
+        [Test]
+        public void TheSimulationHasWeather_ClimatologyPlusTheDaysAnomaly_AndAnOldSaveHasNone()
+        {
+            var sim = Make();
+            Assert.IsTrue(sim.HasWeather);
+            var w = sim.WeatherAt(sim.BaseTileId);
+            Assert.Greater(w.WindMs, 0.0);
+            Assert.Greater(w.PressurePa, 0.0);
+            var state = sim.CaptureState();
+            Assert.IsTrue(state.WeatherOn);
+            state.Version = 55;
+            var old = Make();
+            old.RestoreState(state);
+            Assert.IsFalse(old.HasWeather, "a save before version 56 keeps the old, weatherless balance");
+            Assert.AreEqual(0.0, old.WeatherAt(old.BaseTileId).WindMs);
+        }
+
+        [Test]
+        public void AnAirlessWorldHasNoWeatherInTheSimulation()
+        {
+            var p = new PlanetSolarParams(SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 0.4, 5.0, 24.0, 8760.0, 0.0, 0.3, -50.0, false, 0.0);
+            var sim = new PlanetSimulation(Sphere, Surface, p);
+            Assert.IsFalse(sim.HasWeather);
+        }
     }
 }
