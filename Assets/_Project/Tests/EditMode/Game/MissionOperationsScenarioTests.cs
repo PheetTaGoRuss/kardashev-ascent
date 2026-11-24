@@ -83,6 +83,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         }
 
         /// <summary>Run for days of game time, checking the energy balance on every step; returns the worst mismatch, W.</summary>
+        static string WorstAt = "";
         static double RunChecked(PlanetSimulation sim, double days)
         {
             double worst = 0.0;
@@ -90,7 +91,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             {
                 sim.Tick(1.0);
                 double discharge = Math.Max(0.0, -sim.BatteryPowerW);
-                worst = Math.Max(worst, Math.Abs(sim.GenerationW + discharge - (sim.KardashevPowerW + sim.CurtailedW)));
+                double err = Math.Abs(sim.GenerationW + discharge - (sim.KardashevPowerW + sim.CurtailedW));
+                if (err > worst) { worst = err; WorstAt = $"t={sim.TimeHours:0}h gen {sim.GenerationW:0} discharge {discharge:0} kard {sim.KardashevPowerW:0} curt {sim.CurtailedW:0} brown {sim.IsBrownout} charging {sim.RobotChargingW:0} workshop {sim.WorkshopPowerW:0} demand {sim.DemandW:0} batt {sim.BatteryPowerW:0}"; }
             }
             return worst;
         }
@@ -114,7 +116,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             }
             Assert.IsTrue(sim.PlaceChargingStation(outpost, 0), "a charging station at the outpost wants copper wiring");
             double worst = RunChecked(sim, 60.0);
-            Assert.Less(worst, 1.0, "energy closes on every step of the 60 days, on Mars");
+            Assert.Less(worst, 1.0, "energy closes on every step of the 60 days, on Mars: " + WorstAt);
             Assert.IsFalse(sim.IsUnderConstruction(outpost, 0), "built within 60 days: aluminium " + string.Join(",", sim.Holdings().Where(h => h.Material == Material.Aluminium || h.Material == Material.Alumina).Select(h => h.Kind + h.Id.ToString() + ":" + h.Material + "=" + h.Kg.ToString("0.0"))) + " need " + sim.ConstructionRemainingAt(outpost, 0).Describe() + " standins " + sim.StandInsAt(outpost, 0) + " lines " + string.Join(";", sim.RefineryLines().Select(l => l.Kind + ":" + l.Process + ":" + l.Progress.ToString("0.00"))) + " queue " + sim.RefineQueue.Count + " reports " + string.Join("|", sim.IndustrialReports.Select(r => r.Message).TakeLast(3)));
             Assert.AreNotEqual(StandIn.None, sim.StandInsAt(outpost, 0) & StandIn.AluminiumForCopper, "with aluminium refined from rock in place of copper");
             Assert.Greater(sim.HaulTotals.KgMoved, 0.0, "aluminium was hauled to the outpost");
@@ -123,6 +125,28 @@ namespace KardashevAscent.Simulation.Tests.Game
             FlowsheetSnapshot snap = sim.FlowsheetSnapshot(7);
             foreach (ProcessFlow p in snap.Processes) Assert.AreEqual(100.0, p.ClosurePct, 0.01, p.Name + " closes in mass");
             Assert.Less(sim.TotalKg(Material.Rock), rockBefore, "the alumina took rock");
+        }
+
+        /// <summary>
+        /// The same copper-starved Mars outpost with the weather on (Weather W8, 2026-11-24). The control above runs with it off. With weather on the first
+        /// version lost all three robots in the open at -46 to -59 C: the robot's reserve for the trip home counted the drive but not the heater that runs on the way,
+        /// so they set off back with too little charge. The reserve now includes the heater (RobotUpkeep.Plan); the physics and the figures are unchanged.
+        /// </summary>
+        [Test]
+        public void Mars_WithWeatherOn_TheSameSiteIsBuilt_AndNoRobotIsLost()
+        {
+            PlanetRecord mars = Mars();
+            var sim = Colony(mars);
+            Assert.IsTrue(sim.HasWeather);
+            int outpost = Sphere.Neighbors[sim.BaseTileId].First(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
+            sim.Materials.Set(Material.Copper, 0.0);
+            for (int i = 0; i < 3; i++) { sim.OrderRefine(RefineProcess.AluminaFromRock); sim.OrderRefine(RefineProcess.Aluminium); }
+            Assert.IsTrue(sim.PlaceChargingStation(outpost, 0));
+            double worst = RunChecked(sim, 60.0);
+            Assert.Less(worst, 1.0, "energy closes on every step with the weather on");
+            Assert.AreEqual(0, sim.RobotsDestroyed, "no robot is lost on the way home: " + string.Join(" | ", sim.OperationsLog.Where(r => r.Quantity == "Robot destroyed").Select(r => r.Text)));
+            Assert.IsFalse(sim.IsUnderConstruction(outpost, 0), "built within 60 days with the weather on: " + sim.ConstructionRemainingAt(outpost, 0).Describe());
+            foreach (Material m in Materials.All) Assert.GreaterOrEqual(sim.TotalKg(m), -1e-9, m + " never goes negative");
         }
 
         [Test]
