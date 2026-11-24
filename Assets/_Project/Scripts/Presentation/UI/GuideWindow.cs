@@ -214,7 +214,7 @@ namespace KardashevAscent.Presentation.UI
                 .Add("Keys", "Click a tile: open its site", "Drag from the build bar: place", "P: place on the selected slot", "Del: remove",
                      "Tab: next building", "B: best angle", "Ctrl+A: select all slots", "V: sky view over a panel");
             yield return new GuidePage(Controls, "Windows", "Open the colony's windows.")
-                .Add("Keys", "C: Overview", "O: Power", "G: Robots", "U: Manufacturing", "I: Operations (flight rules, plants, depots, log)", "Z: Flowsheet", "T: Research", "N: Network", "J: Guide", "K: Calculator", "H: all controls");
+                .Add("Keys", "C: Overview", "O: Power", "G: Robots", "U: Manufacturing", "I: Operations (flight rules, plants, depots, log)", "Z: Flowsheet", "T: Research", "N: Network", "J: Guide", "K: Calculator", "F4: instrument overlay (power, robots, ore knowledge on each tile)", "H: all controls");
             yield return new GuidePage(Controls, "Game", "Time, saving and the menu.")
                 .Add("Keys", "Esc: pause menu (sound, save, load)", "F5: save · F9: load", "Time buttons at the top right: pause, real, 1 h/s, 1 d/s");
         }
