@@ -54,7 +54,9 @@ namespace KardashevAscent.Simulation.Game
         public (int Kind, double NeedWh, double BudgetWh, int StopTile) HaulWhyOf(int haulId)
         {
             foreach (HaulOrder o in haulBook.Orders)
-                if (o.Id == haulId) { var w = WhyHaul(o.FromTile, o.ToTile, o.Kg, o.Stops); return ((int)w.Kind, w.NeedWh, w.BudgetWh, w.StopTile); }
+                if (o.Id == haulId && o.WeatherWait && HaulStormWait(haulId) is var sw && sw.HasValue)
+                    return ((int)HaulWhyKind.StormForecast, sw.Value.WindMs, sw.Value.ThresholdMs, sw.Value.Day);
+                else if (o.Id == haulId) { var w = WhyHaul(o.FromTile, o.ToTile, o.Kg, o.Stops); return ((int)w.Kind, w.NeedWh, w.BudgetWh, w.StopTile); }
             return ((int)HaulWhyKind.Ok, 0.0, 0.0, -1);
         }
 
@@ -158,9 +160,22 @@ namespace KardashevAscent.Simulation.Game
                     if (!plan.Feasible)
                     {
                         string stopsDown = o.Stops.Count > 0 && o.Stops.Any(s => !StagingStops().Contains(s)) ? "a stop on its route lost power or is gone" : "no chain of legs between chargers or shelters fits the battery now";
-                        o.Blocked = stopsDown;
+                        o.Blocked = stopsDown; o.WeatherWait = false;
                     }
-                    else { o.Blocked = null; o.Stops = plan.Stops; }
+                    else
+                    {
+                        o.Blocked = null; o.Stops = plan.Stops; o.WeatherWait = false;
+                        // P2: the forecast. A storm on the route within the trip holds the haul unless the player said go anyway; the energy check above is never skipped.
+                        if (!o.GoAnyway)
+                        {
+                            var storm = StormForecastOnRoute(o.FromTile, o.ToTile, TripHours(o.FromTile, o.ToTile));
+                            if (storm.HasValue)
+                            {
+                                o.WeatherWait = true;
+                                o.Blocked = $"a storm is forecast in {storm.Value.Day} day(s) on the route (◐ wind {storm.Value.WindMs:0} m/s ±{storm.Value.SdMs:0}, a storm is above {storm.Value.ThresholdMs:0})";
+                            }
+                        }
+                    }
                     if (o.Blocked != null && was == null)
                         Log($"Haul {o.Id}", "Haul waiting", 0.0, "", $"H{o.Id}", $"Haul {o.Id} ({Resources.Materials.Name(o.Material)} {o.FromTile} to {o.ToTile}) is waiting: {o.Blocked}.", -1);
                     if (o.Blocked != null) { i++; continue; }
@@ -231,7 +246,7 @@ namespace KardashevAscent.Simulation.Game
         {
             state.NextHaulId = haulBook.NextId;
             foreach (HaulOrder o in haulBook.Orders)
-                state.HaulOrders.Add(new HaulOrderRecord { Id = o.Id, FromTile = o.FromTile, ToTile = o.ToTile, Material = o.Material, Kg = o.Kg, Stage = o.Stage, RobotId = o.RobotId });
+                state.HaulOrders.Add(new HaulOrderRecord { Id = o.Id, FromTile = o.FromTile, ToTile = o.ToTile, Material = o.Material, Kg = o.Kg, Stage = o.Stage, RobotId = o.RobotId, GoAnyway = o.GoAnyway });
             foreach (StockTarget t in haulBook.Targets())
                 state.StockTargets.Add(new StockTargetRecord { Tile = t.Tile, Material = t.Material, Kg = t.Kg });
         }
@@ -245,7 +260,7 @@ namespace KardashevAscent.Simulation.Game
                 if (state.HaulOrders != null)
                     foreach (HaulOrderRecord r in state.HaulOrders)
                         if (r.FromTile >= 0 && r.FromTile < TileCount && r.ToTile >= 0 && r.ToTile < TileCount && r.Kg > 0.0)
-                            orders.Add(new HaulOrder { Id = r.Id, FromTile = r.FromTile, ToTile = r.ToTile, Material = r.Material, Kg = r.Kg, Stage = r.Stage == 1 ? 1 : 0, RobotId = r.RobotId });
+                            orders.Add(new HaulOrder { Id = r.Id, FromTile = r.FromTile, ToTile = r.ToTile, Material = r.Material, Kg = r.Kg, Stage = r.Stage == 1 ? 1 : 0, RobotId = r.RobotId, GoAnyway = state.Version >= 57 && r.GoAnyway });
                 if (state.StockTargets != null)
                     foreach (StockTargetRecord r in state.StockTargets)
                         if (r.Tile >= 0 && r.Tile < TileCount && r.Kg > 0.0)

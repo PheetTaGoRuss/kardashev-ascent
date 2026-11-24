@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using KardashevAscent.Simulation.Climate;
 using KardashevAscent.Simulation.Planet;
 using KardashevAscent.Simulation.Robots;
 
@@ -76,6 +77,40 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>The best places for a depot, by the energy per day they save, best first. Empty with no mining orders.</summary>
         public IReadOnlyList<DepotAdvice> DepotSuggestions(int max = 3)
+        {
+            // P3: advice must hold in the coming winter, so it is worked out at the winter cold capacity (the climatology minimum of the next 60 days)
+            double winter = WinterColdShare();
+            if (!HasWeather || winter >= ColdCapacityShare() - 1e-9) return DepotSuggestionsNow(max);
+            adviceColdShareCap = winter; haulPlanCache.Clear();
+            try { return DepotSuggestionsNow(max); }
+            finally { adviceColdShareCap = double.PositiveInfinity; haulPlanCache.Clear(); }
+        }
+
+        double adviceColdShareCap = double.PositiveInfinity;
+        long winterShareDay = long.MinValue; double winterShare = 1.0;
+
+        /// <summary>The share of a battery usable in the coldest hour of the next 60 days at the base, from the climatology and the day-night swing (no weather: the advice cannot know it).</summary>
+        public double WinterColdShare()
+        {
+            long day = (long)Math.Floor(TimeHours / 24.0);
+            if (day == winterShareDay) return winterShare;
+            winterShareDay = day;
+            double coldest = double.MaxValue;
+            for (int h = 0; h < 24 * 60; h += 4) coldest = Math.Min(coldest, DiurnalAirTemperatureAt(BaseTileId, TimeHours + h));
+            winterShare = Robots.RobotBattery.ColdCapacityFactor(Math.Max(Robots.RobotThermal.OperatingMinC, coldest));
+            return winterShare;
+        }
+
+        /// <summary>The share of the usual sunlight the panels can expect in the dusty season of a thin-air world (1 elsewhere): for sizing storage and panels. In a global storm the peak share applies instead.</summary>
+        public double ExpectedSolarShareInDust(bool globalStorm = false)
+        {
+            if (!ThinCo2Air) return 1.0;
+            double clearHalf = OpticalDepthAt(BaseTileId, CurrentMeanAnomaly()) * ThinAirClimate.SeasonFactor(90.0);
+            double tau = globalStorm ? ThinAirClimate.GlobalPeakMin : OpticalDepthAt(BaseTileId, CurrentMeanAnomaly()) * ThinAirClimate.SeasonFactor(270.0) - clearHalf;
+            return SolarShareForExtraTau(Math.Max(0.0, tau));
+        }
+
+        IReadOnlyList<DepotAdvice> DepotSuggestionsNow(int max)
         {
             var result = new List<DepotAdvice>();
             if (Routes == null) return result;

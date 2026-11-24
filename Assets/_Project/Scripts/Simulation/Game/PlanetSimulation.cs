@@ -177,6 +177,7 @@ namespace KardashevAscent.Simulation.Game
             Upkeep.Apply(Workforce, dt, grid.DockServedW, grid.PriorityServedW - networkServedW, topUpW, IsFlaringStar, moving,
                          Materials, LiveAirTemperatureAt(BaseTileId), LiveAirTemperatureAt, shelter.Contains);
             HandleRobotWeather();
+            AccumulateWeatherWaits(dt);
             RobotChargingW = Upkeep.ChargingW;
             Network.SetPowered(!Grid.IsBrownout);
             Workforce.UpdateConnections(dt);

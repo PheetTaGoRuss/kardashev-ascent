@@ -21,6 +21,10 @@ namespace KardashevAscent.Simulation.Logistics
         public List<int> Stops = new List<int>();
         /// <summary>Why the plan no longer holds (a stop lost power, no chain fits the battery), or null. A blocked haul is not offered to robots.</summary>
         public string Blocked;
+        /// <summary>The wait is a forecast storm on the route (P2), not the energy check.</summary>
+        public bool WeatherWait;
+        /// <summary>The player said go anyway: a forecast storm no longer holds this haul (saved; never overrides the energy check).</summary>
+        public bool GoAnyway;
     }
 
     /// <summary>A wish to hold at least some kg of a material at a depot: hauls are generated until it is met.</summary>

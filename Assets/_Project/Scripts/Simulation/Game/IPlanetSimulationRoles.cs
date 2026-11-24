@@ -358,6 +358,10 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>The structured reason behind a haul (0 ok, 1 no route, 2 no stop to start from, 3 no stop to end at, 4 a leg longer than one charge, 5 a planned stop was lost), the energy of its longest leg, one charge, and the lost stop.</summary>
         (int Kind, double NeedWh, double BudgetWh, int StopTile) HaulWhyOf(int haulId);
         IReadOnlyList<int> HaulStops(int haulId);
+        /// <summary>The player overrides a forecast-storm wait on a haul that has not loaded; the energy check still applies.</summary>
+        bool GoAnywayHaul(int haulId);
+        /// <summary>True when the haul waits for a forecast storm (not for energy).</summary>
+        bool HaulWaitsForStorm(int haulId);
         /// <summary>One line on what a haul costs a robot: round-trip energy split into driving, climbing and the heater.</summary>
         string HaulCostText(int fromTile, int toTile, double cargoKg);
 

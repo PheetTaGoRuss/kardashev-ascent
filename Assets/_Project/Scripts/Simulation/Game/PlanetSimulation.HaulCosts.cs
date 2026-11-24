@@ -104,7 +104,7 @@ namespace KardashevAscent.Simulation.Game
         }
 
         /// <summary>Why a haul can or cannot be done: a small structured reason the interface turns into a why? chain (UI stage 5), not text to parse.</summary>
-        public enum HaulWhyKind { Ok, NoRoute, NoStartStop, NoEndStop, LegTooLong, StopLost }
+        public enum HaulWhyKind { Ok, NoRoute, NoStartStop, NoEndStop, LegTooLong, StopLost, StormForecast }
 
         public readonly struct HaulWhy
         {
@@ -160,7 +160,8 @@ namespace KardashevAscent.Simulation.Game
             if (hour == coldShareHour) return coldShare;
             coldShareHour = hour;
             double coldest = double.MaxValue;
-            for (int k = 0; k < 12; k++) coldest = Math.Min(coldest, DiurnalAirTemperatureAt(BaseTileId, TimeHours + k * 2.0));
+            if (HasWeather && ForecastPlanningEnabled) coldest = PessimisticLowC();   // P2: the forecast low for today and tomorrow at the pessimistic bound
+            else for (int k = 0; k < 12; k++) coldest = Math.Min(coldest, DiurnalAirTemperatureAt(BaseTileId, TimeHours + k * 2.0));
             coldShare = RobotBattery.ColdCapacityFactor(Math.Max(RobotThermal.OperatingMinC, coldest));
             return coldShare;
         }
@@ -172,7 +173,7 @@ namespace KardashevAscent.Simulation.Game
             {
                 double best = 0.0;
                 foreach (Robot r in Workforce.Robots) best = Math.Max(best, r.Battery.CapacityWh);
-                return best <= 0.0 ? double.PositiveInfinity : best * (RobotSpecs.ResumeWorkFraction - RobotSpecs.ReturnToChargeFraction) * ColdCapacityShare();   // a robot sets off from the 80 % charge and keeps its 20 % floor
+                return best <= 0.0 ? double.PositiveInfinity : best * (RobotSpecs.ResumeWorkFraction - RobotSpecs.ReturnToChargeFraction) * Math.Min(ColdCapacityShare(), adviceColdShareCap);   // a robot sets off from the 80 % charge and keeps its 20 % floor
             }
         }
 

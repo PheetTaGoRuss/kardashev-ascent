@@ -458,8 +458,13 @@ namespace KardashevAscent.Presentation.UI
                 foreach (var w in waiting)
                 {
                     var chain = new WhyChain();
-                    chain.Set($"Haul {w.Id} is waiting (tile {w.From} to {w.To})", WhyChain.HaulSteps(w.Why.Kind, w.Why.NeedWh, w.Why.BudgetWh, w.Why.StopTile),
-                              "Show depot advice", () => depots.parent?.Q<ScrollView>()?.ScrollTo(depots));
+                    int hid = w.Id;
+                    if (sim.HaulWaitsForStorm(hid))
+                        chain.Set($"Haul {w.Id} waits (tile {w.From} to {w.To})", WhyChain.HaulSteps(w.Why.Kind, w.Why.NeedWh, w.Why.BudgetWh, w.Why.StopTile),
+                                  "Go anyway", () => { sim.GoAnywayHaul(hid); shownWhy = null; });
+                    else
+                        chain.Set($"Haul {w.Id} is waiting (tile {w.From} to {w.To})", WhyChain.HaulSteps(w.Why.Kind, w.Why.NeedWh, w.Why.BudgetWh, w.Why.StopTile),
+                                  "Show depot advice", () => depots.parent?.Q<ScrollView>()?.ScrollTo(depots));
                     depotsWhy.Add(chain);
                 }
             }

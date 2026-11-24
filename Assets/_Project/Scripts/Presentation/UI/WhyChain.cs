@@ -66,6 +66,7 @@ namespace KardashevAscent.Presentation.UI
                 case 3: return new List<string> { "no powered charger or shelter within one charge of the drop (" + $"one charge gives {budgetWh:0} Wh)" };
                 case 4: return new List<string> { $"the haul needs {needWh:0} Wh in one leg, one charge gives {budgetWh:0} Wh", "no powered charger within one charge of the route splits it" };
                 case 5: return new List<string> { $"the charger at tile {stopTile} lost power or was removed", "the staged route no longer holds" };
+                case 6: return new List<string> { $"◐ a storm is forecast in {stopTile} day(s) on the route: planning wind {needWh:0} m/s against a storm threshold of {budgetWh:0} m/s (one sigma pessimistic)", "the haul waits until the forecast clears; the energy check is separate and stays" };
                 default: return new List<string>();
             }
         }
