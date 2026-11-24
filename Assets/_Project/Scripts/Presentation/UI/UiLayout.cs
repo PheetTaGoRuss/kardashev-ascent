@@ -106,6 +106,26 @@ namespace KardashevAscent.Presentation.UI
             {
                 VisualElement root = d.rootVisualElement;
                 if (root == null) continue;
+                // Floating windows sit between the two side panels (the building info on the left, the tile panel on the right) and are narrowed to fit,
+                // so at a large UI size they do not cover them. A window the player has dragged stays where it was put (UI information design, finish).
+                // the side panels live in other documents than the windows; all share one panel space
+                float lo = 12f, hi = root.worldBound.width - 12f;
+                foreach (UIDocument other in documents)
+                {
+                    VisualElement otherRoot = other.rootVisualElement;
+                    if (otherRoot == null) continue;
+                    otherRoot.Query(className: "tile-info").ForEach(r => { if (Shown(r) && r.worldBound.width > 1f) hi = Mathf.Min(hi, r.worldBound.xMin - 8f); });
+                    VisualElement l = otherRoot.Q("left");
+                    if (l != null && Shown(l) && l.worldBound.width > 1f) lo = Mathf.Max(lo, l.worldBound.xMax + 8f);
+                }
+                float room = hi - lo;
+                void Fit(VisualElement w)
+                {
+                    if (w.ClassListContains("drag-pinned") || room < 320f) return;
+                    w.style.maxWidth = room;
+                    w.style.left = lo + room / 2f - root.worldBound.x;   // the stylesheet's centring translate puts the window's middle here
+                }
+                root.Query(className: "workforce").ForEach(Fit);
                 root.Query(className: "workforce").ForEach(Place);
                 VisualElement colony = root.Q("colony");
                 if (colony != null) Place(colony);

@@ -6,6 +6,7 @@ using KardashevAscent.Presentation.UI;
 using UnityEditor;
 using UnityEditor.TestTools.TestRunner.Api;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace KardashevAscent.EditorTools
 {
@@ -290,6 +291,15 @@ namespace KardashevAscent.EditorTools
                 }
                 case "savegame":
                     UnityEngine.Object.FindFirstObjectByType<Presentation.Game.SaveGameController>()?.Save();
+                    return true;
+                case "layoutinfo":
+                    foreach (var doc in UnityEngine.Object.FindObjectsByType<UnityEngine.UIElements.UIDocument>(FindObjectsSortMode.None))
+                    {
+                        var root = doc.rootVisualElement; if (root == null) continue;
+                        var l = root.Q("left"); var r = root.Q(className: "tile-info");
+                        Log($"doc {doc.name}: root {root.worldBound} left {(l == null ? "none" : l.worldBound + " disp=" + l.resolvedStyle.display + " op=" + l.resolvedStyle.opacity)} right {(r == null ? "none" : r.worldBound + " disp=" + r.resolvedStyle.display + " op=" + r.resolvedStyle.opacity)}");
+                        root.Query(className: "workforce").ForEach(w => Log("  window " + w.name + " " + w.worldBound + " pinned=" + w.ClassListContains("drag-pinned") + " maxW=" + w.resolvedStyle.maxWidth));
+                    }
                     return true;
                 case "overlay":
                     Presentation.Planet.InstrumentOverlay.Set(argument != "off");
