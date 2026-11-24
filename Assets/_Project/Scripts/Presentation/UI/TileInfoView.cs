@@ -30,7 +30,7 @@ namespace KardashevAscent.Presentation.UI
         static readonly string[] MonthNames = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12" };
 
         VisualElement panelRoot, monthly, monthLabels, groundActions;
-        Label ground, landingText;
+        Label ground, landingText, weatherHead, weatherNow, weatherForecast;
         VisualElement landingActions;
         string groundShape, landingShape;
         Label title, place, sunlight, bestLabel, bestCaption, sunPathCaption, monthlyCaption, monthlyHover, legend1, legend2;
@@ -69,6 +69,16 @@ namespace KardashevAscent.Presentation.UI
             monthly = root.Q("monthly");
             monthLabels = root.Q("month-labels");
             ground = root.Q<Label>("ground");
+            // the weather strip sits above the ground section (Weather W6)
+            if (ground != null && ground.parent != null)
+            {
+                VisualElement parent = ground.parent;
+                int at = Math.Max(0, parent.IndexOf(ground) - 1);   // before the GROUND heading
+                weatherHead = new Label("WEATHER"); weatherHead.AddToClassList("heading"); weatherHead.AddToClassList("section");
+                weatherNow = new Label(); weatherNow.AddToClassList("caption"); weatherNow.AddToClassList("wrap");
+                weatherForecast = new Label(); weatherForecast.AddToClassList("caption"); weatherForecast.AddToClassList("wrap");
+                parent.Insert(at, weatherForecast); parent.Insert(at, weatherNow); parent.Insert(at, weatherHead);
+            }
             landingText = root.Q<Label>("landing-text");
             landingActions = root.Q("landing-actions");
             landingShape = null;
@@ -341,6 +351,7 @@ namespace KardashevAscent.Presentation.UI
                 : !surveyed ? (sim.IsSurveyOrdered(tile) ? $"Surveying {sim.SurveyProgress(tile) * 100.0:0} %"
                                : CoresWaiting(sim, tile) ? "Cores waiting" : Marks.Glyph(Mark.Unknown) + " unknown · not surveyed, only rock known")
                 : sim.IsRoughSurvey(tile) ? "Surveyed (rough ±)" : "Surveyed";
+            RefreshWeather(sim, tile);
 
             string shape = $"{tile}|{water}|{surveyed}|{sim.IsSurveyOrdered(tile)}|{CoresWaiting(sim, tile)}|{map.DeepScanned}" +
                            $"|{sim.PassageAt(tile)}|{sim.PassageOrdered(tile)}|{(int)(sim.PassageProgress(tile) * 100.0)}|{(int)(sim.Materials[Material.Iron] / 100.0)}";
@@ -538,6 +549,29 @@ namespace KardashevAscent.Presentation.UI
                              SunPath.Day(info.Latitude, planet.Obliquity, day),
                              SunPath.Day(info.Latitude, 0.0, day),
                              info.Latitude);
+        }
+
+        /// <summary>Today's weather and a forecast, with the marks: ● measured (the lander, a Research Station, a robot on the tile), ◐ climatology or forecast with its range.</summary>
+        void RefreshWeather(IPlanetSimulation sim, int tile)
+        {
+            if (weatherNow == null) return;
+            bool show = sim.HasWeather && !sim.GetTile(tile).IsWater;
+            foreach (VisualElement e in new VisualElement[] { weatherHead, weatherNow, weatherForecast }) e.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!show) return;
+            WeatherKnowledge k = sim.WeatherKnownAt(tile);
+            string Mk(KardashevAscent.Simulation.Planet.KnowledgeEstimate e) => Marks.Glyph(Marks.Of(e));
+            string Rng(KardashevAscent.Simulation.Planet.KnowledgeEstimate e, string f) => e.IsExact ? "" : $" ±{e.HalfRange.ToString(f)}";
+            weatherNow.text = $"Now {Mk(k.AirC)} {k.AirC.Value:0.#} °C{Rng(k.AirC, "0.#")} · wind {Mk(k.WindMs)} {k.WindMs.Value:0.#} m/s{Rng(k.WindMs, "0.#")} · light {Mk(k.CloudFactor)} {k.CloudFactor.Value * 100.0:0} %{Rng(k.CloudFactor, "0.00")}" +
+                              (sim.StormAt(tile) && k.Measured ? "\nSTORM: robots shelter" : "") + (k.Measured ? "" : "\n◐ climatology: measure it with a robot or a Research Station on this tile.");
+            var lines = new System.Collections.Generic.List<string>();
+            for (int d = 1; d <= PlanetSimulation.MaxForecastDays; d++)
+            {
+                WeatherKnowledge? f = sim.ForecastAt(tile, d);
+                if (!f.HasValue) break;
+                lines.Add($"+{d} d {Marks.Glyph(Mark.Estimated)} {f.Value.AirC.Value:0} ±{f.Value.AirC.HalfRange:0.#} °C · wind {f.Value.WindMs.Value:0.#} ±{f.Value.WindMs.HalfRange:0.#}");
+            }
+            weatherForecast.text = lines.Count == 0 ? (k.Measured ? "" : "Forecast: needs today measured here.") : "Forecast (one standard deviation):\n" + string.Join("\n", lines);
+            weatherForecast.style.display = show && weatherForecast.text.Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         void Refresh(IPlanetSimulation sim, int tile)

@@ -668,6 +668,9 @@ namespace KardashevAscent.Simulation.Game
         WeatherSample WeatherAt(int tileId);
         bool HasWeather { get; }
         bool StormAt(int tileId);
+        bool WeatherMeasuredAt(int tileId);
+        WeatherKnowledge WeatherKnownAt(int tileId);
+        WeatherKnowledge? ForecastAt(int tileId, int daysAhead);
         double StormThresholdMs(int tileId);
         /// <summary>Put an event (a save, a milestone) into the field log; its priority follows its kind.</summary>
         void NoteEvent(string subject, string quantity, string text);

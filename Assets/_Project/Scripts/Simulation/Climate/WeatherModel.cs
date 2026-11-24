@@ -147,6 +147,24 @@ namespace KardashevAscent.Simulation.Climate
             return table[i0][month] + f * (table[i0 + 1][month] - table[i0][month]);
         }
 
+        /// <summary>How much and how persistently the weather varies at a latitude and time of year (the NASA table, interpolated).</summary>
+        public readonly struct Spread
+        {
+            public readonly double CloudSd, CloudRho, TemperatureSd, TemperatureRho, WindMean, WindSd, WindRho, PressureSd, PressureRho;
+            public Spread(double cs, double cr, double ts, double tr, double wm, double ws, double wr, double ps, double pr)
+            { CloudSd = cs; CloudRho = cr; TemperatureSd = ts; TemperatureRho = tr; WindMean = wm; WindSd = ws; WindRho = wr; PressureSd = ps; PressureRho = pr; }
+        }
+
+        public Spread SpreadAt(double latRad, double yearFraction)
+        {
+            int month = (int)Math.Floor((yearFraction - Math.Floor(yearFraction)) * 12.0) % 12;
+            double mean = Row(WeatherVariabilityTable.WindMean, latRad, month), p98 = Row(WeatherVariabilityTable.WindP98, latRad, month);
+            return new Spread(cloudsKnown ? Row(WeatherVariabilityTable.CloudSd, latRad, month) : 0.0, Row(WeatherVariabilityTable.CloudRho, latRad, month),
+                              Row(WeatherVariabilityTable.TemperatureSd, latRad, month), Row(WeatherVariabilityTable.TemperatureRho, latRad, month),
+                              mean, Math.Max(0.1, (p98 - mean) / Z98), Row(WeatherVariabilityTable.WindRho, latRad, month),
+                              Row(WeatherVariabilityTable.PressureSd, latRad, month) * pressureScale, Row(WeatherVariabilityTable.PressureRho, latRad, month));
+        }
+
         /// <summary>The wind speed above which a day is a storm day here (the local 98th percentile), m/s.</summary>
         public static double StormWindMs(double latRad, double yearFraction) => Row(WeatherVariabilityTable.WindP98, latRad, (int)Math.Floor((yearFraction - Math.Floor(yearFraction)) * 12.0) % 12);
 
