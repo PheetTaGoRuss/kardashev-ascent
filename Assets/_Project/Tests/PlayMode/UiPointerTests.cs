@@ -265,5 +265,42 @@ namespace KardashevAscent.PlayModeTests
             yield return ClickAt(auto.worldBound.center);
             Assert.AreEqual(KardashevAscent.Simulation.Planet.FitPuzzle.AutoFitShare, sim.ExperimentRangeShare(ExperimentKind.Gravity), 1e-9);
         }
+
+        // ---- epistemic marks ----
+
+        [UnityTest]
+        public IEnumerator Marks_AnEstimateShowsItsRangeAndAMeasureLink_AMeasuredValueShowsNeither_AndTheLinkIsPressedByPointer()
+        {
+            var label = new ValueLabel();
+            label.style.position = Position.Absolute; label.style.left = 10; label.style.top = 10;
+            doc.rootVisualElement.Add(label);
+            int pressed = 0;
+            label.SetEstimate(new KnowledgeEstimate(78000.0, 49000.0), "0.#", "kPa", 0.001, "Measure", () => pressed++, "Order the barometer");
+            for (int i = 0; i < 4; i++) yield return null;
+            StringAssert.Contains("◐ estimate", label.Shown);
+            StringAssert.Contains("about 78 kPa", label.Shown);
+            StringAssert.Contains("29 to 127", label.Shown);
+            StringAssert.Contains("Measure ›", label.Shown);
+            Button link = label.Query<Button>().ToList().First(b => b.text.StartsWith("Measure"));
+            yield return ClickAt(link.worldBound.center);
+            Assert.AreEqual(1, pressed, "the Measure link opens the experiment");
+            label.SetEstimate(new KnowledgeEstimate(93900.0, 0.0), "0.#", "kPa", 0.001, "Measure", () => pressed++);
+            yield return null;
+            StringAssert.Contains("● measured", label.Shown);
+            StringAssert.DoesNotContain("Measure ›", label.Shown);
+            StringAssert.DoesNotContain(" to ", label.Shown);
+        }
+
+        [Test]
+        public void Marks_EveryMarkIsAShapeAndAWord()
+        {
+            foreach (Mark m in System.Enum.GetValues(typeof(Mark)))
+            {
+                Assert.IsNotEmpty(Marks.Glyph(m));
+                Assert.IsNotEmpty(Marks.Word(m));
+                Assert.IsNotEmpty(Marks.Tip(m));
+            }
+            Assert.AreEqual(5, System.Enum.GetValues(typeof(Mark)).Length);
+        }
     }
 }
