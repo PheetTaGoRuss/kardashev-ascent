@@ -11,8 +11,14 @@ namespace KardashevAscent.Simulation.Tests.UI
     {
         static string Root()
         {
-            string dir = AppContext.BaseDirectory;
-            while (dir != null && !Directory.Exists(Path.Combine(dir, "Assets", "_Project"))) dir = Path.GetDirectoryName(dir);
+            // Unity runs tests from the project folder; the command-line runner from its bin folder.
+            foreach (string start in new[] { Environment.CurrentDirectory, AppContext.BaseDirectory })
+            {
+                string d = start;
+                while (d != null && !Directory.Exists(Path.Combine(d, "Assets", "_Project"))) d = Path.GetDirectoryName(d);
+                if (d != null) return Path.Combine(d, "Assets", "_Project");
+            }
+            string dir = null;
             if (dir == null) Assert.Ignore("project folder not found");
             return Path.Combine(dir, "Assets", "_Project");
         }
