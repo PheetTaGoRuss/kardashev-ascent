@@ -426,6 +426,14 @@ namespace KardashevAscent.Simulation.Game
         bool CancelJob(int index);
     }
 
+    /// <summary>The colony's knowledge store (K1): what is known, with its source, confidence and age. Read only for the display.</summary>
+    public interface IColonyKnowledge
+    {
+        Knowledge.KnowledgeBase KnowledgeStore { get; }
+        /// <summary>The most recent discrepancies between records, newest last (for the Why? chain).</summary>
+        System.Collections.Generic.List<Knowledge.KnowledgeEvent> RecentDiscrepancies { get; }
+    }
+
     /// <summary>What a panel would make and what the sky is doing (read only, safe from a worker thread).</summary>
     public interface ISolarAdvice
     {

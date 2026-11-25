@@ -377,6 +377,26 @@ namespace KardashevAscent.EditorTools
                     Log($"windturbine placed={ok} tile={tile} status={(tile >= 0 ? sim.WindTurbineStatus(tile) : "-")} windPowerW={sim.WindPowerW():0}");
                     return true;
                 }
+                case "knowdemo":
+                {
+                    // knowdemo: a first-measured report (air pressure, experiment and fit), a discrepancy (two measured gravity records far apart) and a stale value (a 40-day-old hub wind record).
+                    var sim = Runner()?.Simulation as KardashevAscent.Simulation.Game.PlanetSimulation;
+                    if (sim == null) return true;
+                    var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+                    sim.GetType().GetMethod("LearnExperimentForTests", flags).Invoke(sim, new object[] { KardashevAscent.Simulation.Planet.ExperimentKind.AirPressure });
+                    sim.GetType().GetMethod("OnExperimentFinished", flags).Invoke(sim, new object[] { KardashevAscent.Simulation.Planet.ExperimentKind.AirPressure });
+                    for (int h = 0; h < 26; h++) sim.Tick(1.0);
+                    sim.AnswerFitPuzzle(KardashevAscent.Simulation.Planet.ExperimentKind.AirPressure, sim.PuzzleFor(KardashevAscent.Simulation.Planet.ExperimentKind.AirPressure).Best);
+                    var kb = sim.KnowledgeStore; double t = sim.TimeHours;
+                    var planet = KardashevAscent.Simulation.Knowledge.Subject.Planet;
+                    kb.Add(new KardashevAscent.Simulation.Knowledge.Observation(planet, KardashevAscent.Simulation.Knowledge.Quantity.SurfaceGravity, 9.8, 0.05, KardashevAscent.Simulation.Knowledge.Confidence.High, new KardashevAscent.Simulation.Knowledge.Source(KardashevAscent.Simulation.Knowledge.SourceKind.MeasuredByColony), t, t), t);
+                    kb.Add(new KardashevAscent.Simulation.Knowledge.Observation(planet, KardashevAscent.Simulation.Knowledge.Quantity.SurfaceGravity, 11.4, 0.05, KardashevAscent.Simulation.Knowledge.Confidence.High, new KardashevAscent.Simulation.Knowledge.Source(KardashevAscent.Simulation.Knowledge.SourceKind.Robot, 2), t + 0.5, t + 0.5), t + 0.5);
+                    var baseTile = KardashevAscent.Simulation.Knowledge.Subject.Tile(sim.BaseTileId);
+                    kb.Add(new KardashevAscent.Simulation.Knowledge.Observation(baseTile, KardashevAscent.Simulation.Knowledge.Quantity.HubWindSpeed, 6.1, 0.5, KardashevAscent.Simulation.Knowledge.Confidence.High, new KardashevAscent.Simulation.Knowledge.Source(KardashevAscent.Simulation.Knowledge.SourceKind.MeasuredByColony), t - 24.0 * 40.0, t), t);
+                    for (int h = 0; h < 26; h++) sim.Tick(1.0);
+                    Log("knowdemo: " + string.Join(" | ", System.Linq.Enumerable.Select(System.Linq.Enumerable.Where(sim.OperationsLog, o => o.Priority >= KardashevAscent.Simulation.Operations.LogPriority.Info && (o.Quantity == "Measured" || o.Quantity == "Discrepancy" || o.Quantity == "Value stale" || o.Quantity == "Range narrowed")), o => o.Quantity + ": " + o.Text)));
+                    return true;
+                }
                 case "chemlog":
                 {
                     // chemlog: an iron pile on an open depot tile and sodium in a wreck, five days on: the chemistry log entries and the stores chain.
@@ -741,6 +761,8 @@ namespace KardashevAscent.EditorTools
                 }
                 case "playtests":
                 {
+                    // A PlayMode run with script compile errors freezes the editor (Safe Mode prompt): refuse it, and say why.
+                    if (EditorUtility.scriptCompilationFailed) { Log("playtests NOT started: scripts do not compile (see the Console)"); return true; }
                     // Run every PlayMode test (Play must be off); the result goes to the log (TESTS passed=... failed=...).
                     SessionState.SetBool("DevDriver.PlayTestsPending", true);
                     var api = ScriptableObject.CreateInstance<TestRunnerApi>();

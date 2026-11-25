@@ -144,5 +144,18 @@ namespace KardashevAscent.Simulation.Tests.Knowledge
             TestContext.WriteLine($"2 years: {sim.KnowledgeStore.TotalRecords()} records held ({sim.KnowledgeStore.Count} counted), {sim.KnowledgeStore.Keys().Count} series; with knowledge {sw.Elapsed.TotalMilliseconds:0} ms, without {swOff.Elapsed.TotalMilliseconds:0} ms: {(sw.Elapsed.TotalMilliseconds - swOff.Elapsed.TotalMilliseconds) / (24.0 * 365 * 2):0.000} ms per tick extra");
             Assert.Less(sim.KnowledgeStore.TotalRecords(), 20_000);
         }
+
+        [Test]
+        public void AStaleValue_IsReportedOnce_WhenTheDayTurns()
+        {
+            var sim = Make();
+            sim.Tick(30.0);
+            double t = sim.TimeHours;
+            sim.KnowledgeStore.Add(new Observation(Subject.Tile(sim.BaseTileId), Quantity.HubWindSpeed, 6.1, 0.5, Confidence.High, new Source(SourceKind.MeasuredByColony), t - 24.0 * 40.0, t), t);   // observed 40 days ago, known now
+            sim.Tick(26.0);
+            Assert.AreEqual(1, sim.OperationsLog.Count(o => o.Quantity == "Value stale"));
+            sim.Tick(48.0);
+            Assert.AreEqual(1, sim.OperationsLog.Count(o => o.Quantity == "Value stale"), "once");
+        }
     }
 }
