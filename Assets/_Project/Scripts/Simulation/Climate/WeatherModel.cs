@@ -36,7 +36,7 @@ namespace KardashevAscent.Simulation.Climate
         public const double MinCellDeg = 8.0, MaxCellDeg = 45.0;
         /// <summary>The Gaussian z-score of the 98th percentile.</summary>
         public const double Z98 = 2.0537;
-        public enum Channel { Cloud = 0, Temperature = 1, Pressure = 2, Wind = 3 }
+        public enum Channel { Cloud = 0, Temperature = 1, Pressure = 2, Wind = 3, Humidity = 4 }
 
         readonly int seed;
         readonly double cellRad;

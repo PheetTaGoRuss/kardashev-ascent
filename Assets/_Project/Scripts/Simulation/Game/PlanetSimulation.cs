@@ -178,6 +178,7 @@ namespace KardashevAscent.Simulation.Game
                          Materials, LiveAirTemperatureAt(BaseTileId), LiveAirTemperatureAt, shelter.Contains);
             HandleRobotWeather();
             ExposeWrecks();
+            StepChemistry(dt);
             AccumulateWeatherWaits(dt);
             RobotChargingW = Upkeep.ChargingW;
             Network.SetPowered(!Grid.IsBrownout);

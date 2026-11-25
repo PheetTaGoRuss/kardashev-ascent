@@ -358,6 +358,8 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>The structured reason behind a haul (0 ok, 1 no route, 2 no stop to start from, 3 no stop to end at, 4 a leg longer than one charge, 5 a planned stop was lost), the energy of its longest leg, one charge, and the lost stop.</summary>
         (int Kind, double NeedWh, double BudgetWh, int StopTile) HaulWhyOf(int haulId);
         IReadOnlyList<int> HaulStops(int haulId);
+        /// <summary>What the weather does to the stock on a tile, as lines (rate per year, marked estimated where humidity is not measured).</summary>
+        System.Collections.Generic.IReadOnlyList<string> StorageNotes(int tileId);
         /// <summary>The wrecks as lines for the player: cause, what lies there, and the state of the recovery haul.</summary>
         System.Collections.Generic.IReadOnlyList<string> WreckLines();
         /// <summary>The player overrides a forecast-storm wait on a haul that has not loaded; the energy check still applies.</summary>

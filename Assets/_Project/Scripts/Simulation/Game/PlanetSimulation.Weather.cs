@@ -11,12 +11,14 @@ namespace KardashevAscent.Simulation.Game
     public readonly struct WeatherSample
     {
         public readonly double CloudFactor, AirC, PressurePa, WindMs, DustTau;
+        /// <summary>Relative humidity at 2 m, percent (M1).</summary>
+        public readonly double RhPercent;
         /// <summary>A wind storm: the wind is above the local 98th percentile. Robots stop outdoor work.</summary>
         public readonly bool Storm;
         /// <summary>A dust storm: the extra optical depth is above <see cref="PlanetSimulation.DustStormTau"/> (it dims the panels but does not stop robots).</summary>
         public readonly bool DustStorm;
-        public WeatherSample(double cloud, double airC, double pressurePa, double windMs, double dustTau, bool storm, bool dustStorm = false)
-        { CloudFactor = cloud; AirC = airC; PressurePa = pressurePa; WindMs = windMs; DustTau = dustTau; Storm = storm; DustStorm = dustStorm; }
+        public WeatherSample(double cloud, double airC, double pressurePa, double windMs, double dustTau, bool storm, bool dustStorm = false, double rhPercent = 0.0)
+        { RhPercent = rhPercent; CloudFactor = cloud; AirC = airC; PressurePa = pressurePa; WindMs = windMs; DustTau = dustTau; Storm = storm; DustStorm = dustStorm; }
     }
 
     public sealed partial class PlanetSimulation
@@ -150,7 +152,7 @@ namespace KardashevAscent.Simulation.Game
             }
             double cloud = Math.Max(0.02, Math.Min(1.2, CloudFactor(tileId, mean) + a.CloudFactor));
             return new WeatherSample(cloud, AirTemperatureAt(tileId, mean) + a.TemperatureK, Math.Max(0.0, PressurePaAt(tileId) * pressureFactor + a.PressurePa),
-                                     a.WindMs, dust, a.Storm, dustStorm);
+                                     a.WindMs, dust, a.Storm, dustStorm, HumidityAt(tileId));
         }
     }
 }

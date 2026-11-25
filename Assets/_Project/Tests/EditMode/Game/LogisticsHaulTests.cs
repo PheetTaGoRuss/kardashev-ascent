@@ -18,7 +18,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Math.PI / 180.0,
             282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0);
 
-        static PlanetSimulation Make() => new PlanetSimulation(Sphere, Surface, Earthlike) { LogisticsEnabled = true };
+        static PlanetSimulation Make() => new PlanetSimulation(Sphere, Surface, Earthlike) { LogisticsEnabled = true, ChemistryEnabled = false };   // this test counts mass without the environment
 
         static int LandNeighbour(PlanetSimulation sim, int skip = 0) =>
             Sphere.Neighbors[sim.BaseTileId].Where(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n)).Skip(skip).First();
