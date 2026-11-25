@@ -688,7 +688,7 @@ namespace KardashevAscent.EditorTools
                     double ironBefore = sim.Materials[Simulation.Resources.Material.Iron];
                     sim.Materials.Add(Simulation.Resources.Material.Rust, 200.0);
                     string order = sim.OrderRefine(Simulation.Resources.RefineProcess.IronFromRust);
-                    for (int h = 0; h < 130; h++) sim.Tick(1.0);
+                    for (int h = 0; h < 900; h++) sim.Tick(1.0);
                     Log($"ironcell order={order ?? "ok"} iron {ironBefore:0.0} -> {sim.Materials[Simulation.Resources.Material.Iron]:0.0} kg, rust left {sim.Materials[Simulation.Resources.Material.Rust]:0.0} kg :: " + string.Join(" || ", System.Linq.Enumerable.Select(System.Linq.Enumerable.Where(sim.OperationsLog, o => o.Text.Contains("Iron from rust")), o => o.Text)));
                     return true;
                 }
@@ -712,6 +712,7 @@ namespace KardashevAscent.EditorTools
                     inv.Remove(Simulation.Logistics.PlaceId.Wreck(w.Id));
                     sim.LogisticsEnabled = true; sim.Tick(1.0);
                     string after = sim.RebuildBlocker(w.Id);
+                    foreach (var kv in Simulation.Robots.WreckModel.BillOf(Simulation.Robots.RobotKind.General, false)) sim.Materials.Add(kv.Key, kv.Value);   // the recovery brought the metals home
                     string order = sim.OrderRebuild(w.Id);
                     int robots = sim.Workforce.Robots.Count;
                     for (int h = 0; h < 12; h++) sim.Tick(1.0);

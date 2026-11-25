@@ -206,5 +206,19 @@ namespace KardashevAscent.Simulation.Tests.Game
             sim.SetAutoRefine(RefineProcess.Aluminium, 0.0);
             Assert.AreEqual(0.0, sim.StockTarget(sim.BaseTileId, Material.Aluminium), 1e-12);
         }
+
+        [Test]
+        public void AnIronBatch_TurnsRustIntoIron_ConservesMass_AndVentsOxygenAndSteam()
+        {
+            var (sim, cell) = WithCell();
+            sim.Materials.Add(Material.Rust, 100.0);
+            double before = Mass(sim, Material.Rust, Material.Iron, Material.Oxygen);
+            Assert.IsNull(sim.OrderRefine(RefineProcess.IronFromRust));
+            Run(sim, 160.0);
+            RefineRecipe r = Refining.Of(RefineProcess.IronFromRust);
+            Assert.AreEqual(r.OutputKg, sim.Materials[Material.Iron], 1e-6, "20 kg of iron");
+            Assert.AreEqual(r.VentedKg, sim.VentedKg(Material.Oxygen), 1e-6, "the oxygen and the steam are accounted for");
+            Assert.AreEqual(before, Mass(sim, Material.Rust, Material.Iron, Material.Oxygen), 1e-6, "rust in = iron + gas + rust left");
+        }
     }
 }
