@@ -28,6 +28,7 @@ namespace KardashevAscent.Presentation.UI
             style.marginTop = 4; style.marginBottom = 6;
             var madeLabel = new Label("MADE"); madeLabel.AddToClassList("caption");
             var usedLabel = new Label("WHERE IT GOES"); usedLabel.AddToClassList("caption");
+            usedLabel.tooltip = "Served in this order when power is short: colony baseline, robots below 20 % and the network, other robot charging, construction, the colony's growth. A shortage is shed from the bottom.";
             foreach (Label l in new[] { topLegend, bottomLegend })
             {
                 l.AddToClassList(UiType.Secondary);

@@ -481,7 +481,8 @@ namespace KardashevAscent.Presentation.UI
                     {
                         $"the {name} deposit on tile {exTile} held about {ex.HeldKg / 1000.0:0} t and it is all mined",
                         "a mine stops when nothing is left; its order was removed",
-                        best.Count > 0 ? "other known deposits: " + string.Join(", ", best.Select(b => $"tile {b.Tile} ({b.OreGrade.Value * 100.0:0.##} % ore, {b.ShareLeft * 100.0:0} % left)")) : "no other known deposit: survey more tiles",
+                        Comminution.NeedsConcentrating(m, DepositMap.TypicalOreGrade(m) * sim.DepositShareLeft(exTile, m)) || DepositMap.TypicalOreGrade(m) < 0.5 ? $"mining {name} also paid {Comminution.KWhPerTonneProduct(m, DepositMap.TypicalOreGrade(m)):0} kWh of crushing and grinding per tonne at a typical ore grade (Bond's law): a poorer deposit costs more" : "this ore needs no grinding",
+                    best.Count > 0 ? "other known deposits: " + string.Join(", ", best.Select(b => $"tile {b.Tile} ({b.OreGrade.Value * 100.0:0.##} % ore, {b.ShareLeft * 100.0:0} % left)")) : "no other known deposit: survey more tiles",
                     };
                     chain.Set($"Mine on tile {exTile} stopped: {name} used up", steps, "Find another deposit", () => { if (best.Count > 0) sim.OrderSurvey(best[0].Tile); SystemTabs.Open("research"); });
                     depotsWhy.Add(chain);

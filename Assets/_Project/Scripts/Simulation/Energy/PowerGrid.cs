@@ -20,10 +20,16 @@ namespace KardashevAscent.Simulation.Energy
         public readonly double PriorityServedW;
         /// <summary>Power the lander's RTGs gave robots charging at the lander, W.</summary>
         public readonly double DockServedW;
+        /// <summary>Power that reached the other robot charging (above 20 %), W (version 67: served before the colony's growth).</summary>
+        public readonly double TopUpServedW;
+        /// <summary>Power that reached the colony's baseline (life support), W.</summary>
+        public readonly double BaselineServedW;
 
         public GridStep(double solarW, double rtgW, double demandW, double servedW,
-                        double chargeW, double dischargeW, double curtailedW, double priorityServedW = 0.0, double dockServedW = 0.0)
+                        double chargeW, double dischargeW, double curtailedW, double priorityServedW = 0.0, double dockServedW = 0.0, double topUpServedW = 0.0, double baselineServedW = 0.0)
         {
+            TopUpServedW = topUpServedW;
+            BaselineServedW = baselineServedW;
             PriorityServedW = priorityServedW;
             DockServedW = dockServedW;
             SolarW = solarW;
@@ -62,6 +68,8 @@ namespace KardashevAscent.Simulation.Energy
         public Battery Battery { get; }
         /// <summary>Power the colony asks for, W.</summary>
         public double DemandW { get; set; }
+        /// <summary>The colony's baseline load (life support), W: served first of all but the lander dock (load order, decided 2026-11-25).</summary>
+        public double BaselineW { get; set; }
         public int RtgUnits { get; set; }
         public double RtgUnitStartW { get; }
         public GridStep Last { get; private set; }
@@ -79,7 +87,7 @@ namespace KardashevAscent.Simulation.Energy
         /// <paramref name="dockLoadW"/> (robots charging at the lander) is served before everything else, straight from
         /// the lander's RTGs and never more than they make, so a robot can always recover even in a brownout (D10).
         /// </summary>
-        public GridStep Step(double solarW, double hours, double yearsSinceLanding, double priorityLoadW = 0.0, double dockLoadW = 0.0)
+        public GridStep Step(double solarW, double hours, double yearsSinceLanding, double priorityLoadW = 0.0, double dockLoadW = 0.0, double topUpLoadW = 0.0)
         {
             if (hours <= 0.0)
                 return Last;
@@ -89,13 +97,19 @@ namespace KardashevAscent.Simulation.Energy
             double dock = Math.Min(rtgW, Math.Max(0.0, dockLoadW));
             double generation = solarW + rtgW - dock;
             double demand = Math.Max(0.0, DemandW);
-            double total = demand + priority;
+            double topUp = Math.Max(0.0, topUpLoadW);
+            double baseline = Math.Min(demand, Math.Max(0.0, BaselineW));
+            double total = demand + priority + topUp;
 
-            double served, priorityServed, charge = 0.0, discharge = 0.0, curtailed = 0.0;
+            // Load order (rule, director's delegate 2026-11-25): the baseline, robots charging below 20 % and the colony's other priority loads,
+            // the other robot charging, then the colony's growth above its baseline. A brownout sheds from the bottom up.
+            double served, priorityServed, topUpServed, baselineServed, charge = 0.0, discharge = 0.0, curtailed = 0.0;
             if (generation >= total)
             {
                 served = demand;
                 priorityServed = priority;
+                topUpServed = topUp;
+                baselineServed = baseline;
                 double surplus = generation - total;
                 charge = Battery.Charge(surplus, hours);
                 curtailed = surplus - charge;
@@ -104,11 +118,17 @@ namespace KardashevAscent.Simulation.Energy
             {
                 discharge = Battery.Discharge(total - generation, hours);
                 double available = generation + discharge;
-                served = Math.Min(demand, available);
-                priorityServed = Math.Max(0.0, available - served);
+                baselineServed = Math.Min(baseline, available);
+                double left = available - baselineServed;
+                priorityServed = Math.Min(priority, left);
+                left -= priorityServed;
+                topUpServed = Math.Min(topUp, left);
+                left -= topUpServed;
+                double growthServed = Math.Min(demand - baseline, left);
+                served = baselineServed + growthServed;
             }
 
-            Last = new GridStep(solarW, rtgW, demand, served, charge, discharge, curtailed, priorityServed, dock);
+            Last = new GridStep(solarW, rtgW, demand, served, charge, discharge, curtailed, priorityServed, dock, topUpServed, baselineServed);
             if (Last.IsBrownout != IsBrownout)
             {
                 IsBrownout = Last.IsBrownout;

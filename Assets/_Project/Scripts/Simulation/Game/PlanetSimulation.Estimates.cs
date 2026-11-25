@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using KardashevAscent.Simulation.Robots;
 using KardashevAscent.Simulation.Electrical;
 using KardashevAscent.Simulation.Planet;
 using KardashevAscent.Simulation.Resources;
@@ -97,6 +99,36 @@ namespace KardashevAscent.Simulation.Game
                     list.Add((t, OreGradeEstimate(t, material), Deposits.RemainingShare(t, material)));
             list.Sort((a, b) => (b.OreGrade.Value * b.ShareLeft).CompareTo(a.OreGrade.Value * a.ShareLeft));
             return list.GetRange(0, Math.Min(count, list.Count));
+        }
+
+        /// <summary>Serve the chargers on each island from its own sources, shared in proportion to what each asked; the rest is curtailed (no battery on an island).</summary>
+        Dictionary<int, double> ServeIslands(double dt, out double generatedW, out double servedW, out double curtailedW)
+        {
+            generatedW = servedW = curtailedW = 0.0;
+            if (!WiredGrid) return null;
+            var requests = Upkeep.TakeIslandRequests(Workforce, tile => IslandIdOf(tile) >= 0);
+            var offers = new Dictionary<int, double>();
+            var seenIslands = new HashSet<int>();
+            foreach (var b in WireableBuildings())
+            {
+                if (!IsWireOutput(b.Type)) continue;
+                int id = IslandIdOf(b.Tile);
+                if (id < 0 || !seenIslands.Add(id)) continue;
+                double gen = IslandGenerationW(b.Tile);
+                generatedW += gen;
+                var here = new List<int>();
+                double total = 0.0;
+                foreach (var kv in requests)
+                {
+                    Robot r = Workforce.GetRobot(kv.Key);
+                    if (r != null && r.Facility.HasValue && IslandIdOf(r.Facility.Value.Tile) == id) { here.Add(kv.Key); total += kv.Value; }
+                }
+                double share = total > 0.0 ? Math.Min(1.0, gen / total) : 0.0;
+                foreach (int rid in here) { offers[rid] = requests[rid] * share; servedW += requests[rid] * share; requests.Remove(rid); }
+                curtailedW += Math.Max(0.0, gen - total * share);
+            }
+            foreach (var kv in requests) offers[kv.Key] = 0.0;   // an island with no source serves nothing
+            return offers;
         }
 
         public double DepositShareLeft(int tileId, Material material) => Deposits.RemainingShare(tileId, material);

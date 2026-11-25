@@ -39,6 +39,23 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>Charging power robots took in the last <see cref="Apply"/>, W.</summary>
         public double ChargingW { get; private set; }
 
+        /// <summary>
+        /// Take the requests of robots charging at facilities whose tile is on an island out of the lander grid's three pools (they are served from the island instead).
+        /// Returns each robot's request, W; the pools and their totals no longer include them.
+        /// </summary>
+        public Dictionary<int, double> TakeIslandRequests(Workforce workforce, System.Func<int, bool> tileOnIsland)
+        {
+            var taken = new Dictionary<int, double>();
+            foreach (Robot r in workforce.Robots)
+            {
+                if (r.Activity != RobotActivity.Charging || !r.Facility.HasValue || !tileOnIsland(r.Facility.Value.Tile)) continue;
+                if (dockRequest.TryGetValue(r.Id, out double d)) { taken[r.Id] = d; dockRequest.Remove(r.Id); DockRequestW -= d; }
+                else if (criticalRequest.TryGetValue(r.Id, out double c)) { taken[r.Id] = c; criticalRequest.Remove(r.Id); CriticalRequestW -= c; }
+                else if (topUpRequest.TryGetValue(r.Id, out double t)) { taken[r.Id] = t; topUpRequest.Remove(r.Id); TopUpRequestW -= t; }
+            }
+            return taken;
+        }
+
         /// <summary>Charge a robot keeps to climb back to the nearest charger: the climb from its tile up to the charger's height, at the high end of the relief estimate.</summary>
         double ClimbReserveWh(Movement movement, Robot r)
         {
@@ -64,8 +81,12 @@ namespace KardashevAscent.Simulation.Robots
             foreach (Robot r in workforce.Robots)
             {
                 double toCharger = movement != null ? movement.HoursToChargerFor(r)[r.Tile] / r.Attribute(RobotAttribute.Speed) : 0.0;
+                // a robot outdoors on a cold world will hold only the cold capacity once its battery has cooled to the heater's limit (the energy still "in" a warm battery is not all usable)
+                double expectedCold = !r.Sheltered && r.HeaterW > 0.0 ? Math.Min(r.Battery.ColdFactor, RobotBattery.ColdCapacityFactor(RobotThermal.OperatingMinC)) : r.Battery.ColdFactor;
+                r.ExpectedColdFactor = expectedCold;
+                r.ColdLockWh = Math.Max(0.0, r.Battery.CapacityWh * (r.Battery.ColdFactor - expectedCold));
                 r.ReserveFraction = movement != null && r.Battery.CapacityWh > 0.0 && !double.IsInfinity(toCharger)
-                    ? ReserveSafety * (movement.EnergyWh(toCharger) / r.Attribute(RobotAttribute.EnergyEfficiency) * Logistics.HaulPhysics.LoadFactor(Logistics.HaulPhysics.DefaultRobotMassKg, CargoKgOf != null ? CargoKgOf(r) : 0.0) + ClimbReserveWh(movement, r) + r.HeaterW * toCharger) / Math.Max(1e-9, r.Battery.CapacityWh * r.Battery.ColdFactor) : 0.0;   // a cold battery holds less: the state of charge is a share of what it can hold now   // the way back also runs the heater (Weather W8: robots were lost on Mars driving home on an empty battery)
+                    ? ReserveSafety * (movement.EnergyWh(toCharger) / r.Attribute(RobotAttribute.EnergyEfficiency) * Logistics.HaulPhysics.LoadFactor(Logistics.HaulPhysics.DefaultRobotMassKg, CargoKgOf != null ? CargoKgOf(r) : 0.0) + ClimbReserveWh(movement, r) + r.HeaterW * toCharger) / Math.Max(1e-9, r.Battery.CapacityWh * expectedCold) : 0.0;   // a cold battery holds less: the state of charge is a share of what it can hold now   // the way back also runs the heater (Weather W8: robots were lost on Mars driving home on an empty battery)
                 r.IsStranded = movement != null && r.Battery.UsableWh <= 1e-6 && toCharger > 1e-9;
                 r.ChargerExists = movement == null ? HasChargingFacility(facilities) : movement.HasCharger;
             }
@@ -172,7 +193,8 @@ namespace KardashevAscent.Simulation.Robots
         public void Apply(Workforce workforce, double hours, double dockServedW, double criticalServedW, double topUpServedW,
                           bool flaringStar, Movement movement = null,
                           Resources.MaterialStock materials = null, double airTemperatureC = 25.0,
-                          System.Func<int, double> airTemperatureAt = null, System.Func<int, bool> isShelter = null)
+                          System.Func<int, double> airTemperatureAt = null, System.Func<int, bool> isShelter = null,
+                          Dictionary<int, double> islandOffers = null)
         {
             destroyed.Clear();
             // Cold locks part of each battery's capacity; insulated batteries stay warmer (spec v2 §11).
@@ -202,7 +224,8 @@ namespace KardashevAscent.Simulation.Robots
                 else switch (r.Activity)
                 {
                     case RobotActivity.Charging:
-                        double offer = dockRequest.TryGetValue(r.Id, out double d) ? d * fd
+                        double offer = islandOffers != null && islandOffers.TryGetValue(r.Id, out double io) ? io
+                                     : dockRequest.TryGetValue(r.Id, out double d) ? d * fd
                                      : criticalRequest.TryGetValue(r.Id, out double c) ? c * fc
                                      : topUpRequest.TryGetValue(r.Id, out double t) ? t * ft : 0.0;
                         // A lithium-ion battery is not charged outside 0 to 45 C: a cold robot at a charger is warmed first, then charged.

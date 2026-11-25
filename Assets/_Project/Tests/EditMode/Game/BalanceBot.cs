@@ -42,6 +42,23 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.IsTrue(ok, "\n" + earth + "\n" + mars);
         }
 
+        /// <summary>KI-46 for every outdoor task (found by the progression bot): on a -60 C world no robot may set out on a build or mining trip its cold battery and heater cannot bring it back from.</summary>
+        [Test]
+        public void ColdWorld_RobotsAreNotSentOnTripsTheyCannotReturnFrom()
+        {
+            double au = SolarConstants.AstronomicalUnit, lum = SolarConstants.SolarLuminosity;
+            string mars = Run("Mars-like", new PlanetSolarParams(lum, 1.524 * au, 0.0934, 25.19 * Math.PI / 180.0, 336.0 * Math.PI / 180.0, 24.66, 686.98 * 24.0, 0.25, 0.3, -60.0), 20, false);
+            StringAssert.DoesNotContain("Deaths:", mars);
+            StringAssert.DoesNotContain("LAST SEEN BEFORE LOSS", mars);
+        }
+
+        [Test, Explicit("Balance tool: the Mars-like colony's timeline")]
+        public void MarsTimeline()
+        {
+            double au = SolarConstants.AstronomicalUnit, lum = SolarConstants.SolarLuminosity;
+            Assert.Fail("\n" + Run("Mars-like", new PlanetSolarParams(lum, 1.524 * au, 0.0934, 25.19 * Math.PI / 180.0, 336.0 * Math.PI / 180.0, 24.66, 686.98 * 24.0, 0.25, 0.3, -60.0), 120, true));
+        }
+
         /// <summary>B4: a two-year run on three planet types; reports deposits used up, rock moved and the energy share mining takes. Report, not tuned.</summary>
         [Test, Explicit("Balance tool: depletion and mining energy across planet types")]
         public void DepletionByPlanetType()
@@ -61,7 +78,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             var sim = new PlanetSimulation(sphere, surface, planet);
             int exhausted = 0; var exhaustedWhat = new List<string>();
             sim.DepositExhausted += (tile, m) => { exhausted++; exhaustedWhat.Add($"{m}@d{(int)(sim.TimeHours / 24)}"); };
-            double generatedWh = 0.0;
+            double generatedWh = 0.0; var lostNotes = new List<string>();
             int firstShortDay = -1; int milestone2Day = -1; int milestone1Day = -1;
             int home = sim.BaseTileId;
             var log = new System.Text.StringBuilder();
@@ -88,7 +105,12 @@ namespace KardashevAscent.Simulation.Tests.Game
             string robotNote = "";
             for (int hour = 0; hour < 24 * days; hour += 3)
             {
+                var snap = sim.Workforce.Robots.ToDictionary(q => q.Id, q => $"R{q.Id} task={(q.Task.HasValue ? q.Task.Value.Kind + "@" + q.Task.Value.Tile : "none")} tile={q.Tile} act={q.Activity} wh={q.Battery.UsableWh:0} soc={q.Battery.StateOfCharge:0.00} airC={sim.LiveAirTemperatureAt(q.Tile):0} sheltered={q.Sheltered} trav={q.IsTravelling} fac={(q.Facility.HasValue ? q.Facility.Value.Tile + "." + q.Facility.Value.Slot : "-")} stranded={q.IsStranded} heaterW={q.HeaterW:0} hrsTo471={(sim.Routes.HoursBetween(q.Tile, 471)):0.0} lastChg={q.LastChargeW:0} warm={q.WarmingUp} bt={q.BatteryTempC:0} hist={q.ExposedEmptyHours:0} t={sim.TimeHours:0}");
+                int robotsBefore = sim.Workforce.Robots.Count;
                 sim.Tick(3.0);
+                if (full && sim.TimeHours < 150.0 && sim.TimeHours > 96.0 && snap.ContainsKey(4)) log.AppendLine("TRACE " + snap[4] + " RANGE " + (sim.Workforce.GetRobot(4) != null ? sim.Workforce.RangeReport(sim.Workforce.GetRobot(4), 483) : "gone"));
+                if (sim.Workforce.Robots.Count < robotsBefore)
+                    foreach (var id in snap.Keys.Where(k => !sim.Workforce.Robots.Any(q => q.Id == k))) lostNotes.Add(snap[id]);
                 generatedWh += sim.GenerationW * 3.0;
                 if (milestone1Day < 0 && sim.MilestonesReached >= 1) milestone1Day = hour / 24;
                 if (milestone2Day < 0 && sim.MilestonesReached >= 2) milestone2Day = hour / 24;
@@ -164,7 +186,7 @@ namespace KardashevAscent.Simulation.Tests.Game
                     foreach (Material dm in new[] { Material.Copper, Material.Lithium })
                         log.AppendLine($"DIAG {dm}: task={(sim.Workforce.Tasks.Open.FirstOrDefault(q => q.Task.Kind == TaskKind.Mine && q.Task.Tile == target[dm] && q.Task.Slot == (int)dm)?.State.ToString() + "/" + sim.Workforce.Tasks.Open.FirstOrDefault(q => q.Task.Kind == TaskKind.Mine && q.Task.Tile == target[dm] && q.Task.Slot == (int)dm)?.Reason)} tile {target[dm]} reach={sim.WorkReachProblem(target[dm]) ?? "ok"} ordered={sim.IsMiningOrdered(target[dm], dm)} hops={Hops(sphere, home, target[dm])} land={land.Count} minedKg={sim.Deposits.MinedKg(target[dm], dm):0} grade={sim.Deposits.GradeOf(target[dm], dm):0.00} logistics={sim.LogisticsEnabled} chargeW={sim.RobotChargingW:0} gen={sim.GenerationW:0} dem={sim.DemandW:0} hour={hour % 24} lastW={string.Join(",", sim.Workforce.Robots.Select(q => q.LastChargeW.ToString("0")))} robots={string.Join(",", sim.Workforce.Robots.Select(r => r.Tile + ":" + (r.Task.HasValue ? r.Task.Value.Kind.ToString() : "idle") + "/" + r.Activity + "/" + r.Battery.UsableWh.ToString("0") + "Wh/cond" + r.Condition.ToString("0.00") + "/sd" + r.IsShutDown))}");
                 int day = hour / 24;
-                if (day != last && day % 10 == 0)
+                if (day != last && (day % 10 == 0 || (full && day < 8)))
                 {
                     last = day;
                     log.AppendLine($"d{day,3} M={sim.MilestonesReached} demand={sim.DemandW / 1e6,6:0.00}MW gen={sim.GenerationW / 1e6,6:0.0}MW batt={sim.BatteryCapacityWh / 1e6,4:0}MWh " +
@@ -178,6 +200,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             string summary = $"{name}: {days} d, milestones {sim.MilestonesReached} (M1 day {(milestone1Day < 0 ? "never" : milestone1Day.ToString())}, M2 day {(milestone2Day < 0 ? "never" : milestone2Day.ToString())}), deposits used up {exhausted} [{string.Join(", ", exhaustedWhat)}], rock moved {sim.RockMovedKg / 1000.0:0} t, tailings {sim.TailingsKg / 1000.0:0} t, mining energy {miningWh / 1e6:0.0} MWh (crushing {sim.ComminutionWh / 1e6:0.0}) of {generatedWh / 1e6:0} MWh generated = {share * 100.0:0.0} %.{verdict}";
             var blockers = sim.Workforce.Tasks.Open.Where(q => q.State == TaskState.AssistanceNeeded || q.State == TaskState.Blocked).Take(4).Select(q => $"{q.Task.Kind}@{q.Task.Tile}: {q.Reason}");
             var deaths = sim.OperationsLog.Where(o => o.Quantity == "Robot destroyed").Take(2).Select(o => o.Text);
+            if (lostNotes.Count > 0) summary += " LAST SEEN BEFORE LOSS: " + string.Join(" || ", lostNotes.Take(3)) + ".";
             if (deaths.Any()) summary += " Deaths: " + string.Join(" | ", deaths) + ".";
             summary += " First blockers: " + (blockers.Any() ? string.Join(" | ", blockers) : "none") + $". Copper in stock {sim.Materials[Material.Copper]:0} kg, robots {sim.Workforce.Robots.Count}, demand {sim.DemandW / 1e6:0.0} MW, generation {sim.GenerationW / 1e6:0.0} MW.";
             return (full ? log + "\n" : "") + summary;

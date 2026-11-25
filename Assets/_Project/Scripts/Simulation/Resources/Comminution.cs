@@ -8,14 +8,14 @@ namespace KardashevAscent.Simulation.Resources
     /// </summary>
     public static class Comminution
     {
-        /// <summary>Work index, kWh per short ton (Bond; typical table values, recalled, to verify against Rowland's tables): copper ore 13.1, hematite iron ore 12.7, granite 15.1 (stand-in for lithium pegmatite), rare-earth ore 13 (TBD: no table value recalled).</summary>
+        /// <summary>Work index, kWh per tonne, from the tabulated Bond work indexes (Bond 1953, "Work Indexes Tabulated", Trans. AIME; as listed in the 911Metallurgist table of Bond work indices by mineral, https://www.911metallurgist.com/blog/table-of-bond-work-index-by-minerals): copper ore 12.7, hematite iron ore 12.5, granite 15.1 (stand-in for lithium pegmatite), rare-earth ore 13 (TBD: no table value found). Checked against that secondary table only, not the primary paper; short-ton and metric columns differ by 10 %.</summary>
         public static double WorkIndex(Material m)
         {
             switch (m)
             {
-                case Material.Copper: return 13.13;
-                case Material.Iron: return 12.68;
-                case Material.Lithium: return 15.13;
+                case Material.Copper: return 12.7;
+                case Material.Iron: return 12.5;
+                case Material.Lithium: return 15.1;
                 case Material.RareEarth: return 13.0;
                 default: return 0.0;
             }
@@ -24,7 +24,7 @@ namespace KardashevAscent.Simulation.Resources
         /// <summary>Feed size after primary crushing, micrometres (typical 10 mm, game rule) and the product size of a flotation or leach feed, micrometres (typical 150, game rule).</summary>
         public const double F80Um = 10_000.0, P80Um = 150.0;
 
-        public const double ShortTonPerTonne = 1.10231;
+        public const double ShortTonPerTonne = 1.0;   // the table values are per tonne already
 
         /// <summary>Energy per tonne of rock ground, kWh (metric).</summary>
         public static double KWhPerTonneRock(Material m)

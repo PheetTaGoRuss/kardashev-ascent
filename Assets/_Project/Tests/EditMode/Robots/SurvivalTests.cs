@@ -64,5 +64,18 @@ namespace KardashevAscent.Simulation.Tests.Robots
             var again = Colony(-150.0); again.RestoreState(sim.CaptureState());
             Assert.AreEqual(body, again.Workforce.GetRobot(r.Id).BodyTempC, 1e-9);
         }
+
+        [Test]
+        public void TheTripBudget_ForAnyOutdoorTask_CountsTheHeater_SoAColdWorldReachesLess()
+        {
+            var cold = Colony(-60.0); var mild = Colony(15.0);
+            cold.Tick(1.0); mild.Tick(1.0);
+            int tile = Enumerable.Range(0, cold.TileCount).First(t => t != cold.BaseTileId && !cold.GetTile(t).IsWater && !Sphere.Neighbors[cold.BaseTileId].Contains(t));
+            var r = cold.Workforce.AddRobot(RobotKind.General, tile);
+            Assert.IsNotNull(cold.Workforce.OutdoorHeaterWAt, "the heater is part of every trip budget");
+            Assert.Greater(cold.Workforce.OutdoorHeaterWAt(r, tile), 0.0, "-60 C: the heater runs");
+            var m = mild.Workforce.AddRobot(RobotKind.General, tile);
+            Assert.AreEqual(0.0, mild.Workforce.OutdoorHeaterWAt(m, tile), 1e-9, "15 C: no heater");
+        }
     }
 }
