@@ -36,8 +36,8 @@ namespace KardashevAscent.Presentation.UI
         Rule editing;
         string note = "";
         LogFilter filter = LogFilter.All;
-        string shownLog, shownPlants, shownDepots, shownWhy, shownStores;
-        WhyChain storesWhy;
+        string shownLog, shownPlants, shownDepots, shownWhy, shownStores, shownDiscrepancy;
+        WhyChain storesWhy, discrepancyWhy;
         VisualElement depotsWhy;
         VisualElement plantRows;
         float nextRebuild;
@@ -468,6 +468,28 @@ namespace KardashevAscent.Presentation.UI
                         chain.Set($"Haul {w.Id} is waiting (tile {w.From} to {w.To})", WhyChain.HaulSteps(w.Why.Kind, w.Why.NeedWh, w.Why.BudgetWh, w.Why.StopTile),
                                   "Show depot advice", () => depots.parent?.Q<ScrollView>()?.ScrollTo(depots));
                     depotsWhy.Add(chain);
+                }
+            }
+            // the latest discrepancy between what the colony showed and a new record, as a why? chain (K5)
+            {
+                var d = sim.RecentDiscrepancies.Count > 0 ? (KardashevAscent.Simulation.Knowledge.KnowledgeEvent?)sim.RecentDiscrepancies[sim.RecentDiscrepancies.Count - 1] : null;
+                bool fresh = d.HasValue && sim.TimeHours - d.Value.New.KnownAt < 24.0 * 7.0;
+                string dShape = fresh ? d.Value.Quantity + "|" + d.Value.New.Value + "|" + d.Value.OldValue : "";
+                if (dShape != shownDiscrepancy)
+                {
+                    shownDiscrepancy = dShape;
+                    if (discrepancyWhy == null) { discrepancyWhy = new WhyChain(); depotsWhy.parent.Insert(depotsWhy.parent.IndexOf(depotsWhy) + 1, discrepancyWhy); }
+                    if (!fresh) discrepancyWhy.Set("Discrepancy", null);
+                    else
+                    {
+                        var e = d.Value; string unit = e.New.Unit.Length > 0 ? " " + e.New.Unit : "";
+                        discrepancyWhy.Set($"Discrepancy: {KardashevAscent.Simulation.Knowledge.Quantities.Name(e.Quantity)} ({e.Subject})", new System.Collections.Generic.List<string>
+                        {
+                            $"a new record from {e.New.Source} reads {e.New.Value:0.###} ±{e.New.Uncertainty:0.###}{unit}",
+                            $"the colony showed {e.OldValue:0.###} ±{e.OldUncertainty:0.###}{unit}: the two ranges do not overlap",
+                            "both records are kept; the display uses the most recent of the highest confidence",
+                        }, "Open Knowledge", () => KnowledgeWindow.Focus(e.Subject, e.Quantity));
+                    }
                 }
             }
             // stored materials that are losing mass or reacting, as a why? chain ending in a button to the stores (M4)

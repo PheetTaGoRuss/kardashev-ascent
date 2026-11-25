@@ -34,8 +34,8 @@ namespace KardashevAscent.Presentation.UI
     public sealed class ValueLabel : VisualElement
     {
         readonly Label mark = new Label(), value = new Label(), range = new Label();
-        readonly Button measure = new Button();
-        Action measureAction;
+        readonly Button measure = new Button(), historyButton = new Button();
+        Action measureAction, historyAction;
 
         public ValueLabel()
         {
@@ -52,8 +52,14 @@ namespace KardashevAscent.Presentation.UI
             measure.AddToClassList(UiType.Secondary);
             measure.style.marginLeft = 8;
             measure.clicked += () => measureAction?.Invoke();
-            Add(mark); Add(value); Add(range); Add(measure);
+            historyButton.AddToClassList("small-button");
+            historyButton.AddToClassList(UiType.Secondary);
+            historyButton.style.marginLeft = 8;
+            historyButton.text = "History ›";
+            historyButton.clicked += () => historyAction?.Invoke();
+            Add(mark); Add(value); Add(range); Add(measure); Add(historyButton);
             measure.style.display = DisplayStyle.None;
+            historyButton.style.display = DisplayStyle.None;
         }
 
         /// <summary>Show a value. <paramref name="rangeText"/> is the range or the unit note; <paramref name="measureText"/> and <paramref name="onMeasure"/> give the "Measure ›" link.</summary>
@@ -79,6 +85,22 @@ namespace KardashevAscent.Presentation.UI
             string u = unit.Length > 0 ? " " + unit : "";
             if (e.IsExact) Set(Mark.Measured, (e.Value * scale).ToString(format) + u, null);
             else Set(Mark.Estimated, "about " + (e.Value * scale).ToString(format) + u, $"({(e.Low * scale).ToString(format)} to {(e.High * scale).ToString(format)})", measureText, onMeasure, measureTip);
+        }
+
+        /// <summary>
+        /// Show a value from the knowledge store (K3): the mark comes from the record, with its age and a "stale" flag, and a "History ›" link to the Knowledge window.
+        /// </summary>
+        public void SetRecord(KardashevAscent.Simulation.Knowledge.Observation o, double now, string format, string unit, double scale = 1.0, string measureText = null, Action onMeasure = null, string measureTip = null, Action onHistory = null)
+        {
+            string u = unit.Length > 0 ? " " + unit : "";
+            Mark m = KnowledgeWindow.MarkOf(o);
+            double age = KardashevAscent.Simulation.Knowledge.KnowledgeBase.AgeHours(o, now);
+            bool stale = KardashevAscent.Simulation.Knowledge.KnowledgeBase.IsStale(o, now);
+            string fresh = " · " + KardashevAscent.Simulation.Knowledge.Quantities.Age(age) + (stale ? " · ⚠ stale" : "");
+            if (m == Mark.Measured) Set(Mark.Measured, (o.Value * scale).ToString(format) + u, o.Uncertainty > 0 ? "±" + (o.Uncertainty * scale).ToString(format) + fresh : fresh.Substring(3), stale ? "Measure" : null, stale ? onMeasure : null, measureTip);
+            else Set(Mark.Estimated, "about " + (o.Value * scale).ToString(format) + u, $"({((o.Value - o.Uncertainty) * scale).ToString(format)} to {((o.Value + o.Uncertainty) * scale).ToString(format)})" + fresh, measureText, onMeasure, measureTip);
+            historyAction = onHistory;
+            historyButton.style.display = onHistory != null ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         /// <summary>The text on screen, for tests.</summary>

@@ -552,6 +552,22 @@ namespace KardashevAscent.Presentation.UI
         }
 
         /// <summary>Today's weather and a forecast, with the marks: ● measured (the lander, a Research Station, a robot on the tile), ◐ climatology or forecast with its range.</summary>
+        /// <summary>What the colony knows about this tile from the store (K3): each record with its mark, source, age and stale flag.</summary>
+        static string KnownHere(IPlanetSimulation sim, int tile)
+        {
+            var kb = sim.KnowledgeStore;
+            var lines = new System.Collections.Generic.List<string>();
+            foreach (var key in kb.Keys())
+            {
+                if (key.Subject.Kind != KardashevAscent.Simulation.Knowledge.SubjectKind.Tile || key.Subject.A != tile) continue;
+                var o = kb.Shown(key.Subject, key.Quantity);
+                if (!o.HasValue) continue;
+                lines.Add(Marks.Glyph(KnowledgeWindow.MarkOf(o.Value)) + " " + KardashevAscent.Simulation.Knowledge.Quantities.Name(key.Quantity) + ": " + KnowledgeWindow.Describe(o.Value, sim.TimeHours));
+                if (lines.Count >= 6) break;
+            }
+            return lines.Count == 0 ? "" : "\nKnown here (F7 Knowledge): " + string.Join("; ", lines);
+        }
+
         void RefreshWeather(IPlanetSimulation sim, int tile)
         {
             if (weatherNow == null) return;
@@ -564,7 +580,7 @@ namespace KardashevAscent.Presentation.UI
             weatherNow.text = $"Now {Mk(k.AirC)} {k.AirC.Value:0.#} °C{Rng(k.AirC, "0.#")} · wind {Mk(k.WindMs)} {k.WindMs.Value:0.#} m/s{Rng(k.WindMs, "0.#")} · light {Mk(k.CloudFactor)} {k.CloudFactor.Value * 100.0:0} %{Rng(k.CloudFactor, "0.00")} · humidity {Mk(k.Humidity)} {k.Humidity.Value:0} %{Rng(k.Humidity, "0")}" +
                               (sim.StormAt(tile) && k.Measured ? "\nSTORM: robots shelter" : "") + (k.Measured ? "" : "\n◐ climatology: measure it with a robot or a Research Station on this tile.") +
                               (sim.WindTurbineCount(tile) > 0 ? "\nWind turbine: " + sim.WindTurbineStatus(tile) : "") +
-                              (sim.StorageNotes(tile).Count > 0 ? "\nStored here: " + string.Join("; ", sim.StorageNotes(tile)) : "");
+                              (sim.StorageNotes(tile).Count > 0 ? "\nStored here: " + string.Join("; ", sim.StorageNotes(tile)) : "") + KnownHere(sim, tile);
             var lines = new System.Collections.Generic.List<string>();
             for (int d = 1; d <= PlanetSimulation.MaxForecastDays; d++)
             {

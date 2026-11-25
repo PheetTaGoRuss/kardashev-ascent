@@ -549,22 +549,26 @@ namespace KardashevAscent.Presentation.UI
         {
             if (beliefsBox == null) return;
             foreach (string k in new[] { "p", "t", "h", "tide" }) BeliefRow(k, k == "p" ? "Air pressure" : k == "t" ? "Mean ground temperature" : k == "h" ? "Highest point" : "Open-sea tide");
-            void Show(string key, KardashevAscent.Simulation.Planet.KnowledgeEstimate e, string format, string unit, double scale, KardashevAscent.Simulation.Planet.ExperimentKind kind, string note)
+            void Show(string key, KardashevAscent.Simulation.Planet.KnowledgeEstimate e, string format, string unit, double scale, KardashevAscent.Simulation.Planet.ExperimentKind kind, string note, KardashevAscent.Simulation.Knowledge.Quantity quantity)
             {
                 string blocker = sim.IsExperimentOrdered(kind) ? "Being measured." : sim.ExperimentBlocker(kind);
                 bool offer = !e.IsExact && !sim.IsExperimentOrdered(kind) && !sim.IsExperimentKnown(kind);
                 var row = beliefRows[key];
-                row.Value.SetEstimate(e, format, unit, scale, offer ? "Measure" : null, offer ? (System.Action)(() => { if (sim.ExperimentBlocker(kind) == null) sim.OrderExperiment(kind, Tile(sim)); }) : null,
-                                      offer ? (blocker ?? "Order this experiment: " + KardashevAscent.Simulation.Planet.Experiments.Name(kind)) : null);
+                System.Action order = offer ? (System.Action)(() => { if (sim.ExperimentBlocker(kind) == null) sim.OrderExperiment(kind, Tile(sim)); }) : null;
+                string orderTip = offer ? (blocker ?? "Order this experiment: " + KardashevAscent.Simulation.Planet.Experiments.Name(kind)) : null;
+                // the value, its mark, its age and its history come from the knowledge store (K3); the estimate is the fallback before the first record
+                var record = sim.KnowledgeStore.Shown(KardashevAscent.Simulation.Knowledge.Subject.Planet, quantity);
+                if (record.HasValue) row.Value.SetRecord(record.Value, sim.TimeHours, format, unit, scale, offer ? "Measure" : null, order, orderTip, () => KnowledgeWindow.Focus(KardashevAscent.Simulation.Knowledge.Subject.Planet, quantity));
+                else row.Value.SetEstimate(e, format, unit, scale, offer ? "Measure" : null, order, orderTip);
                 row.Note.text = e.IsExact ? "" : note;
                 row.Note.style.display = e.IsExact ? DisplayStyle.None : DisplayStyle.Flex;
             }
             double cable = sim.CableDesignShare;
             Show("p", sim.PressureEstimate, "0.#", "kPa", 0.001, KardashevAscent.Simulation.Planet.ExperimentKind.AirPressure,
-                 "Cables are rated at " + (cable * 100.0).ToString("0") + " % until it is measured.");
-            Show("t", sim.TemperatureEstimate, "0", "C", 1.0, KardashevAscent.Simulation.Planet.ExperimentKind.SurfaceTemperature, "Robot warnings take the worse end.");
-            Show("h", sim.HighestPointEstimate, "0.#", "km", 0.001, KardashevAscent.Simulation.Planet.ExperimentKind.ReliefSurvey, "Climb costs are planned at the high end.");
-            Show("tide", sim.TideRangeEstimate, "0.##", "m", 1.0, KardashevAscent.Simulation.Planet.ExperimentKind.TideGauge, "Tidal output is only a range until the gauge reads it.");
+                 "Cables are rated at " + (cable * 100.0).ToString("0") + " % until it is measured.", KardashevAscent.Simulation.Knowledge.Quantity.AirPressure);
+            Show("t", sim.TemperatureEstimate, "0", "C", 1.0, KardashevAscent.Simulation.Planet.ExperimentKind.SurfaceTemperature, "Robot warnings take the worse end.", KardashevAscent.Simulation.Knowledge.Quantity.SurfaceTemperature);
+            Show("h", sim.HighestPointEstimate, "0.#", "km", 0.001, KardashevAscent.Simulation.Planet.ExperimentKind.ReliefSurvey, "Climb costs are planned at the high end.", KardashevAscent.Simulation.Knowledge.Quantity.ReliefMax);
+            Show("tide", sim.TideRangeEstimate, "0.##", "m", 1.0, KardashevAscent.Simulation.Planet.ExperimentKind.TideGauge, "Tidal output is only a range until the gauge reads it.", KardashevAscent.Simulation.Knowledge.Quantity.TidalRange);
         }
 
         void ToggleStationSurvey()
