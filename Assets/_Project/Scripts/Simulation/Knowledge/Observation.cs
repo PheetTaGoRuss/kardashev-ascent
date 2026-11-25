@@ -17,6 +17,8 @@ namespace KardashevAscent.Simulation.Knowledge
         public static Subject Robot(int id) => new Subject(SubjectKind.Robot, id);
         public static Subject Building(int tile, int slot) => new Subject(SubjectKind.Building, tile, slot);
         public bool Equals(Subject o) => Kind == o.Kind && A == o.A && B == o.B;
+        public static bool operator ==(Subject x, Subject y) => x.Equals(y);
+        public static bool operator !=(Subject x, Subject y) => !x.Equals(y);
         public override bool Equals(object obj) => obj is Subject s && Equals(s);
         public override int GetHashCode() => ((int)Kind * 73856093) ^ (A * 19349663) ^ (B * 83492791);
         public int CompareTo(Subject o) { int c = Kind.CompareTo(o.Kind); if (c != 0) return c; c = A.CompareTo(o.A); return c != 0 ? c : B.CompareTo(o.B); }
