@@ -18,7 +18,7 @@ namespace KardashevAscent.Presentation.UI
         public override KeyCode Key => KeyCode.O;
         public override int Order => 10;
 
-        Label now, sources, uses, battery, buildings;
+        Label now, sources, uses, battery, buildings, sizing;
         InfoTip nowTip;
         VisualElement lineRows;
         readonly System.Collections.Generic.Dictionary<int, (Label Text, Button Meter)> lineRowOf = new System.Collections.Generic.Dictionary<int, (Label, Button)>();
@@ -54,6 +54,7 @@ namespace KardashevAscent.Presentation.UI
             uses = Text();
             InfoTip.After(uses, "Colony: what the colony draws now; it grows toward its target after a day without brownout. " +
                                 "Workshop: jobs being made. Charging: robots topping up.");
+            sizing = Text("caption");
             Heading("BATTERY");
             battery = Text();
             InfoTip.After(battery, "Charges from surplus by day, carries the colony through the night. Until the surface " +
@@ -106,6 +107,14 @@ namespace KardashevAscent.Presentation.UI
             }
             buildings.text = $"{panels} panel{(panels == 1 ? "" : "s")} · {yards} battery yard{(yards == 1 ? "" : "s")}";
             RefreshFlow(sim, solar, tidal, waves, barrage, wind);
+            {
+                var dustS = sim.DustSizingAdvice(false); var dustG = sim.DustSizingAdvice(true);
+                if (sizing != null)
+                {
+                    sizing.text = !dustS.Applies ? "" : $"Dust outlook ◐ (estimated): dusty season panels keep {dustS.SolarShare * 100.0:0} % of their sun, a global storm {dustG.SolarShare * 100.0:0.0} %. " + (dustG.ShortfallWhPerDay <= 0.0 && dustG.ExtraStorageWh <= 0.0 ? "The colony rides a global storm out at this load." : $"A global storm leaves it short {dustG.ShortfallWhPerDay / 1000.0:0} kWh a day for {dustG.Days:0} days: add ~{dustG.ExtraStorageWh / 1000.0:0} kWh storage" + (dustG.ExtraPanels == int.MaxValue ? "." : $" or {dustG.ExtraPanels} panels."));
+                    sizing.style.display = dustS.Applies ? DisplayStyle.Flex : DisplayStyle.None;
+                }
+            }
             corona.style.display = sim.CableOutsideModel ? DisplayStyle.Flex : DisplayStyle.None;
             // a storm at the base, as a why? chain from the day's wind and the local threshold (Weather W5)
             {

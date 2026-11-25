@@ -981,6 +981,9 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Electric power all finished wind turbines give now, W.</summary>
         double WindPowerW();
 
+        /// <summary>The dust sizing advice (estimated): shortfall, extra storage or panels, for a dusty season or a global storm.</summary>
+        DustSizing DustSizingAdvice(bool globalStorm);
+
         /// <summary>Why the turbine on this tile makes what it makes now (or why it is idle), in one line.</summary>
         string WindTurbineStatus(int tileId);
 

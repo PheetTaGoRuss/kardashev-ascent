@@ -60,9 +60,10 @@ namespace KardashevAscent.Simulation.Tests.Climate
             Assert.AreEqual(25.0, plain.AirTemperatureAt(pole, 0.0), 1e-12, "no Earth climatology: the planet's value");
 
             var earth = new PlanetSimulation(Sphere, Surface, Earthlike) { Clouds = CloudModel.EarthClimatology };
-            Assert.AreEqual(EarthAirTemperature.AnnualMean(Sphere.Latitude(pole)), earth.AnnualAirTemperature(pole), 1e-9);
-            Assert.Less(earth.AnnualAirTemperature(pole), 0.0);
-            Assert.Greater(earth.AnnualAirTemperature(equator), 20.0);
+            // NASA's pattern by latitude, moved to this planet's own mean (a uniform offset, ColdEarthTests): the pole-to-equator difference is NASA's
+            double nasaDiff = EarthAirTemperature.AnnualMean(Sphere.Latitude(equator)) - EarthAirTemperature.AnnualMean(Sphere.Latitude(pole));
+            Assert.AreEqual(nasaDiff, earth.AnnualAirTemperature(equator) - earth.AnnualAirTemperature(pole), 1e-9);
+            Assert.Greater(earth.AnnualAirTemperature(equator), earth.AnnualAirTemperature(pole) + 10.0);
         }
 
         [Test]
