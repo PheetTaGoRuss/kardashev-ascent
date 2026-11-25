@@ -364,7 +364,9 @@ namespace KardashevAscent.EditorTools
                     // windturbine: learn the wind mast, put a turbine on an open land tile next to the lander, step to a windy day and log its status.
                     var sim = Runner()?.Simulation as KardashevAscent.Simulation.Game.PlanetSimulation;
                     if (sim == null) return true;
-                    sim.LearnExperimentForTests(KardashevAscent.Simulation.Planet.ExperimentKind.WindMast);
+                    // Internal to the Simulation assembly (visible to tests only), so reach it by reflection like "fitpuzzle" does.
+                    sim.GetType().GetMethod("LearnExperimentForTests", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                        .Invoke(sim, new object[] { KardashevAscent.Simulation.Planet.ExperimentKind.WindMast });
                     sim.Debug.FreeBuilding = true;
                     int tile = -1;
                     foreach (int n in sim.Sphere.Neighbors[sim.BaseTileId]) if (!sim.GetTile(n).IsWater && sim.IsOpenGround(n)) { tile = n; break; }

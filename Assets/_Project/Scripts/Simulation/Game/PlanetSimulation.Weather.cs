@@ -54,13 +54,13 @@ namespace KardashevAscent.Simulation.Game
             {
                 double tau = OpticalDepthAt(BaseTileId, CurrentMeanAnomaly()) * ThinAirClimate.SeasonFactor(270.0);
                 double now = OpticalDepthAt(BaseTileId, CurrentMeanAnomaly());
-                Log("Colony", "Dusty season", tau, "tau", "Weather", $"The dusty season begins (Ls 180): ◐ optical depth about {tau:0.0}, up to {tau + 2.0:0.0} in a regional storm; the panels' sunlight about {SolarShareForExtraTau(tau - now) * 100.0:0} % of the clear half, down to {SolarShareForExtraTau(tau + 2.0 - now) * 100.0:0} % in a storm. A global storm is possible (about 1 year in 3).");
+                Log("Colony", "Dusty season", tau, "tau", "Weather", $"The dusty season begins (Ls 180): ◐ optical depth about {tau:0.0}, up to {tau + 2.0:0.0} in a regional storm; the panels' sunlight about {SolarShareForExtraTau(tau - now) * 100.0:0} % of the clear half, down to {SolarShareForExtraTau(tau + 2.0 - now) * 100.0:0} % in a storm. A global storm is possible (about 1 year in 3). ◐ {SizingText(false)}");
             }
             dustySeasonLogged = dusty;
             double global = ThinAirClimate.GlobalStormTau(TerrainSeed, TimeHours, YearLengthHours, DayLengthHours);
             bool storm = global > 1.0;
             if (storm && !globalStormLogged)
-                Log("Colony", "Global dust storm", global, "tau", "Weather", $"A global dust storm begins: optical depth now +{global:0.0}, ◐ it may reach {ThinAirClimate.GlobalPeakMin:0} to {ThinAirClimate.GlobalPeakMax:0} within about {ThinAirClimate.RiseDays:0} sols and decay over weeks to months; panels would make about {SolarShareForExtraTau(ThinAirClimate.GlobalPeakMin) * 100.0:0.0} to {SolarShareForExtraTau(ThinAirClimate.GlobalPeakMax) * 100.0:0.00} % of their usual sunlight at the peak. Rely on the RTG and the battery.");
+                Log("Colony", "Global dust storm", global, "tau", "Weather", $"A global dust storm begins: optical depth now +{global:0.0}, ◐ it may reach {ThinAirClimate.GlobalPeakMin:0} to {ThinAirClimate.GlobalPeakMax:0} within about {ThinAirClimate.RiseDays:0} sols and decay over weeks to months; panels would make about {SolarShareForExtraTau(ThinAirClimate.GlobalPeakMin) * 100.0:0.0} to {SolarShareForExtraTau(ThinAirClimate.GlobalPeakMax) * 100.0:0.00} % of their usual sunlight at the peak. Rely on the RTG and the battery. ◐ {SizingText(true)}");
             globalStormLogged = storm;
         }
 

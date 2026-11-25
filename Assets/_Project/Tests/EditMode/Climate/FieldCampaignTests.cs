@@ -122,5 +122,14 @@ namespace KardashevAscent.Simulation.Tests.Climate
                 }
             TestContext.WriteLine(rows.ToString());
         }
+
+        [Test]
+        public void ColdEarthLike_MinusTwentyFiveMean_At60DegreesInWinter_NoRobotIsLost()
+        {
+            var cold = new PlanetSolarParams(SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Math.PI / 180.0, 282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, -25.0, false, 1.0);
+            var runs = Enumerable.Range(0, 3).Select(s => Run(cold, CloudModel.EarthClimatology, 60.0, false, s)).ToList();
+            TestContext.WriteLine("Cold Earth-like 60 N winter: " + string.Join(" || ", runs.Select(r => $"lost={r.Lost} hauled={r.HauledKg:0} {r.Note}")));
+            Assert.AreEqual(0, runs.Count(r => r.Lost), string.Join(" || ", runs.Select(r => r.Note)));
+        }
     }
 }

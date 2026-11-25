@@ -184,3 +184,10 @@ No difference in these 30 days: a storm is 2 % of days, and a forecast at the 84
 | Airless | 0 | 0 | 823 991 | 0 |
 
 Not absurd by the stated test: a turbine never beats solar by 3x, and the Earth-like capacity factor (27.6 %) is far above 5 %. A real 100 kW turbine at 7 m/s mean wind has a capacity factor of 34 % on the datasheet's own table, and the game reproduces that table within 5 %. Wind is worth building where air is thick and wind is steady and for the night, not for the energy per kg.
+
+### Closing round (2026-11-25)
+
+- **Forecast planning has no effect, by construction.** Our forecast is persistence of an AR process (today's anomaly times rho^k), so a storm is only seen on the day it comes; the 84th percentile bound rarely reaches the storm threshold ahead of time. Accepted as honest; no better forecaster is planned.
+- **KI-47 (cold Earth-like temperature).** NASA T2M is now moved by a uniform offset to the planet's own mean (an assumption). Cold Earth-like (-25 C): the turbine row is now 277 547 kWh a year, capacity factor 31.7 % (was 27.6 %, the same as Earth: the temperature was ignored), turbine / solar 0.50. The cold Earth-like 60 N winter campaign loses 0 robots; the planner refuses the direct haul (hauled 0). Clouds are untouched (tested).
+- **Dust sizing advisor.** Estimated (marked as such), shown in the Power window and in the dust WATCH entries. A brownout test through a seeded global storm is not possible in this model: the colony's demand grows toward its Kardashev target and the colony browns out long before any storm, so the test checks the advice's bookkeeping instead.
+

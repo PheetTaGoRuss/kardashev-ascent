@@ -147,14 +147,35 @@ namespace KardashevAscent.Simulation.Game
         /// </summary>
         public double AirTemperatureAt(int tileId, double meanAnomaly) =>
             Clouds == CloudModel.EarthClimatology && tileId >= 0 && tileId < TileCount
-                ? Climate.EarthAirTemperature.Celsius(Sphere.Latitude(tileId), Climate.CloudClimate.YearFractionFromMeanAnomaly(meanAnomaly))
+                ? Climate.EarthAirTemperature.Celsius(Sphere.Latitude(tileId), Climate.CloudClimate.YearFractionFromMeanAnomaly(meanAnomaly)) + EarthTemperatureOffsetK
                 : planet.AirTemperatureC;
 
         /// <summary>The tile's air temperature over a whole year, °C (Earth-like planets: NASA POWER; else the planet's value).</summary>
         public double AnnualAirTemperature(int tileId) =>
             Clouds == CloudModel.EarthClimatology && tileId >= 0 && tileId < TileCount
-                ? Climate.EarthAirTemperature.AnnualMean(Sphere.Latitude(tileId))
+                ? Climate.EarthAirTemperature.AnnualMean(Sphere.Latitude(tileId)) + EarthTemperatureOffsetK
                 : planet.AirTemperatureC;
+
+        double earthOffsetK = double.NaN;
+
+        /// <summary>
+        /// A uniform offset (game rule, assumption, TBD) moving NASA's Earth temperatures to this planet's own mean: the planet's air temperature minus the area-weighted
+        /// global annual mean of the T2M table. An Earth-like planet at Earth's own mean is unchanged (within 0.5 K). Clouds are not touched.
+        /// </summary>
+        double EarthTemperatureOffsetK
+        {
+            get
+            {
+                if (double.IsNaN(earthOffsetK))
+                {
+                    double sum = 0.0, w = 0.0;
+                    for (double lat = -89.0; lat <= 89.0; lat += 2.0) { double c = Math.Cos(lat * Math.PI / 180.0); sum += c * Climate.EarthAirTemperature.AnnualMean(lat * Math.PI / 180.0); w += c; }
+                    earthOffsetK = planet.AirTemperatureC - sum / w;
+                    if (Math.Abs(earthOffsetK) < 1.0) earthOffsetK = 0.0;   // Earth at its own mean (the table mean is about 14.4 C): keep NASA as it is
+                }
+                return earthOffsetK;
+            }
+        }
 
         /// <summary>Smallest optical depth a NASA haze change may leave (clean air still scatters: Rayleigh). Game rule.</summary>
         const double MinOpticalDepth = 0.05;
