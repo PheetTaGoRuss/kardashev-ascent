@@ -49,7 +49,7 @@ namespace KardashevAscent.Presentation.UI
 
         public static readonly Color SolarColour = new Color(1f, 0.78f, 0.36f), RtgColour = new Color(0.7f, 0.55f, 1f), SeaColour = new Color(0.4f, 0.75f, 1f),
             BatteryColour = new Color(0.43f, 0.86f, 0.51f), LoadColour = new Color(0.47f, 0.75f, 1f), LossColour = new Color(1f, 0.47f, 0.41f),
-            CurtailColour = new Color(0.6f, 0.64f, 0.7f), UnaccountedColour = new Color(0.9f, 0.9f, 0.9f);
+            CurtailColour = new Color(0.6f, 0.64f, 0.7f), UnaccountedColour = new Color(0.9f, 0.9f, 0.9f), WindColour = new Color(0.62f, 0.9f, 0.85f);
 
         /// <summary>Show both rows on one scale (the larger total).</summary>
         public void Set(IList<Segment> made, IList<Segment> used)

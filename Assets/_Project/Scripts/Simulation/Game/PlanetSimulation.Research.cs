@@ -243,6 +243,14 @@ namespace KardashevAscent.Simulation.Game
                     double kw = Waves.LinePowerW(bestH, period, SurfaceGravityMs2) / 1000.0;
                     return $"The roughest shallow sea averages {bestH:0.#} m waves; a converter line makes about {kw:0} kW there (a line needs {Waves.CutInHeightM:0.#} m and shuts down above {Waves.SurvivalHeightM:0} m).";
                 }
+                case ExperimentKind.WindMast:
+                {
+                    double hub = WindPower.HubWindMs(WeatherModel.HasWeather ? WeatherModel.SpreadAt(Sphere.Latitude(tile), YearFractionNow).WindMean : 0.0);
+                    double rho = WindPower.AirDensity(PressurePaAt(tile), AirTemperatureAt(tile, CurrentMeanAnomaly()), AirMolarMassKg);
+                    double kw = WindPower.DailyMeanPowerW(hub, rho) / 1000.0;
+                    return hub <= 0.0 ? "No wind to speak of: this world has no air to move."
+                        : $"Mean wind {hub:0.#} m/s at {WindPower.HubHeightM:0} m (power-law shear from 10 m); the air is {rho:0.000} kg/m3. A {WindPower.RatedW / 1000.0:0} kW turbine would make about {kw:0.0} kW on average here (cut-in {WindPower.CutInMs:0}, rated {WindPower.RatedMs:0}, cut-out {WindPower.CutOutMs:0} m/s).";
+                }
                 case ExperimentKind.TideGauge:
                 {
                     double best = 0.0;
@@ -315,6 +323,8 @@ namespace KardashevAscent.Simulation.Game
             }
             if (type == BuildingType.WaveConverter && !IsExperimentKnown(ExperimentKind.WaveBuoy))
                 return "Wave converters need to know the sea state here: run the wave buoy experiment.";
+            if (type == BuildingType.WindTurbine && !IsExperimentKnown(ExperimentKind.WindMast))
+                return "Wind turbines need to know the wind here: run the wind mast experiment.";
             if (type == BuildingType.TidalTurbine && !IsExperimentKnown(ExperimentKind.TideGauge))
                 return "Tidal turbines need to know the tide here: run the tide gauge experiment.";
             if (type == BuildingType.FloatingSolar)

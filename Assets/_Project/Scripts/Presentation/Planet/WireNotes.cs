@@ -62,6 +62,7 @@ namespace KardashevAscent.Presentation.Planet
                 case BuildingType.FloatingSolar: return "Floating solar";
                 case BuildingType.TidalTurbine: return "Tidal turbine";
                 case BuildingType.WaveConverter: return "Wave converter";
+                case BuildingType.WindTurbine: return "Wind turbine";
                 case BuildingType.TidalBarrage: return "Tidal barrage";
                 case BuildingType.Battery: return "Battery yard";
                 case BuildingType.Workshop: return "Workshop";

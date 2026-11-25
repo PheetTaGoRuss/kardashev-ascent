@@ -117,6 +117,26 @@ namespace KardashevAscent.Simulation.Game
                      $"Viking Lander 1 saw the pressure run from about {ThinAirClimate.MinHPa:0.0} to {ThinAirClimate.MaxHPa:0.0} hPa over the year as CO2 freezes onto and sublimes from the poles (Hess et al. 1980; Tillman et al. 1993). Global dust storms come in about one Mars year in three (Zurek and Martin 1993; Montabone et al. 2015); in 2018 Opportunity measured an optical depth of about 10.8 (NASA/JPL).")
                 .Add("Related", "Weather", "Air pressure and density");
 
+            yield return new GuidePage(Science, "Wind turbine", "A 100 kW class turbine makes power from the day's wind, the air's density and nothing else.")
+                .Add("In play",
+                     $"{Rule}One turbine stands on one open land tile (no wake model). Its power follows the manufacturer's power curve: nothing below {WindPower.CutInMs:0} m/s, the full {WindPower.RatedW / 1000.0:0} kW from {WindPower.RatedMs:0} m/s, and a shutdown above {WindPower.CutOutMs:0} m/s. The wind inside a day is not steady, so the day's power is the curve averaged over a Rayleigh distribution of the speed around the day's mean.",
+                     "It needs the wind mast experiment first. An idle turbine says why (below cut-in, or above cut-out, or no air).",
+                     $"{Rule}It costs the mass of the reference machine: {WindPower.MassKg:0} kg, split into steel, copper and aluminium (the split is an assumption, TBD).")
+                .Add("How to use", "Run the wind mast experiment (Research). Put turbines in the windy mid-latitudes of a world with thick air; wire them like panels. On a thin-air world such as Mars a turbine makes almost nothing.")
+                .Add("Real science",
+                     "Reference machine: the Northern Power NPS 100C-21 (100 kW, rotor 20.7 m, hub 37 m, cut-in 3, rated 15, cut-out 25 m/s, nacelle and rotor 6 500 kg, tower 12 000 kg), manufacturer datasheet 2020. The game reproduces the datasheet's own annual energy table within 5 %.",
+                     "P = 1/2 rho A v^3 Cp: the power coefficient Cp of this curve is about 0.39 at 8 m/s, under the Betz limit of 16/27 = 0.593 (Betz 1920). For wind on Mars see Hartwick et al. 2023, Nature Astronomy.")
+                .Add("Related", "Wind shear and air density", "Wind chill and storms", "Weather");
+
+            yield return new GuidePage(Science, "Wind shear and air density", "Wind is slower near the ground, and thin air carries less power at the same speed.")
+                .Add("In play",
+                     $"{Rule}The weather gives the wind at 10 m. A turbine's hub is at {WindPower.HubHeightM:0} m, where the wind is stronger: the 1/7 power law makes it {WindPower.HubWindMs(1.0):0.00} times the 10 m wind. The air density comes from the day's pressure and temperature, rho = p / (R_specific T), and a turbine makes power in proportion to it.",
+                     "A cold day at sea level has denser air than a warm one, so the same wind makes more power; a mountain tile has thinner air than a coast.")
+                .Add("How to use", "Read the hub wind and the air density in the tile info of a tile with a turbine; the measured values (●) come from the wind mast and the station, the rest is climatology with a range (◐).")
+                .Add("Real science",
+                     "The neutral boundary layer follows U(z) = U10 (z / 10)^(1/7) (Hsu, Meindl and Gilhousen 1994). Air density of an ideal gas: rho = p / (R T / M): about 1.225 kg/m3 at 15 C and one atmosphere, 0.02 kg/m3 on Mars.")
+                .Add("Related", "Wind turbine", "Air pressure and density", "Weather");
+
             yield return new GuidePage(Science, "Relief and climbing", "How high the land rises decides what a haul costs a robot.")
                 .Add("In play",
                      "Until the terrain relief survey is done, the highest point is only a range, and hauls are planned for the high end.",

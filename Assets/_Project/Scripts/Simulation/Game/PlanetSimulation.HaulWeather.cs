@@ -32,7 +32,13 @@ namespace KardashevAscent.Simulation.Game
             foreach (HaulOrder o in haulBook.Orders) if (o.WeatherWait) HaulStormWaitHours += dt;
         }
 
-        IEnumerable<int> ExtraMeasuredTiles() => Enumerable.Empty<int>();
+        /// <summary>With the wind mast done, the Research Station tile is a measuring site for forecasts (a mast reads wind, pressure and temperature continuously).</summary>
+        IEnumerable<int> ExtraMeasuredTiles()
+        {
+            if (!HasWeather || !IsExperimentKnown(ExperimentKind.WindMast)) yield break;
+            int t = FinishedStationTile(-1);
+            if (t >= 0) yield return t;
+        }
 
         IEnumerable<int> MeasuredTiles()
         {

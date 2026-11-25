@@ -359,6 +359,21 @@ namespace KardashevAscent.EditorTools
                     Log("dustwatch after " + h + " h: " + System.Linq.Enumerable.FirstOrDefault(sim.OperationsLog, r => r.Quantity == "Dusty season")?.Text);
                     return true;
                 }
+                case "windturbine":
+                {
+                    // windturbine: learn the wind mast, put a turbine on an open land tile next to the lander, step to a windy day and log its status.
+                    var sim = Runner()?.Simulation as KardashevAscent.Simulation.Game.PlanetSimulation;
+                    if (sim == null) return true;
+                    sim.LearnExperimentForTests(KardashevAscent.Simulation.Planet.ExperimentKind.WindMast);
+                    sim.Debug.FreeBuilding = true;
+                    int tile = -1;
+                    foreach (int n in sim.Sphere.Neighbors[sim.BaseTileId]) if (!sim.GetTile(n).IsWater && sim.IsOpenGround(n)) { tile = n; break; }
+                    bool ok = tile >= 0 && sim.PlaceWindTurbine(tile, 0);
+                    sim.Debug.FreeBuilding = false;
+                    for (int h = 0; h < 24 * 60 && sim.WindTurbinePowerAtW(tile) < 20000.0; h++) sim.Tick(1.0);
+                    Log($"windturbine placed={ok} tile={tile} status={(tile >= 0 ? sim.WindTurbineStatus(tile) : "-")} windPowerW={sim.WindPowerW():0}");
+                    return true;
+                }
                 case "overlay":
                     Presentation.Planet.InstrumentOverlay.Set(argument != "off");
                     return true;

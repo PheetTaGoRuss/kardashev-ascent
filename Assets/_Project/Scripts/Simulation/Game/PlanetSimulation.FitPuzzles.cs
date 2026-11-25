@@ -53,6 +53,7 @@ namespace KardashevAscent.Simulation.Game
                 WavePeriodS = wavePeriod,
                 BasinDepthM = 30.0,   // game rule, TBD
                 OreGrade = 0.3,
+                WindMeanMs = Math.Max(1.0, WindPower.HubWindMs(WeatherModel.HasWeather ? WeatherModel.SpreadAt(Sphere.Latitude(tile), YearFractionNow).WindMean : 0.0)),
             };
         }
 

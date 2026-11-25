@@ -70,7 +70,7 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Makes power (panels, turbines, wave lines, barrages): it must be wired to give any.</summary>
         public static bool IsWireOutput(BuildingType type) =>
             type == BuildingType.SolarPanel || type == BuildingType.FloatingSolar || type == BuildingType.TidalTurbine
-            || type == BuildingType.WaveConverter || type == BuildingType.TidalBarrage;
+            || type == BuildingType.WaveConverter || type == BuildingType.TidalBarrage || type == BuildingType.WindTurbine;
 
         /// <summary>Takes power (storage, stations, refinery modules): it must be wired to work as a robot facility.</summary>
         public static bool IsWireInput(BuildingType type) => NeedsPower(type);
@@ -113,6 +113,7 @@ namespace KardashevAscent.Simulation.Game
             foreach (var kv in panels) yield return (kv.Key.Tile, kv.Key.Slot, floatingPanels.Contains(kv.Key) ? BuildingType.FloatingSolar : BuildingType.SolarPanel);
             foreach (var k in tidalTurbines) yield return (k.Tile, k.Slot, BuildingType.TidalTurbine);
             foreach (var k in waveConverters) yield return (k.Tile, k.Slot, BuildingType.WaveConverter);
+            foreach (var k in windTurbines) yield return (k.Tile, k.Slot, BuildingType.WindTurbine);
             foreach (var k in barrages) yield return (k.Tile, k.Slot, BuildingType.TidalBarrage);
             foreach (var k in batteries) yield return (k.Tile, k.Slot, BuildingType.Battery);
             foreach (var k in workshops) yield return (k.Tile, k.Slot, BuildingType.Workshop);
@@ -227,10 +228,11 @@ namespace KardashevAscent.Simulation.Game
         double ComputeFlow()
         {
             EnsureWiring();
-            rawPanels.Clear(); rawTidal.Clear(); rawWave.Clear(); rawBarrage.Clear();
+            rawPanels.Clear(); rawTidal.Clear(); rawWave.Clear(); rawBarrage.Clear(); rawWind.Clear();
             RawPanelsByTile(rawPanels);
             RawTidalByTile(rawTidal);
             RawWaveByTile(rawWave);
+            RawWindByTile(rawWind);
             RawBarrageByTile(rawBarrage);
             tileFactor.Clear();
             tileFlow.Clear();
@@ -238,7 +240,7 @@ namespace KardashevAscent.Simulation.Game
 
             var own = new Dictionary<int, double>();
             double rawOnGrid = 0.0;
-            foreach (var map in new[] { rawPanels, rawTidal, rawWave, rawBarrage })
+            foreach (var map in new[] { rawPanels, rawTidal, rawWave, rawBarrage, rawWind })
                 foreach (var kv in map)
                 {
                     if (!WiredGrid || poweredTiles.Contains(kv.Key))
@@ -366,6 +368,7 @@ namespace KardashevAscent.Simulation.Game
                 foreach (var key in panels.Keys) if (!IsPowered(key.Tile)) n++;
                 foreach (var key in tidalTurbines) if (!IsPowered(key.Tile)) n++;
                 foreach (var key in waveConverters) if (!IsPowered(key.Tile)) n++;
+                foreach (var key in windTurbines) if (!IsPowered(key.Tile)) n++;
                 foreach (var key in barrages) if (!IsPowered(key.Tile)) n++;
                 return n;
             }

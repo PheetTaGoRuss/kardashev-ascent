@@ -65,6 +65,8 @@ namespace KardashevAscent.Simulation.Game
         Inverter,
         /// <summary>Rectifier: where an AC line comes into the DC grid.</summary>
         Rectifier,
+        /// <summary>Wind turbine (T2, 2026-11-25): a 100 kW class machine on land; power follows the wind and the air density. Append-only enum.</summary>
+        WindTurbine,
     }
 
     /// <summary>Static facts about one tile.</summary>

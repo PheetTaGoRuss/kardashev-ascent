@@ -44,6 +44,7 @@ namespace KardashevAscent.Presentation.Planet
                 case BuildingType.Electrolyser: Electrolyser(b); break;
                 case BuildingType.TidalTurbine: Turbine(b); break;
                 case BuildingType.WaveConverter: Waves(b); break;
+                case BuildingType.WindTurbine: Wind(b); break;
                 case BuildingType.TidalBarrage: Barrage(b); break;
                 case BuildingType.PowerLine: Pole(b); break;
                 case BuildingType.HighVoltageLine: Tower(b); break;
@@ -233,6 +234,23 @@ namespace KardashevAscent.Presentation.Planet
                 b.Cube("Blade", Teal, cx, 0.5f + cy, 0.21f, 0.07f, 0.34f, 0.012f, new Vector3(0, 0, -a * Mathf.Rad2Deg));
             }
             b.Cube("Warning", Warning, 0f, 0.03f, 0f, 0.1f, 0.01f, 0.1f);
+        }
+
+        /// <summary>A three-bladed upwind turbine on a tapered steel tower (the NPS 100C-21 look): rotor 20.7 m on a 37 m hub, drawn to scale with a slot (about 0.9 wide) as a tall slim model.</summary>
+        static void Wind(Builder b)
+        {
+            b.Cyl("Foundation", DarkConcrete, 0f, 0.015f, 0f, 0.32f, 0.03f);
+            b.Cyl("TowerBase", White, 0f, 0.28f, 0f, 0.07f, 0.5f);
+            b.Cyl("TowerTop", White, 0f, 0.7f, 0f, 0.045f, 0.34f);
+            b.Cube("Nacelle", Steel, 0f, 0.9f, 0.03f, 0.07f, 0.07f, 0.2f);
+            b.Cyl("Hub", DarkSteel, 0f, 0.9f, 0.16f, 0.06f, 0.05f, new Vector3(90f, 0f, 0f));
+            for (int i = 0; i < 3; i++)
+            {
+                float a = i * 120f * Mathf.Deg2Rad + 0.2f;
+                float cx = Mathf.Sin(a) * 0.2f, cy = Mathf.Cos(a) * 0.2f;
+                b.Cube("Blade", White, cx, 0.9f + cy, 0.17f, 0.045f, 0.4f, 0.012f, new Vector3(0, 0, -a * Mathf.Rad2Deg));
+            }
+            b.Cube("Beacon", Warning, 0f, 0.95f, 0.03f, 0.03f, 0.03f, 0.03f);
         }
 
         static void Waves(Builder b)

@@ -157,3 +157,30 @@ Dust warnings (W8.3): one WATCH entry when the dusty season starts and one when 
 | Heavy planet haulage per kg-km | about g over the radius | at least that: loads are smaller (quarter loads), so the robot's own mass is spread over fewer kg |
 
 The climb share (0.075) is unchanged by decision; the numbers above are the honest cost of the safety rule.
+
+## 2026-11-25: weather-aware planning (P1 to P3) and wind turbines (T1 to T3)
+
+**P1, waves on the real wind.** The wave model's wind is now the weather's daily 10 m wind raised to 19.5 m by the 1/7 power law (x1.10; Hsu, Meindl and Gilhousen 1994). Long-run wave energy flux on an Earth-like world, sea tiles, one game year: old rule 2373 W/m, real wind 2985 W/m, ratio 1.26 (inside the +-30 % limit; reported, not tuned: the real wind has more weight in the gales because the flux goes as the fourth power of the wind).
+
+**P-test, field campaign with forecast planning** (3 seeds, 30 days, one hauling robot):
+
+| Scenario | Planning | Hauled kg per seed | Robot-hours sheltering | Haul-hours waiting for a forecast storm | Robots lost |
+| --- | --- | --- | --- | --- | --- |
+| Earth-like 60 N winter | old rule | 1500 / 1500 / 1500 | 958 | 0 | 0 |
+| Earth-like 60 N winter | forecast | 1500 / 1500 / 1500 | 958 | 0 | 0 |
+| Mars southern winter | old / forecast | 0 / 0 / 0 (no direct haul is possible) | 594 | 0 | 0 |
+| Mars winter, advice followed | old / forecast | 1500 / 1500 / 1500 | 1496 | 0 | 0 |
+
+No difference in these 30 days: a storm is 2 % of days, and a forecast at the 84th percentile only fires when today's wind is already about 1.85 sigma high; in two game years at 60 N the days a storm is forecast on a route equal the days a storm is on (23 in 730). The unit tests cover the wait, the reason and Go anyway. The robot-hours sheltering are the robots at their target, not the planner's doing.
+
+**T-balance, one NPS 100C-21 turbine against the same real mass (18 500 kg) of solar panels at a 45 N land tile, two game years:**
+
+| Planet type | Turbine kWh a year | Capacity factor | Solar kWh a year, same mass | Turbine / solar |
+| --- | --- | --- | --- | --- |
+| Earth-like 1 atm | 242 134 | 27.6 % | 474 246 | 0.51 |
+| Cold Earth-like | 242 134 | 27.6 % | 474 246 | 0.51 (the same: the test's mean temperature argument does not change the modelled air temperature) |
+| Mars-like 0.006 atm | 2 002 | 0.2 % | 353 194 | 0.01 |
+| Hot thick air 2 atm | 343 051 | 39.1 % | 565 338 | 0.61 |
+| Airless | 0 | 0 | 823 991 | 0 |
+
+Not absurd by the stated test: a turbine never beats solar by 3x, and the Earth-like capacity factor (27.6 %) is far above 5 %. A real 100 kW turbine at 7 m/s mean wind has a capacity factor of 34 % on the datasheet's own table, and the game reproduces that table within 5 %. Wind is worth building where air is thick and wind is steady and for the night, not for the energy per kg.

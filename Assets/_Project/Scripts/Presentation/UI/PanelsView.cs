@@ -42,7 +42,7 @@ namespace KardashevAscent.Presentation.UI
         Label siteProgress;
         string plannerCostShape, siteNeedsShape, buildInfoShape;
         Slider tilt, facing;
-        Button bestButton, placeButton, removeAllButton, reangleButton, modePanel, modeBattery, modeWorkshop, modeStation, modeRelay, modeFloating, modeTidal, modeWave, modeBarrage, modeLine, modeHv, modeResearch,
+        Button bestButton, placeButton, removeAllButton, reangleButton, modePanel, modeBattery, modeWorkshop, modeStation, modeRelay, modeFloating, modeTidal, modeWave, modeWind, modeBarrage, modeLine, modeHv, modeResearch,
                modeAlumina, modeElectrolyser;
         // Build bar categories and the (i) descriptions.
         readonly System.Collections.Generic.Dictionary<BuildMode, (VisualElement Item, Button Info)> buildItems =
@@ -147,7 +147,7 @@ namespace KardashevAscent.Presentation.UI
             foreach (var (mode, key) in new[] { (BuildMode.SolarPanel, "panel"), (BuildMode.FloatingSolar, "floating"), (BuildMode.Battery, "battery"),
                                                 (BuildMode.Workshop, "workshop"), (BuildMode.ChargingStation, "station"), (BuildMode.Relay, "relay"),
                                                 (BuildMode.ResearchStation, "research"), (BuildMode.AluminaPlant, "alumina"),
-                                                (BuildMode.Electrolyser, "electrolyser"), (BuildMode.TidalTurbine, "tidal"), (BuildMode.WaveConverter, "wave"), (BuildMode.TidalBarrage, "barrage"), (BuildMode.PowerLine, "line"), (BuildMode.HighVoltageLine, "hv") })
+                                                (BuildMode.Electrolyser, "electrolyser"), (BuildMode.TidalTurbine, "tidal"), (BuildMode.WaveConverter, "wave"), (BuildMode.WindTurbine, "wind"), (BuildMode.TidalBarrage, "barrage"), (BuildMode.PowerLine, "line"), (BuildMode.HighVoltageLine, "hv") })
             {
                 VisualElement item = root.Q("item-" + key);
                 Button info = root.Q<Button>("info-" + key);
@@ -170,6 +170,10 @@ namespace KardashevAscent.Presentation.UI
             if (modeWave != null)
                 modeWave.clicked += () => { if (placer != null) placer.Mode = BuildMode.WaveConverter; };
             DragFrom(modeWave, BuildMode.WaveConverter);
+            modeWind = root.Q<Button>("mode-wind");
+            if (modeWind != null)
+                modeWind.clicked += () => { if (placer != null) placer.Mode = BuildMode.WindTurbine; };
+            DragFrom(modeWind, BuildMode.WindTurbine);
             modeBarrage = root.Q<Button>("mode-barrage");
             if (modeBarrage != null)
                 modeBarrage.clicked += () => { if (placer != null) placer.Mode = BuildMode.TidalBarrage; };
@@ -382,6 +386,7 @@ namespace KardashevAscent.Presentation.UI
                 NameButton(modeFloating, "Floating solar", BuildMode.FloatingSolar);
                 NameButton(modeTidal, "Tidal turbine", BuildMode.TidalTurbine);
                 NameButton(modeWave, "Wave converter", BuildMode.WaveConverter);
+                NameButton(modeWind, "Wind turbine", BuildMode.WindTurbine);
                 NameButton(modeBarrage, "Tidal barrage", BuildMode.TidalBarrage);
                 NameButton(modeLine, "Power line", BuildMode.PowerLine);
                 NameButton(modeHv, "High-voltage line", BuildMode.HighVoltageLine);
@@ -408,6 +413,7 @@ namespace KardashevAscent.Presentation.UI
             modeFloating?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.FloatingSolar);
             modeTidal?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.TidalTurbine);
             modeWave?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.WaveConverter);
+            modeWind?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.WindTurbine);
             modeBarrage?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.TidalBarrage);
             modeLine?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.PowerLine);
             modeHv?.EnableInClassList("selected", siteOpen && placer.Mode == BuildMode.HighVoltageLine);
@@ -556,7 +562,7 @@ namespace KardashevAscent.Presentation.UI
             bool moduleMode = placer.Mode == BuildMode.AluminaPlant || placer.Mode == BuildMode.Electrolyser;
             string thing = panelMode ? "panel" : workshopMode ? "Workshop" : stationMode ? "charging station" : relayMode ? "relay"
                          : researchMode ? "Research Station" : placer.Mode == BuildMode.AluminaPlant ? "Alumina plant"
-                         : placer.Mode == BuildMode.Electrolyser ? "Electrolysis cell" : placer.Mode == BuildMode.TidalTurbine ? "tidal turbine" : placer.Mode == BuildMode.WaveConverter ? "wave converter" : placer.Mode == BuildMode.TidalBarrage ? "tidal barrage" : placer.Mode == BuildMode.PowerLine ? "power line" : placer.Mode == BuildMode.HighVoltageLine ? "high-voltage line" : PanelPlacer.IsStorageMode(placer.Mode) ? BuildInfo.Title(placer.Mode).ToLowerInvariant() : "battery yard";
+                         : placer.Mode == BuildMode.Electrolyser ? "Electrolysis cell" : placer.Mode == BuildMode.TidalTurbine ? "tidal turbine" : placer.Mode == BuildMode.WaveConverter ? "wave converter" : placer.Mode == BuildMode.WindTurbine ? "wind turbine" : placer.Mode == BuildMode.TidalBarrage ? "tidal barrage" : placer.Mode == BuildMode.PowerLine ? "power line" : placer.Mode == BuildMode.HighVoltageLine ? "high-voltage line" : PanelPlacer.IsStorageMode(placer.Mode) ? BuildInfo.Title(placer.Mode).ToLowerInvariant() : "battery yard";
             int selected = 0, empty = 0, withPanels = 0, withBatteries = 0;
             if (multi)
             {
@@ -587,6 +593,7 @@ namespace KardashevAscent.Presentation.UI
                 : placer.Mode == BuildMode.HighVoltageLine ? "50 times the capacity of a power line · opens at milestone 1"
                 : placer.Mode == BuildMode.PowerLine ? "Wires this tile into the grid · chains reach out from the lander tile"
                 : placer.Mode == BuildMode.TidalBarrage ? "A dam across a bay · power once a tide · weakens the tide, stops boats · needs the basin survey"
+                : placer.Mode == BuildMode.WindTurbine ? "Power from the wind · none in a calm or above 25 m/s · one a tile · needs the wind mast"
                 : placer.Mode == BuildMode.WaveConverter ? "Power from the waves · none in a calm, shut down in a storm · needs the wave buoy"
                 : placer.Mode == BuildMode.TidalTurbine ? "Power from the tide · none at slack water · needs the tide gauge"
                 : researchMode ? "Measures & experiments · Research (T)"
