@@ -35,7 +35,7 @@ namespace KardashevAscent.Simulation.Game
 
         bool CoastTile(int tile) { foreach (int n in Sphere.Neighbors[tile]) if (GetTile(n).IsWater) return true; return false; }
 
-        ChemEnvironment EnvironmentAt(int tile) => new ChemEnvironment(LiveAirTemperatureAt(tile), HumidityAt(tile), PressurePaAt(tile), OxygenFraction, CoastTile(tile));
+        ChemEnvironment EnvironmentAt(int tile) => new ChemEnvironment(LiveAirTemperatureAt(tile), HumidityAt(tile), PressurePaAt(tile), OxygenFraction, CoastTile(tile), SurfaceGravityMs2, AirMolarMassKg);
 
         /// <summary>How a stock of this material is kept on a tile (M3): the lander is sealed; elsewhere by the building the material's storage class needs, else an open pile.</summary>
         public Shelter ShelterOf(int tile, Material m)
@@ -110,7 +110,7 @@ namespace KardashevAscent.Simulation.Game
         {
             Shelter s = ShelterOf(tile, m);
             var (mean, sd) = HumidityClimateAt(tile);
-            ChemEnvironment env = new ChemEnvironment(AnnualAirTemperature(tile), mean, PressurePaAt(tile), OxygenFraction, CoastTile(tile));
+            ChemEnvironment env = new ChemEnvironment(AnnualAirTemperature(tile), mean, PressurePaAt(tile), OxygenFraction, CoastTile(tile), SurfaceGravityMs2, AirMolarMassKg);
             ChemResult r = Resources.Chemistry.Step(m, 1.0, s, env, Chemistry_WetShare(tile, mean, sd), 1.0);
             double lost = 0.0; foreach (var kv in r.Delta) if (kv.Key == m && kv.Value < 0.0) lost = -kv.Value;
             return 1.0 - Math.Pow(Math.Max(0.0, 1.0 - lost), 365.25);

@@ -998,6 +998,8 @@ namespace KardashevAscent.Simulation.Game
         double HubWindAt(int tileId);
 
         int WindTurbineCount(int tileId);
+        /// <summary>The tiles that have a wind turbine.</summary>
+        System.Collections.Generic.IReadOnlyList<int> WindTurbineTiles();
     }
 
     /// <summary>Testing switches and shortcuts (the debug panel). Not saved.</summary>

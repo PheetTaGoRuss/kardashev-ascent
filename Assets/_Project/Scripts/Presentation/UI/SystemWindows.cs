@@ -42,6 +42,8 @@ namespace KardashevAscent.Presentation.UI
             Body.Add(brownoutWhy);
             stormWhy = new WhyChain();
             Body.Add(stormWhy);
+            windWhy = new WhyChain();
+            Body.Add(windWhy);
             Heading("ENERGY FLOW");
             flowBar = new FlowBar();
             Body.Add(flowBar);
@@ -107,6 +109,16 @@ namespace KardashevAscent.Presentation.UI
             }
             buildings.text = $"{panels} panel{(panels == 1 ? "" : "s")} · {yards} battery yard{(yards == 1 ? "" : "s")}";
             RefreshFlow(sim, solar, tidal, waves, barrage, wind);
+            // an idle wind turbine, as a why? chain from the simulation's own reason (T3)
+            {
+                var wt = sim.WindTurbineTiles();
+                bool idle = wt.Count > 0 && wind < 1.0;
+                windWhy.Set("Wind turbine idle", idle ? new System.Collections.Generic.List<string>
+                {
+                    $"tile {wt[0]}: {sim.WindTurbineStatus(wt[0])}",
+                    "it also makes nothing if it is not wired to the grid",
+                } : null, "Open the Guide", () => GuideWindow.Open("Wind turbine"));
+            }
             {
                 var dustS = sim.DustSizingAdvice(false); var dustG = sim.DustSizingAdvice(true);
                 if (sizing != null)
@@ -141,7 +153,7 @@ namespace KardashevAscent.Presentation.UI
 
         FlowBar flowBar;
         Button corona;
-        WhyChain brownoutWhy, stormWhy;
+        WhyChain brownoutWhy, stormWhy, windWhy;
         Label flowHistory;
 
         /// <summary>Sources above, where it goes below, on one scale; the 7-day history under it (UI information design, stage 4). Only values the simulation reports.</summary>

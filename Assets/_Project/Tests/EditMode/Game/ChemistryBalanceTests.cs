@@ -29,7 +29,8 @@ namespace KardashevAscent.Simulation.Tests.Game
                 ("Cold Earth-like", Params(-25.0, 1.0), CloudModel.EarthClimatology),
                 ("Mars-like", Mars, CloudModel.None),
                 ("Hot thick air 2 atm", Params(60.0, 2.0), CloudModel.None),
-                ("Airless", Params(-50.0, 0.0), CloudModel.None),
+                ("Airless warm (-50 C = 223 K)", Params(-50.0, 0.0), CloudModel.None),
+                ("Airless cold (-153 C = 120 K)", Params(-153.15, 0.0), CloudModel.None),
             };
             var mats = new[] { Material.Iron, Material.Copper, Material.Aluminium, Material.Water, Material.Salt, Material.Rock };
             var rows = new System.Text.StringBuilder("Chemistry balance (2 game years, 1000 kg of each in an open pile on an inland 45 N tile; sodium and lithium 100 kg in an open wreck pile): planet | " + string.Join(" | ", mats.Select(m => m + " % lost")) + " | Sodium in the open % left | Lithium in the open % left | ledger imbalance kg\n");
