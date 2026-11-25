@@ -131,9 +131,19 @@ namespace KardashevAscent.Simulation.Robots
         /// </summary>
         public bool ChargerExists { get; set; } = true;
 
+        /// <summary>Energy that is in the battery now but will be locked once it has cooled to the operating limit outdoors, Wh (a warm battery on a cold world looks fuller than it will be).</summary>
+        internal double ColdLockWh;
+        /// <summary>The share of capacity the battery will really hold outdoors (its cold factor at the operating limit when the heater runs).</summary>
+        internal double ExpectedColdFactor = 1.0;
+
         public bool NeedsCharge => Activity == RobotActivity.None && ChargerExists
-                                   && (Battery.StateOfCharge < RobotSpecs.ReturnToChargeFraction + ReserveFraction
-                                       || (TripCharge > 0.0 && Battery.StateOfCharge < TripCharge - 1e-6));
+                                   && (CoolSoc < RobotSpecs.ReturnToChargeFraction + ReserveFraction
+                                       || (TripCharge > 0.0 && CoolSoc < TripCharge - 1e-6));
+
+        /// <summary>State of charge counting the cold lock still to come.</summary>
+        double CoolSoc => Battery.CapacityWh > 0.0 && ColdLockWh > 0.0
+            ? System.Math.Max(0.0, Battery.UsableWh - ColdLockWh) / System.Math.Max(1e-9, Battery.CapacityWh * ExpectedColdFactor)
+            : Battery.StateOfCharge;
 
         /// <summary>Its group's maintenance rule: go for repair below this condition (spec v2 §8, set each step).</summary>
         internal double MaintenanceBelow = RobotSpecs.MaintenanceBelowCondition;

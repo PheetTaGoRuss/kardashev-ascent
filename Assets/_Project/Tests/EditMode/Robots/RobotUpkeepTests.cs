@@ -353,11 +353,31 @@ namespace KardashevAscent.Simulation.Tests.Robots
             Assert.AreEqual(30.0, s.DischargeW, 1e-9);
             Assert.IsFalse(s.IsBrownout);
 
-            var empty = new PowerGrid(new Battery(1000.0, 1.0, 10.0, 0.0), 100.0);
+            var empty = new PowerGrid(new Battery(1000.0, 1.0, 10.0, 0.0), 100.0) { BaselineW = 100.0 };
             GridStep t = empty.Step(110.0, 1.0, 0.0, 30.0);
-            Assert.AreEqual(100.0, t.ServedW, 1e-9, "the colony first");
+            Assert.AreEqual(100.0, t.ServedW, 1e-9, "the baseline first");
             Assert.AreEqual(10.0, t.PriorityServedW, 1e-9);
             Assert.IsFalse(t.IsBrownout);
+        }
+
+        [Test]
+        public void Grid_LoadOrder_ShedsFromTheBottomUp()
+        {
+            // baseline 100, growth 300 (demand 400), critical charging 50, top-up 80, and only so much generation
+            PowerGrid Make() => new PowerGrid(new Battery(1000.0, 1.0, 10.0, 0.0), 400.0) { BaselineW = 100.0 };
+            GridStep a = Make().Step(120.0, 1.0, 0.0, 50.0, 0.0, 80.0);
+            Assert.AreEqual(100.0, a.BaselineServedW, 1e-9);
+            Assert.AreEqual(20.0, a.PriorityServedW, 1e-9, "robots below 20 % come before everything but the baseline");
+            Assert.AreEqual(0.0, a.TopUpServedW, 1e-9);
+            Assert.AreEqual(100.0, a.ServedW, 1e-9, "no growth served");
+            Assert.IsTrue(a.IsBrownout);
+            GridStep b = Make().Step(300.0, 1.0, 0.0, 50.0, 0.0, 80.0);
+            Assert.AreEqual(50.0, b.PriorityServedW, 1e-9);
+            Assert.AreEqual(80.0, b.TopUpServedW, 1e-9, "other charging before growth");
+            Assert.AreEqual(170.0, b.ServedW, 1e-9, "baseline 100 plus 70 of growth");
+            GridStep c = Make().Step(1000.0, 1.0, 0.0, 50.0, 0.0, 80.0);
+            Assert.IsFalse(c.IsBrownout);
+            Assert.AreEqual(1000.0 - 400.0 - 50.0 - 80.0, c.ChargeW + c.CurtailedW, 1e-9, "the energy closes: the rest charges the battery or is curtailed");
         }
 
         [Test]

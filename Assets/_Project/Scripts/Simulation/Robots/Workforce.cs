@@ -241,6 +241,16 @@ namespace KardashevAscent.Simulation.Robots
                 r.Route.AddRange(route);
         }
 
+        /// <summary>The numbers behind <see cref="InRange"/> for a trip to a tile (tests and the Why? chain).</summary>
+        public string RangeReport(Robot r, int tile)
+        {
+            if (Movement == null) return "no movement";
+            double speed = r.Attribute(RobotAttribute.Speed);
+            double go = Movement.RoutesFor(r).HoursBetween(r.Tile, tile) / speed, back = Movement.HoursToChargerFor(r)[tile] / speed;
+            double heater = OutdoorHeaterWAt != null ? OutdoorHeaterWAt(r, tile) : 0.0;
+            return $"go {go:0.0} h, back {back:0.0} h, drive {Movement.EnergyWh(go + back):0} Wh, heater {heater:0} W, climb {Movement.TripClimbWh(r, r.Tile, tile):0} Wh, have {r.Battery.UsableWh:0} Wh, cap {r.Battery.CapacityWh:0}, cold {r.Battery.ColdFactor:0.00}, speed {speed:0.00}";
+        }
+
         /// <summary>Can it get to a task's tile and back to a charger, keeping 20 %? (Always true without movement.)</summary>
         bool InRange(Robot r, WorkTask t)
         {
@@ -254,9 +264,14 @@ namespace KardashevAscent.Simulation.Robots
             double back = Movement.HoursToChargerFor(r)[t.Tile] / speed;
             if (double.IsInfinity(go) || double.IsInfinity(back))
                 return false;
-            double usableCapacity = r.Battery.ColdFactor * r.Battery.CapacityWh;
-            double spare = r.Battery.UsableWh - RobotSpecs.ReturnToChargeFraction * usableCapacity;
-            return Movement.EnergyWh(go + back) / r.Attribute(RobotAttribute.EnergyEfficiency) + Movement.TripClimbWh(r, r.Tile, t.Tile) <= spare + 1e-9;
+            // KI-46 for every outdoor task, not only hauls: the heater and the cold battery are part of the trip (see TripChargeFor)
+            double heaterWh = OutdoorHeaterWAt != null ? (go + back) * Math.Max(OutdoorHeaterWAt(r, t.Tile), OutdoorHeaterWAt(r, r.Tile)) : 0.0;
+            double cold = OutdoorHeaterWAt != null && OutdoorHeaterWAt(r, t.Tile) > 0.0 && OutdoorAirIsCold != null && OutdoorAirIsCold(t.Tile) ? RobotBattery.ColdCapacityFactor(RobotThermal.OperatingMinC) : 1.0;
+            double usableCapacity = Math.Min(r.Battery.ColdFactor, cold) * r.Battery.CapacityWh;
+            // the energy it holds counts only up to what the cold battery will give
+            double have = Math.Max(0.0, r.Battery.UsableWh - r.Battery.CapacityWh * Math.Max(0.0, r.Battery.ColdFactor - cold));   // energy in a warm battery is partly locked once it has cooled outdoors
+            double spare = have - RobotSpecs.ReturnToChargeFraction * usableCapacity;
+            return Movement.EnergyWh(go + back) / r.Attribute(RobotAttribute.EnergyEfficiency) + Movement.TripClimbWh(r, r.Tile, t.Tile) + heaterWh <= spare + 1e-9;
         }
 
         // ---- Phase 4 settings ----
@@ -1093,6 +1108,11 @@ namespace KardashevAscent.Simulation.Robots
         /// Share of capacity a robot needs at the start to get to a task and back to a charger keeping 20 %
         /// (∞ when it can't get there at all).
         /// </summary>
+        /// <summary>Heater or cooler power a robot would run outdoors at a tile, W (set by the simulation from the weather; null: none counted).</summary>
+        public System.Func<Robot, int, double> OutdoorHeaterWAt { get; set; }
+        /// <summary>True when the air at a tile is below the operating minimum (the heater is then holding the battery cold).</summary>
+        public System.Func<int, bool> OutdoorAirIsCold { get; set; }
+
         double TripChargeFor(Robot r, WorkTask t)
         {
             if (Movement == null || !Movement.HasCharger)
@@ -1100,10 +1120,16 @@ namespace KardashevAscent.Simulation.Robots
             double speed = r.Attribute(RobotAttribute.Speed);
             double go = Movement.RoutesFor(r).HoursBetween(r.Tile, t.Tile) / speed;
             double back = Movement.HoursToChargerFor(r)[t.Tile] / speed;
-            double usableCapacity = r.Battery.ColdFactor * r.Battery.CapacityWh;
+            // outdoors on a cold world the battery is held at the operating limit, not at its sheltered temperature, so the capacity it will really have is the cold one (KI-46)
+            double outdoorCold = OutdoorHeaterWAt != null && OutdoorHeaterWAt(r, t.Tile) > 0.0 && OutdoorAirIsCold != null && OutdoorAirIsCold(t.Tile)
+                ? RobotBattery.ColdCapacityFactor(RobotThermal.OperatingMinC) : 1.0;
+            double usableCapacity = Math.Min(r.Battery.ColdFactor, outdoorCold) * r.Battery.CapacityWh;
             if (double.IsInfinity(go) || double.IsInfinity(back) || usableCapacity <= 0.0)
                 return double.PositiveInfinity;
-            return RobotSpecs.ReturnToChargeFraction + (Movement.EnergyWh(go + back) / r.Attribute(RobotAttribute.EnergyEfficiency) + Movement.TripClimbWh(r, r.Tile, t.Tile)) / usableCapacity;
+            // KI-46 for every outdoor task: the trip also pays the heater or cooler, hours outdoors times its power at the destination (and on the way back),
+            // so on a cold world a robot does not set out with a battery that only covers the driving.
+            double heaterWh = OutdoorHeaterWAt != null ? (go + back) * Math.Max(OutdoorHeaterWAt(r, t.Tile), OutdoorHeaterWAt(r, r.Tile)) : 0.0;
+            return RobotSpecs.ReturnToChargeFraction + (Movement.EnergyWh(go + back) / r.Attribute(RobotAttribute.EnergyEfficiency) + Movement.TripClimbWh(r, r.Tile, t.Tile) + heaterWh) / usableCapacity;
         }
 
         /// <summary>

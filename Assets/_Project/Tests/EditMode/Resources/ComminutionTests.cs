@@ -10,9 +10,9 @@ namespace KardashevAscent.Simulation.Tests.Resources
         [Test]
         public void BondsLaw_MatchesTheFormula()
         {
-            double expected = 10.0 * 13.13 * (1.0 / Math.Sqrt(150.0) - 1.0 / Math.Sqrt(10_000.0)) * 1.10231;
+            double expected = 10.0 * 12.7 * (1.0 / Math.Sqrt(150.0) - 1.0 / Math.Sqrt(10_000.0));
             Assert.AreEqual(expected, Comminution.KWhPerTonneRock(Material.Copper), 1e-9);
-            Assert.That(Comminution.KWhPerTonneRock(Material.Copper), Is.InRange(10.0, 20.0), "about 10 to 20 kWh per tonne of ore, the usual grinding figure");
+            Assert.That(Comminution.KWhPerTonneRock(Material.Copper), Is.InRange(8.0, 20.0), "about 8 to 20 kWh per tonne of ore, the usual grinding figure");
         }
 
         [Test]

@@ -144,6 +144,7 @@ namespace KardashevAscent.Presentation.UI
             {
                 $"making {Format.Power(sim.GenerationW)}, the colony needs {Format.Power(sim.DemandW)}",
                 $"the battery holds {stored * 100.0:0} % of {Format.Energy(sim.BatteryCapacityWh)} and cannot cover the gap",
+                "load order when short: 1 the colony baseline (life support), 2 robots charging below 20 % and the network, 3 other robot charging, 4 construction, 5 the colony's growth: the shortage is shed from the bottom, so growth stops first",
                 "the colony stops growing until a full day passes without a brownout",
             } : null, "Open Overview (C)", () => SystemTabs.Open("overview"));
             RefreshLines(sim);

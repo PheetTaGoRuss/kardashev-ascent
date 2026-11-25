@@ -197,6 +197,56 @@ namespace KardashevAscent.Simulation.Game
                         queue.Enqueue(nb);
                     }
             }
+            islandAdjacent = adjacent;
+            islandOf.Clear();
+        }
+
+        // ---- island grids (decided 2026-11-25, director's delegate; replaces "0 off the grid", EN-18) ----
+        // A connected network of tiles that does not reach the lander tile and has a wired source works as an island: its generation serves the chargers standing on it.
+        // Nothing is wired automatically (EN-22). Cable to the lander tile is still how power is shared. An island has no battery (a battery belongs to the lander grid: game rule, TBD).
+        Dictionary<int, List<int>> islandAdjacent = new Dictionary<int, List<int>>();
+        readonly Dictionary<int, int> islandOf = new Dictionary<int, int>();   // tile -> island id (the lowest tile id of its network), filled on demand
+
+        int IslandIdOf(int tile)
+        {
+            if (!WiredGrid) return -1;
+            EnsureWiring();
+            if (poweredTiles.Contains(tile)) return -1;
+            if (islandOf.TryGetValue(tile, out int id)) return id;
+            var seen = new HashSet<int> { tile };
+            var queue = new Queue<int>(); queue.Enqueue(tile);
+            int lowest = tile;
+            while (queue.Count > 0)
+            {
+                int t = queue.Dequeue();
+                if (islandAdjacent != null && islandAdjacent.TryGetValue(t, out List<int> nbs))
+                    foreach (int nb in nbs) if (seen.Add(nb)) { queue.Enqueue(nb); lowest = Math.Min(lowest, nb); }
+            }
+            foreach (int t in seen) islandOf[t] = lowest;
+            return lowest;
+        }
+
+        /// <summary>Raw power of the sources on the tiles of this island, W (0 for a tile on the lander grid or with no source).</summary>
+        public double IslandGenerationW(int tile)
+        {
+            int id = IslandIdOf(tile);
+            if (id < 0) return 0.0;
+            EnsureFlow();
+            double sum = 0.0;
+            foreach (var map in new[] { rawPanels, rawTidal, rawWave, rawBarrage, rawWind })
+                foreach (var kv in map)
+                    if (!poweredTiles.Contains(kv.Key) && IslandIdOf(kv.Key) == id) sum += kv.Value;
+            return sum;
+        }
+
+        /// <summary>True when a wired source stands on this tile's island (even at night: the panels are there), so stations may be built and used here.</summary>
+        public bool IslandHasSource(int tile)
+        {
+            int id = IslandIdOf(tile);
+            if (id < 0) return false;
+            foreach (var b in WireableBuildings())
+                if (IsWireOutput(b.Type) && wiredBuildings.Contains((b.Tile, b.Slot)) && IslandIdOf(b.Tile) == id && !(Build.QueueCount > 0 && Build.IsQueued(b.Tile, b.Slot))) return true;
+            return false;
         }
 
         /// <summary>What the wire from this tile toward the lander tile can carry now, W: the high-voltage link if one is finished there, else the plain link; the lander tile has no limit.</summary>

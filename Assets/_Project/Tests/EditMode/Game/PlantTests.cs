@@ -220,5 +220,25 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.AreEqual(r.VentedKg, sim.VentedKg(Material.Oxygen), 1e-6, "the oxygen and the steam are accounted for");
             Assert.AreEqual(before, Mass(sim, Material.Rust, Material.Iron, Material.Oxygen), 1e-6, "rust in = iron + gas + rust left");
         }
+
+        [Test]
+        public void AnIronBatch_ThatStallsOnPower_HoldsItsRustInTheCell_NothingIsLost_AndFinishesWhenPowerReturns()
+        {
+            var (sim, cell) = WithCell();
+            sim.Materials.Add(Material.Rust, 100.0);
+            double before = Mass(sim, Material.Rust, Material.Iron, Material.Oxygen);
+            Assert.IsNull(sim.OrderRefine(RefineProcess.IronFromRust));
+            sim.RefineryPowerForTests = false;
+            Run(sim, 400.0);
+            RefineRecipe r = Refining.Of(RefineProcess.IronFromRust);
+            Assert.AreEqual(100.0 - r.InputKg, sim.Materials[Material.Rust], 1e-6, "one batch of rust went into the cell");
+            Assert.AreEqual(0.0, sim.Materials[Material.Iron], 1e-9, "no iron yet: the batch is paused, not lost");
+            var line = sim.RefineryLines().First(l => l.Process.HasValue);
+            Assert.AreEqual(0.0, line.Progress, 1e-9);
+            sim.RefineryPowerForTests = true;
+            Run(sim, 400.0);
+            Assert.AreEqual(r.OutputKg, sim.Materials[Material.Iron], 1e-6);
+            Assert.AreEqual(before, Mass(sim, Material.Rust, Material.Iron, Material.Oxygen), 1e-6);
+        }
     }
 }

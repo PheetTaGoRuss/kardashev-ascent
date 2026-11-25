@@ -118,6 +118,8 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>The air temperature now at a tile: the climatology, the day-night swing and the day's weather. For robots, in play (not for plans, which cannot know the weather ahead).</summary>
         public double LiveAirTemperatureAt(int tileId)
         {
+            Workforce.OutdoorHeaterWAt ??= (r, tile) => Robots.RobotThermal.HeaterW(LiveAirTemperatureAt(tile), r.Has(Robots.RobotModule.ThermalInsulation));
+            Workforce.OutdoorAirIsCold ??= tile => LiveAirTemperatureAt(tile) < Robots.RobotThermal.OperatingMinC;
             Upkeep.WindFactorAt ??= tile => HasWeather ? Robots.RobotThermal.WindFactor(AnomalyAt(tile).WindMs, planet.SurfacePressureEarth) : 1.0;
             return DiurnalAirTemperatureAt(tileId, TimeHours) + AnomalyAt(tileId).TemperatureK;
         }

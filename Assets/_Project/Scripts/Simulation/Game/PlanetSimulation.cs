@@ -93,7 +93,7 @@ namespace KardashevAscent.Simulation.Game
                 if (!Build.IsQueued(b.Tile, b.Slot) && WiredOrOff(b))
                     list.Add(new RobotFacility(b.Tile, b.Slot, ChargingCapability.BatteryYard));
             foreach (var c in stations)
-                if (!Build.IsQueued(c.Tile, c.Slot) && WiredOrOff(c) && StationEnabled(c))
+                if (!Build.IsQueued(c.Tile, c.Slot) && WiredOrOff(c) && StationEnabled(c) && (!WiredGrid || IsPowered(c.Tile) || IslandHasSource(c.Tile)))
                     list.Add(new RobotFacility(c.Tile, c.Slot, ChargingCapability.Station));
             return list;
         }
@@ -159,23 +159,26 @@ namespace KardashevAscent.Simulation.Game
             Workforce.Movement = moving;
             Upkeep.Plan(Workforce, RobotFacilities(), dt, moving);
             // The network hub and relays draw as a priority load: they stay up until the colony itself browns out.
+            Grid.BaselineW = Colony.BaseW;
             Grid.Battery.UsableShare = BatteryUsableShare;   // a margin until the surface temperature is known
+            // Chargers on an island are served from the island's own sources, before the lander grid is stepped.
+            var islandOffers = ServeIslands(dt, out double islandGenW, out double islandServedW, out double islandCurtailedW);
             GridStep grid = Grid.Step(ComputeGeneration(), dt, TimeHours / Rtg.HoursPerYear,
-                                      Upkeep.CriticalRequestW + Network.PowerW + ComputingLoadW() + WorkshopPowerW + CircuitLoadW, Upkeep.DockRequestW);
-            GenerationW = grid.GenerationW;
+                                      Upkeep.CriticalRequestW + Network.PowerW + ComputingLoadW() + WorkshopPowerW + CircuitLoadW, Upkeep.DockRequestW, Upkeep.TopUpRequestW);
+            GenerationW = grid.GenerationW + islandGenW;
             RtgW = grid.RtgW;
             DemandW = grid.DemandW;
             BatteryPowerW = grid.ChargeW - grid.DischargeW;
             // Spare power (battery full or at its limit) tops up robots; the rest is curtailed. Buildings are made from
             // materials, not power (director, 2026-11-14).
-            double topUpW = Math.Min(grid.CurtailedW, Upkeep.TopUpRequestW);
-            CurtailedW = grid.CurtailedW - topUpW;
+            double topUpW = grid.TopUpServedW;   // served before the battery charges and before the colony grows (load order)
+            CurtailedW = grid.CurtailedW + islandCurtailedW;
             // The network's hub and relays are served first from the priority power; robots' critical charging gets the rest.
             double networkServedW = Math.Min(Network.PowerW, grid.PriorityServedW);
             double meanAnomaly = CurrentMeanAnomaly();
             var shelter = ShelterTiles();
             Upkeep.Apply(Workforce, dt, grid.DockServedW, grid.PriorityServedW - networkServedW, topUpW, IsFlaringStar, moving,
-                         Materials, LiveAirTemperatureAt(BaseTileId), LiveAirTemperatureAt, shelter.Contains);
+                         Materials, LiveAirTemperatureAt(BaseTileId), LiveAirTemperatureAt, shelter.Contains, islandOffers);
             HandleRobotWeather();
             ExposeWrecks();
             StepRescue(dt);

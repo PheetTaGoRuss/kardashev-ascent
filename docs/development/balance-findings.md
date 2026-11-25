@@ -267,3 +267,9 @@ The progression bot (`ProgressionReachesMilestoneTwo`, Explicit) does **not** re
 3. A forward charger (Build task) can itself be "too far" when placed more than a robot's round trip from an existing charger.
 4. Mars-like (-60 C): two of the three starting robots cold-soaked on a neighbouring tile by day 20 with an empty battery; no robots left, so nothing is ever mined.
 These may be bot-order flaws or design gaps; the bot has not found a build order that gets past 1.
+
+## Progression bot after the load order, islands and the cold trip budget (2026-11-25)
+
+Changes: load order (baseline, robots below 20 %, other charging, construction, growth; shed from the bottom), island grids (a wired source plus chargers off the lander grid), KI-46 for every outdoor task counting the heater and the cold-locked battery (found by tracing the Mars losses: a warm battery that cools outdoors loses about 750 Wh of usable energy, and the 4-hour leg to tile 483 was approved on the warm numbers), the 20 % return reserve counting that lock.
+
+Result: Mars-like keeps its robots (5 at the end, 1 286 t of rock mined) where all were lost by day 5 before. Neither world reaches milestone 1 in two years. Next blocker, both worlds: "Build@496 / Mine@496: too far: no robot can drive there and back to a charger": the forward charger toward the copper is itself beyond a round trip. The leapfrog outpost (a one-way trip for a full kit) is not built yet. Iron cell in Play: not a leak: a batch waits in the cell while the grid browns out (a unit test now proves the rust stays in the cell and is all accounted for).
