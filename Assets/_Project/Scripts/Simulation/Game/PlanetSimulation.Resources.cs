@@ -195,7 +195,10 @@ namespace KardashevAscent.Simulation.Game
                         ? new HeldFinding { Kind = FindingKind.SurveyCores, Tile = tile, Survey = puzzle }
                         : new HeldFinding { Kind = FindingKind.SurveyWorkedOut, Tile = tile };
                     if (!HoldIfCutOff(t, finding))
+                    {
+                        KnowDeliveredFinding(finding, false);
                         Deliver(finding);
+                    }
                 }
             }
             FinishElectricalOrders();
@@ -224,7 +227,10 @@ namespace KardashevAscent.Simulation.Game
                 {
                     // A cut-off robot keeps the readings until it can sync (stage E); the worker is known before release.
                     if (!HoldIfCutOff(t, readings))
+                    {
+                        KnowDeliveredFinding(readings, false);
                         Deliver(readings);
+                    }
                     Workforce.Release(t);
                     continue;
                 }

@@ -117,7 +117,7 @@ namespace KardashevAscent.Simulation.Game
                      $"Viking Lander 1 saw the pressure run from about {ThinAirClimate.MinHPa:0.0} to {ThinAirClimate.MaxHPa:0.0} hPa over the year as CO2 freezes onto and sublimes from the poles (Hess et al. 1980; Tillman et al. 1993). Global dust storms come in about one Mars year in three (Zurek and Martin 1993; Montabone et al. 2015); in 2018 Opportunity measured an optical depth of about 10.8 (NASA/JPL).")
                 .Add("Related", "Weather", "Air pressure and density");
 
-            yield return new GuidePage(Science, "Wind turbine", "A 100 kW class turbine makes power from the day's wind, the air's density and nothing else.")
+            yield return new GuidePage(Science, "Wind turbine physics", "A 100 kW class turbine makes power from the day's wind, the air's density and nothing else.")
                 .Add("In play",
                      $"{Rule}One turbine stands on one open land tile (no wake model). Its power follows the manufacturer's power curve: nothing below {WindPower.CutInMs:0} m/s, the full {WindPower.RatedW / 1000.0:0} kW from {WindPower.RatedMs:0} m/s, and a shutdown above {WindPower.CutOutMs:0} m/s. The wind inside a day is not steady, so the day's power is the curve averaged over a Rayleigh distribution of the speed around the day's mean.",
                      "It needs the wind mast experiment first. An idle turbine says why (below cut-in, or above cut-out, or no air).",
@@ -135,7 +135,7 @@ namespace KardashevAscent.Simulation.Game
                 .Add("How to use", "Read the hub wind and the air density in the tile info of a tile with a turbine; the measured values (●) come from the wind mast and the station, the rest is climatology with a range (◐).")
                 .Add("Real science",
                      "The neutral boundary layer follows U(z) = U10 (z / 10)^(1/7) (Hsu, Meindl and Gilhousen 1994). Air density of an ideal gas: rho = p / (R T / M): about 1.225 kg/m3 at 15 C and one atmosphere, 0.02 kg/m3 on Mars.")
-                .Add("Related", "Wind turbine", "Air pressure and density", "Weather");
+                .Add("Related", "Wind turbine physics", "Air pressure and density", "Weather");
 
             yield return new GuidePage(Science, "Robot wrecks and salvage", "A destroyed robot lies where it stopped, and what is left of it depends on how it died.")
                 .Add("In play",

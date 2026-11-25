@@ -13,6 +13,7 @@ BASE = 'Assets/_Project/Scripts/Simulation/'
 # namespace -> namespaces it may depend on. Lower tiers first; no cycles.
 ALLOWED = {
     'Civilization': set(),
+    'Knowledge': set(),
     'Climate': set(),
     'Energy': set(),
     'Solar': set(),
@@ -23,7 +24,7 @@ ALLOWED = {
     'Logistics': {'Resources'},
     'Robots': {'Energy', 'Logistics', 'Planet', 'Resources'},
     'Operations': {'Resources', 'Robots'},
-    'Game': {'Circuits', 'Civilization', 'Climate', 'Electrical', 'Energy', 'Logistics', 'Operations', 'Planet', 'Resources', 'Robots', 'Solar'},
+    'Game': {'Circuits', 'Civilization', 'Climate', 'Electrical', 'Energy', 'Knowledge', 'Logistics', 'Operations', 'Planet', 'Resources', 'Robots', 'Solar'},
 }
 NAMES = '|'.join(ALLOWED)
 

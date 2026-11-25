@@ -179,6 +179,7 @@ namespace KardashevAscent.Simulation.Game
             HandleRobotWeather();
             ExposeWrecks();
             StepChemistry(dt);
+            StepKnowledge();
             AccumulateWeatherWaits(dt);
             RobotChargingW = Upkeep.ChargingW;
             Network.SetPowered(!Grid.IsBrownout);

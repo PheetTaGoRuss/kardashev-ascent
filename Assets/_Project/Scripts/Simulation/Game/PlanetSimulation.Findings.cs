@@ -43,11 +43,13 @@ namespace KardashevAscent.Simulation.Game
         bool HoldIfCutOff(WorkTask task, HeldFinding finding)
         {
             Robot worker = Workforce.WorkerOf(task);
+            if (worker != null) finding.RobotId = worker.Id;
             if (worker == null || Workforce.CanSync(worker))
                 return false;
             finding.RobotId = worker.Id;
             heldFindings.Add(finding);
             worker.UnsyncedFindings++;
+            KnowHeldFinding(finding);
             return true;
         }
 
@@ -63,6 +65,7 @@ namespace KardashevAscent.Simulation.Game
                 heldFindings.RemoveAt(i--);
                 if (r != null)
                     r.UnsyncedFindings = Math.Max(0, r.UnsyncedFindings - 1);
+                KnowDeliveredFinding(f, true);
                 Deliver(f);
             }
         }
