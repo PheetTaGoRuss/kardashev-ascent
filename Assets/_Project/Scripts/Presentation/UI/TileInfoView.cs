@@ -448,7 +448,11 @@ namespace KardashevAscent.Presentation.UI
                 Material material = m;
                 bool on = sim.IsMiningOrdered(tile, m);
                 var rate = sim.MiningRateEstimate(tile, m);
-                string rateText = rate.IsExact ? $" · {Marks.Glyph(Mark.Measured)} {rate.Value:0.#} kg/h" : $" · {Marks.Glyph(Mark.Estimated)} about {rate.Value:0.#} kg/h ({rate.Low:0.#} to {rate.High:0.#})";
+                var oreG = sim.OreGradeEstimate(tile, m);
+                double left = sim.DepositShareLeft(tile, m);
+                string gradeText = oreG.Value < 0.999 ? (oreG.IsExact ? $" · {Marks.Glyph(Mark.Measured)} grade {oreG.Value * 100.0:0.##} %" : $" · {Marks.Glyph(Mark.Estimated)} grade about {oreG.Value * 100.0:0.##} %") : "";
+                string leftText = left < 0.999 ? $" · {(rate.IsExact ? "" : "≈ ")}{left * 100.0:0} % left" : "";
+                string rateText = gradeText + leftText + (rate.IsExact ? $" · {Marks.Glyph(Mark.Measured)} {rate.Value:0.#} kg/h" : $" · {Marks.Glyph(Mark.Estimated)} about {rate.Value:0.#} kg/h ({rate.Low:0.#} to {rate.High:0.#})");
                 AddGroundButton(on ? $"Stop mining {Materials.Name(m).ToLowerInvariant()}" : $"Mine {Materials.Name(m).ToLowerInvariant()}{rateText}", on,
                                 () => { if (sim.IsMiningOrdered(tile, material)) sim.CancelMining(tile, material); else sim.OrderMining(tile, material); groundShape = null; });
             }

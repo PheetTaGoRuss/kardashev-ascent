@@ -90,21 +90,18 @@ namespace KardashevAscent.Simulation.Tests.Resources
             int t = sim.BaseTileId;   // every land tile has iron; the base needs no drive
             sim.Deposits.MarkSurveyed(t);
             double reserve = sim.Deposits.ReserveKg(t, Material.Iron);
-            double batch = RobotSpecs.MiningKgPerHour * RobotSpecs.MiningBatchHours * sim.Deposits.GradeOf(t, Material.Iron);
-            sim.Deposits.Extract(t, Material.Iron, reserve - 1.5 * batch);   // one and a half batches left
+            sim.Deposits.Extract(t, Material.Iron, reserve - 10.0);   // ten kilograms left, less than a batch
 
             int exhausted = 0;
             sim.DepositExhausted += (tile, m) => { if (tile == t && m == Material.Iron) exhausted++; };
             Assert.IsTrue(sim.OrderMining(t, Material.Iron));
             sim.Tick(1.0);
-            Assert.AreEqual(batch, sim.Materials[Material.Iron], 1e-9);
-            sim.Tick(1.0);
-            Assert.AreEqual(1.5 * batch, sim.Materials[Material.Iron], 1e-9, "the last batch only brings what was left");
+            Assert.AreEqual(10.0, sim.Materials[Material.Iron], 1e-9, "the last batch only brings what was left");
             Assert.AreEqual(1, exhausted);
             Assert.IsFalse(sim.IsMiningOrdered(t, Material.Iron), "the order ends");
             Assert.IsFalse(sim.OrderMining(t, Material.Iron), "nothing left to mine");
             sim.Tick(2.0);
-            Assert.AreEqual(1.5 * batch, sim.Materials[Material.Iron], 1e-9);
+            Assert.AreEqual(10.0, sim.Materials[Material.Iron], 1e-9);
             // Mass is kept: what is on hand plus what is left in the ground is what the ground held.
             Assert.AreEqual(reserve, sim.Deposits.MinedKg(t, Material.Iron), 1e-6);
             Assert.IsTrue(sim.IndustrialReports.Any(r => r.Message.Contains("used up")));

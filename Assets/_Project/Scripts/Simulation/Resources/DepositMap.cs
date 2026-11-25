@@ -107,18 +107,52 @@ namespace KardashevAscent.Simulation.Resources
         /// </summary>
         public static double ReserveKgAtGrade1(Material m)
         {
+            // B1, decided 2026-11-25 (director's delegate): typical deposit sizes scaled to what one tile offers a colony. A tile's minable share of a deposit is 1e-4 (an assumption, TBD).
+            // Median contained metal: porphyry copper about 3 Mt of copper (Singer, Berger and Moring 2008, USGS Open-File Report 2008-1155; recalled, to verify), a lithium brine or pegmatite
+            // about 0.5 Mt of lithium, a carbonatite rare-earth deposit about 0.2 Mt of oxide (USGS Mineral Commodity Summaries; recalled). Iron, anorthosite and salt are bulk (game rule).
+            // Ice on Mars follows SHARAD and MRO ground-ice mapping (Bramson et al. 2015: widespread excess ice within a metre or two; rule: a tile holds 5 000 t).
             switch (m)
             {
-                case Material.Rock: return 1_000_000.0;
-                case Material.Iron: return 50_000.0;
-                case Material.Water: return 50_000.0;
-                case Material.Copper: return 3_000.0;
-                case Material.Lithium: return 500.0;
-                case Material.RareEarth: return 200.0;
-                case Material.Anorthosite: return 200_000.0;
-                case Material.Salt: return 50_000.0;
+                case Material.Rock: return 100_000_000.0;
+                case Material.Iron: return 5_000_000.0;
+                case Material.Water: return 5_000_000.0;
+                case Material.Copper: return 300_000.0;            // 1e-4 of 3 Mt
+                case Material.Lithium: return 50_000.0;            // 1e-4 of 0.5 Mt
+                case Material.RareEarth: return 20_000.0;          // 1e-4 of 0.2 Mt
+                case Material.Anorthosite: return 20_000_000.0;
+                case Material.Salt: return 5_000_000.0;
                 default: return 0.0;
             }
+        }
+
+        /// <summary>
+        /// The ore grade of an ordinary deposit, kg of product per kg of rock moved (B2): porphyry copper about 0.5 % Cu (Singer et al. 2008 median), iron ore about 60 % Fe (hematite ore), lithium
+        /// brine about 0.1 % Li, rare-earth carbonatite about 6 % oxide, anorthosite and salt and ice are mined as the product itself. A deposit of relative grade g has g times this.
+        /// </summary>
+        public static double TypicalOreGrade(Material m)
+        {
+            switch (m)
+            {
+                case Material.Copper: return 0.005;
+                case Material.Iron: return 0.60;
+                case Material.Lithium: return 0.001;
+                case Material.RareEarth: return 0.06;
+                default: return 1.0;
+            }
+        }
+
+        /// <summary>The ore grade of a deposit, kg of product per kg of rock moved: the typical grade times its relative grade.</summary>
+        public double OreGrade(int tile, Material m) => TypicalOreGrade(m) * GradeOf(tile, m);
+
+        /// <summary>
+        /// The grade the miners get now: rich ore first, falling as the deposit is mined (game rule, TBD): the relative grade times 0.5 plus 0.5 of the share still in the ground, so a deposit
+        /// yields half as much per hour at the end as at the start. Sea water and the like never fall.
+        /// </summary>
+        public double EffectiveGrade(int tile, Material m)
+        {
+            double g = GradeOf(tile, m);
+            if (g <= 0.0 || IsEndless(tile, m) || TypicalOreGrade(m) >= 1.0) return g;   // only ores fall; rock, ice, salt and anorthosite are the product itself
+            return g * (0.5 + 0.5 * RemainingShare(tile, m));
         }
 
         public DepositMap(HexSphere sphere, PlanetSurface surface, PlanetChemistry chemistry, int seed)

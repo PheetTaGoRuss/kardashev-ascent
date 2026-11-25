@@ -245,3 +245,14 @@ A robot with an empty battery outside shelter hibernates; its body follows the a
 
 Robots lost fell from 5 and 3 to 0 in every row: in 72 hours nothing reaches its storage limit, and the soaking robots are still alive when the run ends (the Play run with no helper at all lost them after about 57 hours on Mars). The planner no longer refuses for lack of time on Mars; it refuses for lack of energy and says so with the numbers, and gives the S3 advice (a charging station on the tile halfway). A rescue costs 200 to 600 Wh. The field campaigns (haulers with the KI-46 rule) never strand a robot, so they are identical with and without rescue: 0 robots lost in all of them.
 
+## Deposit depletion by planet type (B4, 2026-11-25)
+
+Two-year BalanceBot run (`DepletionByPlanetType`, explicit), a scripted colony that mines rock, iron, copper and lithium. Reported, not tuned.
+
+| Planet | Deposits used up | Rock moved | Tailings | Mining energy | Generated | Share |
+| --- | --- | --- | --- | --- | --- | --- |
+| Earth-like | 0 | 3 735 t | 1 657 t | 4.1 MWh | 33 945 MWh | 0.0 % |
+| Mars-like (cold, far) | 0 | 35 t | 3 t | 0.1 MWh | 22 705 MWh | 0.0 % |
+| Hot (close) | 0 | 3 597 t | 1 657 t | 3.9 MWh | 48 066 MWh | 0.0 % |
+
+Nothing runs out in two years, and mining takes under 0.1 % of generation: neither "absurd" threshold is near. Mining power (the robot mine power) is tiny next to the panel fields, so the energy cost of poor ore is not a constraint yet; the deposits are what limits a long game. The scripted bot never reaches a milestone (it does not research), so the "ran out before milestone 2" test is checked by its stock never reaching zero. On Mars the cold range keeps robots near the base, so almost nothing is mined: a travel and charging limit, not a deposit limit.

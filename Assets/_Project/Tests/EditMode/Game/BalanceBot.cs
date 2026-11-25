@@ -24,12 +24,31 @@ namespace KardashevAscent.Simulation.Tests.Game
         [Test, Explicit("Balance tool: prints a timeline of a scripted colony")]
         public void Timeline()
         {
-            const int days = 700;
+            Assert.Fail("\n" + Run("Earth-like", new PlanetSolarParams(SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Math.PI / 180.0,
+                                               282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0), 700, true));
+        }
+
+        /// <summary>B4: a two-year run on three planet types; reports deposits used up, rock moved and the energy share mining takes. Report, not tuned.</summary>
+        [Test, Explicit("Balance tool: depletion and mining energy across planet types")]
+        public void DepletionByPlanetType()
+        {
+            double au = SolarConstants.AstronomicalUnit, lum = SolarConstants.SolarLuminosity;
+            var report = new System.Text.StringBuilder();
+            report.AppendLine(Run("Earth-like", new PlanetSolarParams(lum, au, 0.0167, 23.44 * Math.PI / 180.0, 282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0), 730, false));
+            report.AppendLine(Run("Mars-like (cold, far)", new PlanetSolarParams(lum, 1.524 * au, 0.0934, 25.19 * Math.PI / 180.0, 336.0 * Math.PI / 180.0, 24.66, 686.98 * 24.0, 0.25, 0.3, -60.0), 730, false));
+            report.AppendLine(Run("Hot (close)", new PlanetSolarParams(lum, 0.8 * au, 0.0167, 10.0 * Math.PI / 180.0, 282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0 * 0.51, 0.3, 0.3, 45.0), 730, false));
+            Assert.Fail("\n" + report);
+        }
+
+        static string Run(string name, PlanetSolarParams planet, int days, bool full)
+        {
             var sphere = HexSphere.Create(12);
             var surface = PlanetSurface.Generate(sphere, new SurfaceSettings(7));
-            var planet = new PlanetSolarParams(SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Math.PI / 180.0,
-                                               282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0);
             var sim = new PlanetSimulation(sphere, surface, planet);
+            int exhausted = 0; var exhaustedWhat = new List<string>();
+            sim.DepositExhausted += (tile, m) => { exhausted++; exhaustedWhat.Add($"{m}@d{(int)(sim.TimeHours / 24)}"); };
+            double generatedWh = 0.0;
+            int firstShortDay = -1; int milestone2Day = -1;
             int home = sim.BaseTileId;
             var log = new System.Text.StringBuilder();
 
@@ -55,6 +74,9 @@ namespace KardashevAscent.Simulation.Tests.Game
             for (int hour = 0; hour < 24 * days; hour += 3)
             {
                 sim.Tick(3.0);
+                generatedWh += sim.GenerationW * 3.0;
+                if (milestone2Day < 0 && sim.MilestonesReached >= 2) milestone2Day = hour / 24;
+                if (firstShortDay < 0 && milestone2Day < 0 && hour > 24 * 20 && (sim.Materials[Material.Iron] < 1.0 || sim.Materials[Material.Rock] < 1.0)) firstShortDay = hour / 24;
                 var inRange = land.Where(t => sim.WorkReachProblem(t) == null).ToList();
 
                 // mining: base tile for rock and iron; the nearest tile with the ore for copper and lithium
@@ -115,7 +137,11 @@ namespace KardashevAscent.Simulation.Tests.Game
                                    $"rock={sim.Materials[Material.Rock] / 1e3:0}t fe={sim.Materials[Material.Iron] / 1e3:0}t cu={sim.Materials[Material.Copper]:0} li={sim.Materials[Material.Lithium]:0} | robot: {robotNote}");
                 }
             }
-            Assert.Fail("\n" + log);
+            double miningWh = sim.MiningWorkHours * RobotSpecs.MinePowerW;
+            double share = generatedWh > 0.0 ? miningWh / generatedWh : 0.0;
+            string verdict = (share > 0.5 ? " ABSURD: mining takes over half of generation." : "") + (firstShortDay >= 0 ? $" ABSURD: ran out of iron or rock on day {firstShortDay} before milestone 2." : "");
+            string summary = $"{name}: {days} d, milestones {sim.MilestonesReached} (M2 day {(milestone2Day < 0 ? "never" : milestone2Day.ToString())}), deposits used up {exhausted} [{string.Join(", ", exhaustedWhat)}], rock moved {sim.RockMovedKg / 1000.0:0} t, tailings {sim.TailingsKg / 1000.0:0} t, mining energy {miningWh / 1e6:0.0} MWh of {generatedWh / 1e6:0} MWh generated = {share * 100.0:0.0} %.{verdict}";
+            return (full ? log + "\n" : "") + summary;
         }
 
         static List<int> LandByDistance(PlanetSimulation sim, HexSphere sphere, int home)

@@ -76,7 +76,37 @@ namespace KardashevAscent.Simulation.Game
         public KnowledgeEstimate MiningRateEstimate(int tileId, Material material)
         {
             KnowledgeEstimate g = GradeEstimate(tileId, material);
-            return new KnowledgeEstimate(Robots.RobotSpecs.MiningKgPerHour * g.Value, Robots.RobotSpecs.MiningKgPerHour * g.HalfRange);
+            double depletion = Deposits.GradeOf(tileId, material) > 0.0 ? Deposits.EffectiveGrade(tileId, material) / Deposits.GradeOf(tileId, material) : 1.0;
+            return new KnowledgeEstimate(Robots.RobotSpecs.MiningKgPerHour * g.Value * depletion, Robots.RobotSpecs.MiningKgPerHour * g.HalfRange * depletion);
+        }
+
+        public double DepositShareLeft(int tileId, Material material) => Deposits.RemainingShare(tileId, material);
+
+        /// <summary>Rock moved and tailings left so far, kg (reporting; the product is in the stock).</summary>
+        public double RockMovedKg { get; private set; }
+        public double TailingsKg { get; private set; }
+        /// <summary>Robot hours spent in mining batches so far; times the mining power it is the energy mining took (reporting, B4).</summary>
+        public double MiningWorkHours { get; private set; }
+
+        /// <summary>
+        /// What a deposit holds, kg of product: a range until the ore assay measures it (the tonnage follows the grade, so it carries the grade's spread), exact after. The share left
+        /// (1 before any mining) is always known to the colony that mines it.
+        /// </summary>
+        public KnowledgeEstimate ReserveEstimate(int tileId, Material material)
+        {
+            double reserve = Deposits.ReserveKg(tileId, material);
+            double g = Deposits.GradeOf(tileId, material);
+            if (reserve <= 0.0 || double.IsInfinity(reserve) || g <= 0.0) return new KnowledgeEstimate(reserve, 0.0);
+            KnowledgeEstimate ge = GradeEstimate(tileId, material);
+            return new KnowledgeEstimate(reserve * ge.Value / g, reserve * ge.HalfRange / g);
+        }
+
+        /// <summary>The ore grade, kg of product per kg of rock, as a range until the assay.</summary>
+        public KnowledgeEstimate OreGradeEstimate(int tileId, Material material)
+        {
+            double t = DepositMap.TypicalOreGrade(material);
+            KnowledgeEstimate ge = GradeEstimate(tileId, material);
+            return new KnowledgeEstimate(t * ge.Value, t * ge.HalfRange);
         }
 
         /// <summary>True where Peek's law is not valid (the Paschen region, with a labelled fallback): the cable rating there is a game rule, not the law's result (UI marks, outside model).</summary>

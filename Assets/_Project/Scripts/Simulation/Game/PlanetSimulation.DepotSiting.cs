@@ -121,7 +121,7 @@ namespace KardashevAscent.Simulation.Game
                 if (m.Tile == BaseTileId) continue;
                 List<int> direct = Routes.Route(m.Tile, BaseTileId);
                 if (direct == null) continue;
-                double kgDay = RobotSpecs.MiningKgPerHour * Deposits.GradeOf(m.Tile, m.Material) * 24.0;
+                double kgDay = RobotSpecs.MiningKgPerHour * Deposits.EffectiveGrade(m.Tile, m.Material) * 24.0;
                 if (kgDay <= 0.0) continue;
                 flows.Add((m.Tile, kgDay, direct, RoundTripWhAlong(m.Tile, direct, payload) / payload));
             }
