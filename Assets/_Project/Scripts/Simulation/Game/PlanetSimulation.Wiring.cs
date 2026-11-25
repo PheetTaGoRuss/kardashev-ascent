@@ -240,12 +240,12 @@ namespace KardashevAscent.Simulation.Game
         }
 
         /// <summary>True when a wired source stands on this tile's island (even at night: the panels are there), so stations may be built and used here.</summary>
-        public bool IslandHasSource(int tile)
+        public bool IslandHasSource(int tile, bool includeSites = false)
         {
             int id = IslandIdOf(tile);
             if (id < 0) return false;
             foreach (var b in WireableBuildings())
-                if (IsWireOutput(b.Type) && wiredBuildings.Contains((b.Tile, b.Slot)) && IslandIdOf(b.Tile) == id && !(Build.QueueCount > 0 && Build.IsQueued(b.Tile, b.Slot))) return true;
+                if (IsWireOutput(b.Type) && wiredBuildings.Contains((b.Tile, b.Slot)) && IslandIdOf(b.Tile) == id && (includeSites || !(Build.QueueCount > 0 && Build.IsQueued(b.Tile, b.Slot)))) return true;
             return false;
         }
 

@@ -271,7 +271,10 @@ namespace KardashevAscent.Simulation.Robots
             // the energy it holds counts only up to what the cold battery will give
             double have = Math.Max(0.0, r.Battery.UsableWh - r.Battery.CapacityWh * Math.Max(0.0, r.Battery.ColdFactor - cold));   // energy in a warm battery is partly locked once it has cooled outdoors
             double spare = have - RobotSpecs.ReturnToChargeFraction * usableCapacity;
-            return Movement.EnergyWh(go + back) / r.Attribute(RobotAttribute.EnergyEfficiency) + Movement.TripClimbWh(r, r.Tile, t.Tile) + heaterWh <= spare + 1e-9;
+            if (Movement.EnergyWh(go + back) / r.Attribute(RobotAttribute.EnergyEfficiency) + Movement.TripClimbWh(r, r.Tile, t.Tile) + heaterWh <= spare + 1e-9)
+                return true;
+            // the only exception to the round-trip rule: a one-way trip to an outpost whose own panels will charge the robot (see PlanetSimulation.Outposts)
+            return t.Kind == TaskKind.Build && OneWayOutpostOk != null && OneWayOutpostOk(r, t.Tile);
         }
 
         // ---- Phase 4 settings ----
@@ -1110,6 +1113,8 @@ namespace KardashevAscent.Simulation.Robots
         /// </summary>
         /// <summary>Heater or cooler power a robot would run outdoors at a tile, W (set by the simulation from the weather; null: none counted).</summary>
         public System.Func<Robot, int, double> OutdoorHeaterWAt { get; set; }
+        /// <summary>One-way build trips to a leapfrog outpost: true when the robot may go to the tile and not come straight back (the simulation checks the survival window).</summary>
+        public System.Func<Robot, int, bool> OneWayOutpostOk { get; set; }
         /// <summary>True when the air at a tile is below the operating minimum (the heater is then holding the battery cold).</summary>
         public System.Func<int, bool> OutdoorAirIsCold { get; set; }
 

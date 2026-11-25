@@ -273,3 +273,12 @@ These may be bot-order flaws or design gaps; the bot has not found a build order
 Changes: load order (baseline, robots below 20 %, other charging, construction, growth; shed from the bottom), island grids (a wired source plus chargers off the lander grid), KI-46 for every outdoor task counting the heater and the cold-locked battery (found by tracing the Mars losses: a warm battery that cools outdoors loses about 750 Wh of usable energy, and the 4-hour leg to tile 483 was approved on the warm numbers), the 20 % return reserve counting that lock.
 
 Result: Mars-like keeps its robots (5 at the end, 1 286 t of rock mined) where all were lost by day 5 before. Neither world reaches milestone 1 in two years. Next blocker, both worlds: "Build@496 / Mine@496: too far: no robot can drive there and back to a charger": the forward charger toward the copper is itself beyond a round trip. The leapfrog outpost (a one-way trip for a full kit) is not built yet. Iron cell in Play: not a leak: a batch waits in the cell while the grid browns out (a unit test now proves the rust stays in the cell and is all accounted for).
+
+## Progression bot with the real defaults and leapfrog outposts (2026-11-25)
+
+The bot now plays the new-game defaults (wired grid, logistics, nothing wired for it). Findings in order:
+1. A power line costs 112.5 kg of copper a tile (the starting stock is 144 kg), so any cabled charger or panel field away from the lander is out of reach until copper is mined. Island outposts (a panel costs 11.5 kg of copper, a station 20) avoid it.
+2. With outposts built toward the ore, Viridia mines copper (1 500 kg in stock by day 110) with no blockers listed. Crushing (Bond) then takes 5 to 12 % of generation.
+3. Viridia still reaches no milestone in two years: batteries need lithium (about 9 kg each), the lithium deposit (tile 484, two tiles out) shows "Travelling" for 700 days and nothing is mined, so the battery stays 22 MWh and the colony cannot grow past about 1 MW of demand.
+4. Mars-like: the first outpost is refused ("its battery would run out 5 520 Wh short of finishing the build"): two panels and a station take about 8 kWh of build work at 200 W, 3.3 times a cold robot battery. Design gap: the build power, the kit size, or a robot that can charge from a panel before the station stands.
+Not done: islands are lossless in the bot's runs only because the outposts are single tiles; line faults and ratings are not modelled on islands.

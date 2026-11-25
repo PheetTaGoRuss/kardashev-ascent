@@ -46,7 +46,10 @@ namespace KardashevAscent.Simulation.Game
             Build.Salvage(WithStandIns(made, tileId, slot), StockAt(tileId));
             standIns.Remove((tileId, slot));
             if (type == BuildingType.Battery)
-                Grid.Battery.RemoveCapacity(BatteryUnitWh);
+            {
+                if (islandBatteries.Remove((tileId, slot))) { }   // an island battery was never part of the colony battery
+                else Grid.Battery.RemoveCapacity(BatteryUnitWh);
+            }
         }
 
         /// <summary>Panels that float (anchor slots): the Solar and cost rules differ a little.</summary>
@@ -123,7 +126,7 @@ namespace KardashevAscent.Simulation.Game
             AddBattery(tileId, slot);
             Occupy(tileId, FootprintFor(BuildingType.Battery, tileId, slot));
             if (finished)
-                Grid.Battery.AddCapacity(BatteryUnitWh);
+                AddBatteryCapacity(tileId, slot);
             Settle((tileId, slot));
             return true;
         }

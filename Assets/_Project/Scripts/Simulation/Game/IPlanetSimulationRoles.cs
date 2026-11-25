@@ -274,6 +274,8 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>Every open task now (sites, salvage and survey orders, mining, Workshop jobs), in a stable order.</summary>
         System.Collections.Generic.IReadOnlyList<Robots.WorkTask> OpenWork();
+        /// <summary>For a build site that is a leapfrog outpost: whether a robot may go one way and why (empty for other tiles).</summary>
+        string OutpostText(int tile);
 
         /// <summary>Hand out work now (after changing workforce settings), instead of waiting for the next tick.</summary>
         void RefreshWork();

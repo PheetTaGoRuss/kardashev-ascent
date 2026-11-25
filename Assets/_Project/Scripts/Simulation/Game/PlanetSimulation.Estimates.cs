@@ -102,6 +102,42 @@ namespace KardashevAscent.Simulation.Game
         }
 
         /// <summary>Serve the chargers on each island from its own sources, shared in proportion to what each asked; the rest is curtailed (no battery on an island).</summary>
+        readonly HashSet<(int Tile, int Slot)> islandBatteries = new HashSet<(int, int)>();
+        readonly Dictionary<(int Tile, int Slot), double> islandBatteryWh = new Dictionary<(int, int), double>();
+
+        void AddBatteryCapacity(int tileId, int slot)
+        {
+            if (WiredGrid && !restoringState && !IsPowered(tileId)) { islandBatteries.Add((tileId, slot)); islandBatteryWh[(tileId, slot)] = 0.0; }
+            else Grid.Battery.AddCapacity(BatteryUnitWh);
+        }
+
+        /// <summary>Energy held in the batteries on this tile's island, Wh, and their capacity.</summary>
+        public (double StoredWh, double CapacityWh) IslandBatteryOf(int tile)
+        {
+            int id = IslandIdOf(tile);
+            double stored = 0.0, cap = 0.0;
+            if (id < 0) return (0.0, 0.0);
+            foreach (var k in islandBatteries)
+                if (IslandIdOf(k.Tile) == id && !(Build.QueueCount > 0 && Build.IsQueued(k.Tile, k.Slot))) { cap += BatteryUnitWh; stored += islandBatteryWh.TryGetValue(k, out double w) ? w : 0.0; }
+            return (stored, cap);
+        }
+
+        /// <summary>The share of an island source's power that reaches its chargers: the same line loss per tile as the lander grid (resistive, 2 % per tile of line), counted over the tiles between the nearest source and the charger.</summary>
+        double IslandLineFactor(int sourceTile, int chargerTile)
+        {
+            if (sourceTile == chargerTile) return 1.0;
+            var dist = new Dictionary<int, int> { [sourceTile] = 0 };
+            var queue = new Queue<int>(); queue.Enqueue(sourceTile);
+            while (queue.Count > 0)
+            {
+                int a = queue.Dequeue();
+                if (a == chargerTile) break;
+                if (islandAdjacent != null && islandAdjacent.TryGetValue(a, out List<int> nbs))
+                    foreach (int nb in nbs) if (!dist.ContainsKey(nb)) { dist[nb] = dist[a] + 1; queue.Enqueue(nb); }
+            }
+            return dist.TryGetValue(chargerTile, out int hops) ? Math.Pow(1.0 - LineLossPerHop, hops) : 1.0;
+        }
+
         Dictionary<int, double> ServeIslands(double dt, out double generatedW, out double servedW, out double curtailedW)
         {
             generatedW = servedW = curtailedW = 0.0;
@@ -116,6 +152,8 @@ namespace KardashevAscent.Simulation.Game
                 if (id < 0 || !seenIslands.Add(id)) continue;
                 double gen = IslandGenerationW(b.Tile);
                 generatedW += gen;
+                gen *= IslandLineFactor(b.Tile, FirstChargerTile(id, b.Tile));
+                var (stored, cap) = IslandBatteryOf(b.Tile);
                 var here = new List<int>();
                 double total = 0.0;
                 foreach (var kv in requests)
@@ -123,12 +161,38 @@ namespace KardashevAscent.Simulation.Game
                     Robot r = Workforce.GetRobot(kv.Key);
                     if (r != null && r.Facility.HasValue && IslandIdOf(r.Facility.Value.Tile) == id) { here.Add(kv.Key); total += kv.Value; }
                 }
-                double share = total > 0.0 ? Math.Min(1.0, gen / total) : 0.0;
+                // the island battery covers a shortfall and takes the surplus (kept simple: 95 % charging efficiency, a game rule, TBD)
+                double fromBattery = total > gen && stored > 0.0 ? Math.Min(total - gen, stored / dt) : 0.0;
+                double share = total > 0.0 ? Math.Min(1.0, (gen + fromBattery) / total) : 0.0;
                 foreach (int rid in here) { offers[rid] = requests[rid] * share; servedW += requests[rid] * share; requests.Remove(rid); }
-                curtailedW += Math.Max(0.0, gen - total * share);
+                double surplus = Math.Max(0.0, gen - total * share);
+                double toBattery = cap > 0.0 ? Math.Min(surplus, Math.Max(0.0, cap - stored) / (0.95 * dt)) : 0.0;
+                SettleIslandBattery(b.Tile, -fromBattery * dt + 0.95 * toBattery * dt);
+                curtailedW += surplus - toBattery;
             }
             foreach (var kv in requests) offers[kv.Key] = 0.0;   // an island with no source serves nothing
             return offers;
+        }
+
+        int FirstChargerTile(int islandId, int fallback)
+        {
+            foreach (var c in stations) if (IslandIdOf(c.Tile) == islandId) return c.Tile;
+            return fallback;
+        }
+
+        /// <summary>Add (or take) energy to the island's batteries, spread over them in order.</summary>
+        void SettleIslandBattery(int tile, double deltaWh)
+        {
+            int id = IslandIdOf(tile);
+            foreach (var k in new List<(int Tile, int Slot)>(islandBatteries))
+            {
+                if (Math.Abs(deltaWh) < 1e-12) break;
+                if (IslandIdOf(k.Tile) != id) continue;
+                double cur = islandBatteryWh.TryGetValue(k, out double w) ? w : 0.0;
+                double next = Math.Max(0.0, Math.Min(BatteryUnitWh, cur + deltaWh));
+                deltaWh -= next - cur;
+                islandBatteryWh[k] = next;
+            }
         }
 
         public double DepositShareLeft(int tileId, Material material) => Deposits.RemainingShare(tileId, material);

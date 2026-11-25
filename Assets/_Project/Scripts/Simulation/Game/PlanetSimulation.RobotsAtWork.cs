@@ -25,7 +25,7 @@ namespace KardashevAscent.Simulation.Game
             // drive out and back with nothing to bring (it waits for mining or refining instead).
             foreach (var site in Build.Sites())
             {
-                if (!CanAdvance(site.Bill, site.Share, StockAt(site.Tile)))
+                if (!CanAdvance(site.Bill, site.Share, BuildStockAt(site.Tile)))
                     continue;
                 tasks.Add(new WorkTask(TaskKind.Build, site.Tile, site.Slot, i++));
             }
@@ -73,7 +73,7 @@ namespace KardashevAscent.Simulation.Game
                 Workforce.Assign(OpenTasks(), Needs());
                 bool any = false;
                 // A site takes materials from stock while a robot works on it.
-                foreach (var done in Build.Pay(key => StockAt(key.Tile), key => Workforce.IsWorkedOnSite(new WorkTask(TaskKind.Build, key.Tile, key.Slot))))
+                foreach (var done in Build.Pay(key => BuildStockAt(key.Tile), key => Workforce.IsWorkedOnSite(new WorkTask(TaskKind.Build, key.Tile, key.Slot))))
                 {
                     any = true;
                     Finish(done.Tile, done.Slot, !(silent.HasValue && silent.Value == done));
