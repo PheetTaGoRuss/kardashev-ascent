@@ -20,8 +20,10 @@ namespace KardashevAscent.Simulation.Resources
         public readonly double TempC, RelativeHumidityPercent, PressurePa, OxygenFraction;
         /// <summary>A coast tile: sea salt in the air (ISO 9223 chloride class S1 or above).</summary>
         public readonly bool Coast;
-        public ChemEnvironment(double tempC, double rh, double pressurePa, double oxygenFraction, bool coast)
-        { TempC = tempC; RelativeHumidityPercent = Math.Max(0.0, Math.Min(100.0, rh)); PressurePa = Math.Max(0.0, pressurePa); OxygenFraction = Math.Max(0.0, Math.Min(1.0, oxygenFraction)); Coast = coast; }
+        /// <summary>Surface gravity, m/s2, and the air's molar mass, kg/mol (CO2 0.044, Earth's air 0.029), for the free convection of vapour under an atmosphere.</summary>
+        public readonly double GravityMs2, AirMolarMassKg;
+        public ChemEnvironment(double tempC, double rh, double pressurePa, double oxygenFraction, bool coast, double gravityMs2 = 9.81, double airMolarMassKg = 0.02896)
+        { TempC = tempC; RelativeHumidityPercent = Math.Max(0.0, Math.Min(100.0, rh)); PressurePa = Math.Max(0.0, pressurePa); OxygenFraction = Math.Max(0.0, Math.Min(1.0, oxygenFraction)); Coast = coast; GravityMs2 = gravityMs2; AirMolarMassKg = airMolarMassKg; }
     }
 
     /// <summary>What one stock loses and gains in a step: the new masses (kg of each material) and the exchange with the environment, all in kg.</summary>
@@ -130,16 +132,32 @@ namespace KardashevAscent.Simulation.Resources
             tempK <= 0.0 ? 0.0 : Math.Exp(9.550426 - 5723.265 / tempK + 3.53068 * Math.Log(tempK) - 0.00728332 * tempK);
 
         /// <summary>
-        /// Hertz-Knudsen sublimation flux into a vacuum, kg per m2 per s: J = alpha (p_sat - p_vapour) / sqrt(2 pi R T / M), with alpha = 1 (Hertz 1882, Knudsen 1915; Schrage correction ignored).
-        /// In air the flux is limited by diffusion of the vapour away through the gas; the game damps it by 1 / (1 + P / 0.02 Pa) (game rule, TBD, chosen so exposed ice on Mars loses millimetres a month when warm, as Phoenix saw), and caps it by the heat the surface can supply, 100 W/m2 over the latent heat of sublimation.
+        /// Sublimation flux of ice, kg per m2 per s. Into a vacuum (no air) it is the Hertz-Knudsen flux, J = alpha (p_sat - p_vapour) / sqrt(2 pi R T / M) with alpha = 1 (Hertz 1882,
+        /// Knudsen 1915). Under an atmosphere the vapour has to leave by diffusion and free convection: the vapour is lighter than the air, so a layer of it rises from the surface
+        /// (Ingersoll 1970, Science 168: E = 0.17 d(rho_v) D (g (d rho / rho) / nu^2)^(1/3), with d(rho_v) the vapour density difference between the surface and the far air, D the
+        /// diffusivity of water vapour in the air and nu its kinematic viscosity; checked against Mars chamber rates by Chittenden et al. 2008, Icarus 196). The flux is the smaller of
+        /// the two and is also limited by the heat the surface can take in, 200 W/m2 over the latent heat of sublimation (game rule, TBD: about half a Mars noon's absorbed sunlight).
         /// </summary>
-        public static double SublimationFlux(double tempC, double rhPercent, double pressurePa)
+        public static double SublimationFlux(double tempC, double rhPercent, double pressurePa, double gravityMs2 = 9.81, double airMolarMassKg = 0.02896)
         {
             double tK = tempC + 273.15;
-            double dp = IceVapourPressurePa(tK) * (1.0 - Math.Min(1.0, rhPercent / 100.0));
-            if (dp <= 0.0) return 0.0;
-            double j = dp / Math.Sqrt(2.0 * Math.PI * 8.314462618 * tK / 0.01801528);
-            return Math.Min(j / (1.0 + pressurePa / 0.02), 100.0 / SublimationJPerKg);
+            const double R = 8.314462618, Mw = 0.01801528, HeatCapWm2 = 200.0;
+            double pSat = IceVapourPressurePa(tK), dp = pSat * (1.0 - Math.Min(1.0, rhPercent / 100.0));
+            if (dp <= 0.0 || tK <= 0.0) return 0.0;
+            double hk = dp / Math.Sqrt(2.0 * Math.PI * R * tK / Mw);
+            double j = hk;
+            if (pressurePa > 0.0)
+            {
+                double rhoAir = pressurePa * airMolarMassKg / (R * tK);
+                double dRhoV = dp * Mw / (R * tK);                                    // vapour density difference, kg/m3
+                double d = 2.0e-5 * Math.Pow(tK / 273.15, 1.5) * (101_325.0 / pressurePa);   // diffusivity of water vapour in air (Fuller-type scaling from 2e-5 m2/s at 273 K, 1 atm)
+                double mu = 1.46e-5 * Math.Pow(tK / 273.15, 0.7);                   // dynamic viscosity of the air, Pa s (CO2 and air alike to 20 %)
+                double nu = mu / rhoAir;
+                double dRhoOverRho = Math.Max(0.0, (1.0 - Mw / airMolarMassKg) * (pSat * Mw / (R * tK)) / rhoAir);   // the buoyancy of the vapour layer
+                double conv = 0.17 * dRhoV * d * Math.Pow(gravityMs2 * dRhoOverRho / (nu * nu), 1.0 / 3.0);
+                j = Math.Min(hk, Math.Max(conv, 0.0));
+            }
+            return Math.Min(j, HeatCapWm2 / SublimationJPerKg);
         }
 
         // ---- salt: deliquescence ----
@@ -189,7 +207,7 @@ namespace KardashevAscent.Simulation.Resources
                     double melt = 0.0;
                     if (env.TempC > 0.0) melt = Math.Min(kg, kg * Math.Min(1.0, ConvectionWPerM2K * IceAreaM2PerKg * env.TempC * 86400.0 / FusionJPerKg) * days);
                     if (shelter == Shelter.OpenPile && melt > 0.0) { r.Add(Material.Water, -melt); r.Drain(Material.Water, melt); }   // the melt runs off an open pile
-                    double sub = Math.Min(kg - melt, kg * Math.Min(0.5, SublimationFlux(Math.Min(env.TempC, 0.0), env.RelativeHumidityPercent, env.PressurePa) * IceAreaM2PerKg * 86400.0) * days);
+                    double sub = Math.Min(kg - melt, kg * Math.Min(0.5, SublimationFlux(Math.Min(env.TempC, 0.0), env.RelativeHumidityPercent, env.PressurePa, env.GravityMs2, env.AirMolarMassKg) * IceAreaM2PerKg * 86400.0) * days);
                     if (sub > 0.0) { r.Add(Material.Water, -sub); r.WaterSublimated = sub; }
                     break;
                 }

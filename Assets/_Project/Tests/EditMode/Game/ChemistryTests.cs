@@ -114,5 +114,22 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.Less(sim.InventoriesForTests.StockOf(PlaceId.Wreck(wreck.Id))[Material.Sodium], 1.0, "sodium does not survive open humid air");
             Assert.AreEqual(0.0, sim.Chemistry.ImbalanceKg, 1e-6, "the environment ledger closes");
         }
+
+        [Test]
+        public void PhoenixSummer_IceSublimatesMillimetresToCentimetresPerSol_AndAColdAirlessWorldKeepsItsIce()
+        {
+            // Phoenix landing site, northern summer: about -35 C, 800 Pa of CO2, g = 3.71; exposed ice chunks vanished within about 4 sols (Smith et al. 2009, Science 325)
+            foreach (double c in new[] { -15.0, -5.0, 0.0 })   // the daytime temperature of sunlit ice (the night, at -45 C, gives 0.06 mm a sol)
+            {
+                double j = Chemistry.SublimationFlux(c, 0.1, 800.0, 3.71, 0.04401);
+                double mmPerSol = j * 88775.0 / 917.0 * 1000.0;
+                TestContext.WriteLine($"Mars at {c:0} C: {j:0.0e+0} kg/m2/s, {mmPerSol:0.0} mm of ice per sol");
+                Assert.Greater(mmPerSol, 1.0); Assert.Less(mmPerSol, 40.0);
+            }
+            double cold = Chemistry.SublimationFlux(-153.15, 0.0, 0.0);   // 120 K, no air
+            double warm = Chemistry.SublimationFlux(-50.0, 0.0, 0.0);
+            Assert.Less(cold * 86400.0 * 365.0 * 2.0 * 0.005, 0.001, "ice at 120 K stays: under 0.1 % in two years");
+            Assert.Greater(warm, cold * 1e6);
+        }
     }
 }

@@ -57,6 +57,8 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Wind turbines on this tile (a game rule allows one: no wake model).</summary>
         public int WindTurbineCount(int tileId) { int n = 0; foreach (var k in windTurbines) if (k.Tile == tileId) n++; return n; }
 
+        public System.Collections.Generic.IReadOnlyList<int> WindTurbineTiles() { var l = new List<int>(); foreach (var k in windTurbines) if (!l.Contains(k.Tile)) l.Add(k.Tile); l.Sort(); return l; }
+
         long windPowerHour = long.MinValue;
         readonly Dictionary<int, double> windPowerCache = new Dictionary<int, double>();
 

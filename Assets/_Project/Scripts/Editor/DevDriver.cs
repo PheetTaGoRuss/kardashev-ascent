@@ -372,8 +372,25 @@ namespace KardashevAscent.EditorTools
                     foreach (int n in sim.Sphere.Neighbors[sim.BaseTileId]) if (!sim.GetTile(n).IsWater && sim.IsOpenGround(n)) { tile = n; break; }
                     bool ok = tile >= 0 && sim.PlaceWindTurbine(tile, 0);
                     sim.Debug.FreeBuilding = false;
-                    for (int h = 0; h < 24 * 60 && sim.WindTurbinePowerAtW(tile) < 20000.0; h++) sim.Tick(1.0);
+                    if (argument == "idle") { for (int h = 0; h < 24 * 400 && sim.WindTurbinePowerAtW(tile) > 1.0; h++) sim.Tick(1.0); }
+                    else for (int h = 0; h < 24 * 60 && sim.WindTurbinePowerAtW(tile) < 20000.0; h++) sim.Tick(1.0);
                     Log($"windturbine placed={ok} tile={tile} status={(tile >= 0 ? sim.WindTurbineStatus(tile) : "-")} windPowerW={sim.WindPowerW():0}");
+                    return true;
+                }
+                case "chemlog":
+                {
+                    // chemlog: an iron pile on an open depot tile and sodium in a wreck, five days on: the chemistry log entries and the stores chain.
+                    var sim = Runner()?.Simulation as KardashevAscent.Simulation.Game.PlanetSimulation;
+                    if (sim == null) return true;
+                    int tile = -1;
+                    foreach (int n in sim.Sphere.Neighbors[sim.BaseTileId]) if (!sim.GetTile(n).IsWater) { tile = n; break; }
+                    var inv = (KardashevAscent.Simulation.Logistics.InventoryBook)sim.GetType().GetProperty("InventoriesForTests", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(sim);
+                    inv.Add(KardashevAscent.Simulation.Logistics.PlaceId.Depot(tile), KardashevAscent.Simulation.Resources.Material.Iron, 3000.0);
+                    var r = sim.Workforce.AddRobot(KardashevAscent.Simulation.Robots.RobotKind.General, tile);
+                    var w = (KardashevAscent.Simulation.Game.Wreck)sim.GetType().GetMethod("DestroyForTests", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).Invoke(sim, new object[] { r.Id, 10.0 });
+                    inv.Add(KardashevAscent.Simulation.Logistics.PlaceId.Wreck(w.Id), KardashevAscent.Simulation.Resources.Material.Sodium, 50.0);
+                    for (int h = 0; h < 24 * 5; h++) sim.Tick(1.0);
+                    Log("chemlog notes: " + string.Join("; ", sim.StorageNotes(tile)) + " | log: " + string.Join(" | ", System.Linq.Enumerable.Select(System.Linq.Enumerable.Where(sim.OperationsLog, o => o.Quantity == "Reactive metal exposed" || o.Quantity == "Storage loss"), o => o.Quantity + ": " + o.Text)));
                     return true;
                 }
                 case "overlay":
