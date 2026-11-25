@@ -35,6 +35,7 @@ namespace KardashevAscent.EditorTools
     {
         const string RequestPath = "Temp/dev-driver.txt";
         const string ShotFolder = "Temp/shots";
+        static RenderTexture offscreen;
         const string WaitKey = "KardashevAscent.DevDriver.waitUntil";
         const string LogPath = "Temp/dev-driver.log";
 
@@ -115,6 +116,61 @@ namespace KardashevAscent.EditorTools
                     ScreenCapture.CaptureScreenshot($"{ShotFolder}/{argument}.png");
                     Wait(0.5);
                     return true;
+                case "uirt":
+                {
+                    // uirt on|off: render every UI Toolkit panel into an offscreen RenderTexture (works without editor focus); shotrt writes it out.
+                    var panels = new System.Collections.Generic.HashSet<UnityEngine.UIElements.PanelSettings>();
+                    foreach (var doc in UnityEngine.Object.FindObjectsByType<UnityEngine.UIElements.UIDocument>(FindObjectsSortMode.None)) if (doc.panelSettings != null) panels.Add(doc.panelSettings);
+                    if (argument == "off") { foreach (var ps in panels) ps.targetTexture = null; Log("uirt off"); return true; }
+                    offscreen = offscreen != null ? offscreen : new RenderTexture(1920, 1080, 24, RenderTextureFormat.ARGB32);
+                    foreach (var ps in panels) ps.targetTexture = offscreen;
+                    Log($"uirt on ({panels.Count} panel settings)");
+                    return true;
+                }
+                case "shotrt":
+                {
+                    // shotrt <name>: camera view (Camera.Render into the texture) plus the UI panels already drawn into it; PNG into the shots folder.
+                    Directory.CreateDirectory(ShotFolder);
+                    var cam = Camera.main;
+                    var cameraRt = RenderTexture.GetTemporary(1920, 1080, 24, RenderTextureFormat.ARGB32);
+                    var oldTarget = cam != null ? cam.targetTexture : null;
+                    if (cam != null) { cam.targetTexture = cameraRt; cam.Render(); cam.targetTexture = oldTarget; }
+                    var tex = new Texture2D(1920, 1080, TextureFormat.RGBA32, false);
+                    var prev = RenderTexture.active;
+                    RenderTexture.active = cameraRt; tex.ReadPixels(new Rect(0, 0, 1920, 1080), 0, 0); tex.Apply();
+                    File.WriteAllBytes($"{ShotFolder}/{argument}_cam.png", tex.EncodeToPNG());
+                    if (offscreen != null)
+                    {
+                        RenderTexture.active = offscreen; tex.ReadPixels(new Rect(0, 0, 1920, 1080), 0, 0); tex.Apply();
+                        File.WriteAllBytes($"{ShotFolder}/{argument}_ui.png", tex.EncodeToPNG());
+                    }
+                    RenderTexture.active = prev;
+                    RenderTexture.ReleaseTemporary(cameraRt);
+                    UnityEngine.Object.DestroyImmediate(tex);
+                    Log("shotrt " + argument);
+                    return true;
+                }
+                case "islanddemo":
+                {
+                    // islanddemo: an island two tiles from the base with 6 panels, a battery and a charger; a drained robot parked there; steps 10 h; logs the island numbers.
+                    var sim = Runner()?.Simulation as Simulation.Game.PlanetSimulation;
+                    if (sim == null) return true;
+                    sim.WeatherEnabled = false;
+                    sim.Debug.FreeBuilding = true;
+                    int far = -1;
+                    foreach (int n in sim.Sphere.Neighbors[sim.BaseTileId]) foreach (int m2 in sim.Sphere.Neighbors[n]) if (far < 0 && m2 != sim.BaseTileId && System.Array.IndexOf(sim.Sphere.Neighbors[sim.BaseTileId], m2) < 0 && !sim.GetTile(m2).IsWater && sim.IsOpenGround(m2)) far = m2;
+                    for (int sl = 0; sl < 6; sl++) { sim.PlacePanel(far, sl, 0.35, System.Math.PI); sim.PlaceBuildingWire(far, sl); }
+                    sim.PlaceBattery(far, 10); sim.PlaceBuildingWire(far, 10);
+                    sim.PlaceChargingStation(far, 11); sim.PlaceBuildingWire(far, 11);
+                    sim.Debug.FreeBuilding = false;
+                    var rb = sim.Workforce.AddRobot(Simulation.Robots.RobotKind.General, far);
+                    rb.Battery.Draw(rb.Battery.UsableWh * 0.9, 1.0);
+                    double before = rb.Battery.UsableWh;
+                    for (int h = 0; h < 10; h++) sim.Tick(1.0);
+                    var (st, cp) = sim.IslandBatteryOf(far);
+                    Log($"islanddemo tile {far}: island gen {sim.IslandGenerationW(far):0} W, island battery {st / 1000.0:0} of {cp / 1000.0:0} kWh, robot {before:0} -> {rb.Battery.UsableWh:0} Wh, colony battery cap {sim.BatteryCapacityWh / 1e6:0} MWh");
+                    return true;
+                }
                 case "tab":
                     SystemTabs.Toggle(argument);
                     return true;

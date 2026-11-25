@@ -227,6 +227,8 @@ namespace KardashevAscent.Simulation.Game
             UpdateStar();
             // Version 26 builds from materials: an older site keeps the share of its old cost in parts already paid.
             restoringVersion = state.Version;
+            pendingIslandBatteries = state.IslandBatteries;
+            islandBatteries.Clear(); islandBatteryWh.Clear();
             Build.Reset();
             standIns.Clear();
             var sitesInOrder = new List<BuildingRecord>();
@@ -402,6 +404,7 @@ namespace KardashevAscent.Simulation.Game
         }
 
         int restoringVersion = SimulationState.CurrentVersion;
+        System.Collections.Generic.List<IslandBatteryRecord> pendingIslandBatteries;
 
         /// <summary>Work saved for a site (version 27), or null for an older save (work as far as its materials).</summary>
         double? WorkOf(BuildingRecord r) => restoringVersion >= 27 ? r.WorkDoneHours : (double?)null;
@@ -538,6 +541,7 @@ namespace KardashevAscent.Simulation.Game
                 if (r.Tile < 0 || r.Tile >= TileCount || r.Slot < 0 || r.Slot >= SlotCount(r.Tile) || GetBuilding(r.Tile, r.Slot) != BuildingType.None)
                     return;
                 if (site) Build.RestoreSite(r.Tile, r.Slot, WithStandIns(BuildBill(BuildingType.Battery), r.Tile, r.Slot), PaidShareOf(r, 0.0), WorkOf(r), BuildTimes.Hours(BuildingType.Battery));
+                else if (restoringVersion >= 68 && pendingIslandBatteries != null && pendingIslandBatteries.Exists(b => b.Tile == r.Tile && b.Slot == r.Slot)) { islandBatteries.Add((r.Tile, r.Slot)); islandBatteryWh[(r.Tile, r.Slot)] = pendingIslandBatteries.Find(b => b.Tile == r.Tile && b.Slot == r.Slot).StoredWh; }
                 else Grid.Battery.AddCapacity(BatteryUnitWh);
                 AddBattery(r.Tile, r.Slot);
             }

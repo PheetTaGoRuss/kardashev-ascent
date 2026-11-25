@@ -66,7 +66,7 @@ namespace KardashevAscent.Simulation.Game
         void Finish(int tileId, int slot, bool raise)
         {
             if (batteries.Contains((tileId, slot)))
-                Grid.Battery.AddCapacity(BatteryUnitWh);
+                AddBatteryCapacity(tileId, slot);
             else if (!stepping)
                 GenerationW = ComputeGeneration() + RtgW;   // during a step, the next step counts it (keeps the step's books balanced)
             if (relays.Contains((tileId, slot)))

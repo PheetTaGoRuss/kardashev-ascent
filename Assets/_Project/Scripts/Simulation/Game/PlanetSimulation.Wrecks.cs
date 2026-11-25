@@ -197,6 +197,8 @@ namespace KardashevAscent.Simulation.Game
         {
             state.NextWreckId = nextWreckId;
             state.RockMovedKg = RockMovedKg; state.TailingsKg = TailingsKg; state.MiningWorkHours = MiningWorkHours; state.ComminutionWh = ComminutionWh;
+            state.IslandBatteries = new System.Collections.Generic.List<IslandBatteryRecord>();
+            foreach (var k in islandBatteries) state.IslandBatteries.Add(new IslandBatteryRecord { Tile = k.Tile, Slot = k.Slot, StoredWh = islandBatteryWh.TryGetValue(k, out double iw) ? iw : 0.0 });
             foreach (Wreck w in wrecks)
                 state.Wrecks.Add(new WreckRecord
                 {

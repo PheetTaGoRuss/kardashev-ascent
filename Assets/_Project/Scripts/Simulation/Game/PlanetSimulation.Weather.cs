@@ -120,6 +120,7 @@ namespace KardashevAscent.Simulation.Game
         {
             Workforce.OutdoorHeaterWAt ??= (r, tile) => Robots.RobotThermal.HeaterW(LiveAirTemperatureAt(tile), r.Has(Robots.RobotModule.ThermalInsulation));
             Workforce.OutdoorAirIsCold ??= tile => LiveAirTemperatureAt(tile) < Robots.RobotThermal.OperatingMinC;
+            Workforce.OneWayOutpostOk ??= (r, tile) => OneWayVerdict(r, tile).Allowed;
             Upkeep.WindFactorAt ??= tile => HasWeather ? Robots.RobotThermal.WindFactor(AnomalyAt(tile).WindMs, planet.SurfacePressureEarth) : 1.0;
             return DiurnalAirTemperatureAt(tileId, TimeHours) + AnomalyAt(tileId).TemperatureK;
         }

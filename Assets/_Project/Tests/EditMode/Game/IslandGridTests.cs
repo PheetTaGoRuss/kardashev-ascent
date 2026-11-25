@@ -34,7 +34,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.IsTrue(sim.PlaceBuildingWire(far, 0));
             Assert.IsTrue(sim.IslandHasSource(far));
             Assert.IsTrue(sim.PlaceChargingStation(far, 1), "an island with a wired panel may have a charger");
-            Assert.IsFalse(sim.PlaceBattery(far, 2), "a battery belongs to the lander grid");
+            Assert.IsTrue(sim.PlaceBattery(far, 2), "a battery on an island belongs to the island");
         }
 
         [Test]
@@ -51,6 +51,44 @@ namespace KardashevAscent.Simulation.Tests.Game
             for (int h = 0; h < 8; h++) sim.Tick(1.0);
             Assert.Greater(sim.IslandGenerationW(far), 0.0, "the island's panels make power by day");
             Assert.Greater(r.Battery.UsableWh, before, "the robot charged");
+        }
+
+        [Test]
+        public void AnIslandBattery_FillsFromTheIslandsPanels_IsNotPartOfTheColonyBattery_AndIsSaved()
+        {
+            var (sim, far) = Wired();
+            double colonyCap = sim.BatteryCapacityWh;
+            for (int s = 0; s < 6; s++) { sim.PlacePanel(far, s, 0.35, Math.PI); sim.PlaceBuildingWire(far, s); }
+            Assert.IsTrue(sim.PlaceBattery(far, 10)); sim.PlaceBuildingWire(far, 10);
+            Assert.AreEqual(colonyCap, sim.BatteryCapacityWh, 1e-9, "an island battery is not added to the colony battery");
+            for (int h = 0; h < 12; h++) sim.Tick(1.0);
+            var (stored, cap) = sim.IslandBatteryOf(far);
+            Assert.AreEqual(sim.BatteryUnitWh, cap, 1e-6);
+            Assert.Greater(stored, 0.0, "the panels charged it");
+            var again = new PlanetSimulation(Sphere, Surface, Earthlike) { WiredGrid = true, WeatherEnabled = false };
+            again.RestoreState(sim.CaptureState());
+            Assert.AreEqual(stored, again.IslandBatteryOf(far).StoredWh, 1e-6);
+            Assert.AreEqual(colonyCap, again.BatteryCapacityWh, 1e-9);
+        }
+
+        [Test]
+        public void AnOutpostTrip_IsOneWayOnlyWhenTheBatteryCoversItAndThePanelsWillChargeTheRobot()
+        {
+            var (sim, far) = Wired();
+            sim.Debug.FreeBuilding = false;
+            sim.Tick(0.5);
+            var r = sim.Workforce.Robots.First();
+            Assert.IsFalse(sim.OneWayVerdict(r, far).IsOutpost, "no sites there: not an outpost");
+            sim.PlacePanel(far, 0, 0.35, Math.PI); sim.PlaceBuildingWire(far, 0);
+            Assert.IsTrue(sim.PlaceChargingStation(far, 1)); sim.PlaceBuildingWire(far, 1);
+            var v = sim.OneWayVerdict(r, far);
+            TestContext.WriteLine(v.Text);
+            Assert.IsTrue(v.IsOutpost);
+            StringAssert.StartsWith(v.Allowed ? "one-way: the outpost will charge it by sol" : "refused:", v.Text);
+            r.Battery.Draw(r.Battery.UsableWh * 0.95, 1.0);
+            var low = sim.OneWayVerdict(r, far);
+            Assert.IsFalse(low.Allowed, "a nearly empty robot is refused");
+            StringAssert.StartsWith("refused:", low.Text);
         }
     }
 }

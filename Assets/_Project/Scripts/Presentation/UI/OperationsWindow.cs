@@ -453,7 +453,8 @@ namespace KardashevAscent.Presentation.UI
             // why? chains for hauls that are waiting, from the simulation's structured reason (UI information design, stage 5)
             var waiting = haul.Where(h => sim.HaulBlockedReason(h.Id) != null).Select(h => (h.Id, h.From, h.To, Why: sim.HaulWhyOf(h.Id))).ToList();
             var exhaustedNow = sim.ExhaustedDeposits();
-            string whyShape = string.Join("|", waiting.Select(w => $"{w.Id}:{w.Why.Kind}:{w.Why.StopTile}:{w.Why.NeedWh:0}")) + "#" + string.Join(",", exhaustedNow.Select(e => e.Tile + ":" + e.Material));
+            var outposts = sim.OpenWork().Where(w => w.Kind == KardashevAscent.Simulation.Robots.TaskKind.Build).Select(w => w.Tile).Distinct().Select(t => (Tile: t, Text: sim.OutpostText(t))).Where(o => o.Text.Length > 0).ToList();
+            string whyShape = string.Join("|", waiting.Select(w => $"{w.Id}:{w.Why.Kind}:{w.Why.StopTile}:{w.Why.NeedWh:0}")) + "#" + string.Join(",", exhaustedNow.Select(e => e.Tile + ":" + e.Material)) + "#" + string.Join(",", outposts.Select(o => o.Tile + ":" + o.Text)); 
             if (whyShape != shownWhy)
             {
                 shownWhy = whyShape;
@@ -469,6 +470,18 @@ namespace KardashevAscent.Presentation.UI
                         chain.Set($"Haul {w.Id} is waiting (tile {w.From} to {w.To})", WhyChain.HaulSteps(w.Why.Kind, w.Why.NeedWh, w.Why.BudgetWh, w.Why.StopTile),
                                   "Show depot advice", () => depots.parent?.Q<ScrollView>()?.ScrollTo(depots));
                     depotsWhy.Add(chain);
+                }
+                // a leapfrog outpost: whether a robot may go one way, and why (decided 2026-11-25)
+                foreach (var o in outposts)
+                {
+                    var oc = new WhyChain();
+                    oc.Set($"Outpost on tile {o.Tile}", new System.Collections.Generic.List<string>
+                    {
+                        o.Text,
+                        "a robot may go one way only if its battery covers the outbound leg (with the kit as cargo) and the build at the cold capacity, and the outpost's own panels will charge it to its return reserve",
+                        "otherwise the round-trip rule stands: it must be able to drive back to a charger",
+                    });
+                    depotsWhy.Add(oc);
                 }
                 // a mine whose deposit is used up: why it stopped, and where to look next (B3)
                 foreach (var ex in exhaustedNow.Take(3))
