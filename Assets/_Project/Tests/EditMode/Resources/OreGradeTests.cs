@@ -96,5 +96,20 @@ namespace KardashevAscent.Simulation.Tests.Resources
             var third = Create(); third.RestoreState(old);
             Assert.AreEqual(0.0, third.TailingsKg);
         }
+
+        [Test]
+        public void ExhaustedDeposits_AreListed_AndTheBestOthersAreRankedByGrade()
+        {
+            var sim = Create();
+            int t = sim.BaseTileId;
+            sim.DebugSurveyAll();
+            sim.Deposits.Extract(t, Material.Iron, sim.Deposits.ReserveKg(t, Material.Iron));
+            Assert.IsFalse(sim.Deposits.IsExhausted(t, Material.Iron) == false);
+            Assert.IsTrue(sim.ExhaustedDeposits().Any(e => e.Tile == t && e.Material == Material.Iron));
+            var best = sim.BestDeposits(Material.Iron, 5);
+            Assert.AreEqual(5, best.Count);
+            Assert.IsFalse(best.Any(b => b.Tile == t), "the used-up tile is not offered");
+            for (int i = 1; i < best.Count; i++) Assert.GreaterOrEqual(best[i - 1].OreGrade.Value * best[i - 1].ShareLeft, best[i].OreGrade.Value * best[i].ShareLeft);
+        }
     }
 }

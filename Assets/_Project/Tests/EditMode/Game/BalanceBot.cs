@@ -28,6 +28,20 @@ namespace KardashevAscent.Simulation.Tests.Game
                                                282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0), 700, true));
         }
 
+        /// <summary>
+        /// The progression bot (B6): the scripted colony must reach milestone 1 and then milestone 2 within two game years on an Earth-like and a Mars-like world.
+        /// Explicit while it is slow. It fails today: the report names the milestone days or the first blockers. Do not loosen physics or cited figures to make it pass.
+        /// </summary>
+        [Test, Explicit("Progression regression: milestones 1 and 2 within two game years, Earth-like and Mars-like")]
+        public void ProgressionReachesMilestoneTwo()
+        {
+            double au = SolarConstants.AstronomicalUnit, lum = SolarConstants.SolarLuminosity;
+            string earth = Run("Viridia (Earth-like)", new PlanetSolarParams(lum, au, 0.0167, 23.44 * Math.PI / 180.0, 282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0), 730, false);
+            string mars = Run("Mars-like", new PlanetSolarParams(lum, 1.524 * au, 0.0934, 25.19 * Math.PI / 180.0, 336.0 * Math.PI / 180.0, 24.66, 686.98 * 24.0, 0.25, 0.3, -60.0), 730, false);
+            bool ok = earth.Contains("M2 day ") && !earth.Contains("M2 day never") && mars.Contains("M2 day ") && !mars.Contains("M2 day never");
+            Assert.IsTrue(ok, "\n" + earth + "\n" + mars);
+        }
+
         /// <summary>B4: a two-year run on three planet types; reports deposits used up, rock moved and the energy share mining takes. Report, not tuned.</summary>
         [Test, Explicit("Balance tool: depletion and mining energy across planet types")]
         public void DepletionByPlanetType()
@@ -48,15 +62,16 @@ namespace KardashevAscent.Simulation.Tests.Game
             int exhausted = 0; var exhaustedWhat = new List<string>();
             sim.DepositExhausted += (tile, m) => { exhausted++; exhaustedWhat.Add($"{m}@d{(int)(sim.TimeHours / 24)}"); };
             double generatedWh = 0.0;
-            int firstShortDay = -1; int milestone2Day = -1;
+            int firstShortDay = -1; int milestone2Day = -1; int milestone1Day = -1;
             int home = sim.BaseTileId;
             var log = new System.Text.StringBuilder();
 
             // a sensible player orders robots before spending the cargo on anything else
             int robotsOrdered = 3;   // the lander brings three
-            for (int i = 0; i < 6; i++) if (sim.OrderRobot(RobotKind.General) == null) robotsOrdered++;
+            // (no extra robots yet: the starting copper pays for the forward chargers that make copper mining possible)
             // landing: the tutorial's essentials, then enough panels for the base demand (what Skip does)
-            sim.PlaceChargingStation(home, 0);
+            // (no charger on the landing tile: its power is the lander RTGs only, about 440 W for every robot at once)
+            if (planet.AirTemperatureC < 0.0) sim.PlaceChargingStation(home, 0);   // cold world: robots need a charger at the lander to stay warm
             sim.PlaceBattery(home, 4);
             sim.PlaceWorkshop(home, 8);
             sim.PlaceResearchStation(home, 20);
@@ -68,13 +83,14 @@ namespace KardashevAscent.Simulation.Tests.Game
 
             var land = LandByDistance(sim, sphere, home);
             var target = new Dictionary<Material, int>();
-            int chargerHops = 0;
+            int chargerHops = 0; var chargerTiles = new HashSet<int>();
             int last = -1;
             string robotNote = "";
             for (int hour = 0; hour < 24 * days; hour += 3)
             {
                 sim.Tick(3.0);
                 generatedWh += sim.GenerationW * 3.0;
+                if (milestone1Day < 0 && sim.MilestonesReached >= 1) milestone1Day = hour / 24;
                 if (milestone2Day < 0 && sim.MilestonesReached >= 2) milestone2Day = hour / 24;
                 if (firstShortDay < 0 && milestone2Day < 0 && hour > 24 * 20 && (sim.Materials[Material.Iron] < 1.0 || sim.Materials[Material.Rock] < 1.0)) firstShortDay = hour / 24;
                 var inRange = land.Where(t => sim.WorkReachProblem(t) == null).ToList();
@@ -94,17 +110,31 @@ namespace KardashevAscent.Simulation.Tests.Game
                     else if (wanted && sim.WorkReachProblem(tile) == null && !sim.IsMiningOrdered(tile, m)) sim.OrderMining(tile, m);
                 }
 
-                // forward chargers: when an ore tile is out of range, put a charger on the in-range tile nearest to it
+                // forward chargers where the task list says "too far": a charger two tiles toward the ore from the nearest charger (the game's own advice)
                 foreach (Material m in new[] { Material.Copper, Material.Lithium })
                 {
                     int tile = target[m];
-                    if (sim.WorkReachProblem(tile) == null || sim.ConstructionQueueCount > 6) continue;
-                    int step = inRange.OrderBy(t => Hops(sphere, t, tile)).FirstOrDefault();
-                    if (step >= 0 && sim.GetBuilding(step, 0) == BuildingType.None && sim.PlaceChargingStation(step, 0)) chargerHops++;
+                    var rec = sim.Workforce.Tasks.Open.FirstOrDefault(q => q.Task.Kind == TaskKind.Mine && q.Task.Tile == tile && q.Task.Slot == (int)m);
+                    if (rec == null || !rec.Reason.StartsWith("too far") || sim.ConstructionQueueCount > 6) continue;
+                    var seeds = new List<int> { home }; seeds.AddRange(chargerTiles);
+                    int from = seeds.OrderBy(t => Hops(sphere, t, tile)).First();
+                    int step = land.Where(t => Hops(sphere, from, t) <= 1 && !chargerTiles.Contains(t) && t != home).OrderBy(t => Hops(sphere, t, tile)).FirstOrDefault();
+                    if (step > 0 && Hops(sphere, step, tile) < Hops(sphere, from, tile) && sim.PlaceChargingStation(step, 0)) { chargerTiles.Add(step); chargerHops++; }
+                }
+
+                // chargers: the landing tile's are fed by the lander's RTGs only (about 440 W in all), so the colony's robots charge from the grid at chargers on the next tiles; about one per two robots
+                int wantedStations = Math.Max(1, (sim.Workforce.Robots.Count + 1) / 2);
+                int haveStations = 0;
+                foreach (int t in inRange.Skip(1).Take(6)) for (int s = 0; s < sim.SlotCount(t); s++) if (sim.GetBuilding(t, s) == BuildingType.ChargingStation) haveStations++;
+                foreach (int t in inRange.Skip(1).Take(6))
+                {
+                    if (haveStations >= wantedStations || sim.ConstructionQueueCount >= 8) break;
+                    for (int s = 0; s < 3 && haveStations < wantedStations; s++)
+                        if (sim.GetBuilding(t, s) == BuildingType.None && sim.PlaceChargingStation(t, s)) haveStations++;
                 }
 
                 // robots, up to a crew of 12
-                if (robotsOrdered < 16)
+                if (robotsOrdered < 16 && sim.Materials[Material.Copper] > 120.0)
                 {
                     robotNote = sim.OrderRobot(RobotKind.General) ?? "ordered";
                     if (robotNote == "ordered") robotsOrdered++;
@@ -113,7 +143,9 @@ namespace KardashevAscent.Simulation.Tests.Game
                 // panels and batteries as the demand target rises
                 // robots first: while the crew is short and the last robot order is waiting on materials, keep the stock for it
                 bool saveForRobot = robotsOrdered < 16 && robotNote.StartsWith("Missing");
-                if (!saveForRobot && sim.ConstructionQueueCount < 3 + sim.Workforce.Robots.Count)
+                // the starting copper is kept for the chargers that make copper mining possible; growth waits until copper is coming in
+                bool copperComing = target.TryGetValue(Material.Copper, out int cuTile) && sim.Deposits.MinedKg(cuTile, Material.Copper) > 100.0;
+                if (!saveForRobot && (copperComing || sim.Materials[Material.Copper] > 150.0) && sim.ConstructionQueueCount < 3 + sim.Workforce.Robots.Count)
                 {
                     int slots = 0;
                     if (sim.GenerationW < 2.0 * Math.Max(sim.DemandW, 2e5))
@@ -128,19 +160,26 @@ namespace KardashevAscent.Simulation.Tests.Game
                             if (Enumerable.Range(0, sim.SlotCount(t)).Any(s => sim.PlaceBattery(t, s))) break;
                 }
 
+                if ((hour == 24 * 50 || hour == 24 * 50 + 12) && full)
+                    foreach (Material dm in new[] { Material.Copper, Material.Lithium })
+                        log.AppendLine($"DIAG {dm}: task={(sim.Workforce.Tasks.Open.FirstOrDefault(q => q.Task.Kind == TaskKind.Mine && q.Task.Tile == target[dm] && q.Task.Slot == (int)dm)?.State.ToString() + "/" + sim.Workforce.Tasks.Open.FirstOrDefault(q => q.Task.Kind == TaskKind.Mine && q.Task.Tile == target[dm] && q.Task.Slot == (int)dm)?.Reason)} tile {target[dm]} reach={sim.WorkReachProblem(target[dm]) ?? "ok"} ordered={sim.IsMiningOrdered(target[dm], dm)} hops={Hops(sphere, home, target[dm])} land={land.Count} minedKg={sim.Deposits.MinedKg(target[dm], dm):0} grade={sim.Deposits.GradeOf(target[dm], dm):0.00} logistics={sim.LogisticsEnabled} chargeW={sim.RobotChargingW:0} gen={sim.GenerationW:0} dem={sim.DemandW:0} hour={hour % 24} lastW={string.Join(",", sim.Workforce.Robots.Select(q => q.LastChargeW.ToString("0")))} robots={string.Join(",", sim.Workforce.Robots.Select(r => r.Tile + ":" + (r.Task.HasValue ? r.Task.Value.Kind.ToString() : "idle") + "/" + r.Activity + "/" + r.Battery.UsableWh.ToString("0") + "Wh/cond" + r.Condition.ToString("0.00") + "/sd" + r.IsShutDown))}");
                 int day = hour / 24;
                 if (day != last && day % 10 == 0)
                 {
                     last = day;
                     log.AppendLine($"d{day,3} M={sim.MilestonesReached} demand={sim.DemandW / 1e6,6:0.00}MW gen={sim.GenerationW / 1e6,6:0.0}MW batt={sim.BatteryCapacityWh / 1e6,4:0}MWh " +
-                                   $"robots={sim.Workforce.Robots.Count,2} q={sim.ConstructionQueueCount,2} chargers+{chargerHops} " +
+                                   $"robots={sim.Workforce.Robots.Count,2}(chg {sim.Workforce.Robots.Count(r => r.Activity == RobotActivity.Charging)}, {sim.Workforce.Robots.Sum(r => r.Battery.UsableWh) / 1000.0:0.0}kWh) q={sim.ConstructionQueueCount,2} chargers+{chargerHops} " +
                                    $"rock={sim.Materials[Material.Rock] / 1e3:0}t fe={sim.Materials[Material.Iron] / 1e3:0}t cu={sim.Materials[Material.Copper]:0} li={sim.Materials[Material.Lithium]:0} | robot: {robotNote}");
                 }
             }
-            double miningWh = sim.MiningWorkHours * RobotSpecs.MinePowerW;
+            double miningWh = sim.MiningWorkHours * RobotSpecs.MinePowerW + sim.ComminutionWh;
             double share = generatedWh > 0.0 ? miningWh / generatedWh : 0.0;
             string verdict = (share > 0.5 ? " ABSURD: mining takes over half of generation." : "") + (firstShortDay >= 0 ? $" ABSURD: ran out of iron or rock on day {firstShortDay} before milestone 2." : "");
-            string summary = $"{name}: {days} d, milestones {sim.MilestonesReached} (M2 day {(milestone2Day < 0 ? "never" : milestone2Day.ToString())}), deposits used up {exhausted} [{string.Join(", ", exhaustedWhat)}], rock moved {sim.RockMovedKg / 1000.0:0} t, tailings {sim.TailingsKg / 1000.0:0} t, mining energy {miningWh / 1e6:0.0} MWh of {generatedWh / 1e6:0} MWh generated = {share * 100.0:0.0} %.{verdict}";
+            string summary = $"{name}: {days} d, milestones {sim.MilestonesReached} (M1 day {(milestone1Day < 0 ? "never" : milestone1Day.ToString())}, M2 day {(milestone2Day < 0 ? "never" : milestone2Day.ToString())}), deposits used up {exhausted} [{string.Join(", ", exhaustedWhat)}], rock moved {sim.RockMovedKg / 1000.0:0} t, tailings {sim.TailingsKg / 1000.0:0} t, mining energy {miningWh / 1e6:0.0} MWh (crushing {sim.ComminutionWh / 1e6:0.0}) of {generatedWh / 1e6:0} MWh generated = {share * 100.0:0.0} %.{verdict}";
+            var blockers = sim.Workforce.Tasks.Open.Where(q => q.State == TaskState.AssistanceNeeded || q.State == TaskState.Blocked).Take(4).Select(q => $"{q.Task.Kind}@{q.Task.Tile}: {q.Reason}");
+            var deaths = sim.OperationsLog.Where(o => o.Quantity == "Robot destroyed").Take(2).Select(o => o.Text);
+            if (deaths.Any()) summary += " Deaths: " + string.Join(" | ", deaths) + ".";
+            summary += " First blockers: " + (blockers.Any() ? string.Join(" | ", blockers) : "none") + $". Copper in stock {sim.Materials[Material.Copper]:0} kg, robots {sim.Workforce.Robots.Count}, demand {sim.DemandW / 1e6:0.0} MW, generation {sim.GenerationW / 1e6:0.0} MW.";
             return (full ? log + "\n" : "") + summary;
         }
 

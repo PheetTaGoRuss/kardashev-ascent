@@ -687,6 +687,29 @@ namespace KardashevAscent.EditorTools
                     Log($"minedemo reserve {sim.ReserveEstimate(t, iron).Say("0", "kg")}, ore grade {sim.OreGradeEstimate(t, iron).Say("0.0%", "")}, left {sim.DepositShareLeft(t, iron) * 100.0:0} %, rate {sim.MiningRateEstimate(t, iron).Say("0.#", "kg/h")}, rock moved {sim.RockMovedKg / 1000.0:0.0} t, tailings {sim.TailingsKg / 1000.0:0.0} t");
                     return true;
                 }
+                case "calm":
+                {
+                    // calm: weather off (no storms) so a mining batch or a refinery batch can finish in a Play check.
+                    var sim = Runner()?.Simulation as Simulation.Game.PlanetSimulation;
+                    if (sim == null) return true;
+                    sim.WeatherEnabled = false;
+                    Log("calm weather on");
+                    return true;
+                }
+                case "minebatch":
+                {
+                    // minebatch: calm weather, survey, order iron mining at the base, 40 h; logs iron, rock moved, tailings and the share left.
+                    var sim = Runner()?.Simulation as Simulation.Game.PlanetSimulation;
+                    if (sim == null) return true;
+                    sim.WeatherEnabled = false;
+                    int t = sim.BaseTileId; var iron = Simulation.Resources.Material.Iron;
+                    sim.DebugSurveyAll();
+                    double before = sim.Materials[iron];
+                    sim.OrderMining(t, iron);
+                    for (int h = 0; h < 40; h++) sim.Tick(1.0);
+                    Log($"minebatch iron {before:0} -> {sim.Materials[iron]:0} kg, rock moved {sim.RockMovedKg:0} kg, tailings {sim.TailingsKg:0} kg, left {sim.DepositShareLeft(t, iron) * 100.0:0.000} %, mining work {sim.MiningWorkHours:0} h");
+                    return true;
+                }
                 case "ironcell":
                 {
                     // ironcell: a Workshop and an Electrolysis cell at the base, 200 kg of rust, one iron batch; steps 130 h and logs what came out.
@@ -700,6 +723,7 @@ namespace KardashevAscent.EditorTools
                         if (sim.GetBuilding(t, slot) == Simulation.Game.BuildingType.None && sim.RefineryBlocker(Simulation.Game.BuildingType.Electrolyser, t, slot) == null) { sim.PlaceRefinery(Simulation.Game.BuildingType.Electrolyser, t, slot); break; }
                     sim.Debug.FreeBuilding = false;
                     sim.WireAllBuildings();
+                    sim.WeatherEnabled = false; sim.CancelMining(t, Simulation.Resources.Material.Iron);
                     double ironBefore = sim.Materials[Simulation.Resources.Material.Iron];
                     sim.Materials.Add(Simulation.Resources.Material.Rust, 200.0);
                     string order = sim.OrderRefine(Simulation.Resources.RefineProcess.IronFromRust);

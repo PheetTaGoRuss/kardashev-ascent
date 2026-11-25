@@ -561,6 +561,13 @@ namespace KardashevAscent.Simulation.Game
         double RockMovedKg { get; }
         double TailingsKg { get; }
         double MiningWorkHours { get; }
+        /// <summary>Deposits that were mined and are used up now (B3): where the mine stopped.</summary>
+        System.Collections.Generic.IReadOnlyList<(int Tile, Resources.Material Material, double HeldKg)> ExhaustedDeposits();
+        /// <summary>The best known deposits of a material that still hold some, richest first: tile and ore grade (a range until the assay).</summary>
+        System.Collections.Generic.IReadOnlyList<(int Tile, Planet.KnowledgeEstimate OreGrade, double ShareLeft)> BestDeposits(Resources.Material material, int count);
+        double ComminutionWh { get; }
+        /// <summary>Crushing and grinding energy per tonne of product now, kWh (Bond), a range until the assay.</summary>
+        Planet.KnowledgeEstimate ComminutionEstimate(int tileId, Resources.Material material);
         /// <summary>True where Peek's law does not apply (thin air, the Paschen region): cable ratings there use a labelled fallback.</summary>
         bool CableOutsideModel { get; }
         /// <summary>The share of its rating a cable is given while the air pressure is unmeasured.</summary>

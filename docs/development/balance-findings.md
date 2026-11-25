@@ -256,3 +256,14 @@ Two-year BalanceBot run (`DepletionByPlanetType`, explicit), a scripted colony t
 | Hot (close) | 0 | 3 597 t | 1 657 t | 3.9 MWh | 48 066 MWh | 0.0 % |
 
 Nothing runs out in two years, and mining takes under 0.1 % of generation: neither "absurd" threshold is near. Mining power (the robot mine power) is tiny next to the panel fields, so the energy cost of poor ore is not a constraint yet; the deposits are what limits a long game. The scripted bot never reaches a milestone (it does not research), so the "ran out before milestone 2" test is checked by its stock never reaching zero. On Mars the cold range keeps robots near the base, so almost nothing is mined: a travel and charging limit, not a deposit limit.
+
+## Comminution energy and the progression bot (2026-11-25)
+
+Crushing and grinding now costs energy by Bond's law (copper at 0.5 % ore: about 2.6 MWh per tonne of copper). Re-run of the two-year table: Earth-like 25 MWh of mining energy (21 MWh crushing) against 33 945 MWh generated = 0.1 %; Mars-like 0.1 MWh; Hot 25 MWh of 48 066 MWh = 0.1 %. Not absurd, because the scripted colony mines little copper (it stops at 1 500 kg).
+
+The progression bot (`ProgressionReachesMilestoneTwo`, Explicit) does **not** reach milestone 1 on either world in two years. First blockers found, in the order they bite (none fixed by loosening physics):
+1. Chargers on the landing tile are fed by the lander RTGs only (about 440 W in all, about 90 W per robot), so robots that dock there spend almost all their time charging. Chargers on other tiles are grid-fed, but robots prefer the nearer RTG dock.
+2. The starting 144 kg of copper is the only copper until a copper mine runs, and a charger costs 12 kg of it: panels, batteries and robots ordered first leave none for the forward chargers that make the copper mine reachable (task state: "too far: no robot can drive there and back to a charger").
+3. A forward charger (Build task) can itself be "too far" when placed more than a robot's round trip from an existing charger.
+4. Mars-like (-60 C): two of the three starting robots cold-soaked on a neighbouring tile by day 20 with an empty battery; no robots left, so nothing is ever mined.
+These may be bot-order flaws or design gaps; the bot has not found a build order that gets past 1.
