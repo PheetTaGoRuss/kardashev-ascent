@@ -43,7 +43,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             return (sim.RescuesRequested, sim.RescuesSucceeded, sim.RescuesByJump, sim.RescuesByTow, sim.RescueEnergyWh, sim.RobotsDestroyed, ladder);
         }
 
-        [Test]
+        [Test, Explicit("balance report (about 3 minutes): run by hand")]
         public void ForcedDryTwoTilesOut_RescuesAttemptedSucceededMethodEnergyAndLosses()
         {
             var rows = new System.Text.StringBuilder("Rescue balance (one robot forced dry 2 tiles out, 36 h, 3 seeds): scenario | distance | method | rescues requested | succeeded | by jump | by tow | energy Wh | robots lost | final state\n");
@@ -63,6 +63,15 @@ namespace KardashevAscent.Simulation.Tests.Robots
                     if (!method.HasValue) TestContext.WriteLine("planner pick ok=" + ok + " for " + sc.Name);
                 }
             TestContext.WriteLine(rows.ToString());
+        }
+
+        [Test]
+        public void Quick_ARobotForcedDryOneTileOutInWinter_NeverCostsAHelper()
+        {
+            var r = Run(EarthParams, CloudModel.EarthClimatology, 60.0, false, 0, null, 1);
+            var baseline = Run(EarthParams, CloudModel.EarthClimatology, 60.0, false, 0, null, 1, noRescue: true);
+            TestContext.WriteLine($"with rescue: requested {r.Requested}, succeeded {r.Succeeded}, lost {r.Lost}; without: lost {baseline.Lost}");
+            Assert.LessOrEqual(r.Lost, baseline.Lost, "rescue never makes the losses worse");
         }
     }
 }
