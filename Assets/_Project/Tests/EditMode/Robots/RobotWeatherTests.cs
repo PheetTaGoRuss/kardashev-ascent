@@ -116,7 +116,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             var r = sim.Workforce.AddRobot(RobotKind.General, FarLandTile(sim));
             int id = r.Id, count = sim.Workforce.Robots.Count;
             Empty(r);
-            sim.Tick(3.0);
+            sim.Tick(30.0);
             Assert.AreEqual(1, sim.RobotsDestroyed);
             Assert.IsNull(sim.Workforce.GetRobot(id));
             Assert.AreEqual(count - 1, sim.Workforce.Robots.Count);
@@ -186,7 +186,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             var r = sim.Workforce.AddRobot(RobotKind.General, FarLandTile(sim));
             int id = r.Id;
             Empty(r);
-            sim.Tick(3.0);
+            sim.Tick(30.0);
             Assert.IsFalse(sim.HeldFindings.Any(f => f.RobotId == id));
         }
 
@@ -201,7 +201,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             var cargo = KardashevAscent.Simulation.Logistics.PlaceId.Cargo(id);
             sim.InventoriesForTests.Add(cargo, KardashevAscent.Simulation.Resources.Material.Iron, 50.0);
             Empty(r);
-            sim.Tick(3.0);
+            sim.Tick(30.0);
             Assert.AreEqual(1, sim.RobotsDestroyed);
             Assert.IsFalse(sim.InventoriesForTests.Has(cargo), "the cargo place is gone with the robot");
             var wreck = sim.Wrecks.Single();
@@ -225,7 +225,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             Assert.AreEqual(1, sim.RobotWeatherNewsSerial, "the warning");
             StringAssert.Contains("needs shelter", sim.RobotWeatherNews);
             Empty(r);
-            sim.Tick(3.0);
+            sim.Tick(30.0);
             Assert.AreEqual(2, sim.RobotWeatherNewsSerial, "the loss");
             StringAssert.Contains("destroyed", sim.RobotWeatherNews);
         }

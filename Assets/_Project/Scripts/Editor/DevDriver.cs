@@ -397,6 +397,24 @@ namespace KardashevAscent.EditorTools
                     Log("knowdemo: " + string.Join(" | ", System.Linq.Enumerable.Select(System.Linq.Enumerable.Where(sim.OperationsLog, o => o.Priority >= KardashevAscent.Simulation.Operations.LogPriority.Info && (o.Quantity == "Measured" || o.Quantity == "Discrepancy" || o.Quantity == "Value stale" || o.Quantity == "Range narrowed")), o => o.Quantity + ": " + o.Text)));
                     return true;
                 }
+                case "soakdemo":
+                {
+                    // soakdemo: every other robot is run dry too, one is stranded away from the lander: no helper exists, so it hibernates and cold-soaks; each call steps 4 h and logs its body temperature.
+                    var sim = Runner()?.Simulation as KardashevAscent.Simulation.Game.PlanetSimulation;
+                    if (sim == null) return true;
+                    if (argument == "start")
+                    {
+                        sim.RescueEnabled = false;   // no helper at all
+                        foreach (var o in System.Linq.Enumerable.ToList(sim.Workforce.Robots)) o.Battery.Draw(1e12, 1.0);
+                        int tile = -1;
+                        foreach (int n in sim.Sphere.Neighbors[sim.BaseTileId]) if (!sim.GetTile(n).IsWater && sim.IsOpenGround(n)) { tile = n; break; }
+                        var r = sim.Workforce.AddRobot(KardashevAscent.Simulation.Robots.RobotKind.General, tile);
+                        r.Battery.Draw(1e12, 1.0);
+                    }
+                    for (int h = 0; h < 8; h++) sim.Tick(0.5);
+                    Log("soakdemo: " + string.Join(" | ", System.Linq.Enumerable.Select(sim.Workforce.Robots, x => "R" + x.Id + " tile " + x.Tile + " body " + x.BodyTempC.ToString("0.0") + " C hib=" + x.Hibernating + " left=" + x.HibernationHoursLeft.ToString("0.0") + " h :: " + sim.LadderOf(x.Id).Text)) + " destroyed=" + sim.RobotsDestroyed + " :: " + string.Join(" || ", System.Linq.Enumerable.Select(System.Linq.Enumerable.Where(sim.OperationsLog, o => o.Quantity == "Robot destroyed" || o.Quantity == "Rescue impossible"), o => o.Text)));
+                    return true;
+                }
                 case "rescuedemo":
                 {
                     // rescuedemo [jump|tow|stage]: a General robot one tile from the lander is run dry; "jump" or "tow" forces the method; each call steps 1 h and logs the ladder.

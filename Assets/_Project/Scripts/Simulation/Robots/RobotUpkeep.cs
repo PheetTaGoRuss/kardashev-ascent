@@ -238,7 +238,7 @@ namespace KardashevAscent.Simulation.Robots
 
         readonly System.Collections.Generic.List<int> destroyed = new System.Collections.Generic.List<int>();
 
-        /// <summary>Robots whose battery ran out outside their operating range in the last <see cref="Apply"/> long enough to destroy them.</summary>
+        /// <summary>Robots whose body left the storage range while they hibernated with an empty battery (cold soak or heat soak).</summary>
         public System.Collections.Generic.IReadOnlyList<int> DestroyedRobotIds => destroyed;
 
         /// <summary>The heater or cooler of a robot outside its range runs from its battery; shelter removes the draw (KI-43).</summary>
@@ -251,17 +251,37 @@ namespace KardashevAscent.Simulation.Robots
             // the battery follows its surroundings; the heater (while the battery has energy) holds it at the limit it would pass first
             r.BatteryTempC = RobotThermal.BatteryStep(r.BatteryTempC, RobotThermal.BatteryTarget(airC, insulated, sheltered, heater > 0.0 && r.Battery.UsableWh > 1e-6), hours);
             if (r.Activity != RobotActivity.Charging) r.WarmingUp = false;
+            double tau = RobotThermal.BodyTauHours(WindFactorAt != null ? WindFactorAt(r.Tile) : 1.0);
+            if (sheltered)
+            {
+                r.BodyTempC = RobotThermal.BodyStep(r.BodyTempC, RobotThermal.ShelterBatteryC, hours, tau);   // a heated bay warms it back
+                r.Hibernating = false; r.ExposedEmptyHours = 0.0; r.HibernationHoursLeft = double.PositiveInfinity;
+            }
             if (heater <= 0.0)
             {
+                if (!sheltered) r.BodyTempC = RobotThermal.BodyStep(r.BodyTempC, Math.Max(RobotThermal.OperatingMinC, Math.Min(RobotThermal.OperatingMaxC, airC)), hours, tau);
+                r.Hibernating = false;
                 r.ExposedEmptyHours = 0.0;
+                r.HibernationHoursLeft = double.PositiveInfinity;
                 r.ThermalHoursLeft = double.PositiveInfinity;
                 r.ThermalWarned = false;
                 return;
             }
             r.Battery.Draw(heater, hours);
-            if (r.Battery.UsableWh <= 1e-6) r.ExposedEmptyHours += hours; else r.ExposedEmptyHours = 0.0;
             r.ThermalHoursLeft = r.Battery.UsableWh / heater;
-            if (r.ExposedEmptyHours >= RobotThermal.DestroyAfterHours - 1e-12) destroyed.Add(r.Id);
+            if (r.Battery.UsableWh > 1e-6)
+            {
+                // the heater or cooler holds the body at the limit it would pass first
+                r.BodyTempC = RobotThermal.BodyStep(r.BodyTempC, Math.Max(RobotThermal.OperatingMinC, Math.Min(RobotThermal.OperatingMaxC, airC)), hours, Math.Min(tau, 2.0));
+                r.Hibernating = false; r.ExposedEmptyHours = 0.0; r.HibernationHoursLeft = double.PositiveInfinity;
+                return;
+            }
+            // an empty battery outside shelter: it hibernates and cold-soaks (or heat-soaks) toward the air; it is destroyed only past the storage limit
+            r.Hibernating = true;
+            r.ExposedEmptyHours += hours;
+            r.BodyTempC = RobotThermal.BodyStep(r.BodyTempC, airC, hours, tau);
+            r.HibernationHoursLeft = RobotThermal.HibernationHoursUntilLimit(r.BodyTempC, airC, tau);
+            if (r.BodyTempC < RobotThermal.StorageMinC || r.BodyTempC > RobotThermal.StorageMaxC) destroyed.Add(r.Id);
         }
 
         /// <summary>Drive along the route: draw drive power and cross tiles at their terrain's pace.</summary>

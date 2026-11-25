@@ -37,8 +37,58 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>Heater or cooler power per kelvin outside the range, W/K (game rule, TBD).</summary>
         public const double HeaterWPerK = 2.0;
 
-        /// <summary>How long a robot with an empty battery can stand outside its range before it is destroyed, hours (game rule, TBD).</summary>
-        public const double DestroyAfterHours = 1.0;
+        // ---- hibernation and cold or heat soak (S1, decided 2026-11-25) ----
+        // A robot with an empty battery outside shelter hibernates: no heater, no cooler. Its body then follows the air with the time constant tau = m cp / G and is destroyed
+        // only when its body leaves the non-operating (storage) range, the narrower of the electronics' and the battery's.
+
+        /// <summary>
+        /// Storage temperature limits, C. Electronics: -55 to +125 C, the usual military-grade component storage range (MIL-STD-883 and MIL-PRF-38535 qualified parts, Class B). Battery: a lithium
+        /// iron phosphate cell is stored between -40 and +60 C (e.g. the A123 Systems ANR26650M1-B datasheet). The robot's limits are the narrower of the two.
+        /// </summary>
+        public const double ElectronicsStorageMinC = -55.0, ElectronicsStorageMaxC = 125.0, BatteryStorageMinC = -40.0, BatteryStorageMaxC = 60.0;
+        public static double StorageMinC => Math.Max(ElectronicsStorageMinC, BatteryStorageMinC);
+        public static double StorageMaxC => Math.Min(ElectronicsStorageMaxC, BatteryStorageMaxC);
+
+        /// <summary>
+        /// The specific heat of what a robot is made of, kJ per kg per K: steel 0.46, rock (basalt, the hull stand-in) 0.84, aluminium 0.90, copper 0.385, lithium 3.58, sodium 1.23 (CRC Handbook of
+        /// Chemistry and Physics, standard values at 25 C).
+        /// </summary>
+        public static double SpecificHeatKJ(Resources.Material m)
+        {
+            switch (m)
+            {
+                case Resources.Material.Iron: return 0.46;
+                case Resources.Material.Rock: return 0.84;
+                case Resources.Material.Aluminium: return 0.90;
+                case Resources.Material.Copper: return 0.385;
+                case Resources.Material.Lithium: return 3.58;
+                case Resources.Material.Sodium: return 1.23;
+                default: return 0.84;
+            }
+        }
+
+        /// <summary>The heat capacity of a robot, J/K: the mass-weighted specific heat of its bill.</summary>
+        public static double BodyHeatCapacityJPerK
+        {
+            get { double c = 0.0; foreach (var (m, kg) in WreckModel.BillOf(RobotKind.General, false)) c += kg * SpecificHeatKJ(m) * 1000.0; return c; }
+        }
+
+        /// <summary>The time constant of a hibernating robot, hours: tau = m cp / G with G the loss conductance the heater rule implies (<see cref="HeaterWPerK"/>, times the wind factor).</summary>
+        public static double BodyTauHours(double windFactor = 1.0) => BodyHeatCapacityJPerK / (HeaterWPerK * Math.Max(0.1, windFactor)) / 3600.0;
+
+        /// <summary>Hours until a hibernating body at <paramref name="bodyC"/> reaches the storage limit in air held at <paramref name="airC"/>: infinity when the air is within the limits.</summary>
+        public static double HibernationHoursUntilLimit(double bodyC, double airC, double tauHours)
+        {
+            double limit = airC < (StorageMinC + StorageMaxC) / 2.0 ? StorageMinC : StorageMaxC;
+            if (airC >= StorageMinC && airC <= StorageMaxC) return double.PositiveInfinity;
+            double now = bodyC - airC, end = limit - airC;
+            if (Math.Abs(now) <= Math.Abs(end) && Math.Sign(now) == Math.Sign(end)) return 0.0;   // already past the limit
+            if (Math.Sign(now) != Math.Sign(end)) return double.PositiveInfinity;
+            return tauHours * Math.Log(now / end);
+        }
+
+        /// <summary>One step of a hibernating body toward the air temperature.</summary>
+        public static double BodyStep(double bodyC, double airC, double hours, double tauHours) => airC + (bodyC - airC) * Math.Exp(-hours / Math.Max(1e-6, tauHours));
 
         /// <summary>The colony is warned when a robot's battery will not last this many hours at its heater draw (a night; game rule, TBD).</summary>
         public const double WarnWithinHours = 12.0;

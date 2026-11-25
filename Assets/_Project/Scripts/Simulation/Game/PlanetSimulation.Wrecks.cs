@@ -30,7 +30,7 @@ namespace KardashevAscent.Simulation.Game
         public IReadOnlyList<Wreck> Wrecks => wrecks;
 
         /// <summary>The cause from the air temperature where the robot stopped: hot air above the robot's range, cold air below it, else an empty battery.</summary>
-        static DeathCause CauseAt(double airC) => airC > RobotThermal.OperatingMaxC ? DeathCause.Heat : DeathCause.ColdOrEmptyBattery;
+        static DeathCause CauseAt(double airC) => airC > WreckModel.SolderC ? DeathCause.Heat : DeathCause.ColdOrEmptyBattery;   // a soak below 220 C leaves the electronics whole
 
         /// <summary>The robot's remains: lay the wreck, move its cargo into it, keep unsynced findings when the electronics survive. Returns what is left in kg and the lost findings.</summary>
         Wreck LayWreck(Robot r, double airC, out int lostFindings)

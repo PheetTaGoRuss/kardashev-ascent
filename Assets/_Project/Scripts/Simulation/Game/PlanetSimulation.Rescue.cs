@@ -56,10 +56,25 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>The time a robot has before it is destroyed (an empty battery outside its range lasts one hour; with charge left, the heater's time plus that hour): infinity when it is in no danger.</summary>
         double DeadlineOf(Robot r)
         {
+            if (r.Sheltered) return double.PositiveInfinity;
             double heater = FutureHeaterW(r);
-            if (heater <= 0.0 || r.Sheltered) return double.PositiveInfinity;
-            double left = r.Battery.UsableWh / heater;
-            return TimeHours + Math.Max(0.0, left) + RobotThermal.DestroyAfterHours - r.ExposedEmptyHours;
+            double powered = r.Hibernating || r.Battery.UsableWh <= 1e-6 ? 0.0 : heater > 0.0 ? r.Battery.UsableWh / heater : double.PositiveInfinity;
+            if (double.IsInfinity(powered) && !r.Hibernating) return double.PositiveInfinity;
+            // after the battery runs out the body soaks toward the air that will be there: the next day's mean (the swing is smoothed away by the time constant) less a little for its remainder
+            double air = SoakAirC(r.Tile);
+            double body = r.Hibernating ? r.BodyTempC : Math.Max(RobotThermal.OperatingMinC, Math.Min(RobotThermal.OperatingMaxC, air));
+            double tau = RobotThermal.BodyTauHours(1.0);
+            double hib = RobotThermal.HibernationHoursUntilLimit(body, air, tau);
+            return double.IsInfinity(hib) ? double.PositiveInfinity : TimeHours + powered + hib;
+        }
+
+        /// <summary>The air temperature a soaking body will feel: the mean of the next 24 hours (forecast or climatology, with the weather now on top) less a tenth of the swing.</summary>
+        double SoakAirC(int tile)
+        {
+            double sum = 0.0, lo = double.MaxValue, hi = double.MinValue;
+            double anomaly = LiveAirTemperatureAt(tile) - DiurnalAirTemperatureAt(tile, TimeHours);
+            for (int k = 0; k < 12; k++) { double t = DiurnalAirTemperatureAt(tile, TimeHours + 2.0 * k) + anomaly; sum += t; lo = Math.Min(lo, t); hi = Math.Max(hi, t); }
+            return sum / 12.0 - 0.1 * (hi - lo) / 2.0;
         }
 
         /// <summary>The heater a robot out in the open will need over the next night: the coldest air of the next 12 hours (a rescue takes hours and the temperature falls), W.</summary>
@@ -113,7 +128,7 @@ namespace KardashevAscent.Simulation.Game
             double needWh = JumpNeedWh(s);   // what it needs to drive itself to a charger, with the heater running
             double warmWh = RobotThermal.CanCharge(s.BatteryTempC) ? 0.0 : Math.Max(s.HeaterW, 20.0) * 1.5;   // a cold battery is warmed from the cable before it takes charge (the existing rule)
             (Robot, RescueMethod, int, double, double)? best = null;
-            string nearest = null; double nearestHours = double.PositiveInfinity; double bestNeed = double.PositiveInfinity, bestSpare = 0.0;
+            string nearest = null; double nearestHours = double.PositiveInfinity; double bestNeed = double.PositiveInfinity, bestSpare = 0.0; bool timeOk = false;
             foreach (Robot h in Workforce.Robots)
             {
                 if (h.Id == s.Id || h.IsShutDown || h.IsStranded || rescues.Any(o => o.RescuerId == h.Id) || h.Activity == RobotActivity.Maintenance) continue;
@@ -121,6 +136,7 @@ namespace KardashevAscent.Simulation.Game
                 if (double.IsInfinity(goH)) continue;
                 if (goH < nearestHours) { nearestHours = goH; nearest = $"robot {h.Id}"; }
                 if (goH + RescueHandlingHours > budgetHours) continue;
+                timeOk = true;
                 double go = HaulLegCost(h.Tile, s.Tile, 0.0).TotalWh;
                 double spare = SpareWh(h);
                 // jump: out, the cable transfer through the converter, and home from there
@@ -137,8 +153,8 @@ namespace KardashevAscent.Simulation.Game
                      (!best.HasValue || towWh < best.Value.Item4)) best = (h, RescueMethod.Tow, shelter, towWh, towH);
             }
             if (best.HasValue) return best;
-            why = nearest == null ? "no other robot can reach it" : double.IsInfinity(budgetHours) ? $"no robot has the charge to reach it and come back (the nearest, {nearest}, is {nearestHours:0.#} h away and would need about {bestNeed:0} Wh for the jump, {bestSpare:0} Wh to spare)"
-                : $"no robot can reach tile {s.Tile} before it {(s.HeaterW > 0.0 ? (s.BatteryTempC < 10.0 ? "freezes" : "overheats") : "is lost")} in {budgetHours:0.#} h (the nearest, {nearest}, is {nearestHours:0.#} h away)";
+            why = nearest == null ? "no other robot can reach it" : (double.IsInfinity(budgetHours) || timeOk) ? $"no robot has the charge to reach it and come back (the nearest, {nearest}, is {nearestHours:0.#} h away and would need about {bestNeed:0} Wh for the jump, {bestSpare:0} Wh to spare)"
+                : $"no robot can reach tile {s.Tile} before it {(s.HeaterW > 0.0 ? (s.BodyTempC < 15.0 || SoakAirC(s.Tile) < 15.0 ? "cold-soaks to destruction" : "heat-soaks to destruction") : "is lost")} in {budgetHours:0.#} h (the nearest, {nearest}, is {nearestHours:0.#} h away)";
             return null;
         }
 
@@ -160,7 +176,7 @@ namespace KardashevAscent.Simulation.Game
                     rescueRefusals[s.Id] = why;
                     if (!sameKind)
                     {
-                        Log($"Robot {s.Id}", "Rescue impossible", 0.0, "", $"R{s.Id}", $"Robot {s.Id} on tile {s.Tile} needs help and nobody can give it: {why}. A charger or depot near it would shorten the way back.", s.Id);
+                        Log($"Robot {s.Id}", "Rescue impossible", 0.0, "", $"R{s.Id}", $"Robot {s.Id} on tile {s.Tile} needs help and nobody can give it: {why}. {RescueAdvice(s)}", s.Id);
                     }
                     continue;
                 }
@@ -210,6 +226,19 @@ namespace KardashevAscent.Simulation.Game
                     else if (!h.ManualTarget.HasValue && !h.IsTravelling) Workforce.SendTo(h.Id, o.Shelter);
                 }
             }
+        }
+
+        /// <summary>
+        /// Advice only (S3): where a charger would put the route to a tile a rescue could not reach within one charge. The existing depot advice is asked first (a depot with a charging bay where
+        /// hauls already go); with none, the tile halfway along the way from the lander. Nothing is built.
+        /// </summary>
+        public string RescueAdvice(Robot s)
+        {
+            var sites = DepotSites(1);
+            if (sites.Count > 0) return $"Advice: the depot advice names tile {sites[0].Tile} (a charging bay there would also put work near it within one charge).";
+            var route = Routes?.Route(BaseTileId, s.Tile);
+            int mid = route != null && route.Count > 1 ? route[route.Count / 2 - 1] : s.Tile;
+            return mid == s.Tile ? $"Advice: a charging station or battery yard on tile {s.Tile} itself would put the robot within reach of a charger." : $"Advice: a charging station or battery yard on tile {mid}, halfway from the lander, would put tile {s.Tile} within one charge of help.";
         }
 
         /// <summary>Extra cargo the drive carries: a robot being towed.</summary>

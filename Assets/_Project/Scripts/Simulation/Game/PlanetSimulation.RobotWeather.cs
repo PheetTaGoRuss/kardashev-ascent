@@ -78,7 +78,7 @@ namespace KardashevAscent.Simulation.Game
             // A wreck lies where it stopped (OQ-9): its metals can be recovered, its electronics and cell are waste (or slag in the heat), the cargo lies in the pile.
             Wreck w = LayWreck(r, air, out int lost);
             double leftKg = WreckKg(w);
-            string cause = w.Cause == DeathCause.Heat ? $"the air was {air:0} C, above its range" : air < RobotThermal.OperatingMinC ? $"its battery ran out outside its operating range ({air:0} C)" : $"its battery ran out ({air:0} C)";
+            string cause = w.Cause == DeathCause.Heat ? $"the air was {air:0} C, far above its range" : air > RobotThermal.StorageMaxC ? $"its battery ran out and its body heat-soaked past {RobotThermal.StorageMaxC:0} C in the {air:0} C air" : air < RobotThermal.StorageMinC ? $"its battery ran out and its body cold-soaked below {RobotThermal.StorageMinC:0} C in the {air:0} C air" : $"its battery ran out ({air:0} C)";
             string left = leftKg <= 0.0 ? "Nothing is left." : $"{leftKg:0} kg lie there as a wreck" + (WreckStockKg(w, Material.ElectronicWaste) > 0.0 ? $" ({WreckStockKg(w, Material.ElectronicWaste):0.0} kg electronic waste)" : "") + (WreckStockKg(w, Material.Slag) > 0.0 ? $" ({WreckStockKg(w, Material.Slag):0} kg slag)" : "") + ".";
             Log($"Robot {robotId}", "Robot destroyed", air, "C",
                 $"R{robotId}", $"Robot {robotId} was destroyed on tile {tile}: {cause}. {left}"

@@ -232,3 +232,16 @@ What it says: the rescue never kills the rescuer (the helper keeps 1.6 times its
 
 Also in this round: telemetry records (robots' charge and condition, the grid battery, the power made, each turbine) cost 2720 records and 0.024 ms per tick over two years; task priorities (high, normal, low) already existed per robot and group, so R3 only records that computing priorities wait on the ColonyNetwork.
 
+### Hibernation and cold soak replace the one-hour timer (S1, 2026-11-25)
+
+A robot with an empty battery outside shelter hibernates; its body follows the air with tau = m cp / G = 375 kJ/K / 2 W/K = **52 hours** (642 kg at a mass-weighted 0.58 kJ/kg K) and it is destroyed only when its body leaves the storage range, -40 to +60 C (electronics -55 to +125 C, LFP cell -40 to +60 C; the narrower). On a -59 C Mars night an empty robot takes about 57 hours from a warm start to reach -40 C; in the rescue runs the planner's deadline was 19 to 21 hours. The destruction cause is cold soak or heat soak. The earlier rescue table is replaced (3 seeds, 72 h, robot forced low or empty):
+
+| Scenario | Distance | Rescues requested / succeeded (planner's pick) | Method | Energy | Robots lost with rescue | Robots lost, no rescue |
+| --- | --- | --- | --- | --- | --- | --- |
+| Earth-like 60 N winter | 1 tile | 5 / 3 | tow | 612 Wh | 0 | 0 |
+| Earth-like 60 N winter | 2 tiles | 2 / 1 | tow | 204 Wh | 0 | 0 |
+| Mars southern winter | 1 and 2 tiles | 0 / 0: the helper cannot afford it (cold batteries lock a third of their capacity: the jump needs 2 to 3 kWh, the helper has 1) | none | 0 | 0 | 0 |
+| Earth-like 45 N summer, truly empty | 1 and 2 tiles | 0 / 0: same reason (4 h away, 411 Wh to spare of 1129 needed) | none | 0 | 0 | 0 |
+
+Robots lost fell from 5 and 3 to 0 in every row: in 72 hours nothing reaches its storage limit, and the soaking robots are still alive when the run ends (the Play run with no helper at all lost them after about 57 hours on Mars). The planner no longer refuses for lack of time on Mars; it refuses for lack of energy and says so with the numbers, and gives the S3 advice (a charging station on the tile halfway). A rescue costs 200 to 600 Wh. The field campaigns (haulers with the KI-46 rule) never strand a robot, so they are identical with and without rescue: 0 robots lost in all of them.
+

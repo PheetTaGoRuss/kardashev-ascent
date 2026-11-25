@@ -39,6 +39,8 @@ namespace KardashevAscent.Simulation.Robots
         public double ExposedEmptyHours;
         /// <summary>Save version 50: the battery temperature, C.</summary>
         public double BatteryTempC = 15.0;
+        /// <summary>Version 63: the body temperature (older saves start at 15 C).</summary>
+        public double BodyTempC = 15.0;
         /// <summary>Stage E second part (save version 25): the colony's needs at the last sync.</summary>
         public bool CachedBrownoutRisk;
         public bool CachedSitesWaiting;
