@@ -672,6 +672,21 @@ namespace KardashevAscent.EditorTools
                     Log($"flows t={sim.TimeHours:0} processes={snap.Processes.Count} in={snap.TotalInKg:0.0} out={snap.TotalOutKg:0.0} heat={snap.WasteHeatKWh:0.0} blocked={snap.Blocked.Count}");
                     return true;
                 }
+                case "minedemo":
+                {
+                    // minedemo: survey everything, mine iron at the base for 60 hours, take 40 % of the deposit out, log the numbers.
+                    var sim = Runner()?.Simulation as Simulation.Game.PlanetSimulation;
+                    if (sim == null) return true;
+                    int t = sim.BaseTileId;
+                    var iron = Simulation.Resources.Material.Iron;
+                    sim.DebugSurveyAll();
+                    sim.OrderMining(t, iron);
+                    for (int h = 0; h < 60; h++) sim.Tick(1.0);
+                    sim.Deposits.Extract(t, iron, sim.Deposits.ReserveKg(t, iron) * 0.4);
+                    sim.Tick(1.0);
+                    Log($"minedemo reserve {sim.ReserveEstimate(t, iron).Say("0", "kg")}, ore grade {sim.OreGradeEstimate(t, iron).Say("0.0%", "")}, left {sim.DepositShareLeft(t, iron) * 100.0:0} %, rate {sim.MiningRateEstimate(t, iron).Say("0.#", "kg/h")}, rock moved {sim.RockMovedKg / 1000.0:0.0} t, tailings {sim.TailingsKg / 1000.0:0.0} t");
+                    return true;
+                }
                 case "ironcell":
                 {
                     // ironcell: a Workshop and an Electrolysis cell at the base, 200 kg of rust, one iron batch; steps 130 h and logs what came out.

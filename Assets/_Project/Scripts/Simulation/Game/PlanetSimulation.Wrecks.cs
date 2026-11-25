@@ -196,6 +196,7 @@ namespace KardashevAscent.Simulation.Game
         void CaptureWrecks(SimulationState state)
         {
             state.NextWreckId = nextWreckId;
+            state.RockMovedKg = RockMovedKg; state.TailingsKg = TailingsKg; state.MiningWorkHours = MiningWorkHours;
             foreach (Wreck w in wrecks)
                 state.Wrecks.Add(new WreckRecord
                 {
@@ -208,6 +209,7 @@ namespace KardashevAscent.Simulation.Game
         {
             wrecks.Clear();
             nextWreckId = Math.Max(1, state.Version >= 59 ? state.NextWreckId : 1);
+            RockMovedKg = state.Version >= 65 ? state.RockMovedKg : 0.0; TailingsKg = state.Version >= 65 ? state.TailingsKg : 0.0; MiningWorkHours = state.Version >= 65 ? state.MiningWorkHours : 0.0;
             if (state.Version < 59 || state.Wrecks == null) return;
             foreach (WreckRecord r in state.Wrecks)
             {

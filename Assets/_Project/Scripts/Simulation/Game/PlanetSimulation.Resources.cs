@@ -247,7 +247,8 @@ namespace KardashevAscent.Simulation.Game
                     continue;
                 fieldWork[t] = h - RobotSpecs.MiningBatchHours;
                 // What comes out is taken from the ground: a deposit runs out (director 2026-11-15; KI-12).
-                double want = RobotSpecs.MiningKgPerHour * RobotSpecs.MiningBatchHours * Deposits.GradeOf(order.Tile, order.Material);
+                // The rock moved is the same each batch; the product is the grade of what is being mined now (rich ore first, B2), the rest is tailings (mass is kept).
+                double want = RobotSpecs.MiningKgPerHour * RobotSpecs.MiningBatchHours * Deposits.EffectiveGrade(order.Tile, order.Material);
                 // With logistics on, the ore lies in a pile on the mine tile (room permitting); otherwise in the one stock.
                 if (LogisticsEnabled && order.Tile != BaseTileId)
                 {
@@ -259,6 +260,10 @@ namespace KardashevAscent.Simulation.Game
                 double mined = Deposits.Extract(order.Tile, order.Material, want);
                 StockAt(order.Tile).Add(order.Material, mined);
                 flows.Add(TimeHours, FlowStage.Mined, -1, order.Material, mined);
+                // Rock moved = product / ore grade (kg per kg); a poorer ore moves more rock for the same product, which the robot hours already pay for (the yield per hour is the grade).
+                double oreGrade = Math.Max(1e-9, DepositMap.TypicalOreGrade(order.Material) * Deposits.EffectiveGrade(order.Tile, order.Material));
+                double moved = mined / Math.Min(1.0, oreGrade);
+                TailingsKg += moved - mined; RockMovedKg += moved; MiningWorkHours += RobotSpecs.MiningBatchHours;
                 Workforce.Release(t);
                 if (Deposits.IsExhausted(order.Tile, order.Material))
                 {
@@ -267,6 +272,7 @@ namespace KardashevAscent.Simulation.Game
                     fieldWork.Remove(t);
                     industrialReports.Add(TimeHours, "Mining", IndustrialBlocker.None,
                         $"The {Resources.Materials.Name(order.Material).ToLowerInvariant()} on tile {order.Tile} is used up. Survey further out for more.");
+                    Log($"Tile {order.Tile}", "Deposit exhausted", mined, "kg", $"T{order.Tile}", $"The {Resources.Materials.Name(order.Material).ToLowerInvariant()} deposit on tile {order.Tile} is used up (it held about {Deposits.ReserveKg(order.Tile, order.Material) / 1000.0:0} t); its mine stops. Survey further out for more.");
                     DepositExhausted?.Invoke(order.Tile, order.Material);
                 }
             }
