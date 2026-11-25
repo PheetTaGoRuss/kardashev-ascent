@@ -88,6 +88,8 @@ namespace KardashevAscent.Simulation.Game
                     Workforce.Reserve(o.RobotId, HaulTaskOf(o));
             }
 
+            PlanWreckRecovery();
+            ClearEmptyWrecks();
             // What each tile still needs: the sites on it plus its stock targets.
             var wanted = new Dictionary<(int Tile, Material Material), double>();
             foreach (var site in Build.Sites())
@@ -200,7 +202,7 @@ namespace KardashevAscent.Simulation.Game
                 {
                     Robot r = Workforce.WorkerOf(t);
                     if (r == null) continue;
-                    double moved = inventories.Move(PlaceId.Depot(o.FromTile), PlaceId.Cargo(r.Id), o.Material, Math.Min(o.Kg, PayloadKg(r)));
+                    double moved = inventories.Move(o.WreckId != 0 ? PlaceId.Wreck(o.WreckId) : PlaceId.Depot(o.FromTile), PlaceId.Cargo(r.Id), o.Material, Math.Min(o.Kg, PayloadKg(r)));
                     Workforce.Release(t);
                     if (moved <= 1e-9)
                     {
@@ -246,7 +248,7 @@ namespace KardashevAscent.Simulation.Game
         {
             state.NextHaulId = haulBook.NextId;
             foreach (HaulOrder o in haulBook.Orders)
-                state.HaulOrders.Add(new HaulOrderRecord { Id = o.Id, FromTile = o.FromTile, ToTile = o.ToTile, Material = o.Material, Kg = o.Kg, Stage = o.Stage, RobotId = o.RobotId, GoAnyway = o.GoAnyway });
+                state.HaulOrders.Add(new HaulOrderRecord { Id = o.Id, FromTile = o.FromTile, ToTile = o.ToTile, Material = o.Material, Kg = o.Kg, Stage = o.Stage, RobotId = o.RobotId, GoAnyway = o.GoAnyway, WreckId = o.WreckId });
             foreach (StockTarget t in haulBook.Targets())
                 state.StockTargets.Add(new StockTargetRecord { Tile = t.Tile, Material = t.Material, Kg = t.Kg });
         }
@@ -260,7 +262,7 @@ namespace KardashevAscent.Simulation.Game
                 if (state.HaulOrders != null)
                     foreach (HaulOrderRecord r in state.HaulOrders)
                         if (r.FromTile >= 0 && r.FromTile < TileCount && r.ToTile >= 0 && r.ToTile < TileCount && r.Kg > 0.0)
-                            orders.Add(new HaulOrder { Id = r.Id, FromTile = r.FromTile, ToTile = r.ToTile, Material = r.Material, Kg = r.Kg, Stage = r.Stage == 1 ? 1 : 0, RobotId = r.RobotId, GoAnyway = state.Version >= 57 && r.GoAnyway });
+                            orders.Add(new HaulOrder { Id = r.Id, FromTile = r.FromTile, ToTile = r.ToTile, Material = r.Material, Kg = r.Kg, Stage = r.Stage == 1 ? 1 : 0, RobotId = r.RobotId, GoAnyway = state.Version >= 57 && r.GoAnyway, WreckId = state.Version >= 59 ? r.WreckId : 0 });
                 if (state.StockTargets != null)
                     foreach (StockTargetRecord r in state.StockTargets)
                         if (r.Tile >= 0 && r.Tile < TileCount && r.Kg > 0.0)

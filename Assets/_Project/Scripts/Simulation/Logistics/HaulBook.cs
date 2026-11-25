@@ -21,6 +21,8 @@ namespace KardashevAscent.Simulation.Logistics
         public List<int> Stops = new List<int>();
         /// <summary>Why the plan no longer holds (a stop lost power, no chain fits the battery), or null. A blocked haul is not offered to robots.</summary>
         public string Blocked;
+        /// <summary>Recover-wreck order: load from this wreck (its stock place) instead of the depot of the from-tile; 0 for a normal haul.</summary>
+        public int WreckId;
         /// <summary>The wait is a forecast storm on the route (P2), not the energy check.</summary>
         public bool WeatherWait;
         /// <summary>The player said go anyway: a forecast storm no longer holds this haul (saved; never overrides the energy check).</summary>
@@ -91,7 +93,7 @@ namespace KardashevAscent.Simulation.Logistics
         {
             double t = 0.0;
             foreach (HaulOrder o in orders)
-                if (o.Stage == 0 && o.FromTile == tile && o.Material == m) t += o.Kg;
+                if (o.Stage == 0 && o.WreckId == 0 && o.FromTile == tile && o.Material == m) t += o.Kg;
             return t;
         }
 

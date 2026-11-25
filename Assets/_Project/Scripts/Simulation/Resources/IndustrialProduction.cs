@@ -42,6 +42,10 @@ namespace KardashevAscent.Simulation.Resources
                 case Material.Water: return new MaterialProperties(MaterialPhase.Solid, StorageClass.BulkSolid, 917.0);
                 case Material.Sodium: return new MaterialProperties(MaterialPhase.Solid, StorageClass.Hazardous, 968.0);
                 case Material.Lithium: return new MaterialProperties(MaterialPhase.Solid, StorageClass.Hazardous, 534.0);
+                case Material.ElectronicWaste: return new MaterialProperties(MaterialPhase.Solid, StorageClass.Hazardous, 2000.0);   // a loose pile of boards and cells (game rule, TBD)
+                case Material.SodiumHydroxide: return new MaterialProperties(MaterialPhase.Solid, StorageClass.Hazardous, 2130.0);
+                case Material.LithiumHydroxide: return new MaterialProperties(MaterialPhase.Solid, StorageClass.Hazardous, 1460.0);
+                case Material.Rust: return new MaterialProperties(MaterialPhase.Solid, StorageClass.BulkSolid, 4260.0);
                 case Material.Aluminium: return new MaterialProperties(MaterialPhase.Solid, StorageClass.BulkSolid, 2700.0);
                 // Gas densities at 0 C and 1 atm (recalled from standard tables; to verify): O2 1.429, Cl2 3.214 kg/m3. Stored compressed in a gas tank.
                 case Material.Oxygen: return new MaterialProperties(MaterialPhase.Gas, StorageClass.PressurizedGas, 1.429);

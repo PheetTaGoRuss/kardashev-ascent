@@ -29,6 +29,14 @@ namespace KardashevAscent.Simulation.Resources
         Oxygen,
         /// <summary>Chlorine gas (Cl2): what a Downs cell gives off with the sodium (MO-06). Toxic if vented.</summary>
         Chlorine,
+        /// <summary>Electronic waste (2026-11-25, OQ-9): the circuit boards and cell of a destroyed robot. Hazardous. Appended; saved as an integer.</summary>
+        ElectronicWaste,
+        /// <summary>Rust, iron oxide-hydroxide FeOOH (goethite): what iron becomes in damp air (2026-11-25). It can go back into the smelter as ore.</summary>
+        Rust,
+        /// <summary>Sodium hydroxide NaOH: what sodium becomes in moist air (2NaNa + 2H2O gives 2NaOH + H2). Hazardous.</summary>
+        SodiumHydroxide,
+        /// <summary>Lithium hydroxide LiOH: what lithium becomes in moist air. Hazardous.</summary>
+        LithiumHydroxide,
     }
 
     public static class Materials
@@ -58,6 +66,10 @@ namespace KardashevAscent.Simulation.Resources
                 case Material.PureAluminium: return "Aluminium 99.99 %";
                 case Material.Oxygen: return "Oxygen";
                 case Material.Chlorine: return "Chlorine";
+                case Material.ElectronicWaste: return "Electronic waste";
+                case Material.Rust: return "Rust";
+                case Material.SodiumHydroxide: return "Sodium hydroxide";
+                case Material.LithiumHydroxide: return "Lithium hydroxide";
                 default: return m.ToString();
             }
         }
@@ -81,6 +93,10 @@ namespace KardashevAscent.Simulation.Resources
                 case Material.Alumina: return "made from anorthosite or rock in an Alumina plant (step 1 of aluminium)";
                 case Material.PureAluminium: return "aluminium refined again in an Electrolysis cell (three-layer process)";
                 case Material.Oxygen: return "given off by aluminium electrolysis (inert-anode cell, an emerging technology); needs a gas tank or is vented";
+                case Material.ElectronicWaste: return "what is left of a destroyed robot's circuit boards and cell: hazardous, kept in a sealed store";
+                case Material.Rust: return "iron that has rusted in damp air (FeOOH); it gains the mass of the air it took, and goes back into the smelter as ore";
+                case Material.SodiumHydroxide: return "sodium that met moisture (caustic): hazardous, needs a sealed store";
+                case Material.LithiumHydroxide: return "lithium that met moisture: hazardous, needs a sealed store";
                 case Material.Chlorine: return "given off with sodium by a Downs cell; toxic: needs a gas tank, or venting it is logged and warned";
                 default: return "";
             }

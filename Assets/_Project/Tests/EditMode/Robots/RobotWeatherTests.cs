@@ -191,7 +191,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
         }
 
         [Test]
-        public void ADestroyedRobotsCargoStaysWhereItStopped()
+        public void ADestroyedRobotsCargoLiesInItsWreckWhereItStopped()
         {
             var sim = Colony(-150.0);
             sim.LogisticsEnabled = true;
@@ -204,8 +204,12 @@ namespace KardashevAscent.Simulation.Tests.Robots
             sim.Tick(3.0);
             Assert.AreEqual(1, sim.RobotsDestroyed);
             Assert.IsFalse(sim.InventoriesForTests.Has(cargo), "the cargo place is gone with the robot");
-            Assert.AreEqual(50.0, sim.KgAt(r.Tile == tile ? tile : tile, KardashevAscent.Simulation.Resources.Material.Iron), 1e-9, "the iron lies on the tile");
-            StringAssert.Contains("cargo stays on the tile", sim.OperationsLog.Last(o => o.Quantity == "Robot destroyed").Text);
+            var wreck = sim.Wrecks.Single();
+            Assert.AreEqual(tile, wreck.Tile);
+            // the 50 kg of cargo and the robot's own 400 kg of iron lie in the wreck (an open pile), and it is cold: structure intact, electronics are waste
+            Assert.AreEqual(450.0, sim.WreckStockKg(wreck, KardashevAscent.Simulation.Resources.Material.Iron), 1e-6);
+            Assert.Greater(sim.WreckStockKg(wreck, KardashevAscent.Simulation.Resources.Material.ElectronicWaste), 0.0);
+            StringAssert.Contains("wreck", sim.OperationsLog.Last(o => o.Quantity == "Robot destroyed").Text);
         }
 
         [Test]
