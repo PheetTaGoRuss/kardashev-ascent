@@ -157,7 +157,7 @@ namespace KardashevAscent.Simulation.Resources
         {
             var r = new ChemResult();
             if (kg <= 0.0 || days <= 0.0) return r;
-            double air = shelter == Shelter.Sealed ? 0.002 : 1.0;   // a seal leaks a little (game rule, TBD): 0.2 % of the open exchange
+            double air = shelter == Shelter.Sealed ? 0.0002 : 1.0;   // a seal leaks a little (game rule, TBD): 0.02 % of the open exchange
             double humid = VapourFactor(env.TempC, env.RelativeHumidityPercent);
             double o2 = Math.Min(1.0, env.OxygenFraction * (env.PressurePa / 101325.0) / 0.2095);   // the oxygen there is, against Earth's air
             switch (m)
