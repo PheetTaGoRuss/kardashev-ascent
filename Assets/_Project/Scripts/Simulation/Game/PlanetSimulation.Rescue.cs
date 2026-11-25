@@ -156,9 +156,10 @@ namespace KardashevAscent.Simulation.Game
                 var plan = PlanRescue(s, out string why);
                 if (!plan.HasValue)
                 {
-                    if (!rescueRefusals.ContainsKey(s.Id) || rescueRefusals[s.Id] != why)
+                    bool sameKind = rescueRefusals.TryGetValue(s.Id, out string prev) && prev.Split('(')[0] == why.Split('(')[0];   // the numbers move every step: tell the player once per reason
+                    rescueRefusals[s.Id] = why;
+                    if (!sameKind)
                     {
-                        rescueRefusals[s.Id] = why;
                         Log($"Robot {s.Id}", "Rescue impossible", 0.0, "", $"R{s.Id}", $"Robot {s.Id} on tile {s.Tile} needs help and nobody can give it: {why}. A charger or depot near it would shorten the way back.", s.Id);
                     }
                     continue;
