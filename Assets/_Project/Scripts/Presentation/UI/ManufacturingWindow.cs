@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using KardashevAscent.Simulation.Game;
 using KardashevAscent.Simulation.Resources;
 using KardashevAscent.Simulation.Robots;
@@ -96,16 +97,33 @@ namespace KardashevAscent.Presentation.UI
             content.Clear();
             switch (tab)
             {
-                case Tab.Robots: BuildRobots(sim); break;
+                case Tab.Robots: BuildRobots(sim); BuildRebuilds(sim); break;
                 case Tab.Refining: BuildRefining(sim); break;
                 case Tab.Queue: BuildQueue(sim); break;
                 default: BuildReports(sim); break;
             }
         }
 
+        /// <summary>Recovered wrecks that can be rebuilt (A2): each with a Rebuild button, or the reason it cannot be, as a why? line.</summary>
+        void BuildRebuilds(IPlanetSimulation sim)
+        {
+            var list = sim.RecoveredWrecks();
+            if (list.Count == 0) return;
+            var head = Label("REBUILD FROM WRECKS", "heading section"); head.style.marginTop = 10; content.Add(head);
+            foreach (var w in list)
+            {
+                var row = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center, flexWrap = Wrap.Wrap } };
+                int id = w.Id;
+                row.Add(Label($"{w.Kind} robot {w.RobotId}: " + (w.Blocker == null ? "its structure survived; the Workshop can rebuild it (6 h, 5 kWh, the recovered metals and a new cell and boards)." : "can't rebuild: " + w.Blocker + "."), "body"));
+                if (w.Blocker == null) { var b = MakeButton("Rebuild", () => { string why = sim.OrderRebuild(id); if (why != null) message.text = why; shownShape = null; }); b.style.marginLeft = 8; row.Add(b); }
+                content.Add(row);
+            }
+        }
+
         string Shape(IPlanetSimulation sim)
         {
             var s = new System.Text.StringBuilder();
+            s.Append(sim.RecoveredWrecks().Count).Append(string.Join(",", sim.RecoveredWrecks().Select(w => w.Blocker ?? "ok")));
             s.Append(tab).Append('|').Append(sim.MilestonesReached).Append('|').Append(sim.WorkshopCount).Append('|').Append(sim.Jobs.Count);
             foreach (Material m in Materials.All) s.Append('|').Append((int)sim.Materials[m]);
             s.Append('|').Append(sim.RefineQueue.Count);
@@ -299,6 +317,8 @@ namespace KardashevAscent.Presentation.UI
                     return $" Ordinary rock is only about {Refining.RockAluminaShare * 100:0} % alumina: mine anorthosite in highlands for twice the yield.";
                 case RefineProcess.Aluminium:
                     return $" {Refining.AluminaPerAluminium:0.00} kg alumina and about {Refining.SmeltWhPerKg / 1000.0:0.#} kWh per kg of aluminium (real smelters: 13–15 kWh/kg). Grade: 99.7 %, fine for wiring.";
+                case RefineProcess.IronFromRust:
+                    return $" Rust (FeOOH) gives {Refining.IronPerRust:0.000} kg of iron per kg, with oxygen and steam; about {Refining.IronWhPerKg / 1000.0:0.#} kWh per kg of iron (molten oxide electrolysis, Allanore et al. 2013).";
                 case RefineProcess.PureAluminium:
                     return " Grade 99.99 %: needed for advanced processors (chip wiring).";
                 case RefineProcess.SodiumFromSalt:

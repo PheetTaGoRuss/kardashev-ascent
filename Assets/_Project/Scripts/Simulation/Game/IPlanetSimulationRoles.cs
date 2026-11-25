@@ -366,6 +366,12 @@ namespace KardashevAscent.Simulation.Game
         double RescueDeadlineHours(int robotId);
         /// <summary>Ask for a rescue of this robot now (the player's Rescue button); false when nobody can help.</summary>
         bool RequestRescue(int robotId);
+        /// <summary>The recovered wrecks and what stops each from being rebuilt: (wreck id, robot id, robot kind, rebuildable, why not or null).</summary>
+        System.Collections.Generic.IReadOnlyList<(int Id, int RobotId, string Kind, bool Rebuildable, string Blocker)> RecoveredWrecks();
+        /// <summary>Why a recovered wreck cannot be rebuilt (the electronics melted, no Workshop, materials missing), or null when the order can be placed.</summary>
+        string RebuildBlocker(int wreckId);
+        /// <summary>Order a robot rebuilt from a recovered wreck at the Workshop; null when it was placed, else why not.</summary>
+        string OrderRebuild(int wreckId);
         /// <summary>The wrecks as lines for the player: cause, what lies there, and the state of the recovery haul.</summary>
         System.Collections.Generic.IReadOnlyList<string> WreckLines();
         /// <summary>The player overrides a forecast-storm wait on a haul that has not loaded; the energy check still applies.</summary>

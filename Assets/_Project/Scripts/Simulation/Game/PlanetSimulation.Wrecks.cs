@@ -19,6 +19,10 @@ namespace KardashevAscent.Simulation.Game
         public Dictionary<Material, double> BillKg = new Dictionary<Material, double>();
         public List<HeldFinding> Findings = new List<HeldFinding>();
         public bool FindingsLost;
+        /// <summary>The metals have been brought home; the wreck waits to be rebuilt (only for a wreck whose structure survived).</summary>
+        public bool Recovered;
+        /// <summary>The structure survived: neither melted nor burnt (a soak death, not a heat one).</summary>
+        public bool Rebuildable => Cause != DeathCause.Heat && PeakC <= WreckModel.AluminiumMeltC;
         public bool ElectronicsIntact => WreckModel.ElectronicsSurvive(Cause, PeakC);
     }
 
@@ -103,11 +107,12 @@ namespace KardashevAscent.Simulation.Game
             for (int i = 0; i < wrecks.Count; i++)
             {
                 Wreck w = wrecks[i];
-                if (WreckKg(w) > 1e-6 || haulBook.Orders.Any(o => o.WreckId == w.Id)) continue;
+                if (w.Recovered || WreckKg(w) > 1e-6 || haulBook.Orders.Any(o => o.WreckId == w.Id)) continue;
                 foreach (HeldFinding f in w.Findings) { Deliver(f); }
                 if (w.Findings.Count > 0) KnowledgeStore.Sync(w.RobotId, TimeHours);
                 if (w.Findings.Count > 0) Log($"Wreck {w.Id}", "Findings recovered", w.Findings.Count, "", $"W{w.Id}", $"{w.Findings.Count} unsynced finding(s) read back from the wreck of robot {w.RobotId}.", -1);
                 inventories.Remove(PlaceId.Wreck(w.Id));
+                if (w.Rebuildable) { w.Recovered = true; w.Findings.Clear(); continue; }   // the chassis can be rebuilt at the Workshop
                 wrecks.RemoveAt(i--);
             }
         }
@@ -154,6 +159,38 @@ namespace KardashevAscent.Simulation.Game
             return lines;
         }
 
+        void RemoveWreck(int wreckId) { wrecks.RemoveAll(w => w.Id == wreckId); inventories.Remove(PlaceId.Wreck(wreckId)); }
+
+        /// <summary>Why a wreck cannot be rebuilt now, or null.</summary>
+        public string RebuildBlocker(int wreckId)
+        {
+            Wreck w = wrecks.FirstOrDefault(x => x.Id == wreckId);
+            if (w == null) return "there is no such wreck";
+            if (!w.Rebuildable) return w.Cause == DeathCause.Heat ? "the electronics and the cell melted: only the salvaged metals are left" : $"the structure was heated to {w.PeakC:0} C and melted: only the salvaged metals are left";
+            if (!w.Recovered) return "the wreck has not been recovered yet: haul its metals home first";
+            if (WorkshopCount == 0 && workshops.Count == 0) return "build a Robot Workshop first";
+            if (jobs.Any(j => j.Kind == JobKind.Rebuild && j.WreckId == wreckId)) return "it is already being rebuilt";
+            var need = RobotTech.Rebuild(w.Kind, false);
+            string missing = "";
+            foreach (var (m, kg) in need.Inputs) if (Materials[m] < kg - 1e-9) missing += (missing.Length > 0 ? ", " : "") + $"{kg - Materials[m]:0.#} kg {Resources.Materials.Name(m).ToLowerInvariant()}";
+            return missing.Length > 0 ? "needs " + missing : null;
+        }
+
+        public IReadOnlyList<(int Id, int RobotId, string Kind, bool Rebuildable, string Blocker)> RecoveredWrecks() =>
+            wrecks.Where(w => w.Recovered || !w.Rebuildable).Where(w => WreckKg(w) <= 1e-6 || w.Recovered).Select(w => (w.Id, w.RobotId, w.Kind.ToString(), w.Rebuildable, RebuildBlocker(w.Id))).ToList();
+
+        public string OrderRebuild(int wreckId)
+        {
+            string why = RebuildBlocker(wreckId);
+            if (why != null) return "Cannot rebuild: " + why + ".";
+            Wreck w = wrecks.First(x => x.Id == wreckId);
+            Recipe recipe = RobotTech.Rebuild(w.Kind, false);
+            TakeInputs(recipe);
+            jobs.Add(new ManufacturingJob { Kind = JobKind.Rebuild, RobotKind = w.Kind, RobotId = w.RobotId, WreckId = wreckId, Recipe = recipe });
+            Settle(null);
+            return null;
+        }
+
         public bool WreckRecoveryOrdered(int wreckId) => haulBook.Orders.Any(o => o.WreckId == wreckId);
 
         void CaptureWrecks(SimulationState state)
@@ -162,7 +199,7 @@ namespace KardashevAscent.Simulation.Game
             foreach (Wreck w in wrecks)
                 state.Wrecks.Add(new WreckRecord
                 {
-                    Id = w.Id, Tile = w.Tile, RobotId = w.RobotId, Kind = w.Kind, Cause = w.Cause, PeakC = w.PeakC, FindingsLost = w.FindingsLost,
+                    Id = w.Id, Tile = w.Tile, RobotId = w.RobotId, Kind = w.Kind, Cause = w.Cause, PeakC = w.PeakC, FindingsLost = w.FindingsLost, Recovered = w.Recovered,
                     Bill = w.BillKg.Select(kv => new MaterialRecord { Material = kv.Key, Kg = kv.Value }).ToList(), Findings = new List<HeldFinding>(w.Findings),
                 });
         }
@@ -174,7 +211,7 @@ namespace KardashevAscent.Simulation.Game
             if (state.Version < 59 || state.Wrecks == null) return;
             foreach (WreckRecord r in state.Wrecks)
             {
-                var w = new Wreck { Id = r.Id, Tile = r.Tile, RobotId = r.RobotId, Kind = r.Kind, Cause = r.Cause, PeakC = r.PeakC, FindingsLost = r.FindingsLost };
+                var w = new Wreck { Id = r.Id, Tile = r.Tile, RobotId = r.RobotId, Kind = r.Kind, Cause = r.Cause, PeakC = r.PeakC, FindingsLost = r.FindingsLost, Recovered = r.Recovered };
                 foreach (var b in r.Bill) w.BillKg[b.Material] = b.Kg;
                 if (r.Findings != null) w.Findings.AddRange(r.Findings);
                 wrecks.Add(w);

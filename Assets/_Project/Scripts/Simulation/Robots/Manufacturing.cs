@@ -28,7 +28,7 @@ namespace KardashevAscent.Simulation.Robots
         Boat = 64,
     }
 
-    public enum JobKind { Robot, Upgrade, Refine }
+    public enum JobKind { Robot, Upgrade, Refine, Rebuild }
 
     /// <summary>
     /// What a Workshop job takes: materials (kg), electricity (Wh, drawn from the grid while the job is worked) and
@@ -55,6 +55,8 @@ namespace KardashevAscent.Simulation.Robots
         public bool SodiumBattery;
         public bool AluminiumWiring;
         public int RobotId;
+        /// <summary>For a rebuild: the recovered wreck the robot comes back from (A2).</summary>
+        public int WreckId;
         public RobotModule Module;
         public Material Output;
         public double OutputKg;
@@ -71,6 +73,8 @@ namespace KardashevAscent.Simulation.Robots
                     return $"{RobotKind} robot ({(SodiumBattery ? "Na-ion" : "Li-ion")} battery, {(AluminiumWiring ? "aluminium" : "copper")} wiring)";
                 case JobKind.Upgrade:
                     return $"{RobotTech.ModuleName(Module)} for R{RobotId}";
+                case JobKind.Rebuild:
+                    return $"{RobotKind} robot rebuilt from the wreck of robot {RobotId}";
                 default:
                     return $"{OutputKg:0} kg {Materials.Name(Output).ToLowerInvariant()}";
             }
@@ -147,6 +151,18 @@ namespace KardashevAscent.Simulation.Robots
             : m == RobotModule.Boat ? "Boat hull (works on water)" : m.ToString();
 
         // ---- Recipes (TBD) ----
+
+        /// <summary>
+        /// A robot rebuilt from a recovered wreck whose structure survived (A2, decided 2026-11-25, director's delegate): the Workshop reassembles it in a quarter of the time and a tenth of the energy
+        /// of a new one (game rules, TBD: the chassis, drives and wiring are there; only the boards and the cell are fitted), from the same materials, which the recovery of the wreck brought home
+        /// (mass is kept: nothing is made from nothing).
+        /// </summary>
+        public static Recipe Rebuild(RobotKind kind, bool fastDrive)
+        {
+            var r = new Recipe { EnergyWh = 5_000.0, WorkHours = 6.0 };
+            foreach (var kv in WreckModel.BillOf(kind, fastDrive)) r.Add(kv.Key, kv.Value);
+            return r;
+        }
 
         /// <summary>A new robot.</summary>
         public static Recipe Robot(RobotKind kind, bool sodium, bool aluminium)

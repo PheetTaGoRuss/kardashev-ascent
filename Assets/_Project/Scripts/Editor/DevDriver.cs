@@ -672,6 +672,53 @@ namespace KardashevAscent.EditorTools
                     Log($"flows t={sim.TimeHours:0} processes={snap.Processes.Count} in={snap.TotalInKg:0.0} out={snap.TotalOutKg:0.0} heat={snap.WasteHeatKWh:0.0} blocked={snap.Blocked.Count}");
                     return true;
                 }
+                case "ironcell":
+                {
+                    // ironcell: a Workshop and an Electrolysis cell at the base, 200 kg of rust, one iron batch; steps 130 h and logs what came out.
+                    var sim = Runner()?.Simulation as Simulation.Game.PlanetSimulation;
+                    if (sim == null) return true;
+                    int t = sim.BaseTileId;
+                    sim.Debug.FreeBuilding = true;
+                    for (int slot = 0; slot < sim.SlotCount(t); slot++)
+                        if (sim.GetBuilding(t, slot) == Simulation.Game.BuildingType.None && sim.PlaceWorkshop(t, slot)) break;
+                    for (int slot = 0; slot < sim.SlotCount(t); slot++)
+                        if (sim.GetBuilding(t, slot) == Simulation.Game.BuildingType.None && sim.RefineryBlocker(Simulation.Game.BuildingType.Electrolyser, t, slot) == null) { sim.PlaceRefinery(Simulation.Game.BuildingType.Electrolyser, t, slot); break; }
+                    sim.Debug.FreeBuilding = false;
+                    sim.WireAllBuildings();
+                    double ironBefore = sim.Materials[Simulation.Resources.Material.Iron];
+                    sim.Materials.Add(Simulation.Resources.Material.Rust, 200.0);
+                    string order = sim.OrderRefine(Simulation.Resources.RefineProcess.IronFromRust);
+                    for (int h = 0; h < 900; h++) sim.Tick(1.0);
+                    Log($"ironcell order={order ?? "ok"} iron {ironBefore:0.0} -> {sim.Materials[Simulation.Resources.Material.Iron]:0.0} kg, rust left {sim.Materials[Simulation.Resources.Material.Rust]:0.0} kg :: " + string.Join(" || ", System.Linq.Enumerable.Select(System.Linq.Enumerable.Where(sim.OperationsLog, o => o.Text.Contains("Iron from rust")), o => o.Text)));
+                    return true;
+                }
+                case "rebuilddemo":
+                {
+                    // rebuilddemo: a General robot dies on a cold night, its wreck is recovered, and the Workshop rebuilds it; logs each step.
+                    var sim = Runner()?.Simulation as Simulation.Game.PlanetSimulation;
+                    if (sim == null) return true;
+                    var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+                    sim.Debug.FreeBuilding = true;
+                    for (int slot = 0; slot < sim.SlotCount(sim.BaseTileId); slot++)
+                        if (sim.GetBuilding(sim.BaseTileId, slot) == Simulation.Game.BuildingType.None && sim.PlaceWorkshop(sim.BaseTileId, slot)) break;
+                    sim.Debug.FreeBuilding = false;
+                    sim.WireAllBuildings();
+                    int tile = -1;
+                    foreach (int n in sim.Sphere.Neighbors[sim.BaseTileId]) if (!sim.GetTile(n).IsWater) { tile = n; break; }
+                    var r = sim.Workforce.AddRobot(Simulation.Robots.RobotKind.General, tile);
+                    var w = (Simulation.Game.Wreck)sim.GetType().GetMethod("DestroyForTests", flags).Invoke(sim, new object[] { r.Id, -50.0 });
+                    string before = sim.RebuildBlocker(w.Id);
+                    var inv = (Simulation.Logistics.InventoryBook)sim.GetType().GetProperty("InventoriesForTests", flags).GetValue(sim);
+                    inv.Remove(Simulation.Logistics.PlaceId.Wreck(w.Id));
+                    sim.LogisticsEnabled = true; sim.Tick(1.0);
+                    string after = sim.RebuildBlocker(w.Id);
+                    foreach (var kv in Simulation.Robots.WreckModel.BillOf(Simulation.Robots.RobotKind.General, false)) sim.Materials.Add(kv.Key, kv.Value);   // the recovery brought the metals home
+                    string order = sim.OrderRebuild(w.Id);
+                    int robots = sim.Workforce.Robots.Count;
+                    for (int h = 0; h < 12; h++) sim.Tick(1.0);
+                    Log($"rebuilddemo before={before} | after recovery={after ?? "can rebuild"} | order={order ?? "ok"} | robots {robots} -> {sim.Workforce.Robots.Count} :: " + string.Join(" || ", System.Linq.Enumerable.Select(System.Linq.Enumerable.Where(sim.OperationsLog, o => o.Quantity == "Robot rebuilt"), o => o.Text)));
+                    return true;
+                }
                 case "refine":
                 {
                     // refine: free-build a Workshop, an Alumina plant and an Electrolysis cell at the base, give them ore and salt, queue batches

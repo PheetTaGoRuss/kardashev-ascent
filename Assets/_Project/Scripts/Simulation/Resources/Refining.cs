@@ -20,6 +20,8 @@ namespace KardashevAscent.Simulation.Resources
         SodiumFromSalt,
         /// <summary>Sodium from rock where there is no salt: chlorinating feldspar, then electrolysis. Slow and costly (TBD).</summary>
         SodiumFromRock,
+        /// <summary>Iron from rust: molten oxide electrolysis with an inert anode (A1, 2026-11-25). Appended; saved as an integer.</summary>
+        IronFromRust,
     }
 
     /// <summary>What a plant does with the gas its process gives off (mission operations MO-06). Saved as an integer.</summary>
@@ -101,6 +103,17 @@ namespace KardashevAscent.Simulation.Resources
         /// <summary>Enthalpy to split salt into sodium and chlorine: 411.2 kJ per mol NaCl, 17.89 MJ/kg of Na = 4 969 Wh/kg (recalled, to verify).</summary>
         public const double SodiumReactionWhPerKg = 4_969.0;
 
+        /// <summary>
+        /// Molten oxide electrolysis of iron oxide with an inert anode gives iron and oxygen from electricity alone (Allanore, Yin and Sadoway 2013, Nature 497: 353-356, a chromium-iron alloy anode).
+        /// Its energy at scale is estimated at 3.9 to 4 kWh per kg of iron (Allanore 2017, Electrochemical Society Interface 26(2): the target for affordable electrolytic iron is at most 3.9 kWh/kg);
+        /// 4.0 is used. Game rule, TBD: the same figure for rust (FeOOH), which also gives up its water.
+        /// </summary>
+        public const double IronWhPerKg = 4_000.0;
+        /// <summary>FeOOH is 88.85 g/mol, Fe 55.845: 0.6285 kg of iron per kg of rust; the rest leaves as 0.2701 kg of oxygen (3/4 O2) and 0.1014 kg of water (1/2 H2O), by stoichiometry.</summary>
+        public const double IronPerRust = 55.845 / 88.851, OxygenPerRust = 0.75 * 31.998 / 88.851, WaterPerRust = 0.5 * 18.015 / 88.851;
+        /// <summary>Enthalpy to take iron out of goethite: formation enthalpy of FeOOH about -559 kJ/mol, so 10.0 MJ per kg of iron = 2 780 Wh/kg (NIST-JANAF / CRC; recalled, to verify).</summary>
+        public const double IronReactionWhPerKg = 2_780.0;
+
         static readonly Dictionary<RefineProcess, RefineRecipe> Recipes = Make();
 
         static Dictionary<RefineProcess, RefineRecipe> Make()
@@ -157,6 +170,15 @@ namespace KardashevAscent.Simulation.Resources
                 Input = Material.Rock, InputKg = naRock * 45.0, Output = Material.Sodium, OutputKg = naRock,
                 SlagKg = naRock * 44.0, EnergyWh = 30_000.0 * naRock, Hours = 240.0,
             };
+            double fe = 20.0;
+            d[RefineProcess.IronFromRust] = new RefineRecipe
+            {
+                Process = RefineProcess.IronFromRust, Module = RefineryKind.Electrolyser, Name = "Iron from rust",
+                What = "Molten oxide electrolysis with an inert anode: rust melts, the current splits it into liquid iron and oxygen. Electricity only, no carbon. The oxygen and the steam from the rust's water leave as gas.",
+                Input = Material.Rust, InputKg = fe / IronPerRust, Output = Material.Iron, OutputKg = fe,
+                VentedKg = fe / IronPerRust - fe, VentedName = "oxygen and steam", Byproduct = Material.Oxygen, EnergyWh = IronWhPerKg * fe, Hours = 120.0,
+                ReactionWhPerKgOutput = IronReactionWhPerKg,
+            };
             return d;
         }
 
@@ -185,7 +207,7 @@ namespace KardashevAscent.Simulation.Resources
         public static readonly RefineProcess[] Processes =
         {
             RefineProcess.AluminaFromAnorthosite, RefineProcess.AluminaFromRock, RefineProcess.Aluminium,
-            RefineProcess.PureAluminium, RefineProcess.SodiumFromSalt, RefineProcess.SodiumFromRock,
+            RefineProcess.PureAluminium, RefineProcess.SodiumFromSalt, RefineProcess.SodiumFromRock, RefineProcess.IronFromRust,
         };
 
         public static string ModuleName(RefineryKind k) => k == RefineryKind.AluminaPlant ? "Alumina plant" : "Electrolysis cell";
@@ -196,6 +218,7 @@ namespace KardashevAscent.Simulation.Resources
             : output == Material.Sodium ? RefineProcess.SodiumFromSalt
             : output == Material.Alumina ? RefineProcess.AluminaFromAnorthosite
             : output == Material.PureAluminium ? RefineProcess.PureAluminium
+            : output == Material.Iron ? RefineProcess.IronFromRust
             : (RefineProcess?)null;
     }
 }
