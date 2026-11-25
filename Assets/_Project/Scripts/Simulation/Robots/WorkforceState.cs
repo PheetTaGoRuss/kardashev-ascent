@@ -92,6 +92,8 @@ namespace KardashevAscent.Simulation.Robots
         public bool SodiumBattery;
         public bool AluminiumWiring;
         public int RobotId;
+        /// <summary>Version 64: the wreck a rebuild comes from.</summary>
+        public int WreckId;
         public RobotModule Module;
         public Resources.Material Output;
         public double OutputKg;

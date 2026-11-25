@@ -93,7 +93,7 @@ namespace KardashevAscent.Simulation.Tests.Knowledge
             sim.InventoriesForTests.Remove(PlaceId.Wreck(w.Id));
             sim.LogisticsEnabled = true;
             sim.Tick(1.0);
-            Assert.AreEqual(0, sim.Wrecks.Count);
+            Assert.IsTrue(sim.Wrecks.All(x => x.Recovered));
             Assert.IsTrue(sim.KnowledgeStore.Shown(Subject.Tile(tile), Quantity.SurveyCompleted).HasValue, "recovered and synchronised");
             var hot = sim.Workforce.AddRobot(RobotKind.General, tile);
             Hold(sim, hot, tile);

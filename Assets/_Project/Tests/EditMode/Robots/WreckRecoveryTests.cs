@@ -39,7 +39,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             Assert.Greater(sim.WreckStockKg(w, Material.Iron), 300.0);
             double ironBefore = sim.KgAt(sim.BaseTileId, Material.Iron);
             for (int h = 0; h < 24 * 20 && sim.Wrecks.Count > 0; h++) sim.Tick(1.0);
-            Assert.AreEqual(0, sim.Wrecks.Count, "recovered");
+            Assert.IsTrue(sim.Wrecks.All(x => x.Recovered), "recovered: kept only as a chassis to rebuild");
             Assert.Greater(sim.KgAt(sim.BaseTileId, Material.Iron), ironBefore + 300.0, "the iron is in the base depot");
             Assert.Greater(sim.KgAt(sim.BaseTileId, Material.ElectronicWaste), 0.0, "the waste came too");
         }

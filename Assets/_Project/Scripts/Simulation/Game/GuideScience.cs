@@ -170,6 +170,22 @@ namespace KardashevAscent.Simulation.Game
                 .Add("Real science", "Lumped thermal capacitance: T(t) = T_air + (T0 - T_air) exp(-t / tau), tau = m cp / (h A) (Incropera and DeWitt, Fundamentals of Heat and Mass Transfer, ch. 5). Specific heats from the CRC Handbook. Electronics storage rating -55 to +125 C (MIL-STD-883 class B parts); lithium iron phosphate cells store between -40 and +60 C (A123 Systems ANR26650M1-B datasheet).")
                 .Add("Related", "Rescue and the failure ladder", "Temperature and the day-night swing", "Wind chill and storms");
 
+            yield return new GuidePage(Science, "Iron electrolysis", "Rust goes back to iron with electricity alone: molten oxide electrolysis, with oxygen as the only waste.")
+                .Add("In play",
+                     $"{Rule}An Electrolysis cell next to a Workshop can run Iron from rust: {Refining.Of(RefineProcess.IronFromRust).InputKg:0.0} kg of rust gives {Refining.Of(RefineProcess.IronFromRust).OutputKg:0} kg of iron, with {Refining.OxygenPerRust:0.000} kg of oxygen and {Refining.WaterPerRust:0.000} kg of steam per kg of rust, by stoichiometry (FeOOH is 88.85 g/mol, iron 55.845). It takes about {Refining.IronWhPerKg / 1000.0:0.#} kWh per kg of iron and a batch of {Refining.Of(RefineProcess.IronFromRust).Hours:0} hours.",
+                     "Rust comes from iron that rusted in storage (Storage and corrosion). Mined iron, an abstraction of ore, is unchanged: the cell is a way to win back what the damp took.")
+                .Add("How to use", "Keep iron in a sealed store and it never rusts; where it did, put the rust in the lander and order Iron from rust in Manufacturing, Refining.")
+                .Add("Real science", "Molten oxide electrolysis with an inert chromium-iron alloy anode makes iron and oxygen from iron oxide at about 1 600 C (Allanore, Yin and Sadoway 2013, Nature 497: 353-356). The energy at scale is estimated at 3.9 to 4 kWh per kg of iron (Allanore 2017, ECS Interface 26(2)).")
+                .Add("Related", "Storage and corrosion", "Robot wrecks and salvage");
+
+            yield return new GuidePage(Science, "Rebuilding robots", "A robot that died of cold or of long heat, not of fire, can be put back together at the Workshop.")
+                .Add("In play",
+                     $"{Rule}Recover the wreck first (a haul brings its metals home). If its structure survived (a cold or heat soak below {WreckModel.AluminiumMeltC:0} C), the Workshop rebuilds it in 6 hours and 5 kWh, from the recovered metals and a new cell and boards (about 2 kg of lithium and 10 kg of copper). The robot comes back with a new id and the findings that were read back from the wreck.",
+                     "A wreck that melted (aluminium at 660 C, copper at 1085 C, iron at 1538 C) or whose electronics burnt gives only its salvaged metals. The Manufacturing window says why a wreck cannot be rebuilt: the electronics melted, no Workshop, or the copper it needs.")
+                .Add("How to use", "Manufacturing, Robots tab: REBUILD FROM WRECKS lists each recovered wreck with a Rebuild button or the reason it cannot be rebuilt.")
+                .Add("Real science", "Melting points (CRC Handbook); the electronics share is the cell plus a quarter of the wiring (game assumption).")
+                .Add("Related", "Robot wrecks and salvage", "Robots and the weather");
+
             yield return new GuidePage(Science, "Relief and climbing", "How high the land rises decides what a haul costs a robot.")
                 .Add("In play",
                      "Until the terrain relief survey is done, the highest point is only a range, and hauls are planned for the high end.",

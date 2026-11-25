@@ -198,6 +198,7 @@ namespace KardashevAscent.Simulation.Game
         {
             PlaceId outP = OutputOf(m);
             inventories.Add(outP, r.Output, r.OutputKg);
+            Know(Knowledge.Subject.Building(m.Tile, m.Slot), Knowledge.Quantity.PlantOutput, r.OutputKg, 0.0, Knowledge.Confidence.High, new Knowledge.Source(Knowledge.SourceKind.Telemetry));
             flows.Add(TimeHours, FlowStage.PlantIn, (int)r.Process, r.Input, r.InputKg);   // counted with its outputs, when the batch is done, so the closure reads exactly
             flows.Add(TimeHours, FlowStage.PlantProduct, (int)r.Process, r.Output, r.OutputKg);
             if (r.SlagKg > 0.0) { inventories.Add(outP, Material.Slag, r.SlagKg); flows.Add(TimeHours, FlowStage.PlantSlag, (int)r.Process, Material.Slag, r.SlagKg); }

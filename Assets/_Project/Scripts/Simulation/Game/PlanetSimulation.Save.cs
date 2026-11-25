@@ -138,7 +138,7 @@ namespace KardashevAscent.Simulation.Game
                 state.Jobs.Add(new JobRecord
                 {
                     Kind = j.Kind, RobotKind = j.RobotKind, SodiumBattery = j.SodiumBattery, AluminiumWiring = j.AluminiumWiring,
-                    RobotId = j.RobotId, Module = j.Module, Output = j.Output, OutputKg = j.OutputKg, DoneHours = j.DoneHours,
+                    RobotId = j.RobotId, WreckId = j.WreckId, Module = j.Module, Output = j.Output, OutputKg = j.OutputKg, DoneHours = j.DoneHours,
                 });
             anglePresets.Capture(state.AnglePresets, out int nextPresetId);
             state.NextAnglePresetId = nextPresetId;
@@ -379,7 +379,7 @@ namespace KardashevAscent.Simulation.Game
                     var j = new ManufacturingJob
                     {
                         Kind = jr.Kind, RobotKind = jr.RobotKind, SodiumBattery = jr.SodiumBattery, AluminiumWiring = jr.AluminiumWiring,
-                        RobotId = jr.RobotId, Module = jr.Module, Output = jr.Output, OutputKg = jr.OutputKg, DoneHours = Math.Max(0.0, jr.DoneHours),
+                        RobotId = jr.RobotId, WreckId = jr.WreckId, Module = jr.Module, Output = jr.Output, OutputKg = jr.OutputKg, DoneHours = Math.Max(0.0, jr.DoneHours),
                     };
                     j.Recipe = RecipeOf(j);
                     if (j.Kind == JobKind.Refine)

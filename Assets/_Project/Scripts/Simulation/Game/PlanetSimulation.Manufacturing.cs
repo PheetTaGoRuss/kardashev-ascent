@@ -136,6 +136,7 @@ namespace KardashevAscent.Simulation.Game
         static Recipe RecipeOf(ManufacturingJob j) =>
             j.Kind == JobKind.Robot ? RobotTech.Robot(j.RobotKind, j.SodiumBattery, j.AluminiumWiring)
             : j.Kind == JobKind.Upgrade ? RobotTech.Upgrade(j.Module, j.SodiumBattery, j.AluminiumWiring)
+            : j.Kind == JobKind.Rebuild ? RobotTech.Rebuild(j.RobotKind, false)
             : RobotTech.Refine(j.Output);
 
         void FinishJob(ManufacturingJob j)
@@ -146,6 +147,12 @@ namespace KardashevAscent.Simulation.Game
                     Robot made = Workforce.AddRobot(j.RobotKind, BaseTileId);
                     made.SodiumBattery = j.SodiumBattery;
                     made.Battery = new RobotBattery(made.DesignBatteryWh);
+                    break;
+                case JobKind.Rebuild:
+                    Robot back = Workforce.AddRobot(j.RobotKind, BaseTileId);
+                    back.Battery = new RobotBattery(back.DesignBatteryWh);
+                    RemoveWreck(j.WreckId);
+                    Log($"Robot {back.Id}", "Robot rebuilt", 0.0, "", $"R{back.Id}", $"The Workshop rebuilt a {j.RobotKind} robot from the wreck of robot {j.RobotId}: it is robot {back.Id} now.", back.Id);
                     break;
                 case JobKind.Upgrade:
                     Robot r = Workforce.GetRobot(j.RobotId);
