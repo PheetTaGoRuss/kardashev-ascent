@@ -337,6 +337,7 @@ namespace KardashevAscent.Simulation.Game
             {
                 string key = what.Keys.FirstOrDefault(k => string.Equals(k, name, StringComparison.OrdinalIgnoreCase)) ?? name;
                 var page = new GuidePage(Buildings, name, what.TryGetValue(key, out string w) ? w : "");
+                if (name == "Wind turbine") page.Add("Related", "Wind turbine physics", "Wind shear and air density");
                 page.Add("Costs", bill.Describe() + (name == "Solar panel" ? " (a 1 ha field)" : name == "Battery yard" ? " (a 20 MWh yard)" : ""));
                 yield return page;
             }

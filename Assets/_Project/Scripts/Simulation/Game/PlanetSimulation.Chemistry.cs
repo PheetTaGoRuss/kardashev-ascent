@@ -40,11 +40,12 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>How a stock of this material is kept on a tile (M3): the lander is sealed; elsewhere by the building the material's storage class needs, else an open pile.</summary>
         public Shelter ShelterOf(int tile, Material m)
         {
-            if (tile == BaseTileId && MaterialCatalog.PropertiesOf(m).StorageClass != StorageClass.PressurizedGas) return Shelter.Sealed;   // the lander holds every solid and liquid; gas needs a tank
+            StorageClass cls = MaterialCatalog.PropertiesOf(m).StorageClass;
+            if (tile == BaseTileId && cls != StorageClass.PressurizedGas) return cls == StorageClass.Hazardous ? Shelter.Inert : Shelter.Sealed;   // the lander keeps hazardous solids in inert containers   // the lander holds every solid and liquid; gas needs a tank
             switch (MaterialCatalog.PropertiesOf(m).StorageClass)
             {
                 case StorageClass.PressurizedGas: return StorageCount(tile, BuildingType.GasTank) > 0 ? Shelter.Sealed : Shelter.OpenPile;
-                case StorageClass.Hazardous:
+                case StorageClass.Hazardous: return StorageCount(tile, BuildingType.SealedStore) > 0 ? Shelter.Inert : Shelter.OpenPile;   // the sealed store for hazardous solids is filled with argon or oil
                 case StorageClass.SealedLiquid: return StorageCount(tile, BuildingType.SealedStore) > 0 ? Shelter.Sealed : Shelter.OpenPile;
                 default: return StorageCount(tile, BuildingType.StorageYard) > 0 ? Shelter.Yard : Shelter.OpenPile;
             }
@@ -99,7 +100,7 @@ namespace KardashevAscent.Simulation.Game
             int key = place.Kind == PlaceKind.Wreck ? -place.Id - 1 : place.Id;
             if (perMonth <= 0.01 || !chemistryWarned.Add((key, m))) return;
             string name = Resources.Materials.Name(m).ToLowerInvariant();
-            if ((m == Material.Sodium || m == Material.Lithium) && shelter != Shelter.Sealed)
+            if ((m == Material.Sodium || m == Material.Lithium) && shelter != Shelter.Sealed && shelter != Shelter.Inert)
                 Log($"Tile {tile}", "Reactive metal exposed", perMonth * 100.0, "%/month", $"T{tile}", $"{kg:0} kg of {name} on tile {tile} is reacting with the damp air (about {perMonth * 100.0:0} % a month, ◐ humidity estimated): it needs a sealed store.", -1);
             else
                 Log($"Tile {tile}", "Storage loss", perMonth * 100.0, "%/month", $"T{tile}", $"{kg:0} kg of {name} on tile {tile} is losing about {perMonth * 100.0:0.#} % a month ({Resources.Chemistry.Describe(m, shelter) ?? "the environment"}).", -1);
@@ -128,7 +129,7 @@ namespace KardashevAscent.Simulation.Game
                 if (stock[m] <= 0.0) continue;
                 double loss = StorageLossPerYear(tile, m);
                 Shelter s = ShelterOf(tile, m);
-                string how = s == Shelter.Sealed ? "sealed" : s == Shelter.Yard ? "yard" : "open pile";
+                string how = s == Shelter.Inert ? "inert store" : s == Shelter.Sealed ? "sealed" : s == Shelter.Yard ? "yard" : "open pile";
                 string text = Resources.Chemistry.Describe(m, s);
                 if (loss > 0.0005) lines.Add($"{Resources.Materials.Name(m)} {how} · losing ~{loss * 100.0:0.#} %/yr {mark}" + (mark == "◐" ? " (humidity estimated)" : ""));
                 else if (text != null && text.StartsWith("stable")) lines.Add($"{Resources.Materials.Name(m)} {how} · {text}");

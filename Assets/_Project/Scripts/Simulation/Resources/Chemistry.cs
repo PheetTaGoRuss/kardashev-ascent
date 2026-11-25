@@ -12,6 +12,8 @@ namespace KardashevAscent.Simulation.Resources
         Yard,
         /// <summary>A sealed store, a gas tank or the lander's hold: cut off from the air and the damp.</summary>
         Sealed,
+        /// <summary>A hazardous store filled with an inert fill (argon or oil): no reaction at all (the store the reactive metals need).</summary>
+        Inert,
     }
 
     /// <summary>The air and ground a stock sits in.</summary>
@@ -175,7 +177,7 @@ namespace KardashevAscent.Simulation.Resources
         {
             var r = new ChemResult();
             if (kg <= 0.0 || days <= 0.0) return r;
-            double air = shelter == Shelter.Sealed ? 0.0002 : 1.0;   // a seal leaks a little (game rule, TBD): 0.02 % of the open exchange
+            double air = shelter == Shelter.Inert ? 0.0 : shelter == Shelter.Sealed ? 0.0002 : 1.0;   // a seal leaks a little (game rule, TBD): 0.02 % of the open exchange
             double humid = VapourFactor(env.TempC, env.RelativeHumidityPercent);
             double o2 = Math.Min(1.0, env.OxygenFraction * (env.PressurePa / 101325.0) / 0.2095);   // the oxygen there is, against Earth's air
             switch (m)
@@ -203,7 +205,7 @@ namespace KardashevAscent.Simulation.Resources
                 }
                 case Material.Water:
                 {
-                    if (shelter == Shelter.Sealed) break;   // a tank keeps it, as ice or as liquid
+                    if (shelter == Shelter.Sealed || shelter == Shelter.Inert) break;   // a tank keeps it, as ice or as liquid
                     double melt = 0.0;
                     if (env.TempC > 0.0) melt = Math.Min(kg, kg * Math.Min(1.0, ConvectionWPerM2K * IceAreaM2PerKg * env.TempC * 86400.0 / FusionJPerKg) * days);
                     if (shelter == Shelter.OpenPile && melt > 0.0) { r.Add(Material.Water, -melt); r.Drain(Material.Water, melt); }   // the melt runs off an open pile
@@ -220,7 +222,7 @@ namespace KardashevAscent.Simulation.Resources
                 }
                 case Material.Oxygen:
                 case Material.Chlorine:
-                    if (shelter != Shelter.Sealed) { double lost = kg; r.Add(m, -lost); r.Drain(m, lost); }   // a gas outside a tank leaks to the air
+                    if (shelter != Shelter.Sealed && shelter != Shelter.Inert) { double lost = kg; r.Add(m, -lost); r.Drain(m, lost); }   // a gas outside a tank leaks to the air
                     break;
             }
             return r;

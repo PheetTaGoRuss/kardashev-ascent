@@ -50,7 +50,7 @@ namespace KardashevAscent.Simulation.Game
             var mine = heldFindings.Where(f => f.RobotId == r.Id).ToList();
             heldFindings.RemoveAll(f => f.RobotId == r.Id);
             lostFindings = 0;
-            if (w.ElectronicsIntact) w.Findings.AddRange(mine); else { lostFindings = mine.Count; w.FindingsLost = mine.Count > 0; }
+            if (w.ElectronicsIntact) w.Findings.AddRange(mine); else { lostFindings = mine.Count; w.FindingsLost = mine.Count > 0; KnowledgeStore.DropUnsynced(r.Id); }
             wrecks.Add(w);
             return w;
         }
@@ -105,6 +105,7 @@ namespace KardashevAscent.Simulation.Game
                 Wreck w = wrecks[i];
                 if (WreckKg(w) > 1e-6 || haulBook.Orders.Any(o => o.WreckId == w.Id)) continue;
                 foreach (HeldFinding f in w.Findings) { Deliver(f); }
+                if (w.Findings.Count > 0) KnowledgeStore.Sync(w.RobotId, TimeHours);
                 if (w.Findings.Count > 0) Log($"Wreck {w.Id}", "Findings recovered", w.Findings.Count, "", $"W{w.Id}", $"{w.Findings.Count} unsynced finding(s) read back from the wreck of robot {w.RobotId}.", -1);
                 inventories.Remove(PlaceId.Wreck(w.Id));
                 wrecks.RemoveAt(i--);
