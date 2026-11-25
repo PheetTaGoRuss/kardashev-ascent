@@ -137,6 +137,23 @@ namespace KardashevAscent.Simulation.Game
                      "The neutral boundary layer follows U(z) = U10 (z / 10)^(1/7) (Hsu, Meindl and Gilhousen 1994). Air density of an ideal gas: rho = p / (R T / M): about 1.225 kg/m3 at 15 C and one atmosphere, 0.02 kg/m3 on Mars.")
                 .Add("Related", "Wind turbine", "Air pressure and density", "Weather");
 
+            yield return new GuidePage(Science, "Robot wrecks and salvage", "A destroyed robot lies where it stopped, and what is left of it depends on how it died.")
+                .Add("In play",
+                     $"{Rule}A robot destroyed in the cold or with an empty battery leaves its metals whole: iron, rock, copper, aluminium and rare earths can be hauled home. Its circuit boards and cell become electronic waste, a hazardous material. A robot that dies in great heat is worse off: above {WreckModel.SolderC:0} C the boards go to slag, above {WreckModel.AluminiumMeltC:0} C the aluminium, above {WreckModel.CopperMeltC:0} C the copper, above {WreckModel.IronMeltC:0} C the iron and hull, and above {WreckModel.IronBoilC:0} C nothing is left at all.",
+                     "The wreck is an open pile: it keeps degrading at the temperature of its tile. A recover haul is planned like any haul (the energy check, the storm wait). Unsynced findings are read back only if the electronics survived; otherwise they are lost.")
+                .Add("How to use", "The log tells you the cause and what is left. Slag is not worth a trip. Keep a charged hauler near the base.")
+                .Add("Real science", "Melting points (CRC Handbook): Al 660 C, Cu 1085 C, Fe 1538 C, Nd 1024 C; Fe boils at 2862 C. Lead-free solder melts at 217 to 220 C (IPC J-STD-006).")
+                .Add("Related", "Storage and corrosion", "Temperature and the day-night swing", "Weather");
+
+            yield return new GuidePage(Science, "Storage and corrosion", "Stored materials change with the air, the damp and the heat unless the store protects them.")
+                .Add("In play",
+                     $"{Rule}Iron rusts (Fe + O2 + H2O gives FeOOH) at the first-year carbon steel rates of ISO 9223: from under 1.3 micrometres a year in dry air to 80 to 200 in the worst, set by the time the air is wet (RH over 80 %, above freezing) and by sea salt on a coast. Rust weighs more than the iron: it takes oxygen and water from the air. There is no smelter in the game yet, so rust is a loss.",
+                     "Sodium and lithium react with moisture (2 Na + 2 H2O gives 2 NaOH + H2): fast in damp air, so they need a sealed store; the hydrogen is vented. Ice melts above 0 C (meltwater runs off an open pile) and sublimates in thin air (Hertz-Knudsen). Salt takes up water above 75 % humidity and drains away as brine. Oxygen and chlorine leak unless they are in a gas tank. Aluminium, copper, rock, slag, anorthosite, alumina and rare earths are stable on game timescales.",
+                     "A sealed store or the lander protects against air and damp; a storage yard keeps off rain and runoff only; an open pile is exposed. Every reaction conserves mass: what the air gave and what drained away is in a ledger.")
+                .Add("How to use", "Tile info shows what each stored material is losing and whether the humidity is measured (●) or estimated (◐). Put reactive metals and electronic waste in a sealed store.")
+                .Add("Real science", "ISO 9223:2012 corrosivity categories C1 to C5; Murphy and Koop 2005 for the vapour pressure of ice; Hertz 1882 and Knudsen 1915 for the sublimation flux; Greenspan 1977 for the 75.3 % deliquescence point of salt; NASA POWER RH2M for humidity (MERRA-2).")
+                .Add("Related", "Robot wrecks and salvage", "Weather", "Air pressure and density");
+
             yield return new GuidePage(Science, "Relief and climbing", "How high the land rises decides what a haul costs a robot.")
                 .Add("In play",
                      "Until the terrain relief survey is done, the highest point is only a range, and hauls are planned for the high end.",

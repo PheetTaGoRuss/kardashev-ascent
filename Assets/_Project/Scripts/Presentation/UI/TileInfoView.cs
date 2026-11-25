@@ -561,9 +561,10 @@ namespace KardashevAscent.Presentation.UI
             WeatherKnowledge k = sim.WeatherKnownAt(tile);
             string Mk(KardashevAscent.Simulation.Planet.KnowledgeEstimate e) => Marks.Glyph(Marks.Of(e));
             string Rng(KardashevAscent.Simulation.Planet.KnowledgeEstimate e, string f) => e.IsExact ? "" : $" ±{e.HalfRange.ToString(f)}";
-            weatherNow.text = $"Now {Mk(k.AirC)} {k.AirC.Value:0.#} °C{Rng(k.AirC, "0.#")} · wind {Mk(k.WindMs)} {k.WindMs.Value:0.#} m/s{Rng(k.WindMs, "0.#")} · light {Mk(k.CloudFactor)} {k.CloudFactor.Value * 100.0:0} %{Rng(k.CloudFactor, "0.00")}" +
+            weatherNow.text = $"Now {Mk(k.AirC)} {k.AirC.Value:0.#} °C{Rng(k.AirC, "0.#")} · wind {Mk(k.WindMs)} {k.WindMs.Value:0.#} m/s{Rng(k.WindMs, "0.#")} · light {Mk(k.CloudFactor)} {k.CloudFactor.Value * 100.0:0} %{Rng(k.CloudFactor, "0.00")} · humidity {Mk(k.Humidity)} {k.Humidity.Value:0} %{Rng(k.Humidity, "0")}" +
                               (sim.StormAt(tile) && k.Measured ? "\nSTORM: robots shelter" : "") + (k.Measured ? "" : "\n◐ climatology: measure it with a robot or a Research Station on this tile.") +
-                              (sim.WindTurbineCount(tile) > 0 ? "\nWind turbine: " + sim.WindTurbineStatus(tile) : "");
+                              (sim.WindTurbineCount(tile) > 0 ? "\nWind turbine: " + sim.WindTurbineStatus(tile) : "") +
+                              (sim.StorageNotes(tile).Count > 0 ? "\nStored here: " + string.Join("; ", sim.StorageNotes(tile)) : "");
             var lines = new System.Collections.Generic.List<string>();
             for (int d = 1; d <= PlanetSimulation.MaxForecastDays; d++)
             {

@@ -25,9 +25,11 @@ namespace KardashevAscent.Simulation.Operations
             switch (quantity)
             {
                 case "Robot destroyed":
+                case "Reactive metal exposed":
                 case "Cold or heat warning":
                 case "Storm":
                 case "Notice": return LogPriority.ActNow;
+                case "Storage loss":
                 case "Haul waiting":
                 case "Player order wins":
                 case "Milestone reached":

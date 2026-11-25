@@ -191,3 +191,17 @@ Not absurd by the stated test: a turbine never beats solar by 3x, and the Earth-
 - **KI-47 (cold Earth-like temperature).** NASA T2M is now moved by a uniform offset to the planet's own mean (an assumption). Cold Earth-like (-25 C): the turbine row is now 277 547 kWh a year, capacity factor 31.7 % (was 27.6 %, the same as Earth: the temperature was ignored), turbine / solar 0.50. The cold Earth-like 60 N winter campaign loses 0 robots; the planner refuses the direct haul (hauled 0). Clouds are untouched (tested).
 - **Dust sizing advisor.** Estimated (marked as such), shown in the Power window and in the dust WATCH entries. A brownout test through a seeded global storm is not possible in this model: the colony's demand grows toward its Kardashev target and the colony browns out long before any storm, so the test checks the advice's bookkeeping instead.
 
+## 2026-11-25: robot wrecks and storage chemistry
+
+**Chemistry, two game years, 1000 kg of each in an open pile on an inland 45 N tile** (sodium and lithium 100 kg in an open wreck pile, the one place they can lie unsealed; percent lost, and percent left for the metals):
+
+| Planet type | Iron lost | Copper, aluminium, rock lost | Water ice lost | Salt lost | Sodium left | Lithium left |
+| --- | --- | --- | --- | --- | --- | --- |
+| Earth-like 1 atm | 3.1 % | 0 | 100 % (melts, runs off) | 35 % (brine) | 0 % | 0 % |
+| Cold Earth-like | 0 | 0 | 0.1 % | 35 % | 0.2 % | 29 % |
+| Mars-like 0.006 atm | 0 | 0 | 18 % (sublimates) | 0 | 99.8 % | 100 % |
+| Hot thick air 2 atm | 0 | 0 | 100 % (melts) | 0 | 0 % | 0 % |
+| Airless | 0 | 0 | 100 % (sublimates, heat-limited) | 0 | 100 % | 100 % |
+
+The environment ledger closes to under 1e-6 kg in every run. Against the absurd list: iron lost on Earth-like is 3.1 % in 2 years inland (1.5 % a year; a coast or very damp tile loses about a tenth), under 10 %; sodium does not survive open humid air; ice on Mars does sublimate when warm (18 % in two years); a wreck never holds more than the robot's bill (a General robot's bill is 642 kg; a cold wreck holds 642 kg, a wreck at 700 or 1600 C holds the same 642 kg as slag and parts, above 2862 C nothing). Caveats: the lander and any store with a seal are inert in these runs by rule, so the losses are the open-pile worst case; the rates for sodium, lithium, salt brine and the 0.05 m2/kg iron surface are game rules or assumptions (TBD); there is no iron smelter in the game yet, so rust cannot go back as ore.
+

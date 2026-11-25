@@ -36,7 +36,8 @@ namespace KardashevAscent.Presentation.UI
         Rule editing;
         string note = "";
         LogFilter filter = LogFilter.All;
-        string shownLog, shownPlants, shownDepots, shownWhy;
+        string shownLog, shownPlants, shownDepots, shownWhy, shownStores;
+        WhyChain storesWhy;
         VisualElement depotsWhy;
         VisualElement plantRows;
         float nextRebuild;
@@ -467,6 +468,19 @@ namespace KardashevAscent.Presentation.UI
                         chain.Set($"Haul {w.Id} is waiting (tile {w.From} to {w.To})", WhyChain.HaulSteps(w.Why.Kind, w.Why.NeedWh, w.Why.BudgetWh, w.Why.StopTile),
                                   "Show depot advice", () => depots.parent?.Q<ScrollView>()?.ScrollTo(depots));
                     depotsWhy.Add(chain);
+                }
+            }
+            // stored materials that are losing mass or reacting, as a why? chain ending in a button to the stores (M4)
+            {
+                var losing = new System.Collections.Generic.List<string>();
+                for (int t = 0; t < sim.TileCount && losing.Count < 4; t++)
+                    foreach (string note in sim.StorageNotes(t)) if (note.Contains("losing")) { losing.Add($"tile {t}: {note}"); if (losing.Count >= 4) break; }
+                string stoShape = string.Join("|", losing);
+                if (stoShape != shownStores)
+                {
+                    shownStores = stoShape;
+                    if (storesWhy == null) { storesWhy = new WhyChain(); depotsWhy.parent.Insert(depotsWhy.parent.IndexOf(depotsWhy) + 1, storesWhy); }
+                    storesWhy.Set("Stored materials are changing", losing.Count == 0 ? null : losing, "Show stores", () => depots.parent?.Q<ScrollView>()?.ScrollTo(depots));
                 }
             }
             if (targetRow.childCount == 0)

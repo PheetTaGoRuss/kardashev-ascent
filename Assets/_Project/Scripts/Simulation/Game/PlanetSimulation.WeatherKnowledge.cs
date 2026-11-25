@@ -10,8 +10,10 @@ namespace KardashevAscent.Simulation.Game
     {
         public readonly bool Measured;
         public readonly KnowledgeEstimate AirC, WindMs, CloudFactor, PressurePa;
-        public WeatherKnowledge(bool measured, KnowledgeEstimate air, KnowledgeEstimate wind, KnowledgeEstimate cloud, KnowledgeEstimate pressure)
-        { Measured = measured; AirC = air; WindMs = wind; CloudFactor = cloud; PressurePa = pressure; }
+        /// <summary>Relative humidity, percent: exact where measured, else the climate with its spread (M1).</summary>
+        public readonly KnowledgeEstimate Humidity;
+        public WeatherKnowledge(bool measured, KnowledgeEstimate air, KnowledgeEstimate wind, KnowledgeEstimate cloud, KnowledgeEstimate pressure, KnowledgeEstimate humidity = default)
+        { Humidity = humidity; Measured = measured; AirC = air; WindMs = wind; CloudFactor = cloud; PressurePa = pressure; }
     }
 
     public sealed partial class PlanetSimulation
@@ -29,11 +31,11 @@ namespace KardashevAscent.Simulation.Game
             WeatherSample w = WeatherAt(tileId);
             if (!HasWeather || WeatherMeasuredAt(tileId))
                 return new WeatherKnowledge(HasWeather, new KnowledgeEstimate(LiveAirTemperatureAt(tileId), 0.0), new KnowledgeEstimate(w.WindMs, 0.0),
-                                            new KnowledgeEstimate(w.CloudFactor, 0.0), new KnowledgeEstimate(w.PressurePa, 0.0));
+                                            new KnowledgeEstimate(w.CloudFactor, 0.0), new KnowledgeEstimate(w.PressurePa, 0.0), new KnowledgeEstimate(w.RhPercent, 0.0));
             WeatherModel.Spread s = WeatherModel.SpreadAt(Sphere.Latitude(tileId), YearFractionNow);
             double mean = CurrentMeanAnomaly();
             return new WeatherKnowledge(false, new KnowledgeEstimate(DiurnalAirTemperatureAt(tileId, TimeHours), s.TemperatureSd), new KnowledgeEstimate(s.WindMean, s.WindSd),
-                                        new KnowledgeEstimate(CloudFactor(tileId, mean), s.CloudSd), new KnowledgeEstimate(PressurePaAt(tileId), s.PressureSd));
+                                        new KnowledgeEstimate(CloudFactor(tileId, mean), s.CloudSd), new KnowledgeEstimate(PressurePaAt(tileId), s.PressureSd), new KnowledgeEstimate(HumidityClimateAt(tileId).Mean, HumidityClimateAt(tileId).Sd));
         }
 
         /// <summary>

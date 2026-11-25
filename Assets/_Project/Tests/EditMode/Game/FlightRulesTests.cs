@@ -78,7 +78,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             var sim = Make();
             for (int i = 0; i < 48; i++) sim.Tick(1.0);
             Assert.AreEqual(0, sim.RulebookVersion);
-            Assert.IsEmpty(sim.OperationsLog);
+            Assert.IsEmpty(sim.OperationsLog, string.Join(" | ", sim.OperationsLog.Select(o => o.Quantity + ": " + o.Text)));
         }
 
         [Test]
