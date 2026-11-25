@@ -75,25 +75,15 @@ namespace KardashevAscent.Simulation.Game
             if (r == null) return;
             int tile = r.Tile;
             double air = AirTemperatureAt(tile, CurrentMeanAnomaly());
-            // What it had not yet handed in is lost; what it carried stays where it stopped.
-            int lost = heldFindings.RemoveAll(f => f.RobotId == robotId);
-            double cargoKg = 0.0;
-            var place = PlaceId.Cargo(robotId);
-            if (inventories != null && inventories.Has(place))
-            {
-                var stock = inventories.StockOf(place);
-                foreach (Material m in Resources.Materials.All)
-                {
-                    double kg = stock[m];
-                    if (kg <= 0.0) continue;
-                    cargoKg += inventories.Move(place, PlaceId.Depot(tile), m, kg);
-                }
-                inventories.Remove(place);
-            }
+            // A wreck lies where it stopped (OQ-9): its metals can be recovered, its electronics and cell are waste (or slag in the heat), the cargo lies in the pile.
+            Wreck w = LayWreck(r, air, out int lost);
+            double leftKg = WreckKg(w);
+            string cause = w.Cause == DeathCause.Heat ? $"the air was {air:0} C, above its range" : air < RobotThermal.OperatingMinC ? $"its battery ran out outside its operating range ({air:0} C)" : $"its battery ran out ({air:0} C)";
+            string left = leftKg <= 0.0 ? "Nothing is left." : $"{leftKg:0} kg lie there as a wreck" + (WreckStockKg(w, Material.ElectronicWaste) > 0.0 ? $" ({WreckStockKg(w, Material.ElectronicWaste):0.0} kg electronic waste)" : "") + (WreckStockKg(w, Material.Slag) > 0.0 ? $" ({WreckStockKg(w, Material.Slag):0} kg slag)" : "") + ".";
             Log($"Robot {robotId}", "Robot destroyed", air, "C",
-                $"R{robotId}", $"Robot {robotId} was destroyed on tile {tile}: its battery ran out outside its operating range ({air:0} C)."
-                + (lost > 0 ? $" {lost} unsynced finding{(lost == 1 ? "" : "s")} lost." : "")
-                + (cargoKg > 0.0 ? $" Its {cargoKg:0} kg of cargo stays on the tile." : ""), robotId);
+                $"R{robotId}", $"Robot {robotId} was destroyed on tile {tile}: {cause}. {left}"
+                + (lost > 0 ? $" {lost} unsynced finding{(lost == 1 ? "" : "s")} lost with its electronics." : w.Findings.Count > 0 ? $" {w.Findings.Count} unsynced finding(s) can be read back if the wreck is recovered." : "")
+                + (leftKg > 0.0 ? " Recover it with a haul." : ""), robotId);
             Workforce.RemoveRobot(robotId);
             RobotsDestroyed++;
             RobotWeatherNews = $"Robot {robotId} was destroyed: battery empty at {air:0} C.";

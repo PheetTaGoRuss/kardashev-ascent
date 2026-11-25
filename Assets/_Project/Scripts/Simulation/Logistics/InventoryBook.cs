@@ -5,7 +5,7 @@ using KardashevAscent.Simulation.Resources;
 namespace KardashevAscent.Simulation.Logistics
 {
     /// <summary>Where a stock lies: a depot on a tile, a plant's input or output buffer, or the cargo a robot carries.</summary>
-    public enum PlaceKind { Depot, BufferIn, BufferOut, Cargo }
+    public enum PlaceKind { Depot, BufferIn, BufferOut, Cargo, Wreck }
 
     /// <summary>A typed place id (mission operations spec 3.3): every kilogram the colony holds is in exactly one place.</summary>
     public readonly struct PlaceId : IEquatable<PlaceId>
@@ -21,6 +21,7 @@ namespace KardashevAscent.Simulation.Logistics
 
         public static PlaceId Depot(int tile) => new PlaceId(PlaceKind.Depot, tile);
         public static PlaceId Cargo(int robotId) => new PlaceId(PlaceKind.Cargo, robotId);
+        public static PlaceId Wreck(int wreckId) => new PlaceId(PlaceKind.Wreck, wreckId);
 
         public bool Equals(PlaceId other) => Kind == other.Kind && Id == other.Id;
         public override bool Equals(object obj) => obj is PlaceId p && Equals(p);
