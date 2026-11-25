@@ -61,10 +61,10 @@ namespace KardashevAscent.Simulation.Tests.Game
             for (int s = 0; s < 6; s++) { sim.PlacePanel(far, s, 0.35, Math.PI); sim.PlaceBuildingWire(far, s); }
             Assert.IsTrue(sim.PlaceBattery(far, 10)); sim.PlaceBuildingWire(far, 10);
             Assert.AreEqual(colonyCap, sim.BatteryCapacityWh, 1e-9, "an island battery is not added to the colony battery");
-            for (int h = 0; h < 12; h++) sim.Tick(1.0);
+            double made = 0.0; for (int h = 0; h < 12; h++) { sim.Tick(1.0); made += sim.IslandGenerationW(far) * 1.0; }
             var (stored, cap) = sim.IslandBatteryOf(far);
             Assert.AreEqual(sim.BatteryUnitWh, cap, 1e-6);
-            Assert.Greater(stored, 0.0, "the panels charged it");
+            Assert.Greater(stored, 0.0, "the panels charged it"); TestContext.WriteLine($"made about {made:0} Wh, stored {stored:0} Wh"); Assert.LessOrEqual(stored, 1.15 * made + 1.0, "energy is kept: the battery cannot hold more than the panels made (end-of-hour samples, a margin for the day shape)");
             var again = new PlanetSimulation(Sphere, Surface, Earthlike) { WiredGrid = true, WeatherEnabled = false };
             again.RestoreState(sim.CaptureState());
             Assert.AreEqual(stored, again.IslandBatteryOf(far).StoredWh, 1e-6);
