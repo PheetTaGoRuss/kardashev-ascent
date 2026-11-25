@@ -404,6 +404,7 @@ namespace KardashevAscent.EditorTools
                     if (sim == null) return true;
                     if (argument == "start")
                     {
+                        sim.RescueEnabled = false;   // no helper at all
                         foreach (var o in System.Linq.Enumerable.ToList(sim.Workforce.Robots)) o.Battery.Draw(1e12, 1.0);
                         int tile = -1;
                         foreach (int n in sim.Sphere.Neighbors[sim.BaseTileId]) if (!sim.GetTile(n).IsWater && sim.IsOpenGround(n)) { tile = n; break; }

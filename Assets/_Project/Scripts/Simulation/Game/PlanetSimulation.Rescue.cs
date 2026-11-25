@@ -238,7 +238,7 @@ namespace KardashevAscent.Simulation.Game
             if (sites.Count > 0) return $"Advice: the depot advice names tile {sites[0].Tile} (a charging bay there would also put work near it within one charge).";
             var route = Routes?.Route(BaseTileId, s.Tile);
             int mid = route != null && route.Count > 1 ? route[route.Count / 2 - 1] : s.Tile;
-            return $"Advice: a charging station or battery yard on tile {mid}, halfway from the lander, would put tile {s.Tile} within one charge of help.";
+            return mid == s.Tile ? $"Advice: a charging station or battery yard on tile {s.Tile} itself would put the robot within reach of a charger." : $"Advice: a charging station or battery yard on tile {mid}, halfway from the lander, would put tile {s.Tile} within one charge of help.";
         }
 
         /// <summary>Extra cargo the drive carries: a robot being towed.</summary>
