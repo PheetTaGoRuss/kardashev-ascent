@@ -80,6 +80,25 @@ namespace KardashevAscent.Simulation.Game
             return new KnowledgeEstimate(Robots.RobotSpecs.MiningKgPerHour * g.Value * depletion, Robots.RobotSpecs.MiningKgPerHour * g.HalfRange * depletion);
         }
 
+        public System.Collections.Generic.IReadOnlyList<(int Tile, Material Material, double HeldKg)> ExhaustedDeposits()
+        {
+            var list = new System.Collections.Generic.List<(int, Material, double)>();
+            for (int t = 0; t < TileCount; t++)
+                foreach (Material m in Resources.Materials.Mined)
+                    if (m != Material.Rock && Deposits.MinedKg(t, m) > 0.0 && Deposits.IsExhausted(t, m)) list.Add((t, m, Deposits.ReserveKg(t, m)));
+            return list;
+        }
+
+        public System.Collections.Generic.IReadOnlyList<(int Tile, KnowledgeEstimate OreGrade, double ShareLeft)> BestDeposits(Material material, int count)
+        {
+            var list = new System.Collections.Generic.List<(int Tile, KnowledgeEstimate OreGrade, double ShareLeft)>();
+            for (int t = 0; t < TileCount; t++)
+                if (!GetTile(t).IsWater && Deposits.IsKnown(t, material) && Deposits.GradeOf(t, material) > 0.0 && !Deposits.IsExhausted(t, material))
+                    list.Add((t, OreGradeEstimate(t, material), Deposits.RemainingShare(t, material)));
+            list.Sort((a, b) => (b.OreGrade.Value * b.ShareLeft).CompareTo(a.OreGrade.Value * a.ShareLeft));
+            return list.GetRange(0, Math.Min(count, list.Count));
+        }
+
         public double DepositShareLeft(int tileId, Material material) => Deposits.RemainingShare(tileId, material);
 
         /// <summary>Rock moved and tailings left so far, kg (reporting; the product is in the stock).</summary>
@@ -87,6 +106,18 @@ namespace KardashevAscent.Simulation.Game
         public double TailingsKg { get; private set; }
         /// <summary>Robot hours spent in mining batches so far; times the mining power it is the energy mining took (reporting, B4).</summary>
         public double MiningWorkHours { get; private set; }
+        /// <summary>Crushing and grinding energy spent so far, Wh (Bond's law; reporting, B4).</summary>
+        public double ComminutionWh { get; private set; }
+
+        /// <summary>Crushing and grinding energy per tonne of product from this deposit now, kWh (zero when it needs none): a range until the ore assay.</summary>
+        public KnowledgeEstimate ComminutionEstimate(int tileId, Material material)
+        {
+            KnowledgeEstimate og = OreGradeEstimate(tileId, material);
+            double lo = Comminution.KWhPerTonneProduct(material, Math.Max(1e-9, og.Value + og.HalfRange)), hi = Comminution.KWhPerTonneProduct(material, Math.Max(1e-9, og.Value - og.HalfRange));
+            double mid = Comminution.KWhPerTonneProduct(material, og.Value);
+            double now = Deposits.OreGrade(tileId, material) > 0.0 ? Deposits.EffectiveGrade(tileId, material) / Deposits.GradeOf(tileId, material) : 1.0;
+            return og.IsExact ? new KnowledgeEstimate(mid / now, 0.0) : new KnowledgeEstimate(mid / now, Math.Max(hi - mid, mid - lo) / now);
+        }
 
         /// <summary>
         /// What a deposit holds, kg of product: a range until the ore assay measures it (the tonnage follows the grade, so it carries the grade's spread), exact after. The share left

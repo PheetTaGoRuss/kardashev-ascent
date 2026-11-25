@@ -452,7 +452,8 @@ namespace KardashevAscent.Presentation.UI
             }
             // why? chains for hauls that are waiting, from the simulation's structured reason (UI information design, stage 5)
             var waiting = haul.Where(h => sim.HaulBlockedReason(h.Id) != null).Select(h => (h.Id, h.From, h.To, Why: sim.HaulWhyOf(h.Id))).ToList();
-            string whyShape = string.Join("|", waiting.Select(w => $"{w.Id}:{w.Why.Kind}:{w.Why.StopTile}:{w.Why.NeedWh:0}"));
+            var exhaustedNow = sim.ExhaustedDeposits();
+            string whyShape = string.Join("|", waiting.Select(w => $"{w.Id}:{w.Why.Kind}:{w.Why.StopTile}:{w.Why.NeedWh:0}")) + "#" + string.Join(",", exhaustedNow.Select(e => e.Tile + ":" + e.Material));
             if (whyShape != shownWhy)
             {
                 shownWhy = whyShape;
@@ -467,6 +468,22 @@ namespace KardashevAscent.Presentation.UI
                     else
                         chain.Set($"Haul {w.Id} is waiting (tile {w.From} to {w.To})", WhyChain.HaulSteps(w.Why.Kind, w.Why.NeedWh, w.Why.BudgetWh, w.Why.StopTile),
                                   "Show depot advice", () => depots.parent?.Q<ScrollView>()?.ScrollTo(depots));
+                    depotsWhy.Add(chain);
+                }
+                // a mine whose deposit is used up: why it stopped, and where to look next (B3)
+                foreach (var ex in exhaustedNow.Take(3))
+                {
+                    var chain = new WhyChain();
+                    var best = sim.BestDeposits(ex.Material, 5);
+                    var m = ex.Material; int exTile = ex.Tile;
+                    string name = Materials.Name(m).ToLowerInvariant();
+                    var steps = new System.Collections.Generic.List<string>
+                    {
+                        $"the {name} deposit on tile {exTile} held about {ex.HeldKg / 1000.0:0} t and it is all mined",
+                        "a mine stops when nothing is left; its order was removed",
+                        best.Count > 0 ? "other known deposits: " + string.Join(", ", best.Select(b => $"tile {b.Tile} ({b.OreGrade.Value * 100.0:0.##} % ore, {b.ShareLeft * 100.0:0} % left)")) : "no other known deposit: survey more tiles",
+                    };
+                    chain.Set($"Mine on tile {exTile} stopped: {name} used up", steps, "Find another deposit", () => { if (best.Count > 0) sim.OrderSurvey(best[0].Tile); SystemTabs.Open("research"); });
                     depotsWhy.Add(chain);
                 }
             }

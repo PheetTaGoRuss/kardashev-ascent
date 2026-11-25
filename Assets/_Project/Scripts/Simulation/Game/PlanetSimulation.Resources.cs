@@ -161,6 +161,18 @@ namespace KardashevAscent.Simulation.Game
                     Build.Work(t.Tile, t.Slot, dt * speed);
                     continue;
                 }
+                if (t.Kind == TaskKind.Mine)
+                {
+                    // Crushing and grinding is a grid load while the crew digs (Bond's law, per tonne of rock moved).
+                    var mat = (Material)t.Slot;
+                    double eg = Deposits.EffectiveGrade(t.Tile, mat), og = DepositMap.TypicalOreGrade(mat) * eg;
+                    if (og > 0.0 && Comminution.NeedsConcentrating(mat, og))
+                    {
+                        double rockKgPerHour = RobotSpecs.MiningKgPerHour * eg / og;
+                        workshopW += speed * rockKgPerHour * Comminution.KWhPerTonneRock(mat);   // kg/h x kWh/t = W
+                        ComminutionWh += speed * rockKgPerHour * Comminution.KWhPerTonneRock(mat) * dt;
+                    }
+                }
                 if (t.Kind != TaskKind.Survey && t.Kind != TaskKind.Mine && t.Kind != TaskKind.Measure && t.Kind != TaskKind.Experiment
                     && t.Kind != TaskKind.Excavate && t.Kind != TaskKind.Haul && t.Kind != TaskKind.Electrical)
                     continue;
