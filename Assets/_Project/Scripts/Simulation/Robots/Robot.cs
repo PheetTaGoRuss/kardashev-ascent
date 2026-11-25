@@ -167,6 +167,12 @@ namespace KardashevAscent.Simulation.Robots
         public double ThermalHoursLeft { get; internal set; } = double.PositiveInfinity;
         /// <summary>Hours spent outside the range with an empty battery (saved from version 49); the robot is destroyed at <see cref="RobotThermal.DestroyAfterHours"/>.</summary>
         public double ExposedEmptyHours { get; internal set; }
+        /// <summary>The robot's body temperature, C (saved from version 63): held at the operating limit by its heater or cooler while it has energy, following the air at tau = m cp / G while it hibernates with an empty battery (S1).</summary>
+        public double BodyTempC { get; internal set; } = RobotThermal.ShelterBatteryC;
+        /// <summary>True while the robot hibernates outside shelter with an empty battery.</summary>
+        public bool Hibernating { get; internal set; }
+        /// <summary>Hours until its body reaches the storage limit at the current air temperature (infinity when it will not).</summary>
+        public double HibernationHoursLeft { get; internal set; } = double.PositiveInfinity;
         /// <summary>The battery's own temperature, C (saved from version 50). It follows the shelter, the held limit or the air.</summary>
         public double BatteryTempC { get; internal set; } = RobotThermal.ShelterBatteryC;
         /// <summary>At a charger with a battery too cold (or too hot) to take a charge: it is being warmed first.</summary>

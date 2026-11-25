@@ -71,7 +71,7 @@ namespace KardashevAscent.Simulation.Game
             yield return new GuidePage(Science, "Temperature and the day-night swing", "Air temperature has a yearly value and a swing between day and night.")
                 .Add("In play",
                      $"{Rule}The day-night amplitude is {PlanetSimulation.DiurnalBaseK:0} K under thick air, rising by up to {PlanetSimulation.DiurnalThinAirK:0} K under thin air. A tidally locked planet has no day, so no swing.",
-                     $"A robot works without its heater between {RobotThermal.OperatingMinC:0} and {RobotThermal.OperatingMaxC:0} °C; outside that a heater draws power, and a robot with an empty battery out in the weather is destroyed.",
+                     $"A robot works without its heater between {RobotThermal.OperatingMinC:0} and {RobotThermal.OperatingMaxC:0} °C; outside that a heater draws power. A robot with an empty battery out in the weather hibernates and cold-soaks: see Robots and the weather.",
                      "A haul's heater cost follows the temperature over the hours of its legs, so a night haul costs more.")
                 .Add("How to use", "Measure the surface temperature (Research, T): the puzzle fits mean, amplitude and phase of a day's readings. Send hauls at the warm part of the day, as the haul text suggests.")
                 .Add("Real science",
@@ -103,7 +103,7 @@ namespace KardashevAscent.Simulation.Game
                 .Add("In play",
                      $"{Rule}A storm day is a day when the wind at a tile is above the local 98th percentile (about 2 days in 100). Robots there do no new outdoor work and go to the nearest shelter; the colony gets an ACT NOW entry in the log.",
                      $"{Rule}The heater cost grows with the wind (capped at {RobotThermal.MaxWindMs:0} m/s). The heater constant is for a {RobotThermal.ReferenceWindMs:0} m/s wind, so the usual weather of a planet costs what it always did and only gusts and storms cost more. In thin air the effect is weaker.",
-                     "A robot is still destroyed if its battery is empty while it is out in the cold with no shelter, as before.")
+                     "A robot with an empty battery out in the cold or heat with no shelter hibernates, and is destroyed only when its body leaves its storage range (see Robots and the weather).")
                 .Add("How to use", "Keep robots charged and near shelter in storm season; the Power window shows a Storm chain when one reaches the base.")
                 .Add("Real science", "The convective heat-transfer coefficient of a body in wind: h = 10.45 - v + 10 sqrt(v) (Siple and Passel 1945), so the loss grows by h(v) / h(0).")
                 .Add("Related", "Weather", "Temperature and the day-night swing");
@@ -156,11 +156,19 @@ namespace KardashevAscent.Simulation.Game
 
             yield return new GuidePage(Science, "Rescue and the failure ladder", "A robot that runs dry in the field gets help before it is lost; a stuck task climbs a ladder until it needs you.")
                 .Add("In play",
-                     $"{Rule}A robot with an empty battery outside a charger asks for rescue. In heat or cold it has a deadline: its battery runs out, and an hour later it is destroyed. The nearest robot that can do it and still come home on its own reserve (the 20 % return charge, at the cold capacity of its battery) helps in whichever way costs less energy. A jump charge carries charge through a cable at {PlanetSimulation.JumpChargeEfficiency * 100.0:0} % efficiency, enough for the robot to drive to a charger; a cold battery is warmed from the cable first. A tow carries the stranded robot, as cargo of about {HaulPhysics.DefaultRobotMassKg:0} kg, to the nearest shelter.",
+                     $"{Rule}A robot with an empty battery outside a charger asks for rescue. In heat or cold it has a deadline: when its battery runs out it hibernates and its body soaks toward the air, which takes tens of hours before it leaves its storage range. The nearest robot that can do it and still come home on its own reserve (the 20 % return charge, at the cold capacity of its battery) helps in whichever way costs less energy. A jump charge carries charge through a cable at {PlanetSimulation.JumpChargeEfficiency * 100.0:0} % efficiency, enough for the robot to drive to a charger; a cold battery is warmed from the cable first. A tow carries the stranded robot, as cargo of about {HaulPhysics.DefaultRobotMassKg:0} kg, to the nearest shelter.",
                      "The ladder: first the colony tries alternatives (another source, staging, waiting out a storm), then it asks a suitable robot for help, and only then does it need you: an ACT NOW entry, a Why? chain and one action. Progress is kept at every step. If nobody can reach the robot before its deadline, the log says why.")
                 .Add("How to use", "In the Robots window a stranded robot shows its deadline and the ladder state; the Rescue button asks for help at once. A charger or battery yard near where robots work shortens every rescue. Task priorities (high, normal, low) per robot or group are in the Robots window.")
                 .Add("Real science", "DC-DC converters run at 90 to 95 % efficiency (Erickson and Maksimovic, Fundamentals of Power Electronics); a lithium-ion cell cannot be charged below 0 C without plating, so a cold battery is warmed first.")
                 .Add("Related", "Robot wrecks and salvage", "Temperature and the day-night swing", "Weather");
+
+            yield return new GuidePage(Science, "Robots and the weather", "A robot is safe while it has energy; with none, it cools or warms like a lump of metal.")
+                .Add("In play",
+                     $"{Rule}With energy a robot holds its body at its operating limit with a heater or cooler ({RobotThermal.HeaterWPerK:0} W per kelvin outside {RobotThermal.OperatingMinC:0} to {RobotThermal.OperatingMaxC:0} C). With an empty battery outside shelter it hibernates: no heater, and its body follows the air with the time constant tau = m cp / G, about {RobotThermal.BodyTauHours():0} hours for a robot of 642 kg (mass-weighted specific heat about 0.58 kJ/kg K, G = {RobotThermal.HeaterWPerK:0} W/K).",
+                     $"It is destroyed only when its body leaves the storage range, {RobotThermal.StorageMinC:0} to {RobotThermal.StorageMaxC:0} C (the narrower of the electronics' and the cell's), so a Mars night does not kill an empty robot at once: it gives a rescue most of a day. The wreck's cause is cold soak or heat soak.")
+                .Add("How to use", "Keep robots charged and near shelter; in the cold a robot with an empty battery has hours, not minutes, for help to arrive (Rescue and the failure ladder).")
+                .Add("Real science", "Lumped thermal capacitance: T(t) = T_air + (T0 - T_air) exp(-t / tau), tau = m cp / (h A) (Incropera and DeWitt, Fundamentals of Heat and Mass Transfer, ch. 5). Specific heats from the CRC Handbook. Electronics storage rating -55 to +125 C (MIL-STD-883 class B parts); lithium iron phosphate cells store between -40 and +60 C (A123 Systems ANR26650M1-B datasheet).")
+                .Add("Related", "Rescue and the failure ladder", "Temperature and the day-night swing", "Wind chill and storms");
 
             yield return new GuidePage(Science, "Relief and climbing", "How high the land rises decides what a haul costs a robot.")
                 .Add("In play",

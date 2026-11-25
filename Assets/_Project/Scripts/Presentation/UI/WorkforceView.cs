@@ -596,6 +596,7 @@ namespace KardashevAscent.Presentation.UI
             if (r.WarmingUp) return $"warming its battery ({r.BatteryTempC:0} C) before charging";
             string storm = r.StormHold ? " · storm: sheltering, no outdoor work" : "";
             string cold = (r.HeaterW > 0.0 ? $" · outside its range: heater {r.HeaterW:0} W, {r.ThermalHoursLeft:0.0} h left" : "") + storm;
+            if (r.Hibernating) cold = $" · hibernating: body {r.BodyTempC:0} C" + (double.IsInfinity(r.HibernationHoursLeft) ? "" : $", {r.HibernationHoursLeft:0} h to its storage limit") + storm;
             var ladder = sim.LadderOf(r.Id);
             string rescue = ladder.State == KardashevAscent.Simulation.Game.LadderState.None ? "" : " · " + ladder.Text;
             if (r.IsStranded) return "stranded: battery empty" + (double.IsInfinity(sim.RescueDeadlineHours(r.Id)) ? "" : $" · lost in {sim.RescueDeadlineHours(r.Id):0.#} h") + rescue + cold;
