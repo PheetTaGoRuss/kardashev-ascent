@@ -64,6 +64,12 @@ namespace KardashevAscent.Presentation.Planet
             var robots = sim.Workforce.Robots.Where(x => x.Tile == tile).ToList();
             if (robots.Count > 0)
                 tags.Add("R" + string.Join(",", robots.Select(x => x.Id)) + " " + string.Join("/", robots.Select(x => x.State.ToString().ToLowerInvariant()).Distinct()));
+            foreach (var rb in robots)
+            {
+                var lad = sim.LadderOf(rb.Id);
+                if (lad.State == KardashevAscent.Simulation.Game.LadderState.WaitingForHelp) tags.Add("⚠ R" + rb.Id + " rescue coming");
+                else if (lad.State == KardashevAscent.Simulation.Game.LadderState.NeedsYou) tags.Add("⚠ R" + rb.Id + " NEEDS YOU");
+            }
             if (sim.Deposits.IsSurveyed(tile))
             {
                 Deposit best = default; bool any = false;

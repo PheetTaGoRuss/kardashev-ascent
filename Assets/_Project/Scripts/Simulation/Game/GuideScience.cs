@@ -154,6 +154,14 @@ namespace KardashevAscent.Simulation.Game
                 .Add("Real science", "ISO 9223:2012 corrosivity categories C1 to C5; Murphy and Koop 2005 for the vapour pressure of ice; Hertz 1882 and Knudsen 1915 for the sublimation flux; Greenspan 1977 for the 75.3 % deliquescence point of salt; NASA POWER RH2M for humidity (MERRA-2).")
                 .Add("Related", "Robot wrecks and salvage", "Weather", "Air pressure and density");
 
+            yield return new GuidePage(Science, "Rescue and the failure ladder", "A robot that runs dry in the field gets help before it is lost; a stuck task climbs a ladder until it needs you.")
+                .Add("In play",
+                     $"{Rule}A robot with an empty battery outside a charger asks for rescue. In heat or cold it has a deadline: its battery runs out, and an hour later it is destroyed. The nearest robot that can do it and still come home on its own reserve (the 20 % return charge, at the cold capacity of its battery) helps in whichever way costs less energy. A jump charge carries charge through a cable at {PlanetSimulation.JumpChargeEfficiency * 100.0:0} % efficiency, enough for the robot to drive to a charger; a cold battery is warmed from the cable first. A tow carries the stranded robot, as cargo of about {HaulPhysics.DefaultRobotMassKg:0} kg, to the nearest shelter.",
+                     "The ladder: first the colony tries alternatives (another source, staging, waiting out a storm), then it asks a suitable robot for help, and only then does it need you: an ACT NOW entry, a Why? chain and one action. Progress is kept at every step. If nobody can reach the robot before its deadline, the log says why.")
+                .Add("How to use", "In the Robots window a stranded robot shows its deadline and the ladder state; the Rescue button asks for help at once. A charger or battery yard near where robots work shortens every rescue. Task priorities (high, normal, low) per robot or group are in the Robots window.")
+                .Add("Real science", "DC-DC converters run at 90 to 95 % efficiency (Erickson and Maksimovic, Fundamentals of Power Electronics); a lithium-ion cell cannot be charged below 0 C without plating, so a cold battery is warmed first.")
+                .Add("Related", "Robot wrecks and salvage", "Temperature and the day-night swing", "Weather");
+
             yield return new GuidePage(Science, "Relief and climbing", "How high the land rises decides what a haul costs a robot.")
                 .Add("In play",
                      "Until the terrain relief survey is done, the highest point is only a range, and hauls are planned for the high end.",

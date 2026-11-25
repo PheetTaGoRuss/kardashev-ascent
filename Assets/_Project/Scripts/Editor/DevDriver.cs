@@ -397,6 +397,25 @@ namespace KardashevAscent.EditorTools
                     Log("knowdemo: " + string.Join(" | ", System.Linq.Enumerable.Select(System.Linq.Enumerable.Where(sim.OperationsLog, o => o.Priority >= KardashevAscent.Simulation.Operations.LogPriority.Info && (o.Quantity == "Measured" || o.Quantity == "Discrepancy" || o.Quantity == "Value stale" || o.Quantity == "Range narrowed")), o => o.Quantity + ": " + o.Text)));
                     return true;
                 }
+                case "rescuedemo":
+                {
+                    // rescuedemo [jump|tow|stage]: a General robot one tile from the lander is run dry; "jump" or "tow" forces the method; each call steps 1 h and logs the ladder.
+                    var sim = Runner()?.Simulation as KardashevAscent.Simulation.Game.PlanetSimulation;
+                    if (sim == null) return true;
+                    if (argument == "jump") sim.RescueMethodOverride = KardashevAscent.Simulation.Game.RescueMethod.Jump;
+                    if (argument == "tow") sim.RescueMethodOverride = KardashevAscent.Simulation.Game.RescueMethod.Tow;
+                    if (argument == "jump" || argument == "tow")
+                    {
+                        int tile = -1;
+                        foreach (int n in sim.Sphere.Neighbors[sim.BaseTileId]) if (!sim.GetTile(n).IsWater && sim.IsOpenGround(n)) { tile = n; break; }
+                        var r = sim.Workforce.AddRobot(KardashevAscent.Simulation.Robots.RobotKind.General, tile);
+                        r.Battery.Draw(1e12, 1.0);
+                    }
+                    for (int h = 0; h < 12; h++) sim.Tick(0.5);
+                    string states = string.Join(" | ", System.Linq.Enumerable.Select(sim.Workforce.Robots, x => "R" + x.Id + "@" + x.Tile + " " + (int)(x.Battery.StateOfCharge * 100) + "% " + sim.LadderOf(x.Id).Text));
+                    Log($"rescuedemo requested={sim.RescuesRequested} done={sim.RescuesSucceeded} jump={sim.RescuesByJump} tow={sim.RescuesByTow} orders={sim.Rescues.Count} :: {states} :: " + string.Join(" || ", System.Linq.Enumerable.Select(System.Linq.Enumerable.Where(sim.OperationsLog, o => o.Quantity.StartsWith("Rescue")), o => o.Text)));
+                    return true;
+                }
                 case "chemlog":
                 {
                     // chemlog: an iron pile on an open depot tile and sodium in a wreck, five days on: the chemistry log entries and the stores chain.

@@ -39,6 +39,7 @@ namespace KardashevAscent.Presentation.UI
         float nextRefresh;
         string shownShape;
         readonly Dictionary<int, Label> taskLabels = new Dictionary<int, Label>();
+        readonly Dictionary<int, Button> rescueButtons = new Dictionary<int, Button>();
         readonly Dictionary<int, Label> vitalLabels = new Dictionary<int, Label>();
 
         public bool Visible { get; private set; }
@@ -152,6 +153,11 @@ namespace KardashevAscent.Presentation.UI
                     l.text = ShortTask(sim, r);
                     l.tooltip = TaskText(sim, r);   // the full wording on hover
                 }
+                if (rescueButtons.TryGetValue(r.Id, out Button rb))
+                {
+                    var state = sim.LadderOf(r.Id).State;
+                    rb.style.display = state == KardashevAscent.Simulation.Game.LadderState.NeedsYou || state == KardashevAscent.Simulation.Game.LadderState.TryingAlternatives ? DisplayStyle.Flex : DisplayStyle.None;
+                }
                 if (gaugeUpdaters.TryGetValue(r.Id, out System.Action<Robot> update))
                     update(r);
             }
@@ -184,6 +190,7 @@ namespace KardashevAscent.Presentation.UI
         {
             groupsHolder.Clear();
             taskLabels.Clear();
+            rescueButtons.Clear();
             vitalLabels.Clear();
             gaugeUpdaters.Clear();
             foreach (RobotGroup g in w.Groups)
@@ -589,7 +596,10 @@ namespace KardashevAscent.Presentation.UI
             if (r.WarmingUp) return $"warming its battery ({r.BatteryTempC:0} C) before charging";
             string storm = r.StormHold ? " · storm: sheltering, no outdoor work" : "";
             string cold = (r.HeaterW > 0.0 ? $" · outside its range: heater {r.HeaterW:0} W, {r.ThermalHoursLeft:0.0} h left" : "") + storm;
-            if (r.IsStranded) return "stranded: battery empty" + cold;
+            var ladder = sim.LadderOf(r.Id);
+            string rescue = ladder.State == KardashevAscent.Simulation.Game.LadderState.None ? "" : " · " + ladder.Text;
+            if (r.IsStranded) return "stranded: battery empty" + (double.IsInfinity(sim.RescueDeadlineHours(r.Id)) ? "" : $" · lost in {sim.RescueDeadlineHours(r.Id):0.#} h") + rescue + cold;
+            if (ladder.State != KardashevAscent.Simulation.Game.LadderState.None) return ladder.Text.Substring(0, 1).ToUpperInvariant() + ladder.Text.Substring(1) + cold;
             if (r.ManualTarget.HasValue) return $"→ tile {r.ManualTarget.Value} · {r.HopsLeft} to go";
             string what = DoingText(sim, r);
             return (r.IsTravelling ? $"→ tile {r.Destination} · {r.HopsLeft} to go · {what}" : what) + cold;
@@ -625,6 +635,12 @@ namespace KardashevAscent.Presentation.UI
             task.tooltip = TaskText(sim, r);
             taskLabels[r.Id] = task;
             head.Add(task);
+            var rescueButton = new Button(() => sim.RequestRescue(r.Id)) { text = "Rescue" };
+            rescueButton.AddToClassList("small-button");
+            rescueButton.tooltip = "Ask a robot to help: a jump charge or a tow, whichever costs less energy";
+            rescueButton.style.display = DisplayStyle.None;
+            head.Add(rescueButton);
+            rescueButtons[r.Id] = rescueButton;
             row.Add(head);
 
             // --- vitals: battery, health, condition ---

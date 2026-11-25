@@ -218,3 +218,17 @@ The earlier damping was replaced. Under air, sublimation follows Ingersoll (1970
 | Airless, warm (-50 C = 223 K) | 100 % (sublimates, heat-limited) |
 | Airless, cold (-153 C = 120 K) | 0 % (it keeps its ice) |
 
+## 2026-11-25: robot rescue (R1), field campaign
+
+One robot forced low (25 % of what its cold battery can hold: it cannot get home) 1 or 2 tiles from the lander in the worst season, 3 weather seeds, 72 hours; the balance report is `RescueBalanceTests` (run by hand). A tile is 4 hours of driving here, so a helper at the lander is 4 h from the nearest tile.
+
+| Scenario | Distance | Rescues requested / succeeded (planner's pick) | Method | Energy | Rescuers lost | Robots lost, no rescue (baseline) | Robots lost, with rescue |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Earth-like 60 N winter | 1 tile | 2 of 3 runs / 1 | jump | 447 Wh | 0 | 5 | 5 |
+| Earth-like 60 N winter | 2 tiles | 1 / 0 (refused: the helper cannot come back) | tow tried | 204 Wh | 0 | 2 | 2 |
+| Mars southern winter | 1 and 2 tiles | 0 / 0: the stranded robot has under an hour in the cold and the helper is 4 h away | none | 0 | 0 | 3 | 3 |
+
+What it says: the rescue never kills the rescuer (the helper keeps 1.6 times its way home and the transfer stops when it would go below it; an earlier version with a thinner margin lost the helper too, found by this run), never makes the losses worse than no rescue, and costs 200 to 450 Wh against a robot bill of 642 kg. It is not a miracle: on Mars in winter a robot that runs dry has under an hour, and in 60 N winter a robot two tiles out is out of reach of a robot with a 2 kWh battery; the log says so ("no robot can reach tile X before it freezes in N h") and the player is told to build a charger or depot nearer. A tow is dearer than a jump (the stranded robot is 1025 kg of cargo) and the stranded robot must live to the shelter, so the planner picks the jump when the deadline is short. The baseline losses (5 of 9 robots in 60 N winter) are not from the rescue: the same robots die without it.
+
+Also in this round: telemetry records (robots' charge and condition, the grid battery, the power made, each turbine) cost 2720 records and 0.024 ms per tick over two years; task priorities (high, normal, low) already existed per robot and group, so R3 only records that computing priorities wait on the ColonyNetwork.
+

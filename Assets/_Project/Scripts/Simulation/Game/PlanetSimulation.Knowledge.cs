@@ -118,11 +118,40 @@ namespace KardashevAscent.Simulation.Game
             }
         }
 
+        long telemetryHour = long.MinValue;
+
+        void TelemetryIfChanged(Subject s, Quantity q, double value, double minChange)
+        {
+            if (knowledgeWritten.TryGetValue((s, q), out var last) && Math.Abs(last.Value - value) < minChange) return;
+            Know(s, q, value, 0.0, Confidence.High, new Source(SourceKind.Telemetry));
+        }
+
+        /// <summary>
+        /// Telemetry (R4, OQ-1): the colony reads its own machines exactly, so robots' charge and condition, the grid battery, the power made and each wind turbine are records with
+        /// source telemetry. Capped: at most one record per entity per game hour, and only when the value moved (1 point, 1 %, 1 kW).
+        /// </summary>
+        void RecordTelemetry()
+        {
+            long hour = (long)Math.Floor(TimeHours);
+            if (hour == telemetryHour) return;
+            telemetryHour = hour;
+            foreach (Robot r in Workforce.Robots)
+            {
+                TelemetryIfChanged(Subject.Robot(r.Id), Quantity.RobotCharge, Math.Round(r.Battery.StateOfCharge * 100.0), 1.0);
+                TelemetryIfChanged(Subject.Robot(r.Id), Quantity.RobotCondition, Math.Round(r.Condition * 100.0), 1.0);
+            }
+            var colony = new Subject(SubjectKind.Colony);
+            if (BatteryCapacityWh > 0.0) TelemetryIfChanged(colony, Quantity.GridBatteryCharge, Math.Round(BatteryStoredWh / BatteryCapacityWh * 100.0), 1.0);
+            TelemetryIfChanged(colony, Quantity.GridGeneration, Math.Round(GenerationW / 1000.0) * 1000.0, 1000.0);
+            foreach (int t in WindTurbineTiles()) TelemetryIfChanged(Subject.Building(t, 0), Quantity.TurbineOutput, Math.Round(WindTurbinePowerAtW(t) / 1000.0) * 1000.0, 1000.0);
+        }
+
         /// <summary>The Knowledge step: daily records, estimate changes, stale values, and the reports (K5).</summary>
         void StepKnowledge()
         {
             if (!KnowledgeEnabled) return;
             long day = (long)Math.Floor(TimeHours / 24.0);
+            RecordTelemetry();
             bool newDay = day != knowledgeDay;
             if (newDay)
             {
@@ -142,6 +171,7 @@ namespace KardashevAscent.Simulation.Game
         {
             foreach (KnowledgeEvent e in events)
             {
+                if (Quantities.IsTelemetry(e.Quantity)) continue;   // the colony reading its own machines is not news
                 string what = $"{Quantities.Name(e.Quantity)} ({e.Subject})";
                 switch (e.Kind)
                 {
