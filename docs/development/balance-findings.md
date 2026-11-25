@@ -205,3 +205,16 @@ Not absurd by the stated test: a turbine never beats solar by 3x, and the Earth-
 
 The environment ledger closes to under 1e-6 kg in every run. Against the absurd list: iron lost on Earth-like is 3.1 % in 2 years inland (1.5 % a year; a coast or very damp tile loses about a tenth), under 10 %; sodium does not survive open humid air; ice on Mars does sublimate when warm (18 % in two years); a wreck never holds more than the robot's bill (a General robot's bill is 642 kg; a cold wreck holds 642 kg, a wreck at 700 or 1600 C holds the same 642 kg as slag and parts, above 2862 C nothing). Caveats: the lander and any store with a seal are inert in these runs by rule, so the losses are the open-pile worst case; the rates for sodium, lithium, salt brine and the 0.05 m2/kg iron surface are game rules or assumptions (TBD); there is no iron smelter in the game yet, so rust cannot go back as ore.
 
+### Sublimation, cited model (2026-11-25)
+
+The earlier damping was replaced. Under air, sublimation follows Ingersoll (1970, Science 168): free convection of the lighter vapour layer plus diffusion, E = 0.17 d(rho_v) D (g d(rho)/rho / nu^2)^(1/3), checked against Mars chamber rates by Chittenden et al. 2008 (Icarus); in a vacuum it is Hertz-Knudsen; both are capped by the heat the surface can take in (200 W/m2). At Phoenix conditions (800 Pa CO2, g 3.71) the model gives 0.06 mm of ice a sol at -45 C, 0.25 mm at -35 C, 1 mm at -25 C, 3.4 mm at -15 C and 6.8 mm (heat-limited) at 0 C: millimetres per sol at the daytime temperatures of sunlit ice, consistent with the Phoenix trench chunks vanishing in about 4 sols (Smith et al. 2009, Science 325), and negligible at the night temperatures.
+
+| Planet type | Ice lost in 2 years (open pile, 45 N tile) |
+| --- | --- |
+| Earth-like 1 atm | 100 % (it melts and runs off) |
+| Cold Earth-like (-25 C mean) | 4.2 % |
+| Mars-like 0.006 atm | 52 % (was 18 % with the damping) |
+| Hot thick air 2 atm | 100 % (melts) |
+| Airless, warm (-50 C = 223 K) | 100 % (sublimates, heat-limited) |
+| Airless, cold (-153 C = 120 K) | 0 % (it keeps its ice) |
+
