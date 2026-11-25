@@ -98,6 +98,14 @@ namespace KardashevAscent.Simulation.Resources
         public static readonly MaterialBill WaveConverter = new MaterialBill()
             .Add(Material.Iron, 900.0).Add(Material.Rock, 150.0).Add(Material.Copper, 120.0);
 
+        /// <summary>
+        /// Wind turbine: the mass of the reference machine (Northern Power NPS 100C-21 datasheet: nacelle and rotor 6 500 kg, 37 m steel tower 12 000 kg, 18 500 kg in all) split into
+        /// steel (the tower, the nacelle frame and the hub, as Iron), copper (the permanent-magnet direct-drive generator and cables) and aluminium (blades and nacelle skin stand in).
+        /// The split is an assumption, TBD: no published breakdown for this machine; the foundation is not counted. Like every bill it is the real mass times OnSiteShare (the colony supplies 1 % on site).
+        /// </summary>
+        public static readonly MaterialBill WindTurbine = new MaterialBill()
+            .Add(Material.Iron, 16000.0 * OnSiteShare).Add(Material.Copper, 900.0 * OnSiteShare).Add(Material.Aluminium, 1600.0 * OnSiteShare);
+
         /// <summary>Tidal barrage: a long dam of rock and steel with gates and turbines (game rule, TBD; about ten turbines' worth).</summary>
         public static readonly MaterialBill TidalBarrage = new MaterialBill()
             .Add(Material.Iron, 12000.0).Add(Material.Rock, 20000.0).Add(Material.Copper, 800.0);

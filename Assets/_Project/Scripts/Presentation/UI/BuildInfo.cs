@@ -13,7 +13,7 @@ namespace KardashevAscent.Presentation.UI
         public enum Category { Solar, Sea, Storage, Stations, Industry, Grid }
 
         public static Category CategoryOf(BuildMode m) =>
-            m == BuildMode.SolarPanel || m == BuildMode.FloatingSolar ? Category.Solar
+            m == BuildMode.SolarPanel || m == BuildMode.FloatingSolar || m == BuildMode.WindTurbine ? Category.Solar
             : m == BuildMode.TidalTurbine || m == BuildMode.WaveConverter || m == BuildMode.TidalBarrage ? Category.Sea
             : m == BuildMode.Battery ? Category.Storage
             : m == BuildMode.PowerLine || m == BuildMode.HighVoltageLine || PanelPlacer.IsConverterMode(m) ? Category.Grid
@@ -49,6 +49,7 @@ namespace KardashevAscent.Presentation.UI
                 case BuildMode.Electrolyser: return "Electrolysis cell";
                 case BuildMode.TidalTurbine: return "Tidal turbine";
                 case BuildMode.WaveConverter: return "Wave converter";
+                case BuildMode.WindTurbine: return "Wind turbine";
                 case BuildMode.TidalBarrage: return "Tidal barrage";
                 case BuildMode.PowerLine: return "Power line";
                 case BuildMode.HighVoltageLine: return "High-voltage line";
@@ -81,6 +82,9 @@ namespace KardashevAscent.Presentation.UI
                     break;
                 case BuildMode.WaveConverter:
                     what = Short(BuildingType.WaveConverter);
+                    break;
+                case BuildMode.WindTurbine:
+                    what = Short(BuildingType.WindTurbine);
                     break;
                 case BuildMode.TidalBarrage:
                     what = Short(BuildingType.TidalBarrage);
@@ -155,6 +159,7 @@ namespace KardashevAscent.Presentation.UI
                 case BuildingType.HighVoltageLine: return "Same wiring as a power line, 50 times the capacity (1 GW against 20 MW). Opens at milestone 1. Build one on a tile whose power line is red.";
                 case BuildingType.PowerLine: return "Wires a tile into the grid. Chains of tiles with lines carry power from the lander tile; generators off the grid make nothing, and stations and storage go where the grid reaches.";
                 case BuildingType.TidalBarrage: return "A dam across a bay with 4 m or more of tide: the tide fills the basin and runs out through turbines once a tide. Big power, a late big build; it weakens the tide behind it and stops boats crossing.";
+                case BuildingType.WindTurbine: return "A 100 kW class turbine (the Northern Power NPS 100C-21: 20.7 m rotor on a 37 m tower, cut-in 3, rated 15, cut-out 25 m/s) on open land, one to a tile. Power follows the day's wind and the air density: none in a calm or above cut-out, almost none on a thin-air world. Needs the wind mast experiment.";
                 case BuildingType.WaveConverter: return "A floating line of hinged floats on shallow sea. Power follows the waves: none in a calm, a cap in a good sea, shut down in a storm. Built by a boat robot.";
                 case BuildingType.TidalTurbine: return "A free-flow rotor on shallow sea. Power follows the tide: none at slack water. Coasts with land around them give the strongest stream. Built by a boat robot.";
                 case BuildingType.ResearchStation: return "Measurements and experiments (Research, T).";

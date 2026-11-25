@@ -974,6 +974,23 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>Put a wave-converter line on a shallow-sea tile.</summary>
         bool PlaceWaveConverter(int tileId, int slot);
+
+        /// <summary>Put a wind turbine on a land tile (one per tile).</summary>
+        bool PlaceWindTurbine(int tileId, int slot);
+
+        /// <summary>Electric power all finished wind turbines give now, W.</summary>
+        double WindPowerW();
+
+        /// <summary>Why the turbine on this tile makes what it makes now (or why it is idle), in one line.</summary>
+        string WindTurbineStatus(int tileId);
+
+        /// <summary>What one turbine would make on this tile today (mean over the day), W.</summary>
+        double WindTurbinePowerAtW(int tileId);
+
+        /// <summary>The daily mean wind at the hub of a turbine on this tile, m/s.</summary>
+        double HubWindAt(int tileId);
+
+        int WindTurbineCount(int tileId);
     }
 
     /// <summary>Testing switches and shortcuts (the debug panel). Not saved.</summary>

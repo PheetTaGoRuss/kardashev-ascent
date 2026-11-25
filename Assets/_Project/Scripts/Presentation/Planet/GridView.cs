@@ -184,7 +184,7 @@ namespace KardashevAscent.Presentation.Planet
         }
 
         static bool IsGenerator(BuildingType b) =>
-            b == BuildingType.SolarPanel || b == BuildingType.FloatingSolar || b == BuildingType.TidalTurbine || b == BuildingType.WaveConverter || b == BuildingType.TidalBarrage;
+            b == BuildingType.SolarPanel || b == BuildingType.FloatingSolar || b == BuildingType.TidalTurbine || b == BuildingType.WaveConverter || b == BuildingType.TidalBarrage || b == BuildingType.WindTurbine;
 
         static bool NeedsGrid(BuildingType b) =>
             b == BuildingType.Battery || b == BuildingType.Workshop || b == BuildingType.ChargingStation || b == BuildingType.Relay

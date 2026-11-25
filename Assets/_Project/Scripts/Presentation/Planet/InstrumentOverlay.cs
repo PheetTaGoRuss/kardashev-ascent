@@ -56,6 +56,11 @@ namespace KardashevAscent.Presentation.Planet
                 else if (r.Measured) tags.Add("⚡ ok");
                 else tags.Add("⚡ unmetered");
             }
+            if (sim.WindTurbineCount(tile) > 0)
+            {
+                double kw = sim.WindTurbinePowerAtW(tile) / 1000.0;
+                tags.Add(kw >= 0.5 ? $"wind {kw:0} kW" : "wind idle");
+            }
             var robots = sim.Workforce.Robots.Where(x => x.Tile == tile).ToList();
             if (robots.Count > 0)
                 tags.Add("R" + string.Join(",", robots.Select(x => x.Id)) + " " + string.Join("/", robots.Select(x => x.State.ToString().ToLowerInvariant()).Distinct()));

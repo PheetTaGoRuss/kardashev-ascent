@@ -314,6 +314,7 @@ namespace KardashevAscent.Presentation.UI
                     case BuildingType.FloatingSolar: return "Float. solar";
                     case BuildingType.TidalTurbine: return "Tidal";
                     case BuildingType.WaveConverter: return "Wave";
+                    case BuildingType.WindTurbine: return "Wind";
                     case BuildingType.TidalBarrage: return "Barrage";
                     case BuildingType.ChargingStation: return "Charger";
                     case BuildingType.ResearchStation: return "Research";

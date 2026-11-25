@@ -48,6 +48,8 @@ namespace KardashevAscent.Simulation.Game
                 if (GetBuilding(tileId, s) != BuildingType.None) return false;
             if (!restoringState && WiredGrid && NeedsPower(type) && !IsPowered(tileId))
                 return false;   // wired grid: stations and storage go where the grid reaches
+            if (!restoringState && type == BuildingType.WindTurbine && WindTurbineCount(tileId) > 0)
+                return false;   // one turbine per tile: no wake model (game rule, TBD)
             if (!restoringState && type == BuildingType.TidalBarrage && BarrageBlocker(tileId) != null)
                 return false;   // a barrage needs a bay with a big tide, and only one per tile
             if (!restoringState && RefineryBlocker(type, tileId, slot) != null)

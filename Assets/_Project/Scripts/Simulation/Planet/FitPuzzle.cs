@@ -58,7 +58,7 @@ namespace KardashevAscent.Simulation.Planet
         public struct Truth
         {
             public double PressurePa, ScaleHeightM, TemperatureMeanC, TemperatureAmpK, DayHours;
-            public double ReliefMaxM, TideRangeM, TidePeriodHours, GravityMs2, WaveHeightM, WavePeriodS, BasinDepthM, OreGrade;
+            public double ReliefMaxM, TideRangeM, TidePeriodHours, GravityMs2, WaveHeightM, WavePeriodS, BasinDepthM, OreGrade, WindMeanMs;
         }
 
         static FitPuzzle Curve1(ExperimentKind kind, string physics, string xl, string yl, double[] x, double[] truth, string[] names, double[] min, double[] max, double[] start,
@@ -142,6 +142,13 @@ namespace KardashevAscent.Simulation.Planet
                         "seconds", "heave, m", Range(0.0, 3.0 * period, 40), new[] { h, period * 0.2 }, new[] { "wave height H, m", "phase, s" },
                         new[] { 0.0, 0.0 }, new[] { h * 3.0, period }, new[] { h * 0.5, period * 0.5 },
                         (p, x) => p[0] / 2.0 * Math.Sin(2.0 * Math.PI * (x - p[1]) / period), 0.05 * h, seed);
+                }
+                case ExperimentKind.WindMast:
+                {
+                    double m = Math.Max(1.0, t.WindMeanMs);
+                    return Curve1(kind, "f(v) = (pi v / (2 m^2)) exp(-pi v^2 / (4 m^2)): the share of the time the wind blows at each speed follows a Rayleigh curve whose only handle is the mean wind m.",
+                        "wind speed, m/s", "share of time per m/s", Range(1.0, 20.0, 20), new[] { m }, new[] { "mean wind m, m/s" }, new[] { 1.0 }, new[] { 25.0 }, new[] { m * 0.6 },
+                        (p, x) => Math.PI * x / (2.0 * p[0] * p[0]) * Math.Exp(-Math.PI * x * x / (4.0 * p[0] * p[0])), 0.002, seed);
                 }
                 case ExperimentKind.BasinSurvey:
                 {

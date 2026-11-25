@@ -83,14 +83,15 @@ namespace KardashevAscent.Presentation.UI
             double tidal = sim.TidalPowerW();
             double waves = sim.WavePowerW();
             double barrage = sim.BarragePowerW();
-            double solar = sim.GenerationW - sim.RtgW - tidal - waves - barrage;
+            double wind = sim.WindPowerW();
+            double solar = sim.GenerationW - sim.RtgW - tidal - waves - barrage - wind;
             now.text = (sim.IsBrownout ? "BROWNOUT · " : "") +
                        $"Making {Format.Power(sim.GenerationW)} · need {Format.Power(sim.DemandW)}";
             if (nowTip != null)
                 nowTip.Text = $"Colony target {Format.Power(sim.DemandTargetW)}: demand grows toward it after a full day without " +
                               "brownout. A brownout is when power made plus the battery can't meet demand; growth stops until it ends.";
             now.EnableInClassList("message", sim.IsBrownout);
-            sources.text = $"Solar {Format.Power(System.Math.Max(0.0, solar))} · " + (tidal > 0.0 ? $"Tidal {Format.Power(tidal)} · " : "") + (waves > 0.0 ? $"Waves {Format.Power(waves)} · " : "") + (barrage > 0.0 ? $"Barrage {Format.Power(barrage)} · " : "") + (sim.GeneratorsOffGrid > 0 ? $"{sim.GeneratorsOffGrid} off grid · " : "") + (sim.TransmissionLossW > 1.0 ? $"lines lose {Format.Power(sim.TransmissionLossW)} · " : "") + (sim.OverloadLossW > 1.0 ? $"OVERLOAD {Format.Power(sim.OverloadLossW)} lost · " : "") + $"RTG {Format.Power(sim.RtgW)} · wasted {Format.Power(sim.CurtailedW)}";
+            sources.text = $"Solar {Format.Power(System.Math.Max(0.0, solar))} · " + (tidal > 0.0 ? $"Tidal {Format.Power(tidal)} · " : "") + (waves > 0.0 ? $"Waves {Format.Power(waves)} · " : "") + (wind > 0.0 ? $"Wind {Format.Power(wind)} · " : "") + (barrage > 0.0 ? $"Barrage {Format.Power(barrage)} · " : "") + (sim.GeneratorsOffGrid > 0 ? $"{sim.GeneratorsOffGrid} off grid · " : "") + (sim.TransmissionLossW > 1.0 ? $"lines lose {Format.Power(sim.TransmissionLossW)} · " : "") + (sim.OverloadLossW > 1.0 ? $"OVERLOAD {Format.Power(sim.OverloadLossW)} lost · " : "") + $"RTG {Format.Power(sim.RtgW)} · wasted {Format.Power(sim.CurtailedW)}";
             uses.text = $"Colony {Format.Power(sim.DemandW)} · workshop {Format.Power(sim.WorkshopPowerW)} · charging {Format.Power(sim.RobotChargingW)}";
             double share = sim.BatteryCapacityWh > 0.0 ? sim.BatteryStoredWh / sim.BatteryCapacityWh : 0.0;
             string flow = sim.BatteryPowerW > 1.0 ? $"charging {Format.Power(sim.BatteryPowerW)}"
@@ -104,7 +105,7 @@ namespace KardashevAscent.Presentation.UI
                 yards += sim.BatteryCount(t);
             }
             buildings.text = $"{panels} panel{(panels == 1 ? "" : "s")} · {yards} battery yard{(yards == 1 ? "" : "s")}";
-            RefreshFlow(sim, solar, tidal, waves, barrage);
+            RefreshFlow(sim, solar, tidal, waves, barrage, wind);
             corona.style.display = sim.CableOutsideModel ? DisplayStyle.Flex : DisplayStyle.None;
             // a storm at the base, as a why? chain from the day's wind and the local threshold (Weather W5)
             {
@@ -135,14 +136,14 @@ namespace KardashevAscent.Presentation.UI
         Label flowHistory;
 
         /// <summary>Sources above, where it goes below, on one scale; the 7-day history under it (UI information design, stage 4). Only values the simulation reports.</summary>
-        void RefreshFlow(IPlanetSimulation sim, double solar, double tidal, double waves, double barrage)
+        void RefreshFlow(IPlanetSimulation sim, double solar, double tidal, double waves, double barrage, double wind)
         {
             if (flowBar == null) return;
             double rtg = sim.RtgW, bat = sim.BatteryPowerW;
             var made = new System.Collections.Generic.List<FlowBar.Segment>
             {
                 new FlowBar.Segment("Solar", System.Math.Max(0.0, solar), FlowBar.SolarColour), new FlowBar.Segment("RTG", rtg, FlowBar.RtgColour),
-                new FlowBar.Segment("Tidal", tidal, FlowBar.SeaColour), new FlowBar.Segment("Waves", waves, FlowBar.SeaColour), new FlowBar.Segment("Barrage", barrage, FlowBar.SeaColour),
+                new FlowBar.Segment("Tidal", tidal, FlowBar.SeaColour), new FlowBar.Segment("Waves", waves, FlowBar.SeaColour), new FlowBar.Segment("Barrage", barrage, FlowBar.SeaColour), new FlowBar.Segment("Wind", wind, FlowBar.WindColour),
                 new FlowBar.Segment("Battery out", bat < 0.0 ? -bat : 0.0, FlowBar.BatteryColour),
             };
             double loss = sim.WiredGrid ? sim.TransmissionLossW + sim.ConverterLossW : 0.0;

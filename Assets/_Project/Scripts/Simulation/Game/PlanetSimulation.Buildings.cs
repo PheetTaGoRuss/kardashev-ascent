@@ -104,6 +104,7 @@ namespace KardashevAscent.Simulation.Game
             : relays.Contains((tileId, slot)) ? BuildingType.Relay
             : tidalTurbines.Contains((tileId, slot)) ? BuildingType.TidalTurbine
             : waveConverters.Contains((tileId, slot)) ? BuildingType.WaveConverter
+            : windTurbines.Contains((tileId, slot)) ? BuildingType.WindTurbine
             : barrages.Contains((tileId, slot)) ? BuildingType.TidalBarrage
             : powerLines.Contains((tileId, slot)) ? BuildingType.PowerLine
             : highVoltageLines.Contains((tileId, slot)) ? BuildingType.HighVoltageLine
@@ -196,6 +197,13 @@ namespace KardashevAscent.Simulation.Game
                 barrages.Remove((tileId, slot));
                 Vacate(tileId, slot);
                 RefreshBarrageBlocks();
+                return true;
+            }
+            if (windTurbines.Contains((tileId, slot)))
+            {
+                Dismantle(tileId, slot, BuildingType.WindTurbine);
+                windTurbines.Remove((tileId, slot));
+                Vacate(tileId, slot);
                 return true;
             }
             if (waveConverters.Contains((tileId, slot)))

@@ -330,6 +330,7 @@ namespace KardashevAscent.Simulation.Game
                 { "Rectifier", "Where an AC line comes into the DC grid: turns AC into DC (about 98.5 % at 33 kV, 99 % at 500 kV). Opens at milestone 2." },
                 { "Tidal barrage", "A dam across a bay: the tide fills the basin and is let out through turbines once a tide. Big power from a big tide, but a late, big build that weakens the tide behind it and stops boats crossing. Needs a bay with at least 4 m of tide, the basin survey, and milestone 1." },
                 { "Wave converter", "A floating line of hinged floats on shallow sea. Power follows the waves: none in a flat calm, a rating cap in a good sea, shut down in a storm. Mid-latitude seas run roughest. Needs a boat robot and the wave buoy experiment." },
+                { "Wind turbine", "A 100 kW class turbine on open land, one to a tile. Power follows the day's wind and the air density: none in a calm or above 25 m/s, almost none on a thin-air world. Needs the wind mast experiment." },
                 { "Tidal turbine", "A free-flow rotor on shallow sea. Power follows the tide: none at slack water, most at mid-tide. Coasts with land around them funnel the tide and give the strongest stream. Needs a boat robot and a moon." },
             };
             foreach (var (name, bill) in Bills())

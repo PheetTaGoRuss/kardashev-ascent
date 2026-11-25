@@ -53,6 +53,7 @@ namespace KardashevAscent.Simulation.Game
             { BuildingType.Rectifier, new BuildingDefinition(BuildingType.Rectifier, "rectifier", BuildingFootprints.Converter, BuildCosts.Converter) },
             { BuildingType.TidalBarrage, new BuildingDefinition(BuildingType.TidalBarrage, "tidal barrage", BuildingFootprints.TidalBarrage, BuildCosts.TidalBarrage) },
             { BuildingType.WaveConverter, new BuildingDefinition(BuildingType.WaveConverter, "wave converter", BuildingFootprints.WaveConverter, BuildCosts.WaveConverter) },
+            { BuildingType.WindTurbine, new BuildingDefinition(BuildingType.WindTurbine, "wind turbine", BuildingFootprints.WindTurbine, BuildCosts.WindTurbine) },
             { BuildingType.TidalTurbine, new BuildingDefinition(BuildingType.TidalTurbine, "tidal turbine", BuildingFootprints.TidalTurbine, BuildCosts.TidalTurbine) },
             { BuildingType.StorageYard, new BuildingDefinition(BuildingType.StorageYard, "storage yard", BuildingFootprints.StorageYard, BuildCosts.StorageYard) },
             { BuildingType.SealedStore, new BuildingDefinition(BuildingType.SealedStore, "sealed store", BuildingFootprints.SealedStore, BuildCosts.SealedStore) },

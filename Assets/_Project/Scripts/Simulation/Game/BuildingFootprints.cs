@@ -16,6 +16,7 @@ namespace KardashevAscent.Simulation.Game
         public const int ResearchStation = 1;
         public const int RefineryModule = 1;
         public const int TidalTurbine = 1;
+        public const int WindTurbine = 1;
         public const int WaveConverter = 1;
         public const int TidalBarrage = 3;
         public const int PowerLine = 1;
