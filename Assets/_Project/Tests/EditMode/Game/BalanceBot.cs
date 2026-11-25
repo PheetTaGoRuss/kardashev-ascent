@@ -42,6 +42,17 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.IsTrue(ok, "\n" + earth + "\n" + mars);
         }
 
+        /// <summary>No robot is stuck "Travelling": over 60 days of the scripted colony none travels continuously for more than 96 hours (a leg is 4 to 8 hours; a haul crosses a few).</summary>
+        [Test]
+        public void NoRobotStaysTravellingLongerThanAPlannedTripPlusAMargin()
+        {
+            double au = SolarConstants.AstronomicalUnit, lum = SolarConstants.SolarLuminosity;
+            string v = Run("Viridia", new PlanetSolarParams(lum, au, 0.0167, 23.44 * Math.PI / 180.0, 282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0), 60, false);
+            var m = System.Text.RegularExpressions.Regex.Match(v, @"longest continuous travel (\d+) h");
+            Assert.IsTrue(m.Success, v);
+            Assert.Less(int.Parse(m.Groups[1].Value), 97, v);
+        }
+
         /// <summary>KI-46 for every outdoor task (found by the progression bot): on a -60 C world no robot may set out on a build or mining trip its cold battery and heater cannot bring it back from.</summary>
         [Test]
         public void ColdWorld_RobotsAreNotSentOnTripsTheyCannotReturnFrom()
@@ -78,6 +89,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             var sim = new PlanetSimulation(sphere, surface, planet) { WiredGrid = true, LogisticsEnabled = true };   // the new-game defaults (SimulationRunner)
             int exhausted = 0; var exhaustedWhat = new List<string>();
             sim.DepositExhausted += (tile, m) => { exhausted++; exhaustedWhat.Add($"{m}@d{(int)(sim.TimeHours / 24)}"); };
+            var outpostNotes = new List<string>();
+            var travelHours = new Dictionary<int, double>(); double longestTravel = 0.0;
             double generatedWh = 0.0; var lostNotes = new List<string>();
             int firstShortDay = -1; int milestone2Day = -1; int milestone1Day = -1;
             int home = sim.BaseTileId;
@@ -109,10 +122,11 @@ namespace KardashevAscent.Simulation.Tests.Game
                 var snap = sim.Workforce.Robots.ToDictionary(q => q.Id, q => $"R{q.Id} task={(q.Task.HasValue ? q.Task.Value.Kind + "@" + q.Task.Value.Tile : "none")} tile={q.Tile} act={q.Activity} wh={q.Battery.UsableWh:0} soc={q.Battery.StateOfCharge:0.00} airC={sim.LiveAirTemperatureAt(q.Tile):0} sheltered={q.Sheltered} trav={q.IsTravelling} fac={(q.Facility.HasValue ? q.Facility.Value.Tile + "." + q.Facility.Value.Slot : "-")} stranded={q.IsStranded} heaterW={q.HeaterW:0} hrsTo471={(sim.Routes.HoursBetween(q.Tile, 471)):0.0} lastChg={q.LastChargeW:0} warm={q.WarmingUp} bt={q.BatteryTempC:0} hist={q.ExposedEmptyHours:0} t={sim.TimeHours:0}");
                 int robotsBefore = sim.Workforce.Robots.Count;
                 sim.Tick(3.0);
-                if (full && sim.TimeHours < 150.0 && sim.TimeHours > 96.0 && snap.ContainsKey(4)) log.AppendLine("TRACE " + snap[4] + " RANGE " + (sim.Workforce.GetRobot(4) != null ? sim.Workforce.RangeReport(sim.Workforce.GetRobot(4), 483) : "gone"));
+                if (full && sim.TimeHours > 600.0 && sim.TimeHours < 720.0) foreach (var q in sim.Workforce.Robots.Where(q => q.Task.HasValue && q.Task.Value.Kind == TaskKind.Mine && q.Task.Value.Tile == 484)) log.AppendLine($"TRACE t={sim.TimeHours:0} R{q.Id} tile={q.Tile} trav={q.IsTravelling} act={q.Activity} soc={q.Battery.StateOfCharge:0.00} tripCharge={q.TripCharge:0.00} need={q.NeedsCharge} {sim.Workforce.RangeReport(q, 484)}");
                 if (sim.Workforce.Robots.Count < robotsBefore)
                     foreach (var id in snap.Keys.Where(k => !sim.Workforce.Robots.Any(q => q.Id == k))) lostNotes.Add(snap[id]);
                 generatedWh += sim.GenerationW * 3.0;
+                foreach (var tq in sim.Workforce.Robots) { travelHours[tq.Id] = tq.IsTravelling ? (travelHours.TryGetValue(tq.Id, out double th) ? th : 0.0) + 3.0 : 0.0; longestTravel = Math.Max(longestTravel, travelHours[tq.Id]); if (travelHours[tq.Id] == 33.0) lostNotes.Add($"LONGTRAVEL R{tq.Id} task={(tq.Task.HasValue ? tq.Task.Value.Kind + "@" + tq.Task.Value.Tile : "none")} tile={tq.Tile} act={tq.Activity} soc={tq.Battery.StateOfCharge:0.00} manual={tq.ManualTarget} fac={(tq.Facility.HasValue ? tq.Facility.Value.Tile : -1)} t={sim.TimeHours:0}"); }
                 if (milestone1Day < 0 && sim.MilestonesReached >= 1) milestone1Day = hour / 24;
                 if (milestone2Day < 0 && sim.MilestonesReached >= 2) milestone2Day = hour / 24;
                 if (firstShortDay < 0 && milestone2Day < 0 && hour > 24 * 20 && (sim.Materials[Material.Iron] < 1.0 || sim.Materials[Material.Rock] < 1.0)) firstShortDay = hour / 24;
@@ -145,16 +159,26 @@ namespace KardashevAscent.Simulation.Tests.Game
                     var seeds = new List<int> { home }; seeds.AddRange(chargerTiles);
                     int from = seeds.OrderBy(t => Hops(sphere, t, tile)).First();
                     // a leapfrog outpost: panels, a charger and a battery on a tile up to three tiles toward the ore; the game decides whether a robot may go one way
-                    int step = land.Where(t => Hops(sphere, from, t) <= 3 && !chargerTiles.Contains(t) && t != home && !sim.GetTile(t).IsWater && sim.IsOpenGround(t)).OrderBy(t => Hops(sphere, t, tile)).FirstOrDefault();
-                    if (step > 0 && Hops(sphere, step, tile) < Hops(sphere, from, tile) && !chargerTiles.Any(ct => Enumerable.Range(0, sim.SlotCount(ct)).Any(sl => sim.GetBuilding(ct, sl) != BuildingType.None && sim.IsUnderConstruction(ct, sl))))   // one outpost at a time
+                    var candidates = land.Where(t => Hops(sphere, from, t) <= 3 && !chargerTiles.Contains(t) && t != home && !sim.GetTile(t).IsWater && sim.IsOpenGround(t) && Hops(sphere, t, tile) < Hops(sphere, from, tile)).OrderBy(t => Hops(sphere, t, tile)).ThenBy(t => t).Take(6).ToList();
+                    bool busy = chargerTiles.Any(ct => Enumerable.Range(0, sim.SlotCount(ct)).Any(sl => sim.GetBuilding(ct, sl) != BuildingType.None && sim.IsUnderConstruction(ct, sl)));   // one outpost at a time
+                    foreach (int step in busy || hour % 24 != 0 ? new List<int>() : candidates)
                     {
-                        sim.IsPowered(step);
+                        // try the candidate: the sites go down, and the game says whether a robot may go one way; if not, take them back and try a nearer tile
+                        var placedSlots = new List<int>();
                         int placed = 0;
-                        for (int sl = 0; sl < 12 && placed < 2; sl++) if (sim.PlacePanel(step, sl, 0.35, Math.PI)) placed++;
-                        chargerTiles.Add(step); chargerHops++;
+                        for (int sl = 0; sl < 12 && placed < 2; sl++) if (sim.PlacePanel(step, sl, 0.35, Math.PI)) { placed++; placedSlots.Add(sl); sim.PlaceBuildingWire(step, sl); }
+                        for (int sl = 12; sl < 20; sl++) if (sim.PlaceChargingStation(step, sl)) { placedSlots.Add(sl); sim.PlaceBuildingWire(step, sl); break; }
+                        string outpostVerdict = sim.OutpostTextAtFullCharge(step);
+                        if (outpostVerdict.StartsWith("one-way")) { chargerTiles.Add(step); chargerHops++; break; }
+                        foreach (int sl in placedSlots) sim.OrderSalvage(step, sl);   // a site is simply cancelled (its materials come back)
+                        outpostNotes.Add($"tile {step}: {outpostVerdict}");
                     }
                 }
 
+                // lithium is a sealed-store material: with logistics on, mined ore needs a sealed store on the mine tile ("No room for lithium on tile N: build a sealed store there")
+                if (target.TryGetValue(Material.Lithium, out int liT) && liT > 0 && sim.IsMiningOrdered(liT, Material.Lithium) && sim.KgAt(liT, Material.Lithium) < 1.0 && sim.Deposits.MinedKg(liT, Material.Lithium) < 1.0 && hour > 24 * 5
+                    && !Enumerable.Range(0, sim.SlotCount(liT)).Any(sl => sim.GetBuilding(liT, sl) == BuildingType.SealedStore))
+                    for (int sl = 30; sl < 45; sl++) if (sim.PlaceStorage(BuildingType.SealedStore, liT, sl)) break;
                 // an outpost gets its charger once its panels are wired (the island has a source then)
                 foreach (int ot in chargerTiles.ToList())
                     if (!Enumerable.Range(0, sim.SlotCount(ot)).Any(sl => sim.GetBuilding(ot, sl) == BuildingType.ChargingStation) && sim.IslandHasSource(ot, true))
@@ -220,8 +244,9 @@ namespace KardashevAscent.Simulation.Tests.Game
             double miningWh = sim.MiningWorkHours * RobotSpecs.MinePowerW + sim.ComminutionWh;
             double share = generatedWh > 0.0 ? miningWh / generatedWh : 0.0;
             string verdict = (share > 0.5 ? " ABSURD: mining takes over half of generation." : "") + (firstShortDay >= 0 ? $" ABSURD: ran out of iron or rock on day {firstShortDay} before milestone 2." : "");
-            string summary = $"{name}: {days} d, milestones {sim.MilestonesReached} (M1 day {(milestone1Day < 0 ? "never" : milestone1Day.ToString())}, M2 day {(milestone2Day < 0 ? "never" : milestone2Day.ToString())}), deposits used up {exhausted} [{string.Join(", ", exhaustedWhat)}], rock moved {sim.RockMovedKg / 1000.0:0} t, tailings {sim.TailingsKg / 1000.0:0} t, mining energy {miningWh / 1e6:0.0} MWh (crushing {sim.ComminutionWh / 1e6:0.0}) of {generatedWh / 1e6:0} MWh generated = {share * 100.0:0.0} %.{verdict}";
+            string summary = $"{name} (longest continuous travel {longestTravel:0} h): {days} d, milestones {sim.MilestonesReached} (M1 day {(milestone1Day < 0 ? "never" : milestone1Day.ToString())}, M2 day {(milestone2Day < 0 ? "never" : milestone2Day.ToString())}), deposits used up {exhausted} [{string.Join(", ", exhaustedWhat)}], rock moved {sim.RockMovedKg / 1000.0:0} t, tailings {sim.TailingsKg / 1000.0:0} t, mining energy {miningWh / 1e6:0.0} MWh (crushing {sim.ComminutionWh / 1e6:0.0}) of {generatedWh / 1e6:0} MWh generated = {share * 100.0:0.0} %.{verdict}";
             foreach (int ot in new HashSet<int>(sim.Workforce.Tasks.Open.Where(q => q.Task.Kind == TaskKind.Build).Select(q => q.Task.Tile))) { string txt = sim.OutpostText(ot); if (txt.Length > 0) summary += $" Outpost {ot}: {txt}."; }
+            if (outpostNotes.Count > 0) summary += " Outpost candidates tried: " + string.Join(" | ", outpostNotes.Take(4)) + ".";
             var blockers = sim.Workforce.Tasks.Open.Where(q => q.State == TaskState.AssistanceNeeded || q.State == TaskState.Blocked).Take(4).Select(q => $"{q.Task.Kind}@{q.Task.Tile}: {q.Reason}");
             var deaths = sim.OperationsLog.Where(o => o.Quantity == "Robot destroyed").Take(2).Select(o => o.Text);
             if (lostNotes.Count > 0) summary += " LAST SEEN BEFORE LOSS: " + string.Join(" || ", lostNotes.Take(3)) + ".";
