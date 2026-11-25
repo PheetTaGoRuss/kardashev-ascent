@@ -98,3 +98,6 @@ Found by the Weather W8 field campaign: robots hauling on an Earth-like world at
 
 On Earth-climatology planets `AirTemperatureAt` and `AnnualAirTemperature` used NASA T2M as it is, so a -25 C world got Earth's temperatures. Fixed: NASA's pattern is moved by a uniform offset (planet mean minus the area-weighted global annual mean of the table; an assumption, TBD; an offset under 1 K is dropped, so Earth at its own mean is unchanged) in `PlanetSimulation.Solar.cs`. Clouds are not touched (tested). Tests: `ColdEarthTests`, `AirTemperatureTests`. Effects: a cold Earth-like turbine row now has denser air (31.7 % capacity factor against 27.6 %); the cold Earth-like 60 N winter campaign loses 0 robots (the planner refuses the direct haul, hauled 0).
 
+## KI-48: Island grids do not model line ratings or faults (OPEN, 2026-11-25)
+
+An island grid (a wired source network not joined to the lander) serves its chargers with the same 2 % line loss per tile as the lander grid, but its cables have no ampacity rating, no I2R heating and no faults (the lander grid has all three). Decided not to fix now (director's delegate). Also: mining with logistics on, an ore that needs a sealed store (lithium, sodium) is not mined until a sealed store stands on the mine tile; the robots still spend the work hours (the report says so, the task is not blocked).

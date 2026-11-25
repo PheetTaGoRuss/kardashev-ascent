@@ -90,5 +90,22 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.IsFalse(low.Allowed, "a nearly empty robot is refused");
             StringAssert.StartsWith("refused:", low.Text);
         }
+
+        [Test]
+        public void LithiumMiningWithLogisticsNeedsASealedStore_TheReasonIsReported_NothingIsMinedWithoutOne()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { LogisticsEnabled = true, WeatherEnabled = false };
+            sim.Debug.FreeBuilding = true;
+            int t = sim.BaseTileId;
+            for (int h = 0; h < 4; h++) { }
+            int li = Enumerable.Range(0, sim.TileCount).First(q => !sim.GetTile(q).IsWater && sim.Deposits.GradeOf(q, KardashevAscent.Simulation.Resources.Material.Lithium) > 0.0 && q != t);
+            sim.DebugSurveyAll();
+            sim.Workforce.AddRobot(RobotKind.General, li);
+            sim.OrderMining(li, KardashevAscent.Simulation.Resources.Material.Lithium);
+            for (int h = 0; h < 30; h++) sim.Tick(1.0);
+            Assert.AreEqual(0.0, sim.Deposits.MinedKg(li, KardashevAscent.Simulation.Resources.Material.Lithium), 1e-9, "no room: nothing is mined");
+            Assert.IsTrue(sim.IndustrialReports.Any(r => r.Message.Contains("sealed store")), "the reason is reported");
+            Assert.IsTrue(sim.PlaceStorage(BuildingType.SealedStore, li, 5), "the reported remedy can be built");
+        }
     }
 }
