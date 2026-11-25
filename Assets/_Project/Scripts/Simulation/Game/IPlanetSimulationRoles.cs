@@ -360,6 +360,12 @@ namespace KardashevAscent.Simulation.Game
         IReadOnlyList<int> HaulStops(int haulId);
         /// <summary>What the weather does to the stock on a tile, as lines (rate per year, marked estimated where humidity is not measured).</summary>
         System.Collections.Generic.IReadOnlyList<string> StorageNotes(int tileId);
+        /// <summary>The failure ladder of a robot (none, trying alternatives, waiting for help, needs you) with a line for the player.</summary>
+        (LadderState State, string Text) LadderOf(int robotId);
+        /// <summary>Hours before a robot in danger is lost (infinity when it is not).</summary>
+        double RescueDeadlineHours(int robotId);
+        /// <summary>Ask for a rescue of this robot now (the player's Rescue button); false when nobody can help.</summary>
+        bool RequestRescue(int robotId);
         /// <summary>The wrecks as lines for the player: cause, what lies there, and the state of the recovery haul.</summary>
         System.Collections.Generic.IReadOnlyList<string> WreckLines();
         /// <summary>The player overrides a forecast-storm wait on a haul that has not loaded; the energy check still applies.</summary>

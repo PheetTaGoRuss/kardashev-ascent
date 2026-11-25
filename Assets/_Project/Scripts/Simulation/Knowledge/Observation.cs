@@ -30,13 +30,15 @@ namespace KardashevAscent.Simulation.Knowledge
     {
         AirPressure, SurfaceGravity, WaterBoilingPoint, SurfaceTemperature, AirTemperature, RelativeHumidity, WindSpeed, HubWindSpeed, WaveHeight, TidalRange,
         BasinDepth, ReliefMax, OreGrade, SurveyCompleted, LatitudeFix, OpticalDepth, DiffuseShare, CloudFactor, Albedo, LineFlow, DustOpticalDepth, SpectrumFit,
+        /// <summary>Telemetry of the colony's own machines (R4): exact, because the colony reads its own robots and buildings (OQ-1).</summary>
+        RobotCharge, RobotCondition, GridBatteryCharge, GridGeneration, TurbineOutput,
     }
 
     /// <summary>How far to trust a record: a small ordered scale, not a fake percentage.</summary>
     public enum Confidence { Low, Medium, High }
 
     /// <summary>Who or what observed it.</summary>
-    public enum SourceKind { Robot, Instrument, Dataset, Assumed, Derived, MeasuredByColony }
+    public enum SourceKind { Robot, Instrument, Dataset, Assumed, Derived, MeasuredByColony, Telemetry }
 
     [Serializable]
     public struct Source : IEquatable<Source>
@@ -48,7 +50,7 @@ namespace KardashevAscent.Simulation.Knowledge
         public bool Equals(Source o) => Kind == o.Kind && Id == o.Id;
         public override bool Equals(object obj) => obj is Source s && Equals(s);
         public override int GetHashCode() => (int)Kind * 31 + Id;
-        public override string ToString() => Kind == SourceKind.Robot ? $"robot {Id}" : Kind == SourceKind.Instrument ? "instrument" : Kind == SourceKind.Dataset ? "dataset" : Kind == SourceKind.Assumed ? "assumed" : Kind == SourceKind.Derived ? "derived" : "measured by the colony";
+        public override string ToString() => Kind == SourceKind.Robot ? $"robot {Id}" : Kind == SourceKind.Instrument ? "instrument" : Kind == SourceKind.Telemetry ? "telemetry" : Kind == SourceKind.Dataset ? "dataset" : Kind == SourceKind.Assumed ? "assumed" : Kind == SourceKind.Derived ? "derived" : "measured by the colony";
     }
 
     /// <summary>
@@ -95,6 +97,11 @@ namespace KardashevAscent.Simulation.Knowledge
                 case Quantity.BasinDepth:
                 case Quantity.ReliefMax: return "m";
                 case Quantity.LatitudeFix: return "deg";
+                case Quantity.RobotCharge:
+                case Quantity.RobotCondition:
+                case Quantity.GridBatteryCharge: return "%";
+                case Quantity.GridGeneration:
+                case Quantity.TurbineOutput: return "W";
                 case Quantity.LineFlow: return "W";
                 case Quantity.OreGrade:
                 case Quantity.DiffuseShare:
@@ -130,6 +137,11 @@ namespace KardashevAscent.Simulation.Knowledge
                 case Quantity.LineFlow: return "Line flow";
                 case Quantity.DustOpticalDepth: return "Dust optical depth";
                 case Quantity.SpectrumFit: return "Light spectrum";
+                case Quantity.RobotCharge: return "Battery charge";
+                case Quantity.RobotCondition: return "Condition";
+                case Quantity.GridBatteryCharge: return "Grid battery charge";
+                case Quantity.GridGeneration: return "Power generated";
+                case Quantity.TurbineOutput: return "Turbine output";
                 default: return q.ToString();
             }
         }
@@ -145,6 +157,11 @@ namespace KardashevAscent.Simulation.Knowledge
                 case Quantity.CloudFactor:
                 case Quantity.LineFlow:
                 case Quantity.DustOpticalDepth: return 48.0;
+                case Quantity.RobotCharge:
+                case Quantity.RobotCondition:
+                case Quantity.GridBatteryCharge:
+                case Quantity.GridGeneration:
+                case Quantity.TurbineOutput: return 6.0;
                 case Quantity.HubWindSpeed:
                 case Quantity.WaveHeight: return 24.0 * 30.0;
                 case Quantity.OreGrade:
@@ -154,7 +171,9 @@ namespace KardashevAscent.Simulation.Knowledge
         }
 
         /// <summary>Quantities that change from day to day: a new record is the latest value, not a disagreement (no discrepancy reports).</summary>
-        public static bool IsTimeVarying(Quantity q) => q == Quantity.AirTemperature || q == Quantity.RelativeHumidity || q == Quantity.WindSpeed || q == Quantity.CloudFactor || q == Quantity.LineFlow || q == Quantity.DustOpticalDepth;
+        public static bool IsTimeVarying(Quantity q) => q == Quantity.AirTemperature || q == Quantity.RelativeHumidity || q == Quantity.WindSpeed || q == Quantity.CloudFactor || q == Quantity.LineFlow || q == Quantity.DustOpticalDepth || IsTelemetry(q);
+
+        public static bool IsTelemetry(Quantity q) => q == Quantity.RobotCharge || q == Quantity.RobotCondition || q == Quantity.GridBatteryCharge || q == Quantity.GridGeneration || q == Quantity.TurbineOutput;
 
         /// <summary>Quantities whose staleness the colony is told about (game rule).</summary>
         public static bool ReportsStale(Quantity q) => q == Quantity.HubWindSpeed || q == Quantity.AirPressure || q == Quantity.SurfaceTemperature;

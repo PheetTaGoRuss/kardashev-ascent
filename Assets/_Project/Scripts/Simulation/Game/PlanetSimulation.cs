@@ -178,6 +178,7 @@ namespace KardashevAscent.Simulation.Game
                          Materials, LiveAirTemperatureAt(BaseTileId), LiveAirTemperatureAt, shelter.Contains);
             HandleRobotWeather();
             ExposeWrecks();
+            StepRescue(dt);
             StepChemistry(dt);
             StepKnowledge();
             AccumulateWeatherWaits(dt);
