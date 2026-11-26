@@ -40,7 +40,16 @@ namespace KardashevAscent.Simulation.Game
             for (int k = 0; k < research.Orders.Count; k++)
                 tasks.Add(new WorkTask(TaskKind.Experiment, research.Orders[k].Tile, (int)research.Orders[k].Kind, k));
             for (int k = 0; k < orders.Mining.Count; k++)
+            {
+                // a mine whose store at the mine tile is full pauses (no robot hours spent) and resumes when hauls make room (decided 2026-11-26)
+                if (LogisticsEnabled && orders.Mining[k].Tile != BaseTileId && RoomAt(orders.Mining[k].Tile, orders.Mining[k].Material) <= 1e-9)
+                {
+                    ReportStoreFull(orders.Mining[k].Tile, orders.Mining[k].Material);
+                    continue;
+                }
+                storeFullPaused.Remove((orders.Mining[k].Tile, orders.Mining[k].Material));
                 tasks.Add(new WorkTask(TaskKind.Mine, orders.Mining[k].Tile, (int)orders.Mining[k].Material, k));
+            }
             AddPassageTasks(tasks);
             AddHaulTasks(tasks);
             AddElectricalTasks(tasks);

@@ -231,5 +231,26 @@ namespace KardashevAscent.Simulation.Tests.Game
             for (int h = 0; h < 12; h++) sim.Tick(1.0);
             Assert.IsFalse(r.Activity == RobotActivity.Maintenance && r.IsTravelling && r.Battery.UsableWh < 5.0, "it must not set out for the workshop on an empty battery");
         }
+
+        [Test]
+        public void AMineWhoseStoreIsFull_Pauses_WithTheReasonInTheLog_AndResumesWhenThereIsRoom()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { LogisticsEnabled = true, WeatherEnabled = false };
+            sim.Debug.FreeBuilding = true;
+            var li = KardashevAscent.Simulation.Resources.Material.Lithium;
+            int t = sim.BaseTileId;
+            int tile = Enumerable.Range(0, sim.TileCount).First(q => !sim.GetTile(q).IsWater && sim.Deposits.GradeOf(q, li) > 0.0 && q != t && sim.IsOpenGround(q) && sim.Routes.HoursBetween(t, q) < 12.0);
+            sim.DebugSurveyAll(); sim.PlaceChargingStation(t, 0); sim.PlacePanel(t, 1, 0.35, Math.PI); sim.PlaceBattery(t, 2); sim.WireAllBuildings();
+            Assert.IsTrue(sim.PlaceStorage(sim.StoreFor(li), tile, 5)); sim.PlaceChargingStation(tile, 6); sim.PlacePanel(tile, 7, 0.35, Math.PI);
+            Assert.IsTrue(sim.OrderMining(tile, li));
+            for (int h = 0; h < 900 && sim.RoomAt(tile, li) > 1e-9; h++) sim.Tick(1.0);
+            Assert.AreEqual(0.0, sim.RoomAt(tile, li), 1e-6, "the store filled");
+            for (int h = 0; h < 6; h++) sim.Tick(1.0);
+            Assert.IsFalse(sim.Workforce.Tasks.Open.Any(q => q.Task.Kind == KardashevAscent.Simulation.Robots.TaskKind.Mine && q.Task.Tile == tile), "no mine task is open while the store is full");
+            Assert.IsTrue(sim.OperationsLog.Any(o => o.Quantity == "Mine paused" && o.Text.Contains("Store full at tile")));
+            double mined = sim.Deposits.MinedKg(tile, li);
+            for (int h = 0; h < 24; h++) sim.Tick(1.0);
+            Assert.AreEqual(mined, sim.Deposits.MinedKg(tile, li), 1e-6, "nothing is mined while it is paused");
+        }
     }
 }

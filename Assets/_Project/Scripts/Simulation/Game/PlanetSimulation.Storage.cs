@@ -132,6 +132,17 @@ namespace KardashevAscent.Simulation.Game
             !LogisticsEnabled ? double.PositiveInfinity : inventories.FreeFor(PlaceId.Depot(tileId), material);
 
         /// <summary>Mining a material into a depot with no room says so once, instead of silently doing nothing.</summary>
+        /// <summary>A mine paused because its store at the mine tile is full: said once in the Operations log and the industrial reports.</summary>
+        void ReportStoreFull(int tileId, Material material)
+        {
+            if (!storeFullPaused.Add((tileId, material))) return;
+            string text = $"Store full at tile {tileId}: waiting for hauls.";
+            industrialReports.Add(TimeHours, "Mining", IndustrialBlocker.OutputStorageUnavailable, text);
+            Log($"Tile {tileId}", "Mine paused", 0.0, "", $"T{tileId}", $"The {Resources.Materials.Name(material).ToLowerInvariant()} mine on tile {tileId} is paused. {text}");
+        }
+
+        readonly HashSet<(int, Material)> storeFullPaused = new HashSet<(int, Material)>();
+
         void ReportNoRoom(int tileId, Material material)
         {
             if (!storageFullReported.Add((tileId, material))) return;
