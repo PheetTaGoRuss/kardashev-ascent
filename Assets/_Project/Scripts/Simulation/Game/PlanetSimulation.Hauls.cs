@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using KardashevAscent.Simulation.Climate;
 using KardashevAscent.Simulation.Logistics;
 using KardashevAscent.Simulation.Resources;
 using KardashevAscent.Simulation.Robots;
@@ -217,6 +218,18 @@ namespace KardashevAscent.Simulation.Game
         /// (to the next stop, or the drop and the way back to a charger) at its charge and body temperature now, 1.1 times the energy above the reserve. Returns the state of charge to charge to,
         /// or 0 when this tile is not a stop of its haul or no stop is ahead.
         /// </summary>
+        /// <summary>The air anomaly (K) expected at a tile this many hours ahead: today's anomaly at a measured tile (or one in its weather region), damped by the day-to-day correlation, none beyond the forecast range.</summary>
+        double ForecastAnomalyK(int tile, double hoursAhead)
+        {
+            if (!HasWeather) return 0.0;
+            int src = ForecastSource(tile);
+            if (src < 0) return 0.0;
+            int k = (int)Math.Floor(Math.Max(0.0, hoursAhead) / 24.0);
+            if (k > MaxForecastDays) return 0.0;
+            WeatherModel.Spread s = WeatherModel.SpreadAt(Sphere.Latitude(src), YearFractionNow);
+            return AnomalyAt(src).TemperatureK * Math.Pow(Math.Max(0.0, s.TemperatureRho), k);
+        }
+
         double LegChargeShareFor(Robot r)
         {
             HaulOrder o = null;
@@ -225,8 +238,10 @@ namespace KardashevAscent.Simulation.Game
             int idx = o.Stops.IndexOf(r.Tile);
             if (idx < 0 && r.Tile != o.FromTile) return 0.0;
             int next = idx >= 0 && idx + 1 < o.Stops.Count ? o.Stops[idx + 1] : o.ToTile;
-            var leg = HaulLegCost(r.Tile, next, o.Kg);
-            if (!leg.Reachable) return 0.0;
+            legAnomalyK = ForecastAnomalyK;   // the leg is checked at the forecast air where the weather is known, else the climate
+            HaulLeg leg;
+            leg = HaulLegCost(r.Tile, next, o.Kg);
+            if (!leg.Reachable) { legAnomalyK = null; return 0.0; }
             double wh = leg.TotalWh, minC = leg.MinBodyC;
             if (next == o.ToTile)
             {
@@ -234,6 +249,7 @@ namespace KardashevAscent.Simulation.Game
                 foreach (int st in StagingStops()) { if (st == o.ToTile) { back = 0.0; break; } var bl = HaulLegCost(o.ToTile, st, 0.0); if (bl.Reachable && bl.TotalWh < back) { back = bl.TotalWh; minC = Math.Min(minC, bl.MinBodyC); } }
                 if (back < double.MaxValue) wh += back;
             }
+            legAnomalyK = null;
             double cap = r.Battery.CapacityWh * RobotBattery.ColdCapacityFactor(minC);
             if (cap <= 0.0) return 0.0;
             double need = RobotSpecs.ReturnToChargeFraction + wh * Workforce.HaulDispatchMargin / cap;

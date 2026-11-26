@@ -35,6 +35,9 @@ namespace KardashevAscent.Simulation.Game
         }
 
         /// <summary>The energy of driving a given route (the tiles after the start, in order) with this much cargo.</summary>
+        /// <summary>When set, the air along a leg is the climate plus this forecast anomaly (K) for the tile and the hours ahead (the per-leg check of KI-46 uses the forecast where it is known).</summary>
+        Func<int, double, double> legAnomalyK;
+
         HaulLeg LegAlong(int from, List<int> route, double cargoKg, double startDelayHours = 0.0)
         {
             double clock = TimeHours + startDelayHours;
@@ -54,7 +57,7 @@ namespace KardashevAscent.Simulation.Game
                 if (heights != null)
                     climb += HaulPhysics.ClimbEnergyWh(HaulPhysics.DefaultRobotMassKg, cargoKg, SurfaceGravityMs2, heights[t] - heights[at], 1.0) * HaulPhysics.ClimbEffortShare * scale;
                 // one lumped body: a leg starts at a charger or shelter (body at the shelter temperature) and the body cools along the way, so the heater only runs once it would pass its limit
-                var lump = RobotThermal.Step(bodyC, DiurnalAirTemperatureAt(t, clock), step, 1.0, false, power, true, false);
+                var lump = RobotThermal.Step(bodyC, DiurnalAirTemperatureAt(t, clock) + (legAnomalyK != null ? legAnomalyK(t, clock - TimeHours) : 0.0), step, 1.0, false, power, true, false);
                 heater += lump.HeaterW * step; bodyC = lump.BodyC; minBodyC = Math.Min(minBodyC, lump.MinC);
                 clock += step;
                 at = t;

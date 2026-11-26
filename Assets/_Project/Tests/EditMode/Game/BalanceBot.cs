@@ -113,6 +113,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             sim.DepositExhausted += (tile, m) => { exhausted++; exhaustedWhat.Add($"{m}@d{(int)(sim.TimeHours / 24)}"); };
             var outpostNotes = new List<string>();
             var stuckNotes = new List<string>(); var travelHours = new Dictionary<int, double>(); double longestTravel = 0.0;
+            int accN = 0; double accBase = 0, accTop = 0, accDock = 0, accPri = 0, accServed = 0, accChg = 0, accGen = 0, accCurt = 0, accDemand = 0, accKard = 0, accBattChg = 0, accRobot = 0, accShop = 0; var dawnSoc = new List<double>(); bool wasDay = false;
             double generatedWh = 0.0; var lostNotes = new List<string>();
             int firstShortDay = -1; int milestone2Day = -1; int milestone1Day = -1;
             int home = sim.BaseTileId;
@@ -150,6 +151,12 @@ namespace KardashevAscent.Simulation.Tests.Game
                 if (sim.Workforce.Robots.Count < robotsBefore)
                     foreach (var id in snap.Keys.Where(k => !sim.Workforce.Robots.Any(q => q.Id == k))) lostNotes.Add(snap[id]);
                 generatedWh += sim.GenerationW * 3.0;
+                if (hour >= 24 * (days - 30))
+                {
+                    accN++; accGen += sim.GenerationW; accCurt += sim.CurtailedW; accDemand += sim.DemandW; accKard += sim.KardashevPowerW; accBattChg += Math.Max(0.0, sim.BatteryPowerW); accRobot += sim.RobotChargingW; accShop += sim.WorkshopPowerW; var gl = sim.Grid.Last; accBase += gl.BaselineServedW; accTop += gl.TopUpServedW; accDock += gl.DockServedW; accPri += gl.PriorityServedW; accServed += gl.ServedW; accChg += gl.ChargeW;
+                    if (sim.IsDayAtBase && !wasDay) { dawnSoc.Add(sim.BatteryStoredWh / Math.Max(1.0, sim.BatteryCapacityWh)); }
+                    wasDay = sim.IsDayAtBase;
+                }
                 foreach (var tq in sim.Workforce.Robots) { travelHours[tq.Id] = tq.IsTravelling ? (travelHours.TryGetValue(tq.Id, out double th) ? th : 0.0) + 3.0 : 0.0; longestTravel = Math.Max(longestTravel, travelHours[tq.Id]); if (travelHours[tq.Id] == 192.0 && Workforce.DebugWatch < 0) { Workforce.DebugWatch = tq.Id; Workforce.DebugTrace = e => { if (stuckNotes.Count < 40) stuckNotes.Add("EV t=" + sim.TimeHours.ToString("0.0") + " " + e); }; }
                     if (travelHours[tq.Id] == 201.0) stuckNotes.Add($"STUCK R{tq.Id} task={(tq.Task.HasValue ? tq.Task.Value.Kind + "@" + tq.Task.Value.Tile : "none")} tile={tq.Tile} act={tq.Activity} soc={tq.Battery.StateOfCharge:0.00} wh={tq.Battery.UsableWh:0} shut={tq.IsShutDown} stranded={tq.IsStranded} routeLeft={tq.Route.Count} hop={tq.HopProgress:0.00} manual={tq.ManualTarget} fac={(tq.Facility.HasValue ? tq.Facility.Value.Tile : -1)} reserve={tq.ReserveFraction:0.00} trip={tq.TripCharge:0.00} t={sim.TimeHours:0}");
                     if (travelHours[tq.Id] >= 204.0 && travelHours[tq.Id] <= 222.0 && stuckNotes.Count < 12) stuckNotes.Add($"TRACE R{tq.Id} t={sim.TimeHours:0} tile={tq.Tile} next={tq.NextTile} hop={tq.HopProgress:0.000} hopHours={(tq.NextTile.HasValue ? sim.Routes.HopHoursAt(tq.NextTile.Value) : 0.0):0.0} wh={tq.Battery.UsableWh:0} act={tq.Activity} task={(tq.Task.HasValue ? tq.Task.Value.Kind.ToString() : "none")} manual={tq.ManualTarget} paused={tq.StormHold} sheltered={tq.Sheltered} body={tq.BodyTempC:0} lastW={tq.LastChargeW:0}");
@@ -320,6 +327,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             if (stuckNotes.Count > 0) summary += " " + string.Join(" || ", stuckNotes.Take(200));
             summary += " Ore ledger (crushing kWh | mined kg | left at the mine tile | at base): " + string.Join("; ", sim.ComminutionWhByOre.OrderByDescending(kv => kv.Value).Take(5).Select(kv => $"{kv.Key.Material}@{kv.Key.Tile} {kv.Value / 1000.0:0} | {sim.MinedByOreTile.GetValueOrDefault(kv.Key):0} | {sim.KgAt(kv.Key.Tile, kv.Key.Material):0} | {sim.KgAt(home, kv.Key.Material):0}")) + ".";
             if (target.TryGetValue(Material.Copper, out int cuTile) && cuTile > 0) summary += $" Copper tile {cuTile}: payload per trip {sim.FeasiblePayloadKg(cuTile, home, PlanetSimulation.BasePayloadKg):0} kg, mined {sim.Deposits.MinedKg(cuTile, Material.Copper) / days:0.0} kg a day on average, {sim.HaulTotals.KgMoved / 1000.0:0} t hauled in all, {sim.HaulTotals.Wh / 1e6:0.0} MWh spent hauling.";
+            if (accN > 0) summary += $" GRID SPLIT (MW): served colony {accServed / accN / 1e6:0.0} of which baseline {accBase / accN / 1e6:0.0}; dock/critical {accDock / accN / 1e6:0.00}; priority {accPri / accN / 1e6:0.00}; top-up {accTop / accN / 1e6:0.00}; battery charge {accChg / accN / 1e6:0.0}."
+                + $" DEMAND TABLE (last 30 days, means, MW): generation {accGen / accN / 1e6:0.0}, curtailed {accCurt / accN / 1e6:0.0}, colony demand {accDemand / accN / 1e6:0.0} (baseline {sim.BaseDemandW / 1e6:0.00} now; target {sim.DemandTargetW / 1e6:0.0}), battery charging {accBattChg / accN / 1e6:0.0}, robot charging {accRobot / accN / 1e6:0.00}, workshop+refinery+crushing {accShop / accN / 1e6:0.00}, counted as used by the milestone {accKard / accN / 1e6:0.0}; battery at dawn {(dawnSoc.Count > 0 ? dawnSoc.Average() * 100.0 : double.NaN):0} % of {sim.BatteryCapacityWh / 1e6:0} MWh.";
             if (outpostNotes.Count > 0) summary += " Outpost candidates tried: " + string.Join(" | ", outpostNotes.Take(4)) + ".";
             var blockers = sim.Workforce.Tasks.Open.Where(q => q.State == TaskState.AssistanceNeeded || q.State == TaskState.Blocked).Take(4).Select(q => $"{q.Task.Kind}@{q.Task.Tile}: {q.Reason}");
             var deaths = sim.OperationsLog.Where(o => o.Quantity == "Robot destroyed").Take(2).Select(o => o.Text);
