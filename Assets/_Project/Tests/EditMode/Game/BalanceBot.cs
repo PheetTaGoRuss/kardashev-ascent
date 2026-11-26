@@ -162,7 +162,7 @@ namespace KardashevAscent.Simulation.Tests.Game
                     double enough = m == Material.Rock ? double.MaxValue : m == Material.Iron ? 20_000.0 : 1_500.0;
                     bool wanted = sim.Materials[m] < enough;
                     if (!wanted && sim.IsMiningOrdered(tile, m)) sim.CancelMining(tile, m);
-                    else if (wanted && sim.WorkReachProblem(tile) == null && !sim.IsMiningOrdered(tile, m)) sim.OrderMining(tile, m);
+                    else if (wanted && sim.WorkReachProblem(tile) == null && !sim.IsMiningOrdered(tile, m) && sim.MiningWarning(tile, m) == null) sim.OrderMining(tile, m);   // the bot never orders ore it cannot haul home
                 }
 
                 // forward chargers where the task list says "too far": a charger two tiles toward the ore from the nearest charger (the game's own advice)
@@ -170,13 +170,15 @@ namespace KardashevAscent.Simulation.Tests.Game
                 {
                     int tile = target[m];
                     var rec = sim.Workforce.Tasks.Open.FirstOrDefault(q => q.Task.Kind == TaskKind.Mine && q.Task.Tile == tile && q.Task.Slot == (int)m);
-                    bool stuck = rec != null && (rec.Reason.StartsWith("too far") || (hour > 24 * 10 && sim.Deposits.MinedKg(tile, m) < 1.0));   // too far, or ordered for days and nothing mined
+                    bool stuck = (rec != null && (rec.Reason.StartsWith("too far") || (hour > 24 * 10 && sim.Deposits.MinedKg(tile, m) < 1.0))) || (!sim.IsMiningOrdered(tile, m) && tile > 0 && sim.MiningWarning(tile, m) != null);   // no haul route home: extend the charger chain toward the ore   // too far, or ordered for days and nothing mined
                     if (!stuck || sim.ConstructionQueueCount > 6) continue;
                     var seeds = new List<int> { home }; seeds.AddRange(chargerTiles);
                     int from = seeds.OrderBy(t => Hops(sphere, t, tile)).First();
                     // a leapfrog outpost: panels, a charger and a battery on a tile up to three tiles toward the ore; the game decides whether a robot may go one way
                     var candidates = land.Where(t => Hops(sphere, from, t) <= 3 && !chargerTiles.Contains(t) && t != home && !sim.GetTile(t).IsWater && sim.IsOpenGround(t) && Hops(sphere, t, tile) < Hops(sphere, from, tile)).OrderBy(t => Hops(sphere, t, tile)).ThenBy(t => t).Take(14).ToList();
-                    bool busy = chargerTiles.Any(ct => Enumerable.Range(0, sim.SlotCount(ct)).Any(sl => sim.GetBuilding(ct, sl) != BuildingType.None && sim.IsUnderConstruction(ct, sl)));   // one outpost at a time
+                    // one outpost at a time, two when copper is the blocker (the copper mine is still out of reach): leapfrog on both sides of the route toward the ore
+                    int building = chargerTiles.Count(ct => Enumerable.Range(0, sim.SlotCount(ct)).Any(sl => sim.GetBuilding(ct, sl) != BuildingType.None && sim.IsUnderConstruction(ct, sl)));
+                    bool busy = building >= (m == Material.Copper && sim.Materials[Material.Copper] < 200.0 ? 2 : 1);
                     foreach (int step in busy || hour % 24 != 0 ? new List<int>() : candidates)
                     {
                         // order the outpost (sites, wiring, kit hauls); the game says whether the builder may go one way; if not, take the order back and try a nearer tile

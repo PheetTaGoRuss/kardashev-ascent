@@ -569,6 +569,8 @@ namespace KardashevAscent.Simulation.Game
         double MiningWorkHours { get; }
         /// <summary>Why mining here would waste robot hours (no store for the ore on this tile), or null.</summary>
         string MiningBlocker(int tileId, Resources.Material material);
+        /// <summary>A warning for a mine order whose ore cannot be hauled home, or null.</summary>
+        string MiningWarning(int tileId, Resources.Material material);
         /// <summary>The kind of store a material needs on a mine tile.</summary>
         BuildingType StoreFor(Resources.Material material);
         /// <summary>Deposits that were mined and are used up now (B3): where the mine stopped.</summary>

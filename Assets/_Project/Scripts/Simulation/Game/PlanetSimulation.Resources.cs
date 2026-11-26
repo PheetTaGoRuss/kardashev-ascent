@@ -86,6 +86,8 @@ namespace KardashevAscent.Simulation.Game
                 || MiningBlocker(tileId, material) != null)
                 return false;
             orders.AddMining(tileId, material);
+            string warn = MiningWarning(tileId, material);
+            if (warn != null) Log($"Tile {tileId}", "Mining warning", 0.0, "", $"T{tileId}", $"{warn} The robots will fill the pile and the energy of crushing is spent; hauls cannot bring it home until a charger chain reaches the tile.");
             Settle(null);
             return true;
         }
