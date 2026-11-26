@@ -75,7 +75,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         public void ViridiaShort()
         {
             double au = SolarConstants.AstronomicalUnit, lum = SolarConstants.SolarLuminosity;
-            Assert.Fail("\n" + Run("Viridia", new PlanetSolarParams(lum, au, 0.0167, 23.44 * Math.PI / 180.0, 282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0), 250, false));
+            Assert.Fail("\n" + Run("Viridia", new PlanetSolarParams(lum, au, 0.0167, 23.44 * Math.PI / 180.0, 282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0), 400, false));
         }
 
         [Test, Explicit("Balance tool: the Mars-like colony's timeline")]
@@ -105,7 +105,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             int exhausted = 0; var exhaustedWhat = new List<string>();
             sim.DepositExhausted += (tile, m) => { exhausted++; exhaustedWhat.Add($"{m}@d{(int)(sim.TimeHours / 24)}"); };
             var outpostNotes = new List<string>();
-            var travelHours = new Dictionary<int, double>(); double longestTravel = 0.0;
+            var stuckNotes = new List<string>(); var travelHours = new Dictionary<int, double>(); double longestTravel = 0.0;
             double generatedWh = 0.0; var lostNotes = new List<string>();
             int firstShortDay = -1; int milestone2Day = -1; int milestone1Day = -1;
             int home = sim.BaseTileId;
@@ -141,7 +141,10 @@ namespace KardashevAscent.Simulation.Tests.Game
                 if (sim.Workforce.Robots.Count < robotsBefore)
                     foreach (var id in snap.Keys.Where(k => !sim.Workforce.Robots.Any(q => q.Id == k))) lostNotes.Add(snap[id]);
                 generatedWh += sim.GenerationW * 3.0;
-                foreach (var tq in sim.Workforce.Robots) { travelHours[tq.Id] = tq.IsTravelling ? (travelHours.TryGetValue(tq.Id, out double th) ? th : 0.0) + 3.0 : 0.0; longestTravel = Math.Max(longestTravel, travelHours[tq.Id]); if (travelHours[tq.Id] == 33.0) lostNotes.Add($"LONGTRAVEL R{tq.Id} task={(tq.Task.HasValue ? tq.Task.Value.Kind + "@" + tq.Task.Value.Tile : "none")} tile={tq.Tile} act={tq.Activity} soc={tq.Battery.StateOfCharge:0.00} manual={tq.ManualTarget} fac={(tq.Facility.HasValue ? tq.Facility.Value.Tile : -1)} t={sim.TimeHours:0}"); }
+                foreach (var tq in sim.Workforce.Robots) { travelHours[tq.Id] = tq.IsTravelling ? (travelHours.TryGetValue(tq.Id, out double th) ? th : 0.0) + 3.0 : 0.0; longestTravel = Math.Max(longestTravel, travelHours[tq.Id]); if (travelHours[tq.Id] == 192.0 && Workforce.DebugWatch < 0) { Workforce.DebugWatch = tq.Id; Workforce.DebugTrace = e => { if (stuckNotes.Count < 40) stuckNotes.Add("EV t=" + sim.TimeHours.ToString("0.0") + " " + e); }; }
+                    if (travelHours[tq.Id] == 201.0) stuckNotes.Add($"STUCK R{tq.Id} task={(tq.Task.HasValue ? tq.Task.Value.Kind + "@" + tq.Task.Value.Tile : "none")} tile={tq.Tile} act={tq.Activity} soc={tq.Battery.StateOfCharge:0.00} wh={tq.Battery.UsableWh:0} shut={tq.IsShutDown} stranded={tq.IsStranded} routeLeft={tq.Route.Count} hop={tq.HopProgress:0.00} manual={tq.ManualTarget} fac={(tq.Facility.HasValue ? tq.Facility.Value.Tile : -1)} reserve={tq.ReserveFraction:0.00} trip={tq.TripCharge:0.00} t={sim.TimeHours:0}");
+                    if (travelHours[tq.Id] >= 204.0 && travelHours[tq.Id] <= 222.0 && stuckNotes.Count < 12) stuckNotes.Add($"TRACE R{tq.Id} t={sim.TimeHours:0} tile={tq.Tile} next={tq.NextTile} hop={tq.HopProgress:0.000} hopHours={(tq.NextTile.HasValue ? sim.Routes.HopHoursAt(tq.NextTile.Value) : 0.0):0.0} wh={tq.Battery.UsableWh:0} act={tq.Activity} task={(tq.Task.HasValue ? tq.Task.Value.Kind.ToString() : "none")} manual={tq.ManualTarget} paused={tq.StormHold} sheltered={tq.Sheltered} body={tq.BodyTempC:0} lastW={tq.LastChargeW:0}");
+                    if (travelHours[tq.Id] == 33.0) lostNotes.Add($"LONGTRAVEL R{tq.Id} task={(tq.Task.HasValue ? tq.Task.Value.Kind + "@" + tq.Task.Value.Tile : "none")} tile={tq.Tile} act={tq.Activity} soc={tq.Battery.StateOfCharge:0.00} manual={tq.ManualTarget} fac={(tq.Facility.HasValue ? tq.Facility.Value.Tile : -1)} t={sim.TimeHours:0}"); }
                 if (milestone1Day < 0 && sim.MilestonesReached >= 1) milestone1Day = hour / 24;
                 if (milestone2Day < 0 && sim.MilestonesReached >= 2) milestone2Day = hour / 24;
                 if (firstShortDay < 0 && milestone2Day < 0 && hour > 24 * 20 && (sim.Materials[Material.Iron] < 1.0 || sim.Materials[Material.Rock] < 1.0)) firstShortDay = hour / 24;
@@ -281,6 +284,7 @@ namespace KardashevAscent.Simulation.Tests.Game
                 summary += " Build tasks: " + string.Join(" | ", sim.Workforce.Tasks.Open.Where(q => q.Task.Kind == TaskKind.Build).Take(4).Select(q => $"@{q.Task.Tile} {q.State} {q.Reason}")) + ". Hauls: " + string.Join(" | ", sim.HaulOrders().Take(4).Select(h => $"{h.Material} {h.Kg:0} {h.From}>{h.To} {(sim.HaulBlockedReason(h.Id) ?? "ok")}")) + ". Stock at 472: Cu " + sim.KgAt(472, Material.Copper).ToString("0") + " Fe " + sim.KgAt(472, Material.Iron).ToString("0") + ".";
                 summary += $" Panels built {panelCount}, powered tiles {powered}, sites waiting: {(stuck.Count == 0 ? "none" : string.Join(", ", stuck.Take(6)))}.";
             }
+            if (stuckNotes.Count > 0) summary += " " + string.Join(" || ", stuckNotes.Take(45));
             if (outpostNotes.Count > 0) summary += " Outpost candidates tried: " + string.Join(" | ", outpostNotes.Take(4)) + ".";
             var blockers = sim.Workforce.Tasks.Open.Where(q => q.State == TaskState.AssistanceNeeded || q.State == TaskState.Blocked).Take(4).Select(q => $"{q.Task.Kind}@{q.Task.Tile}: {q.Reason}");
             var deaths = sim.OperationsLog.Where(o => o.Quantity == "Robot destroyed").Take(2).Select(o => o.Text);

@@ -198,6 +198,10 @@ namespace KardashevAscent.Simulation.Robots
         }
 
         /// <summary>Send a robot to a tile (hybrid movement): it drops its task and drives there, then works from there.</summary>
+        /// <summary>Debugging: when set, every order that sets or clears a watched robot's target or route reports here (tests only).</summary>
+        public static Action<string> DebugTrace; public static int DebugWatch = -1;
+        internal static void Trace(Robot r, string what) { if (DebugTrace != null && r.Id == DebugWatch) DebugTrace($"R{r.Id} tile={r.Tile} route={r.Route.Count} manual={r.ManualTarget} act={r.Activity} {what} | " + string.Join(" < ", System.Linq.Enumerable.Select(System.Linq.Enumerable.Take(new System.Diagnostics.StackTrace(2, false).GetFrames(), 4), f => f.GetMethod().Name))); }
+
         public bool SendTo(int robotId, int tile)
         {
             Robot r = GetRobot(robotId);
@@ -218,6 +222,7 @@ namespace KardashevAscent.Simulation.Robots
             r.Task = null;
             r.OnTemporaryTask = false;
             r.ManualTarget = tile;
+            Trace(r, $"SendTo {tile}");
             return true;
         }
 
@@ -234,6 +239,7 @@ namespace KardashevAscent.Simulation.Robots
             }
             if (r.Destination == tile)
                 return;
+            Trace(r, $"Head {tile}");
             List<int> route = Movement.RoutesFor(r).Route(r.Tile, tile);
             r.Route.Clear();
             r.HopProgress = 0.0;
