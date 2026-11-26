@@ -95,12 +95,49 @@ namespace KardashevAscent.Simulation.Game
             return tiles;
         }
 
-        /// <summary>The most cargo one robot can take from one tile to another through the stops, kg: the full load if it fits, else the largest of 3/4, 1/2 or 1/4 that does, else 0.</summary>
+        /// <summary>The smallest load worth sending, kg (game rule, TBD, decided 2026-11-26): below this a trip is not worth the handling.</summary>
+        public const double MinHaulLoadKg = 5.0;
+
+        readonly Dictionary<(int From, int To, long Full), (double Stamp, double Kg)> payloadCache = new Dictionary<(int, int, long), (double, double)>();
+
+        /// <summary>
+        /// The most cargo one robot can take from one tile to another through the stops, kg: the full load if it fits, else the largest load that does, down to
+        /// <see cref="MinHaulLoadKg"/>, else 0 (decided 2026-11-26: the old floor of a quarter load made far kits unhaulable; drive power scales with the carried mass, so a smaller
+        /// load always costs less energy, down to the empty robot, and more trips are the honest cost). 0 means even the minimum load does not fit: the empty round trip is out of reach.
+        /// </summary>
         public double FeasiblePayloadKg(int from, int to, double fullKg)
         {
-            foreach (double share in new[] { 1.0, 0.75, 0.5, 0.25 })
-                if (PlanHaul(from, to, fullKg * share).Feasible) return fullKg * share;
-            return 0.0;
+            var key = (from, to, (long)Math.Round(fullKg * 100.0));
+            if (payloadCache.TryGetValue(key, out var c) && TimeHours - c.Stamp < 1.0 && TimeHours >= c.Stamp) return c.Kg;
+            double result = SearchPayload(from, to, fullKg);
+            payloadCache[key] = (TimeHours, result);
+            return result;
+        }
+
+        double SearchPayload(int from, int to, double fullKg)
+        {
+            if (fullKg <= 0.0) return 0.0;
+            if (PlanHaul(from, to, fullKg).Feasible) return fullKg;
+            double bad = fullKg;
+            double good = -1.0;
+            while (bad / 2.0 >= MinHaulLoadKg)
+            {
+                double x = bad / 2.0;
+                if (PlanHaul(from, to, x).Feasible) { good = x; break; }
+                bad = x;
+            }
+            if (good < 0.0)
+            {
+                double min = Math.Min(MinHaulLoadKg, fullKg);
+                if (!PlanHaul(from, to, min).Feasible) return 0.0;
+                good = min;
+            }
+            for (int k = 0; k < 8; k++)   // bisect between the load that fits and the one that does not (a heavier load never needs less energy)
+            {
+                double mid = 0.5 * (good + bad);
+                if (PlanHaul(from, to, mid).Feasible) good = mid; else bad = mid;
+            }
+            return good;
         }
 
         /// <summary>Why a haul can or cannot be done: a small structured reason the interface turns into a why? chain (UI stage 5), not text to parse.</summary>

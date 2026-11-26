@@ -110,5 +110,27 @@ namespace KardashevAscent.Simulation.Tests.Game
             TestContext.WriteLine("mined " + sim.Deposits.MinedKg(tile, li) + " room " + sim.RoomAt(tile, li)); foreach (var tq in sim.Workforce.Tasks.Open) TestContext.WriteLine($"{tq.Task.Kind}@{tq.Task.Tile} {tq.State} {tq.Reason}"); foreach (var rb in sim.Workforce.Robots) TestContext.WriteLine($"R{rb.Id} tile {rb.Tile} act {rb.Activity} soc {rb.Battery.StateOfCharge:0.00} trav {rb.IsTravelling}");
             Assert.Greater(sim.Deposits.MinedKg(tile, li), 0.0, "with the store standing the ore is mined");
         }
+
+        [Test]
+        public void ALoadThatDoesNotFit_IsSplitToTheLargestLoadThatDoes_DownToTheMinimum_AndMoreTripsAreTheCost()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { LogisticsEnabled = true, WeatherEnabled = false };
+            sim.Debug.FreeBuilding = true;
+            sim.PlaceChargingStation(sim.BaseTileId, 0); sim.PlacePanel(sim.BaseTileId, 1, 0.35, Math.PI); sim.PlaceBattery(sim.BaseTileId, 2); sim.WireAllBuildings();
+            sim.Tick(0.5);
+            int far = Enumerable.Range(0, sim.TileCount).Where(q => !sim.GetTile(q).IsWater && q != sim.BaseTileId && sim.IsOpenGround(q) && sim.Routes != null && sim.Routes.HoursBetween(sim.BaseTileId, q) > 12.0 && sim.Routes.HoursBetween(sim.BaseTileId, q) < 40.0).OrderBy(q => sim.Routes.HoursBetween(sim.BaseTileId, q)).First();
+            double full = PlanetSimulation.BasePayloadKg;
+            double load = sim.FeasiblePayloadKg(sim.BaseTileId, far, full);
+            TestContext.WriteLine($"tile {far}: full {full} kg -> {load:0.0} kg");
+            if (load >= full) Assert.Pass("the full load fits here");
+            Assert.AreEqual(load > 0.0, sim.PlanHaul(sim.BaseTileId, far, Math.Max(load, PlanetSimulation.MinHaulLoadKg)).Feasible, "a positive answer is a feasible plan");
+            if (load > 0.0)
+            {
+                Assert.GreaterOrEqual(load, PlanetSimulation.MinHaulLoadKg);
+                Assert.IsTrue(sim.PlanHaul(sim.BaseTileId, far, load).Feasible);
+                Assert.IsFalse(sim.PlanHaul(sim.BaseTileId, far, load * 1.2 + 1.0).Feasible, "a heavier load does not fit");
+                Assert.Less(load, 0.25 * full + 1e-6, "below the old quarter-load floor: loads that used to be refused now go in smaller pieces");
+            }
+        }
     }
 }

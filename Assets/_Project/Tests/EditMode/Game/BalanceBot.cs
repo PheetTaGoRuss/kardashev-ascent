@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using KardashevAscent.Simulation.Civilization;
 using KardashevAscent.Simulation.Game;
 using KardashevAscent.Simulation.Planet;
 using KardashevAscent.Simulation.Resources;
@@ -183,7 +184,7 @@ namespace KardashevAscent.Simulation.Tests.Game
                 }
 
                 // lithium is a sealed-store material: with logistics on, mined ore needs a sealed store on the mine tile ("No room for lithium on tile N: build a sealed store there")
-                if (target.TryGetValue(Material.Lithium, out int liT) && liT > 0 && sim.IsMiningOrdered(liT, Material.Lithium) && sim.KgAt(liT, Material.Lithium) < 1.0 && sim.Deposits.MinedKg(liT, Material.Lithium) < 1.0 && hour > 24 * 5
+                if (target.TryGetValue(Material.Lithium, out int liT) && liT > 0 && sim.MiningBlocker(liT, Material.Lithium) != null && hour > 24 * 5
                     && !Enumerable.Range(0, sim.SlotCount(liT)).Any(sl => sim.GetBuilding(liT, sl) == BuildingType.SealedStore))
                     for (int sl = 30; sl < 45; sl++) if (sim.PlaceStorage(BuildingType.SealedStore, liT, sl)) break;
                 // an outpost gets its charger once its panels are wired (the island has a source then)
@@ -261,7 +262,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             var deaths = sim.OperationsLog.Where(o => o.Quantity == "Robot destroyed").Take(2).Select(o => o.Text);
             if (lostNotes.Count > 0) summary += " LAST SEEN BEFORE LOSS: " + string.Join(" || ", lostNotes.Take(3)) + ".";
             if (deaths.Any()) summary += " Deaths: " + string.Join(" | ", deaths) + ".";
-            summary += " First blockers: " + (blockers.Any() ? string.Join(" | ", blockers) : "none") + $". Copper in stock {sim.Materials[Material.Copper]:0} kg, robots {sim.Workforce.Robots.Count}, demand {sim.DemandW / 1e6:0.0} MW, generation {sim.GenerationW / 1e6:0.0} MW.";
+            summary += " First blockers: " + (blockers.Any() ? string.Join(" | ", blockers) : "none") + $". Final state: demand {sim.DemandW / 1e6:0.0} MW (target {sim.DemandTargetW / 1e6:0.0}), generation now {sim.GenerationW / 1e6:0.0} MW, day-average power {sim.DayAveragePowerW / 1e6:0.00} MW (M1 needs {Kardashev.PowerForMilestone(1, sim.TypeITargetW) / 1e6:0.0} MW, M2 {Kardashev.PowerForMilestone(2, sim.TypeITargetW) / 1e6:0.0} MW), battery {sim.BatteryCapacityWh / 1e6:0} MWh, robots {sim.Workforce.Robots.Count}, stock Fe {sim.Materials[Material.Iron] / 1e3:0.0} t Cu {sim.Materials[Material.Copper]:0} kg Li {sim.Materials[Material.Lithium]:0} kg rock {sim.Materials[Material.Rock] / 1e3:0} t, construction queue {sim.ConstructionQueueCount}, shortfall {string.Join(", ", Materials.All.Where(m => sim.ConstructionShortfall[m] > 0.01).Select(m => m + " " + sim.ConstructionShortfall[m].ToString("0")))}.";
             return (full ? log + "\n" : "") + summary;
         }
 
