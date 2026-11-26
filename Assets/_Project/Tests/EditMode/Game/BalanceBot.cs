@@ -163,7 +163,7 @@ namespace KardashevAscent.Simulation.Tests.Game
                     }
                     // a player stops mining what the stock already covers, so the robots go where the shortage is
                     double enough = m == Material.Rock ? double.MaxValue : m == Material.Iron ? 20_000.0 : 1_500.0;
-                    bool wanted = sim.Materials[m] < enough;
+                    bool wanted = sim.Materials[m] < enough && (tile <= 0 || tile == home || sim.KgAt(tile, m) < 2000.0);   // stop mining what is piling up at the mine faster than hauls bring it home
                     if (!wanted && sim.IsMiningOrdered(tile, m)) sim.CancelMining(tile, m);
                     else if (wanted && sim.WorkReachProblem(tile) == null && !sim.IsMiningOrdered(tile, m) && sim.MiningWarning(tile, m) == null) sim.OrderMining(tile, m);   // the bot never orders ore it cannot haul home
                 }
@@ -285,6 +285,7 @@ namespace KardashevAscent.Simulation.Tests.Game
                 summary += $" Panels built {panelCount}, powered tiles {powered}, sites waiting: {(stuck.Count == 0 ? "none" : string.Join(", ", stuck.Take(6)))}.";
             }
             if (stuckNotes.Count > 0) summary += " " + string.Join(" || ", stuckNotes.Take(45));
+            summary += " Ore ledger (crushing kWh | mined kg | left at the mine tile | at base): " + string.Join("; ", sim.ComminutionWhByOre.OrderByDescending(kv => kv.Value).Take(5).Select(kv => $"{kv.Key.Material}@{kv.Key.Tile} {kv.Value / 1000.0:0} | {sim.MinedByOreTile.GetValueOrDefault(kv.Key):0} | {sim.KgAt(kv.Key.Tile, kv.Key.Material):0} | {sim.KgAt(home, kv.Key.Material):0}")) + ".";
             if (outpostNotes.Count > 0) summary += " Outpost candidates tried: " + string.Join(" | ", outpostNotes.Take(4)) + ".";
             var blockers = sim.Workforce.Tasks.Open.Where(q => q.State == TaskState.AssistanceNeeded || q.State == TaskState.Blocked).Take(4).Select(q => $"{q.Task.Kind}@{q.Task.Tile}: {q.Reason}");
             var deaths = sim.OperationsLog.Where(o => o.Quantity == "Robot destroyed").Take(2).Select(o => o.Text);

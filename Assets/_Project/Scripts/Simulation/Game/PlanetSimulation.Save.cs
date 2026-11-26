@@ -359,7 +359,7 @@ namespace KardashevAscent.Simulation.Game
             // Before version 26 the colony built from parts; it gets the lander's cargo of materials instead (game rule).
             if (state.Version < 26)
                 foreach (var (m, kg) in BuildCosts.LanderCargo.Items())
-                    Materials.Add(m, kg);
+                    if (m != Material.Aluminium) Materials.Add(m, kg);   // the aluminium of 2026-11-26 is not granted to old saves
             if (state.SurveyOrders != null)
                 foreach (int tile in state.SurveyOrders)
                     if (tile >= 0 && tile < TileCount && !Deposits.IsSurveyed(tile) && !orders.HasSurvey(tile))

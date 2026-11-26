@@ -170,10 +170,13 @@ namespace KardashevAscent.Simulation.Resources
 
         /// <summary>
         /// What the lander brings: about one solar panel, battery yard, charging station, Workshop and Research Station, with some to spare
-        /// (game rule, TBD).
+        /// (game rule, TBD). Decided 2026-11-26 ([rule] TBD): 100 kg of aluminium too. Aluminium is the usual spacecraft structure and wiring metal, and with it the existing stand-in
+        /// (0.494 kg of aluminium per kg of copper, StandIns.AluminiumPerCopperKg) works from day 0 on every planet: refining aluminium needs plants that cost 75 kg of copper, more than
+        /// the copper they would save (found by the Mars bot). This follows the director rule of 2026-11-15, "a colony must be able to start on every planet". Old saves keep their stock:
+        /// nothing is granted when one is loaded.
         /// </summary>
         public static readonly MaterialBill LanderCargo = new MaterialBill()
-            .Add(Material.Rock, 2500.0).Add(Material.Iron, 1500.0).Add(Material.Copper, 250.0).Add(Material.Lithium, 25.0);
+            .Add(Material.Rock, 2500.0).Add(Material.Iron, 1500.0).Add(Material.Copper, 250.0).Add(Material.Lithium, 25.0).Add(Material.Aluminium, 100.0);
 
         // ---- Before save version 26: buildings cost "build parts" in Wh ----
 

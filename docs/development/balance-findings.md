@@ -311,3 +311,17 @@ Fixed on the way (with tests): a haul planned in a warm hour that no longer fitt
 Viridia, five game years: milestone 1 on day 60, then 37 MW day-average power from about day 250 to day 1 826 (504 panels, 12 powered tiles, battery 402 MWh); milestone 2 needs 100 MW. The limit is copper: stock 0 kg, the copper mine (tile 496) is out of reach again, so 19 sites wait. The 112 kg per tile of cable is not the limit; copper income is.
 
 Mars-like, two years: no milestone 1 (0.59 MW day-average against 4.3 MW). Copper 135 kg at landing is gone by day 30 (home charger, first panels, outposts); the second outpost (tile 485) is 16 kg of copper short, the copper tile (496) stays out of reach, and 20 t of lithium was mined into the sealed store at tile 484 with no haul home (crushing took 32 % of generation for nothing).
+
+## Stuck robots, lander aluminium, the ore ledger (2026-11-26)
+
+Two stuck-robot bugs found by the five-year bot, both fixed with tests: (1) a rescue helper was sent to the shelter every step by the rescue code and called off to charge by the upkeep every 4 h (the charger gave it nothing), so the order never ended: orders now end after 72 h with a back-off; (2) a robot with a fraction of a watt-hour (or none) set out for the workshop or sat on the road to a charger and was not counted as stranded (the test was an exactly empty battery): the stranded test is now 0.2 % of capacity, and a robot goes for maintenance only if its battery can drive there.
+
+The lander now brings 100 kg of aluminium ([rule] TBD; old saves are not granted any), so the aluminium stand-in works from day 0 on every planet.
+
+| two game years | before | after |
+|---|---|---|
+| Viridia milestone 1 | day 92 | day 82 |
+| Mars-like milestone 1 | never | day 63 (day-average 16.0 MW at the end; milestone 2 needs 43.1 MW) |
+| Mars-like crushing energy | 7 164 MWh (26 % of generation) | 45 MWh (0.0 %) |
+
+Where the Mars crushing went (ledger, before the bot rule): lithium at tile 484, 2.72 GWh for 21.7 t mined, of which 20 t sat in the sealed store at the mine and only 1.5 t reached the base (hauls from 484 carry little); copper at tile 496, 17.8 MWh for 2.9 t. So the waste was lithium mined into a full store faster than hauls could bring it home; the bot now stops mining an ore whose pile at the mine tile passes 2 t.

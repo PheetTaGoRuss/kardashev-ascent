@@ -73,6 +73,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             var sim = Create();
             int t = sim.BaseTileId;
             sim.Materials.Take(Material.Copper, sim.Materials[Material.Copper]);
+            sim.Materials.Take(Material.Aluminium, sim.Materials[Material.Aluminium]);   // the lander now brings some (2026-11-26); these tests are about refined aluminium
             double al = sim.BuildBill(BuildingType.Relay)[Material.Copper] * StandIns.AluminiumPerCopperKg;
             sim.Materials.Add(Material.Aluminium, al);
             MaterialBill bill = sim.BillToBuild(BuildingType.Relay);
@@ -100,6 +101,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             var sim = Create();
             int t = sim.BaseTileId;
             sim.Materials.Take(Material.Copper, sim.Materials[Material.Copper]);
+            sim.Materials.Take(Material.Aluminium, sim.Materials[Material.Aluminium]);   // the lander now brings some (2026-11-26); these tests are about refined aluminium
             Assert.IsTrue(sim.PlaceRelay(t, 0));
             Assert.AreEqual(StandIn.None, sim.StandInsAt(t, 0));
             Assert.IsTrue(sim.IsUnderConstruction(t, 0));
@@ -114,6 +116,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             var wet = Create();
             double cu = wet.Materials[Material.Copper];
             wet.Materials.Take(Material.Copper, cu);
+            wet.Materials.Take(Material.Aluminium, wet.Materials[Material.Aluminium]);
             Assert.IsTrue(wet.PlaceRelay(t, 0));
             wet.Materials.Add(Material.Copper, cu);
             for (int i = 0; i < 96 && wet.IsUnderConstruction(t, 0); i++)

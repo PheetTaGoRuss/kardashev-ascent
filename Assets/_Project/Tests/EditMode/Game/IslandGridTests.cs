@@ -202,5 +202,34 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.AreEqual(0, list.Count, "the order ends after its maximum: no helper is re-sent for ever");
             Assert.IsFalse(h.ManualTarget.HasValue && h.IsTravelling && sim.TimeHours > PlanetSimulation.RescueMaxHours + 20, "the helper is released");
         }
+
+        [Test]
+        public void ARobotWithAFractionOfAWattHourLeft_FarFromACharger_IsStranded_SoARescueCanBeAsked()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { WeatherEnabled = false };
+            sim.Debug.FreeBuilding = true;
+            sim.PlaceChargingStation(sim.BaseTileId, 0); sim.PlacePanel(sim.BaseTileId, 1, 0.35, Math.PI); sim.WireAllBuildings();
+            int far = Enumerable.Range(0, sim.TileCount).First(q => !sim.GetTile(q).IsWater && q != sim.BaseTileId && System.Array.IndexOf(Sphere.Neighbors[sim.BaseTileId], q) < 0);
+            var r = sim.Workforce.AddRobot(RobotKind.General, far);
+            r.Battery.Draw(r.Battery.UsableWh - 0.3, 1.0);
+            sim.Tick(0.1);
+            Assert.Less(r.Battery.UsableWh, 5.0);
+            Assert.IsTrue(r.IsStranded, "a robot with 0.3 Wh cannot drive: it is stranded, not 'travelling'");
+        }
+
+        [Test]
+        public void ARobotThatNeedsMaintenanceButHasNoChargeToDriveToTheWorkshop_ChargesFirst_AndDoesNotSitOnTheRoad()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { WeatherEnabled = false };
+            sim.Debug.FreeBuilding = true;
+            sim.PlaceChargingStation(sim.BaseTileId, 0); sim.PlacePanel(sim.BaseTileId, 1, 0.35, Math.PI); sim.PlaceWorkshop(sim.BaseTileId, 3); sim.WireAllBuildings();
+            sim.Tick(0.5);
+            int far = Enumerable.Range(0, sim.TileCount).First(q => !sim.GetTile(q).IsWater && q != sim.BaseTileId && System.Array.IndexOf(Sphere.Neighbors[sim.BaseTileId], q) < 0 && sim.Routes != null && sim.Routes.HoursBetween(sim.BaseTileId, q) < 12.0);
+            var r = sim.Workforce.AddRobot(RobotKind.General, far);
+            r.Condition = 0.1;   // wants maintenance
+            r.Battery.Draw(r.Battery.UsableWh - 3.0, 1.0);
+            for (int h = 0; h < 12; h++) sim.Tick(1.0);
+            Assert.IsFalse(r.Activity == RobotActivity.Maintenance && r.IsTravelling && r.Battery.UsableWh < 5.0, "it must not set out for the workshop on an empty battery");
+        }
     }
 }

@@ -51,7 +51,7 @@ namespace KardashevAscent.Simulation.Resources
         readonly bool[] evaporite;
 
         /// <summary>
-        /// Anorthosite: the ancient light crust of highlands (the Moon's highlands are almost all anorthosite; on Earth
+        /// Anorthosite (real support on Mars: anorthositic highland terrains, Carter and Poulet 2013, Nature Geoscience 6, 1008, "Ancient plutonic processes on Mars inferred from the detection of possible anorthositic terrains"): the ancient light crust of highlands (the Moon's highlands are almost all anorthosite; on Earth
         /// massif anorthosites stand in old mountain belts). Share of highland and mountain tiles, TBD.
         /// </summary>
         public const double AnorthositeShare = 0.5;

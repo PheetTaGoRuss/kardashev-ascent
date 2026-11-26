@@ -408,7 +408,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.IsTrue(b.IsUnderConstruction(t, 0));
             Assert.AreEqual(0.25, b.ConstructionProgress(t, 0), 1e-9);
             foreach (var (m, kg) in BuildCosts.LanderCargo.Items())
-                Assert.AreEqual(kg, b.Materials[m], 1e-9, "the old parts became the lander's cargo");
+                Assert.AreEqual(m == Material.Aluminium ? 0.0 : kg, b.Materials[m], 1e-9, "the old parts became the lander's cargo (not the aluminium added on 2026-11-26)");
         }
     }
 }

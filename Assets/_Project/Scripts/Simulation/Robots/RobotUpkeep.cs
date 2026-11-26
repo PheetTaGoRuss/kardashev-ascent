@@ -36,6 +36,9 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>Charging asked for elsewhere by robots above 20 %: served from spare power before build parts (D6).</summary>
         public double TopUpRequestW { get; private set; }
 
+        /// <summary>A robot holding less than this share of its capacity cannot drive and counts as stranded ([rule] TBD: 0.2 %, about 5 Wh).</summary>
+        public const double StrandedBelowShare = 0.002;
+
         /// <summary>Charging power robots took in the last <see cref="Apply"/>, W.</summary>
         public double ChargingW { get; private set; }
 
@@ -85,7 +88,8 @@ namespace KardashevAscent.Simulation.Robots
                 r.ExpectedColdFactor = expectedCold; r.ColdLockWh = 0.0;
                 r.ReserveFraction = movement != null && r.Battery.CapacityWh > 0.0 && !double.IsInfinity(toCharger)
                     ? ReserveSafety * (movement.EnergyWh(toCharger) / r.Attribute(RobotAttribute.EnergyEfficiency) * Logistics.HaulPhysics.LoadFactor(Logistics.HaulPhysics.DefaultRobotMassKg, CargoKgOf != null ? CargoKgOf(r) : 0.0) + ClimbReserveWh(movement, r) + r.HeaterW * toCharger) / Math.Max(1e-9, r.Battery.CapacityWh * expectedCold) : 0.0;   // a cold battery holds less: the state of charge is a share of what it can hold now   // the way back also runs the heater (Weather W8: robots were lost on Mars driving home on an empty battery)
-                r.IsStranded = movement != null && r.Battery.UsableWh <= 1e-6 && toCharger > 1e-9;
+                // stranded: too little left to drive at all (an exactly empty battery was the old test; a robot with a fraction of a watt-hour sat at "hop 0.995" for 1 200 days in the five-year bot run)
+                r.IsStranded = movement != null && r.Battery.UsableWh <= Math.Max(1e-6, StrandedBelowShare * r.Battery.CapacityWh) && (toCharger > 1e-9 || r.IsTravelling);
                 r.ChargerExists = movement == null ? HasChargingFacility(facilities) : movement.HasCharger;
             }
             var byKey = new Dictionary<(int, int), RobotFacility>();
@@ -127,6 +131,12 @@ namespace KardashevAscent.Simulation.Robots
                 if (r.NeedsMaintenance || r.Shutdown == ShutdownKind.Mechanical || r.Shutdown == ShutdownKind.CriticalDamage)
                 {
                     RobotFacility? shop = Free(r, facilities, used, true, movement);
+                    // it goes for maintenance only if its battery can drive there (a robot with nothing left sat at "hop 0.42" for 1 000 days in the five-year bot run): else it charges first
+                    if (shop.HasValue && movement != null && r.Tile != shop.Value.Tile)
+                    {
+                        double hoursThere = movement.RoutesFor(r).HoursBetween(r.Tile, shop.Value.Tile) / r.Attribute(RobotAttribute.Speed);
+                        if (double.IsInfinity(hoursThere) || movement.EnergyWh(hoursThere) / r.Attribute(RobotAttribute.EnergyEfficiency) > 0.8 * r.Battery.UsableWh) shop = null;
+                    }
                     if (shop.HasValue)
                     {
                         workforce.LeftTask(r, "went for maintenance");

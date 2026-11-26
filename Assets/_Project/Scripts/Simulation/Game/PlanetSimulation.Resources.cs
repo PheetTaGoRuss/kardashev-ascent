@@ -174,6 +174,7 @@ namespace KardashevAscent.Simulation.Game
                         double rockKgPerHour = RobotSpecs.MiningKgPerHour * eg / og;
                         workshopW += speed * rockKgPerHour * Comminution.KWhPerTonneRock(mat);   // kg/h x kWh/t = W
                         ComminutionWh += speed * rockKgPerHour * Comminution.KWhPerTonneRock(mat) * dt;
+                        ComminutionWhByOre[(mat, t.Tile)] = (ComminutionWhByOre.TryGetValue((mat, t.Tile), out double cw) ? cw : 0.0) + speed * rockKgPerHour * Comminution.KWhPerTonneRock(mat) * dt;
                     }
                 }
                 if (t.Kind != TaskKind.Survey && t.Kind != TaskKind.Mine && t.Kind != TaskKind.Measure && t.Kind != TaskKind.Experiment
@@ -275,6 +276,7 @@ namespace KardashevAscent.Simulation.Game
                 double mined = Deposits.Extract(order.Tile, order.Material, want);
                 StockAt(order.Tile).Add(order.Material, mined);
                 flows.Add(TimeHours, FlowStage.Mined, -1, order.Material, mined);
+                MinedByOreTile[(order.Material, order.Tile)] = (MinedByOreTile.TryGetValue((order.Material, order.Tile), out double mk) ? mk : 0.0) + mined;
                 // Rock moved = product / ore grade (kg per kg); a poorer ore moves more rock for the same product, which the robot hours already pay for (the yield per hour is the grade).
                 double oreGrade = Math.Max(1e-9, DepositMap.TypicalOreGrade(order.Material) * Deposits.EffectiveGrade(order.Tile, order.Material));
                 double moved = mined / Math.Min(1.0, oreGrade);
