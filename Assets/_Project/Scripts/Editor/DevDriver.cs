@@ -116,6 +116,44 @@ namespace KardashevAscent.EditorTools
                     ScreenCapture.CaptureScreenshot($"{ShotFolder}/{argument}.png");
                     Wait(0.5);
                     return true;
+                case "flybase":
+                {
+                    // flybase: point the OrbitCamera at the colony (reset view facing the base tile, instantly) and open the site view there.
+                    var orbit = UnityEngine.Object.FindFirstObjectByType<Presentation.CameraControl.OrbitCamera>();
+                    var sim = Runner()?.Simulation;
+                    if (orbit == null || sim == null) { Log("flybase: no camera or simulation"); return true; }
+                    orbit.ResetView(true);
+                    var picker = UnityEngine.Object.FindFirstObjectByType<Presentation.Planet.TilePicker>();
+                    if (picker != null) picker.Select(sim.BaseTileId);
+                    Log("flybase done");
+                    return true;
+                }
+                case "brownoutdemo":
+                {
+                    // brownoutdemo: drain the grid battery and overload the demand for two hours; logs what each load class got (the load order).
+                    var sim = Runner()?.Simulation as Simulation.Game.PlanetSimulation;
+                    if (sim == null) return true;
+                    sim.WeatherEnabled = false;
+                    sim.ForceBrownoutForTests();
+                    sim.Tick(1.0);
+                    sim.Tick(1.0);
+                    Log($"brownoutdemo: brownout={sim.IsBrownout}, demand {sim.DemandW / 1000.0:0} kW, generation {sim.GenerationW / 1000.0:0} kW, robot charging {sim.RobotChargingW / 1000.0:0.0} kW, baseline {sim.BaseDemandW / 1000.0:0} kW");
+                    return true;
+                }
+                case "outpostdemo":
+                {
+                    // outpostdemo: order a leapfrog outpost on the nearest open tile two tiles out; steps 60 h; logs the stages, the verdict and what stands.
+                    var sim = Runner()?.Simulation as Simulation.Game.PlanetSimulation;
+                    if (sim == null) return true;
+                    sim.WeatherEnabled = false;
+                    sim.DebugSurveyAll();
+                    int far = -1;
+                    foreach (int n in sim.Sphere.Neighbors[sim.BaseTileId]) foreach (int m2 in sim.Sphere.Neighbors[n]) if (far < 0 && m2 != sim.BaseTileId && System.Array.IndexOf(sim.Sphere.Neighbors[sim.BaseTileId], m2) < 0 && !sim.GetTile(m2).IsWater && sim.IsOpenGround(m2)) far = m2;
+                    string order = sim.OrderOutpost(far);
+                    for (int h = 0; h < 60; h++) sim.Tick(1.0);
+                    Log($"outpostdemo tile {far}: order={order ?? "ok"} | stages: {sim.OutpostStages(far)} | verdict: {sim.OutpostText(far)} | queue {sim.ConstructionQueueCount}");
+                    return true;
+                }
                 case "uirt":
                 {
                     // uirt on|off: render every UI Toolkit panel into an offscreen RenderTexture (works without editor focus); shotrt writes it out.

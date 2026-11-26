@@ -63,6 +63,13 @@ namespace KardashevAscent.Simulation.Tests.Game
             StringAssert.DoesNotContain("LAST SEEN BEFORE LOSS", mars);
         }
 
+        [Test, Explicit("Balance tool: 60 days of the Earth-like colony with the diagnostics")]
+        public void ViridiaShort()
+        {
+            double au = SolarConstants.AstronomicalUnit, lum = SolarConstants.SolarLuminosity;
+            Assert.Fail("\n" + Run("Viridia", new PlanetSolarParams(lum, au, 0.0167, 23.44 * Math.PI / 180.0, 282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0), 60, true));
+        }
+
         [Test, Explicit("Balance tool: the Mars-like colony's timeline")]
         public void MarsTimeline()
         {
@@ -132,7 +139,8 @@ namespace KardashevAscent.Simulation.Tests.Game
                 if (firstShortDay < 0 && milestone2Day < 0 && hour > 24 * 20 && (sim.Materials[Material.Iron] < 1.0 || sim.Materials[Material.Rock] < 1.0)) firstShortDay = hour / 24;
                 var inRange = land.Where(t => sim.WorkReachProblem(t) == null).ToList();
                 foreach (var ub in sim.UnwiredBuildings().ToList()) sim.PlaceBuildingWire(ub.Tile, ub.Slot);   // nothing is wired for the player (EN-22)
-                foreach (Material hm in new[] { Material.Iron, Material.Copper, Material.Lithium }) sim.SetStockTarget(home, hm, hm == Material.Iron ? 20_000.0 : 1_500.0);   // the game's advice: keep a stock at the base; hauls bring the ore
+                bool kitPending = chargerTiles.Any(ct => Enumerable.Range(0, sim.SlotCount(ct)).Any(sl => sim.GetBuilding(ct, sl) != BuildingType.None && sim.IsUnderConstruction(ct, sl)));
+                foreach (Material hm in new[] { Material.Iron, Material.Copper, Material.Lithium }) sim.SetStockTarget(home, hm, kitPending ? 0.0 : (hm == Material.Iron ? 20_000.0 : 1_500.0));   // the base keeps nothing back while an outpost kit is being hauled out   // the game's advice: keep a stock at the base; hauls bring the ore
 
                 // mining: base tile for rock and iron; the nearest tile with the ore for copper and lithium
                 foreach (Material m in Mined)
@@ -159,18 +167,17 @@ namespace KardashevAscent.Simulation.Tests.Game
                     var seeds = new List<int> { home }; seeds.AddRange(chargerTiles);
                     int from = seeds.OrderBy(t => Hops(sphere, t, tile)).First();
                     // a leapfrog outpost: panels, a charger and a battery on a tile up to three tiles toward the ore; the game decides whether a robot may go one way
-                    var candidates = land.Where(t => Hops(sphere, from, t) <= 3 && !chargerTiles.Contains(t) && t != home && !sim.GetTile(t).IsWater && sim.IsOpenGround(t) && Hops(sphere, t, tile) < Hops(sphere, from, tile)).OrderBy(t => Hops(sphere, t, tile)).ThenBy(t => t).Take(6).ToList();
+                    var candidates = land.Where(t => Hops(sphere, from, t) <= 3 && !chargerTiles.Contains(t) && t != home && !sim.GetTile(t).IsWater && sim.IsOpenGround(t) && Hops(sphere, t, tile) < Hops(sphere, from, tile)).OrderBy(t => Hops(sphere, t, tile)).ThenBy(t => t).Take(14).ToList();
                     bool busy = chargerTiles.Any(ct => Enumerable.Range(0, sim.SlotCount(ct)).Any(sl => sim.GetBuilding(ct, sl) != BuildingType.None && sim.IsUnderConstruction(ct, sl)));   // one outpost at a time
                     foreach (int step in busy || hour % 24 != 0 ? new List<int>() : candidates)
                     {
-                        // try the candidate: the sites go down, and the game says whether a robot may go one way; if not, take them back and try a nearer tile
-                        var placedSlots = new List<int>();
-                        int placed = 0;
-                        for (int sl = 0; sl < 12 && placed < 2; sl++) if (sim.PlacePanel(step, sl, 0.35, Math.PI)) { placed++; placedSlots.Add(sl); sim.PlaceBuildingWire(step, sl); }
-                        for (int sl = 12; sl < 20; sl++) if (sim.PlaceChargingStation(step, sl)) { placedSlots.Add(sl); sim.PlaceBuildingWire(step, sl); break; }
+                        // order the outpost (sites, wiring, kit hauls); the game says whether the builder may go one way; if not, take the order back and try a nearer tile
+                        string err = sim.OrderOutpost(step);
+                        if (err != null) { outpostNotes.Add($"tile {step}: {err}"); continue; }
                         string outpostVerdict = sim.OutpostTextAtFullCharge(step);
                         if (outpostVerdict.StartsWith("one-way")) { chargerTiles.Add(step); chargerHops++; break; }
-                        foreach (int sl in placedSlots) sim.OrderSalvage(step, sl);   // a site is simply cancelled (its materials come back)
+                        for (int sl = 0; sl < sim.SlotCount(step); sl++) if (sim.GetBuilding(step, sl) != BuildingType.None && sim.IsUnderConstruction(step, sl)) sim.OrderSalvage(step, sl);
+                        foreach (Material km in Materials.All) sim.SetStockTarget(step, km, 0.0);
                         outpostNotes.Add($"tile {step}: {outpostVerdict}");
                     }
                 }
@@ -218,6 +225,9 @@ namespace KardashevAscent.Simulation.Tests.Game
                     log.AppendLine($"LI tile={lt} minedKg={sim.Deposits.MinedKg(lt, Material.Lithium):0} pileKg={sim.KgAt(lt, Material.Lithium):0} baseKg={sim.KgAt(home, Material.Lithium):0} ordered={sim.IsMiningOrdered(lt, Material.Lithium)} hauls={string.Join(" | ", sim.HaulOrders().Select(h => h.Id + ":" + h.Material + " " + h.Kg.ToString("0") + " " + h.From + ">" + h.To + " " + (sim.HaulBlockedReason(h.Id) ?? "ok")))} targets={string.Join(",", sim.StockTargets().Select(q => q.Tile + ":" + q.Material + q.Kg))}");
                 }
                 if ((hour % (24 * 100) == 0) && full) log.AppendLine($"GROW d{hour / 24} target={sim.DemandTargetW:0} demand={sim.DemandW:0} gen={sim.GenerationW:0} battCap={sim.BatteryCapacityWh:0} brown={sim.IsBrownout} queue={sim.ConstructionQueueCount} robots={sim.Workforce.Robots.Count} saveForRobot={robotNote} cuComing={copperComing}");
+                if (hour == 24 * 50 && full)
+                    foreach (int ot in chargerTiles) log.AppendLine($"ROOM tile={ot} iron={sim.RoomAt(ot, Material.Iron):0} copper={sim.RoomAt(ot, Material.Copper):0} baseIron={sim.KgAt(home, Material.Iron):0} baseCu={sim.KgAt(home, Material.Copper):0} cost={sim.HaulCostText(home, ot, 100.0)} reach={sim.WorkReachProblem(ot)}");
+                    log.AppendLine("KIT targets=" + string.Join(",", sim.StockTargets().Select(q => q.Tile + ":" + q.Material + q.Kg.ToString("0"))) + " hauls=" + string.Join(" | ", sim.HaulOrders().Select(h => h.Id + ":" + h.Material + " " + h.Kg.ToString("0") + " " + h.From + ">" + h.To + " " + (sim.HaulBlockedReason(h.Id) ?? "ok"))));
                 if (hour == 24 * 50 && full)
                 {
                     var counts = new Dictionary<string, int>();

@@ -276,6 +276,10 @@ namespace KardashevAscent.Simulation.Game
         System.Collections.Generic.IReadOnlyList<Robots.WorkTask> OpenWork();
         /// <summary>For a build site that is a leapfrog outpost: whether a robot may go one way and why (empty for other tiles).</summary>
         string OutpostText(int tile);
+        /// <summary>Order a leapfrog outpost on a tile (panels, station and the kit hauls); null when ordered, else why not.</summary>
+        string OrderOutpost(int tile, int panels = 2);
+        /// <summary>Kit hauls delivered and the builder's departure, for the Why? chain.</summary>
+        string OutpostStages(int tile);
 
         /// <summary>Hand out work now (after changing workforce settings), instead of waiting for the next tick.</summary>
         void RefreshWork();
@@ -563,6 +567,10 @@ namespace KardashevAscent.Simulation.Game
         double RockMovedKg { get; }
         double TailingsKg { get; }
         double MiningWorkHours { get; }
+        /// <summary>Why mining here would waste robot hours (no store for the ore on this tile), or null.</summary>
+        string MiningBlocker(int tileId, Resources.Material material);
+        /// <summary>The kind of store a material needs on a mine tile.</summary>
+        BuildingType StoreFor(Resources.Material material);
         /// <summary>Deposits that were mined and are used up now (B3): where the mine stopped.</summary>
         System.Collections.Generic.IReadOnlyList<(int Tile, Resources.Material Material, double HeldKg)> ExhaustedDeposits();
         /// <summary>The best known deposits of a material that still hold some, richest first: tile and ore grade (a range until the assay).</summary>

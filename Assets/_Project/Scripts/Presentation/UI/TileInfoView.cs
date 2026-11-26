@@ -445,6 +445,18 @@ namespace KardashevAscent.Presentation.UI
             {
                 if (!map.IsKnown(tile, m) || map.GradeOf(tile, m) <= 0.0 || !sim.IsOpenGround(tile))
                     continue;
+                string noStore = sim.IsMiningOrdered(tile, m) ? null : sim.MiningBlocker(tile, m);
+                if (noStore != null)
+                {
+                    // a Why? chain: the game does not let robots mine what the tile cannot store
+                    Material blockedMaterial = m;
+                    AddGroundButton($"Mine {Materials.Name(m).ToLowerInvariant()}: {noStore} · build it here", false, () =>
+                    {
+                        for (int slot = 0; slot < sim.SlotCount(tile); slot++) if (sim.PlaceStorage(sim.StoreFor(blockedMaterial), tile, slot)) break;
+                        groundShape = null;
+                    });
+                    continue;
+                }
                 Material material = m;
                 bool on = sim.IsMiningOrdered(tile, m);
                 var rate = sim.MiningRateEstimate(tile, m);

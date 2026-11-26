@@ -82,7 +82,8 @@ namespace KardashevAscent.Simulation.Game
         public bool OrderMining(int tileId, Material material)
         {
             if (tileId < 0 || tileId >= TileCount || !Deposits.IsKnown(tileId, material) || Deposits.GradeOf(tileId, material) <= 0.0
-                || Deposits.IsExhausted(tileId, material) || orders.HasMining(tileId, material) || !IsOpenGround(tileId) || !CanPileOn(tileId, material))
+                || Deposits.IsExhausted(tileId, material) || orders.HasMining(tileId, material) || !IsOpenGround(tileId) || !CanPileOn(tileId, material)
+                || MiningBlocker(tileId, material) != null)
                 return false;
             orders.AddMining(tileId, material);
             Settle(null);

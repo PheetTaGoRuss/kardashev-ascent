@@ -92,20 +92,23 @@ namespace KardashevAscent.Simulation.Tests.Game
         }
 
         [Test]
-        public void LithiumMiningWithLogisticsNeedsASealedStore_TheReasonIsReported_NothingIsMinedWithoutOne()
+        public void MiningAnOreTheTileCannotStore_IsRefusedUpFront_WithTheReason_AndWorksOnceTheStoreStands()
         {
             var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { LogisticsEnabled = true, WeatherEnabled = false };
             sim.Debug.FreeBuilding = true;
+            var li = KardashevAscent.Simulation.Resources.Material.Lithium;
             int t = sim.BaseTileId;
-            for (int h = 0; h < 4; h++) { }
-            int li = Enumerable.Range(0, sim.TileCount).First(q => !sim.GetTile(q).IsWater && sim.Deposits.GradeOf(q, KardashevAscent.Simulation.Resources.Material.Lithium) > 0.0 && q != t);
-            sim.DebugSurveyAll();
-            sim.Workforce.AddRobot(RobotKind.General, li);
-            sim.OrderMining(li, KardashevAscent.Simulation.Resources.Material.Lithium);
-            for (int h = 0; h < 30; h++) sim.Tick(1.0);
-            Assert.AreEqual(0.0, sim.Deposits.MinedKg(li, KardashevAscent.Simulation.Resources.Material.Lithium), 1e-9, "no room: nothing is mined");
-            Assert.IsTrue(sim.IndustrialReports.Any(r => r.Message.Contains("sealed store")), "the reason is reported");
-            Assert.IsTrue(sim.PlaceStorage(BuildingType.SealedStore, li, 5), "the reported remedy can be built");
+            int tile = Enumerable.Range(0, sim.TileCount).First(q => !sim.GetTile(q).IsWater && sim.Deposits.GradeOf(q, li) > 0.0 && q != t && sim.IsOpenGround(q) && sim.Routes.HoursBetween(t, q) < 12.0);
+            sim.DebugSurveyAll(); sim.PlaceChargingStation(t, 0); sim.PlacePanel(t, 1, 0.35, Math.PI); sim.PlaceBattery(t, 2); sim.WireAllBuildings();
+            StringAssert.Contains("sealed store", sim.MiningBlocker(tile, li));
+            Assert.IsFalse(sim.OrderMining(tile, li), "no robot hours are spent on a tile that cannot store the ore");
+            Assert.AreEqual(KardashevAscent.Simulation.Game.BuildingType.SealedStore, sim.StoreFor(li));
+            Assert.IsTrue(sim.PlaceStorage(sim.StoreFor(li), tile, 5)); sim.PlaceChargingStation(tile, 6); sim.PlacePanel(tile, 7, 0.35, Math.PI);
+            Assert.IsNull(sim.MiningBlocker(tile, li));
+            Assert.IsTrue(sim.OrderMining(tile, li));
+            for (int h = 0; h < 800; h++) sim.Tick(1.0);
+            TestContext.WriteLine("mined " + sim.Deposits.MinedKg(tile, li) + " room " + sim.RoomAt(tile, li)); foreach (var tq in sim.Workforce.Tasks.Open) TestContext.WriteLine($"{tq.Task.Kind}@{tq.Task.Tile} {tq.State} {tq.Reason}"); foreach (var rb in sim.Workforce.Robots) TestContext.WriteLine($"R{rb.Id} tile {rb.Tile} act {rb.Activity} soc {rb.Battery.StateOfCharge:0.00} trav {rb.IsTravelling}");
+            Assert.Greater(sim.Deposits.MinedKg(tile, li), 0.0, "with the store standing the ore is mined");
         }
     }
 }

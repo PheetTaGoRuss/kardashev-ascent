@@ -98,6 +98,25 @@ namespace KardashevAscent.Simulation.Game
             return kg;
         }
 
+        /// <summary>The store a material needs on a mine tile (KI-49): a yard for bulk solids, a sealed store for liquids and hazardous solids, a gas tank for gas.</summary>
+        public BuildingType StoreFor(Material material)
+        {
+            StorageClass cls = MaterialCatalog.PropertiesOf(material).StorageClass;
+            return cls == StorageClass.PressurizedGas ? BuildingType.GasTank : cls == StorageClass.BulkSolid ? BuildingType.StorageYard : BuildingType.SealedStore;
+        }
+
+        /// <summary>
+        /// Why mining this material on this tile would waste the robots' hours: with logistics on, the ore lies in a pile on the mine tile and the tile has no room for it
+        /// (needs a sealed store, a yard or a tank there), or null. The lander tile uses the colony stock and is never blocked.
+        /// </summary>
+        public string MiningBlocker(int tileId, Material material)
+        {
+            if (!LogisticsEnabled || tileId == BaseTileId || RoomAt(tileId, material) > 1e-9) return null;
+            BuildingType store = StoreFor(material);
+            string what = store == BuildingType.GasTank ? "a gas tank" : store == BuildingType.StorageYard ? "a storage yard" : "a sealed store";
+            return $"needs {what} on tile {tileId}";
+        }
+
         /// <summary>Kg of a material a tile's depot has room for now.</summary>
         public double RoomAt(int tileId, Material material) =>
             !LogisticsEnabled ? double.PositiveInfinity : inventories.FreeFor(PlaceId.Depot(tileId), material);
