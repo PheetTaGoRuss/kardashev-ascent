@@ -212,6 +212,34 @@ namespace KardashevAscent.Simulation.Game
             return (wh, minC);
         }
 
+        /// <summary>
+        /// KI-46 before each later leg (2026-11-26): a robot carrying a haul that has just reached one of the haul's stops (a charger or shelter) before the drop needs the battery for the next leg
+        /// (to the next stop, or the drop and the way back to a charger) at its charge and body temperature now, 1.1 times the energy above the reserve. Returns the state of charge to charge to,
+        /// or 0 when this tile is not a stop of its haul or no stop is ahead.
+        /// </summary>
+        double LegChargeShareFor(Robot r)
+        {
+            HaulOrder o = null;
+            foreach (HaulOrder q in haulBook.Orders) if (q.Stage == 1 && q.RobotId == r.Id) { o = q; break; }
+            if (o == null || Routes == null || r.Tile == o.ToTile) return 0.0;
+            int idx = o.Stops.IndexOf(r.Tile);
+            if (idx < 0 && r.Tile != o.FromTile) return 0.0;
+            int next = idx >= 0 && idx + 1 < o.Stops.Count ? o.Stops[idx + 1] : o.ToTile;
+            var leg = HaulLegCost(r.Tile, next, o.Kg);
+            if (!leg.Reachable) return 0.0;
+            double wh = leg.TotalWh, minC = leg.MinBodyC;
+            if (next == o.ToTile)
+            {
+                double back = double.MaxValue;
+                foreach (int st in StagingStops()) { if (st == o.ToTile) { back = 0.0; break; } var bl = HaulLegCost(o.ToTile, st, 0.0); if (bl.Reachable && bl.TotalWh < back) { back = bl.TotalWh; minC = Math.Min(minC, bl.MinBodyC); } }
+                if (back < double.MaxValue) wh += back;
+            }
+            double cap = r.Battery.CapacityWh * RobotBattery.ColdCapacityFactor(minC);
+            if (cap <= 0.0) return 0.0;
+            double need = RobotSpecs.ReturnToChargeFraction + wh * Workforce.HaulDispatchMargin / cap;
+            return need > 1.0 ? 0.0 : need;   // a leg that can never be planned is not held here (the plan was refused at dispatch)
+        }
+
         /// <summary>The open haul tasks: a load at each source, and an unload at the target of each loaded haul.</summary>
         void AddHaulTasks(List<WorkTask> tasks)
         {

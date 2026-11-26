@@ -322,5 +322,35 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.LessOrEqual(orders.Count, 4, "at most the per-destination limit, not one per site");
             Assert.GreaterOrEqual(total, Math.Min(PlanetSimulation.BasePayloadKg, 0.9 * orders.Count * PlanetSimulation.BasePayloadKg) * 0.5, "loads are as big as the payload allows");
         }
+
+        static double LegShare(double airC, out int stopTile)
+        {
+            var planet = new PlanetSolarParams(SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Math.PI / 180.0, 282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, airC);
+            var sim = new PlanetSimulation(Sphere, Surface, planet) { LogisticsEnabled = true, WeatherEnabled = false, DiurnalTemperature = false };
+            sim.Debug.FreeBuilding = true;
+            sim.PlaceChargingStation(sim.BaseTileId, 0); sim.PlacePanel(sim.BaseTileId, 1, 0.35, Math.PI); sim.PlaceBattery(sim.BaseTileId, 2); sim.WireAllBuildings();
+            sim.Tick(0.5);
+            int far = Enumerable.Range(0, sim.TileCount).Where(q => !sim.GetTile(q).IsWater && q != sim.BaseTileId && sim.IsOpenGround(q) && sim.Routes.HoursBetween(sim.BaseTileId, q) > 8.0 && sim.Routes.HoursBetween(sim.BaseTileId, q) < 20.0).OrderBy(q => sim.Routes.HoursBetween(sim.BaseTileId, q)).First();
+            sim.PlaceChargingStation(far, 0); sim.PlacePanel(far, 1, 0.35, Math.PI); sim.WireAllBuildings();
+            sim.Debug.FreeBuilding = false;
+            var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+            var book = typeof(PlanetSimulation).GetField("haulBook", flags).GetValue(sim);
+            var add = book.GetType().GetMethod("Add");
+            var order = (KardashevAscent.Simulation.Logistics.HaulOrder)add.Invoke(book, new object[] { far, sim.BaseTileId, KardashevAscent.Simulation.Resources.Material.Rock, 300.0 });
+            var r = sim.Workforce.Robots[0];
+            order.Stage = 1; order.RobotId = r.Id; order.Stops = new System.Collections.Generic.List<int> { far };
+            r.Tile = far;
+            stopTile = far;
+            return (double)typeof(PlanetSimulation).GetMethod("LegChargeShareFor", flags).Invoke(sim, new object[] { r });
+        }
+
+        [Test]
+        public void BeforeEachLaterLeg_TheNextLegIsCheckedAtTheAirOfThatHour_ColderAirAsksForMoreCharge()
+        {
+            double mild = LegShare(15.0, out _), cold = LegShare(-60.0, out _);
+            TestContext.WriteLine($"charge asked for the next leg: mild {mild:0.00}, cold {cold:0.00}");
+            Assert.Greater(mild, 0.2, "a leg of several hours needs more than the reserve");
+            Assert.GreaterOrEqual(cold, mild, "the same leg in colder air asks for at least as much (the heater and the cold battery)");
+        }
     }
 }

@@ -136,9 +136,13 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>The share of capacity the battery will really hold outdoors (its cold factor at the operating limit when the heater runs).</summary>
         internal double ExpectedColdFactor = 1.0;
 
+        /// <summary>The state of charge a hauling robot must have before it starts the next leg of its haul (KI-46 before each leg, 2026-11-26); 0 when none is asked. Cleared when it leaves a charger.</summary>
+        internal double LegChargeShare;
+
         public bool NeedsCharge => Activity == RobotActivity.None && ChargerExists
                                    && (CoolSoc < RobotSpecs.ReturnToChargeFraction + ReserveFraction
-                                       || (TripCharge > 0.0 && CoolSoc < TripCharge - 1e-6));
+                                       || (TripCharge > 0.0 && CoolSoc < TripCharge - 1e-6)
+                                       || (LegChargeShare > 0.0 && CoolSoc < LegChargeShare - 1e-6));
 
         /// <summary>State of charge counting the cold lock still to come.</summary>
         double CoolSoc => Battery.CapacityWh > 0.0 && ColdLockWh > 0.0

@@ -25,6 +25,8 @@ namespace KardashevAscent.Simulation.Robots
 
         /// <summary>The cargo a robot carries, kg (set by the simulation); it loads the drive: heavier, so more power (MO-04).</summary>
         public System.Func<Robot, double> CargoKgOf { get; set; }
+        /// <summary>The state of charge a loaded haul robot at a stop needs for its next leg (0: not at a stop, or no check due).</summary>
+        public System.Func<Robot, double> LegChargeNeed { get; set; }
 
         /// <summary>Energy spent driving with cargo aboard since the simulation last read it, Wh (it zeroes it).</summary>
         public double HaulDriveWh { get; set; }
@@ -346,6 +348,13 @@ namespace KardashevAscent.Simulation.Robots
                 r.Tile = r.Route[0];
                 r.Route.RemoveAt(0);
                 r.HopProgress = 0.0;
+                // KI-46 before each later leg: on reaching a charger or shelter with a haul still to go, the leg to the next one is checked at the robot's charge and body temperature now; if it fails
+                // the robot stops here and charges for it (a leg always starts at a charger or shelter)
+                if (r.Route.Count > 0 && LegChargeNeed != null)
+                {
+                    double share = LegChargeNeed(r);
+                    if (share > 0.0 && share > r.Battery.StateOfCharge + 1e-6) { r.LegChargeShare = share; moved = 0.0; break; }
+                }
             }
             if (climbWh > 0.0 && hours > 0.0)
             {
@@ -459,6 +468,7 @@ namespace KardashevAscent.Simulation.Robots
 
         static void Leave(Robot r)
         {
+            r.LegChargeShare = 0.0;
             Workforce.Trace(r, "Leave");
             r.Activity = RobotActivity.None;
             r.Facility = null;
