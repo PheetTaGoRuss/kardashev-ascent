@@ -23,6 +23,9 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Most hauls planned for one demand in a pass.</summary>
         const int MaxHaulsPerDemand = 4;
 
+        /// <summary>Mines push their output home when it makes a full load (on by default; tests of a full store turn it off).</summary>
+        public bool MinePushEnabled { get; set; } = true;
+
         /// <summary>What this robot carries, kg: its base payload times its transport capacity.</summary>
         double PayloadKg(Robot r) => BasePayloadKg * r.Attribute(RobotAttribute.TransportCapacity);
 
@@ -154,6 +157,31 @@ namespace KardashevAscent.Simulation.Game
                 {
                     HaulOrder made = haulBook.Add(h.From, h.To, h.Material, h.Kg);
                     if (made != null) made.Stops = PlanHaul(h.From, h.To, h.Kg).Stops;
+                }
+            }
+
+            // Mines push their output (decided 2026-11-26): ore lying at a mine tile is hauled home when it makes at least one full load, or when the base has any waiting demand for it, even with no
+            // stock target at the base. One haul at a time per (mine, ore), so the planner does not flood the route.
+            foreach (int mine in MinePushEnabled ? sources : new List<int>())
+            {
+                if (mine == BaseTileId) continue;
+                double load = PayloadBetween(mine, BaseTileId);
+                if (load <= 0.0) continue;
+                foreach (Material m in Resources.Materials.Mined)
+                {
+                    if (m == Material.Rock) continue;
+                    double kept = siteWanted.TryGetValue((mine, m), out double kw) ? kw : 0.0;
+                    double avail = StockAt(mine)[m] - kept - haulBook.ReservedAt(mine, m);
+                    if (avail <= 1e-6) continue;
+                    double baseLack = (siteWanted.TryGetValue((BaseTileId, m), out double bw) ? bw : 0.0) - StockAt(BaseTileId)[m] - haulBook.InFlightTo(BaseTileId, m);
+                    if (avail < load - 1e-6 && baseLack <= 1e-6) continue;
+                    if (haulBook.Orders.Any(o => o.FromTile == mine && o.ToTile == BaseTileId && o.Material == m && o.WreckId == 0 && o.Stage == 0)) continue;
+                    double room = RoomAt(BaseTileId, m) - haulBook.InFlightTo(BaseTileId, m);
+                    double kg = Math.Min(Math.Min(avail, load), room);
+                    if (kg < MinHaulLoadKg - 1e-6 && kg < avail - 1e-6) continue;
+                    if (kg <= 1e-6) continue;
+                    HaulOrder made = haulBook.Add(mine, BaseTileId, m, kg);
+                    if (made != null) made.Stops = PlanHaul(mine, BaseTileId, kg).Stops;
                 }
             }
         }

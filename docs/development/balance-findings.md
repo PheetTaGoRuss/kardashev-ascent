@@ -338,3 +338,7 @@ Cause of the Mars R2 and R3 deaths (traced hour by hour): a haul was dispatched 
 |---|---|---|
 | Viridia milestone 1 | day 82 | day 52 |
 | Mars-like milestone 1 | day 63 | day 98 (no robot lost; day-average power 12.9 MW against 43.1 MW for milestone 2) |
+
+## Mines push their output; the copper bootstrap is the limit (2026-11-26, later)
+
+A mine's store at least one full load (or any waiting demand at the base) now gets a haul home even with no stock target (one at a time per mine and ore); many sites at one destination were already served by one demand per destination (a test pins at most 4 hauls, with loads up to the payload). Two years: Viridia milestone 1 day 54, Mars-like day 96 (no loss), day-average power 12.6 MW against 43.1 MW for milestone 2. Viridia five years: milestone 1 day 54, then 14.1 MW day-average power (milestone 2: 100 MW) with copper stock 0 and the copper mine (tile 496) out of the haul chain's reach: the chain stops at tile 485 because each outpost needs 43 kg of copper and the starting copper is spent on home panels first. Copper arriving: 0.1 kg a day. Lithium is no longer the issue (3.3 t at the base).

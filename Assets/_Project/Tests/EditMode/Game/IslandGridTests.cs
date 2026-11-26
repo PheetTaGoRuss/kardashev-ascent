@@ -235,7 +235,7 @@ namespace KardashevAscent.Simulation.Tests.Game
         [Test]
         public void AMineWhoseStoreIsFull_Pauses_WithTheReasonInTheLog_AndResumesWhenThereIsRoom()
         {
-            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { LogisticsEnabled = true, WeatherEnabled = false };
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { LogisticsEnabled = true, WeatherEnabled = false, MinePushEnabled = false };
             sim.Debug.FreeBuilding = true;
             var li = KardashevAscent.Simulation.Resources.Material.Lithium;
             int t = sim.BaseTileId;
@@ -284,6 +284,43 @@ namespace KardashevAscent.Simulation.Tests.Game
             }
             Assert.Greater(sim.Workforce.Robots.Count(r => r.Battery.StateOfCharge > 0.0), 0);
             Assert.AreEqual(0, sim.RobotsDestroyed, "nobody is sent out to die");
+        }
+
+        [Test]
+        public void AMineWhoseStoreHoldsAFullLoad_GetsAHaulHome_EvenWithNoStockTarget()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { LogisticsEnabled = true, WeatherEnabled = false };
+            sim.Debug.FreeBuilding = true;
+            var li = KardashevAscent.Simulation.Resources.Material.Lithium;
+            int t = sim.BaseTileId;
+            int tile = Enumerable.Range(0, sim.TileCount).First(q => !sim.GetTile(q).IsWater && sim.Deposits.GradeOf(q, li) > 0.0 && q != t && sim.IsOpenGround(q) && sim.Routes.HoursBetween(t, q) < 12.0);
+            sim.DebugSurveyAll(); sim.PlaceChargingStation(t, 0); sim.PlacePanel(t, 1, 0.35, Math.PI); sim.PlaceBattery(t, 2); sim.WireAllBuildings();
+            Assert.IsTrue(sim.PlaceStorage(sim.StoreFor(li), tile, 5)); sim.PlaceChargingStation(tile, 6); sim.PlacePanel(tile, 7, 0.35, Math.PI); sim.WireAllBuildings();
+            double start = sim.KgAt(t, li);
+            Assert.IsTrue(sim.OrderMining(tile, li));
+            bool hauled = false;
+            for (int h = 0; h < 1500 && !hauled; h++) { sim.Tick(1.0); hauled = sim.HaulOrders().Any(o => o.Material == li && o.From == tile && o.To == t) || sim.KgAt(t, li) > start + 1e-6; }
+            Assert.IsTrue(hauled, "no stock target at the base, yet the mine's output is hauled home once it makes a load");
+        }
+
+        [Test]
+        public void ManySitesAtOneDestination_AreServedByLoadsAsBigAsThePayload_NotOneHaulPerSite()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { LogisticsEnabled = true, WeatherEnabled = false };
+            sim.Debug.FreeBuilding = true;
+            sim.PlaceChargingStation(sim.BaseTileId, 0); sim.PlacePanel(sim.BaseTileId, 1, 0.35, Math.PI); sim.PlaceBattery(sim.BaseTileId, 2); sim.WireAllBuildings();
+            sim.Debug.FreeBuilding = false;
+            sim.Materials.Add(KardashevAscent.Simulation.Resources.Material.Iron, 20000.0);
+            int near = Sphere.Neighbors[sim.BaseTileId].First(q => !sim.GetTile(q).IsWater && sim.IsOpenGround(q));
+            int sites = 0;
+            for (int s2 = 0; s2 < 19; s2++) if (sim.PlaceBattery(near, s2)) sites++;
+            Assert.GreaterOrEqual(sites, 8);
+            sim.Tick(0.1);
+            var fe = KardashevAscent.Simulation.Resources.Material.Iron;
+            var orders = sim.HaulOrders().Where(o => o.Material == fe && o.To == near).ToList();
+            double total = orders.Sum(o => o.Kg);
+            Assert.LessOrEqual(orders.Count, 4, "at most the per-destination limit, not one per site");
+            Assert.GreaterOrEqual(total, Math.Min(PlanetSimulation.BasePayloadKg, 0.9 * orders.Count * PlanetSimulation.BasePayloadKg) * 0.5, "loads are as big as the payload allows");
         }
     }
 }
