@@ -72,7 +72,7 @@ namespace KardashevAscent.Simulation.Game
                 .Add("In play",
                      $"{Rule}The day-night amplitude is {PlanetSimulation.DiurnalBaseK:0} K under thick air, rising by up to {PlanetSimulation.DiurnalThinAirK:0} K under thin air. A tidally locked planet has no day, so no swing.",
                      $"A robot works without its heater between {RobotThermal.OperatingMinC:0} and {RobotThermal.OperatingMaxC:0} °C; outside that a heater draws power. A robot with an empty battery out in the weather hibernates and cold-soaks: see Robots and the weather.",
-                     "A haul's heater cost follows the temperature over the hours of its legs, so a night haul costs more.")
+                     "A robot is one thermal lump (heat capacity C, loss conductance G, its own heat from the electronics and the drive): it leaves shelter warm and cools slowly (a time constant of about 52 hours), so on a short trip the heater need not run at all. The heater runs only once the body would pass its limit, and then draws exactly what holds it there: G times the gap, less the robot's own heat. The battery has the body temperature. Hauls and trips are planned with the same model.")
                 .Add("How to use", "Measure the surface temperature (Research, T): the puzzle fits mean, amplitude and phase of a day's readings. Send hauls at the warm part of the day, as the haul text suggests.")
                 .Add("Real science",
                      "On Mars, Curiosity's REMS saw daily air temperatures from about −70 °C to 0 °C at Gale crater, a range of about 70 K (JPL, PIA16913). Thin air holds little heat, so the swing is large.",

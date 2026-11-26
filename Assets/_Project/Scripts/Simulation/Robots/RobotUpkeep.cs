@@ -81,10 +81,8 @@ namespace KardashevAscent.Simulation.Robots
             foreach (Robot r in workforce.Robots)
             {
                 double toCharger = movement != null ? movement.HoursToChargerFor(r)[r.Tile] / r.Attribute(RobotAttribute.Speed) : 0.0;
-                // a robot outdoors on a cold world will hold only the cold capacity once its battery has cooled to the heater's limit (the energy still "in" a warm battery is not all usable)
-                double expectedCold = !r.Sheltered && r.HeaterW > 0.0 ? Math.Min(r.Battery.ColdFactor, RobotBattery.ColdCapacityFactor(RobotThermal.OperatingMinC)) : r.Battery.ColdFactor;
-                r.ExpectedColdFactor = expectedCold;
-                r.ColdLockWh = Math.Max(0.0, r.Battery.CapacityWh * (r.Battery.ColdFactor - expectedCold));
+                double expectedCold = r.Battery.ColdFactor;   // one lumped body: the battery has the body temperature, so no cold lock is still to come
+                r.ExpectedColdFactor = expectedCold; r.ColdLockWh = 0.0;
                 r.ReserveFraction = movement != null && r.Battery.CapacityWh > 0.0 && !double.IsInfinity(toCharger)
                     ? ReserveSafety * (movement.EnergyWh(toCharger) / r.Attribute(RobotAttribute.EnergyEfficiency) * Logistics.HaulPhysics.LoadFactor(Logistics.HaulPhysics.DefaultRobotMassKg, CargoKgOf != null ? CargoKgOf(r) : 0.0) + ClimbReserveWh(movement, r) + r.HeaterW * toCharger) / Math.Max(1e-9, r.Battery.CapacityWh * expectedCold) : 0.0;   // a cold battery holds less: the state of charge is a share of what it can hold now   // the way back also runs the heater (Weather W8: robots were lost on Mars driving home on an empty battery)
                 r.IsStranded = movement != null && r.Battery.UsableWh <= 1e-6 && toCharger > 1e-9;
@@ -216,6 +214,7 @@ namespace KardashevAscent.Simulation.Robots
                     mechanic = Math.Max(mechanic, r.Attribute(RobotAttribute.RepairEfficiency));
             foreach (Robot r in workforce.Robots)
             {
+                r.ActiveW = 0.0;
                 if (movement != null && r.IsTravelling)
                 {
                     if (!r.IsShutDown)
@@ -243,8 +242,10 @@ namespace KardashevAscent.Simulation.Robots
                             break;
                         bool working = r.Task.HasValue;
                         double efficiency = r.Attribute(RobotAttribute.EnergyEfficiency);
-                        r.Battery.Draw(((working ? RobotSpecs.WorkingPowerW(r.Task.Value.Kind) : RobotSpecs.IdlePowerW)
-                                        + RobotSpecs.OnboardAIW(r.AILevel, !r.Connected)) / efficiency, hours);
+                        double drawW = ((working ? RobotSpecs.WorkingPowerW(r.Task.Value.Kind) : RobotSpecs.IdlePowerW)
+                                        + RobotSpecs.OnboardAIW(r.AILevel, !r.Connected)) / efficiency;
+                        r.Battery.Draw(drawW, hours);
+                        r.ActiveW = drawW;
                         if (working)
                             r.Condition -= RobotSpecs.WearPerWorkingHour * RobotCatalog.WearFactor(r.Task.Value.Kind) * hours
                                            / r.Attribute(RobotAttribute.Durability);
@@ -264,45 +265,45 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>Robots whose body left the storage range while they hibernated with an empty battery (cold soak or heat soak).</summary>
         public System.Collections.Generic.IReadOnlyList<int> DestroyedRobotIds => destroyed;
 
-        /// <summary>The heater or cooler of a robot outside its range runs from its battery; shelter removes the draw (KI-43).</summary>
+        /// <summary>
+        /// One lumped body (decided 2026-11-26): the robot's temperature follows C dT/dt = -G (T - T_air) + P_internal + P_heater. The heater or cooler runs only when the body would pass a hold limit and
+        /// draws what holds it there; with an empty battery the robot hibernates and the body follows the air. The battery has the body temperature. Shelter sets the air to its own temperature.
+        /// </summary>
         void ApplyWeather(Robot r, double hours, double airC, bool sheltered)
         {
             bool insulated = r.Has(RobotModule.ThermalInsulation);
-            double heater = sheltered ? 0.0 : RobotThermal.HeaterW(airC, insulated, WindFactorAt != null ? WindFactorAt(r.Tile) : 1.0);
+            double wind = WindFactorAt != null ? WindFactorAt(r.Tile) : 1.0;
+            bool awake = r.Battery.UsableWh > 1e-6;
             r.Sheltered = sheltered;
+            var lr = RobotThermal.Step(r.BodyTempC, airC, hours, wind, insulated, r.ActiveW, awake, sheltered);
+            double heater = lr.HeaterW;
+            if (heater > 0.0 && !sheltered)
+            {
+                double delivered = r.Battery.Draw(heater, hours);
+                if (r.Battery.UsableWh <= 1e-6 && delivered < heater - 1e-9)
+                    lr = RobotThermal.Step(r.BodyTempC, airC, hours, wind, insulated, r.ActiveW, false, sheltered);   // it ran dry in this step: it hibernates for the step
+            }
             r.HeaterW = heater;
-            // the battery follows its surroundings; the heater (while the battery has energy) holds it at the limit it would pass first
-            r.BatteryTempC = RobotThermal.BatteryStep(r.BatteryTempC, RobotThermal.BatteryTarget(airC, insulated, sheltered, heater > 0.0 && r.Battery.UsableWh > 1e-6), hours);
+            r.BodyTempC = lr.BodyC;
+            r.BatteryTempC = lr.BodyC;
             if (r.Activity != RobotActivity.Charging) r.WarmingUp = false;
-            double tau = RobotThermal.BodyTauHours(WindFactorAt != null ? WindFactorAt(r.Tile) : 1.0);
+            double steady = RobotThermal.SteadyHeaterW(airC, wind, insulated, r.ActiveW);
+            r.ThermalHoursLeft = steady > 0.0 && !sheltered ? r.Battery.UsableWh / steady : double.PositiveInfinity;
             if (sheltered)
             {
-                r.BodyTempC = RobotThermal.BodyStep(r.BodyTempC, RobotThermal.ShelterBatteryC, hours, tau);   // a heated bay warms it back
-                r.Hibernating = false; r.ExposedEmptyHours = 0.0; r.HibernationHoursLeft = double.PositiveInfinity;
-            }
-            if (heater <= 0.0)
-            {
-                if (!sheltered) r.BodyTempC = RobotThermal.BodyStep(r.BodyTempC, Math.Max(RobotThermal.OperatingMinC, Math.Min(RobotThermal.OperatingMaxC, airC)), hours, tau);
-                r.Hibernating = false;
-                r.ExposedEmptyHours = 0.0;
-                r.HibernationHoursLeft = double.PositiveInfinity;
-                r.ThermalHoursLeft = double.PositiveInfinity;
-                r.ThermalWarned = false;
+                r.Hibernating = false; r.ExposedEmptyHours = 0.0; r.HibernationHoursLeft = double.PositiveInfinity; r.ThermalWarned = false;
                 return;
             }
-            r.Battery.Draw(heater, hours);
-            r.ThermalHoursLeft = r.Battery.UsableWh / heater;
             if (r.Battery.UsableWh > 1e-6)
             {
-                // the heater or cooler holds the body at the limit it would pass first
-                r.BodyTempC = RobotThermal.BodyStep(r.BodyTempC, Math.Max(RobotThermal.OperatingMinC, Math.Min(RobotThermal.OperatingMaxC, airC)), hours, Math.Min(tau, 2.0));
                 r.Hibernating = false; r.ExposedEmptyHours = 0.0; r.HibernationHoursLeft = double.PositiveInfinity;
+                if (steady <= 0.0) r.ThermalWarned = false;
                 return;
             }
             // an empty battery outside shelter: it hibernates and cold-soaks (or heat-soaks) toward the air; it is destroyed only past the storage limit
+            double tau = RobotThermal.BodyHeatCapacityJPerK / RobotThermal.Conductance(wind, insulated) / 3600.0;
             r.Hibernating = true;
             r.ExposedEmptyHours += hours;
-            r.BodyTempC = RobotThermal.BodyStep(r.BodyTempC, airC, hours, tau);
             r.HibernationHoursLeft = RobotThermal.HibernationHoursUntilLimit(r.BodyTempC, airC, tau);
             if (r.BodyTempC < RobotThermal.StorageMinC || r.BodyTempC > RobotThermal.StorageMaxC) destroyed.Add(r.Id);
         }
@@ -313,6 +314,7 @@ namespace KardashevAscent.Simulation.Robots
             double cargoKg = CargoKgOf != null ? CargoKgOf(r) : 0.0;
             double want = (cargoKg > 0.0 ? movement.DrivePowerWithCargoW(cargoKg) : movement.DrivePowerW) / r.Attribute(RobotAttribute.EnergyEfficiency);
             double got = r.Battery.Draw(want, hours);
+            r.ActiveW = got;
             if (cargoKg > 0.0)
                 HaulDriveWh += got * hours;
             double moved = (want > 0.0 ? hours * got / want : hours) * r.Attribute(RobotAttribute.Speed);

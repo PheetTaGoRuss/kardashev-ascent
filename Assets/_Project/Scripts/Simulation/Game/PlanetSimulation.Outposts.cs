@@ -74,7 +74,7 @@ namespace KardashevAscent.Simulation.Game
             if (double.IsInfinity(go)) return new OutpostVerdict(true, false, 0, "refused: there is no route to tile " + tile);
             double airDest = LiveAirTemperatureAt(tile);
             bool cold = airDest < RobotThermal.OperatingMinC;
-            double heaterW = RobotThermal.HeaterW(airDest, r.Has(RobotModule.ThermalInsulation));
+            double heaterW = RobotThermal.SteadyHeaterW(airDest, 1.0, r.Has(RobotModule.ThermalInsulation), RobotSpecs.BuildPowerW);
             // the cold capacity: the battery is held at the operating limit outdoors (Bressan et al. 2025 curve, RobotBattery.ColdCapacityFactor)
             double coldFactor = cold ? RobotBattery.ColdCapacityFactor(RobotThermal.OperatingMinC) : 1.0;
             double cap = r.Battery.CapacityWh * Math.Min(r.Battery.ColdFactor, coldFactor);
@@ -100,7 +100,8 @@ namespace KardashevAscent.Simulation.Game
             double day = DayLengthHours, e = have - outbound;
             if (e < 0.0)
                 return new OutpostVerdict(true, false, 0, $"refused: its battery would run out {(-e):0} Wh short of reaching tile {tile}");
-            double body = RobotThermal.OperatingMinC, tauH = RobotThermal.BodyTauHours();
+            // the body starts from the temperature the robot has after the outbound leg: the shelter temperature cooling over the trip hours (one lumped body)
+            double body = RobotThermal.TripHeater(r.BodyTempC, airDest, go, 1.0, r.Has(RobotModule.ThermalInsulation), mv.DrivePowerW).EndC;
             int stageIndex = 0; double stageDone = 0.0;
             int hoursMax = OutpostMaxSols * (int)Math.Ceiling(day);
             for (int h = 0; h < hoursMax; h++)
@@ -108,7 +109,9 @@ namespace KardashevAscent.Simulation.Game
                 double now = TimeHours + go + h;
                 double air = DiurnalAirTemperatureAt(tile, now);
                 bool sheltered = stationDone;
-                double heater = sheltered ? 0.0 : RobotThermal.HeaterW(air, r.Has(RobotModule.ThermalInsulation));
+                bool workingNow = stageIndex < stages.Count;
+                var lump = RobotThermal.Step(body, air, 1.0, 1.0, r.Has(RobotModule.ThermalInsulation), workingNow ? RobotSpecs.BuildPowerW : 0.0, e > 0.0, sheltered);
+                double heater = lump.HeaterW;
                 double phase = (now % day) / day;
                 double panelW = panelsDone * perPanelMeanW * Math.PI * (phase < 0.5 ? Math.Sin(Math.PI * phase * 2.0) : 0.0);   // half-sine day; the planning estimate (marked as such in the UI)
                 bool working = stageIndex < stages.Count;
@@ -118,9 +121,7 @@ namespace KardashevAscent.Simulation.Game
                 double batteryDelta = net >= 0.0 ? 0.95 * net : net;
                 if (e + batteryDelta <= 0.0 && panelW < load) { e = 0.0; working = false; }
                 else e = Math.Min(cap, e + batteryDelta);
-                // the body: held at the operating limit while it has energy or a powered heater, else it soaks toward the air
-                bool heldWarm = sheltered || e > 0.0 || panelW >= heater;
-                if (heldWarm) body = Math.Max(body, RobotThermal.OperatingMinC); else body = air + (body - air) * Math.Exp(-1.0 / tauH);
+                body = lump.BodyC;
                 if (body < RobotThermal.StorageMinC)
                     return new OutpostVerdict(true, false, 0, $"refused: it would freeze at {body:0} C before sunrise (stage {stageIndex + 1} of {stages.Count} unfinished)");
                 if (working && e > 0.0)

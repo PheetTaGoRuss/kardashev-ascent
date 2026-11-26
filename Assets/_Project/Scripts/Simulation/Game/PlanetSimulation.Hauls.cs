@@ -158,6 +158,12 @@ namespace KardashevAscent.Simulation.Game
                 if (o.Stage == 0)
                 {
                     HaulPlan plan = PlanHaul(o.FromTile, o.ToTile, o.Kg);
+                    // a load planned when the battery could carry more (a warmer hour) that no longer fits: cut it to what fits now (the rest is planned again as a new haul)
+                    if (!plan.Feasible && o.WreckId == 0 && o.Kg > MinHaulLoadKg)
+                    {
+                        double fits = FeasiblePayloadKg(o.FromTile, o.ToTile, o.Kg);
+                        if (fits >= MinHaulLoadKg - 1e-9 && fits < o.Kg) { o.Kg = fits; plan = PlanHaul(o.FromTile, o.ToTile, o.Kg); }
+                    }
                     string was = o.Blocked;
                     if (!plan.Feasible)
                     {

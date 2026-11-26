@@ -83,7 +83,7 @@ namespace KardashevAscent.Simulation.Game
             double coldest = double.MaxValue;
             double anomaly = LiveAirTemperatureAt(r.Tile) - DiurnalAirTemperatureAt(r.Tile, TimeHours);   // today's weather rides on the day-night swing
             for (int k = 0; k <= 6; k++) coldest = Math.Min(coldest, DiurnalAirTemperatureAt(r.Tile, TimeHours + 2.0 * k) + anomaly);
-            return Math.Max(r.HeaterW, RobotThermal.HeaterW(coldest, r.Has(RobotModule.ThermalInsulation)));
+            return Math.Max(r.HeaterW, RobotThermal.SteadyHeaterW(coldest, 1.0, r.Has(RobotModule.ThermalInsulation), 0.0));
         }
 
         bool NeedsRescue(Robot r) => r.IsStranded || (!r.Sheltered && FutureHeaterW(r) > 0.0 && r.Battery.UsableWh / FutureHeaterW(r) < RescueEarlyHours && r.ReserveFraction > r.Battery.StateOfCharge + 1e-9);

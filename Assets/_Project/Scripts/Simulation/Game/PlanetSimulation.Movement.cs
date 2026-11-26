@@ -50,7 +50,7 @@ namespace KardashevAscent.Simulation.Game
                 double up = heights[to] - heights[from];
                 double wh = up > 0.0 ? Logistics.HaulPhysics.ClimbEnergyWh(Logistics.HaulPhysics.DefaultRobotMassKg, 0.0, g, up, 1.0) * Logistics.HaulPhysics.ClimbEffortShare : 0.0;
                 if (double.IsNaN(meanAirC[to])) meanAirC[to] = AnnualAirTemperature(to);
-                wh += RobotThermal.HeaterW(meanAirC[to], false) * hopHours;
+                wh += RobotThermal.SteadyHeaterW(meanAirC[to], 1.0, false, Routes.DrivePowerW) * hopHours;   // steady-state: a route edge has no body history (conservative: no credit for the thermal mass)
                 return wh;
             }, RouteHoursPerWh);
         }

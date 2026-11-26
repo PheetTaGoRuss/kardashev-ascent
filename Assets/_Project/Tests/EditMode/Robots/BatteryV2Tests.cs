@@ -189,10 +189,10 @@ namespace KardashevAscent.Simulation.Tests.Robots
             Robot r = sim.Workforce.AddRobot(RobotKind.General, far);
             Robot insulated = sim.Workforce.AddRobot(RobotKind.General, far);
             insulated.Modules = RobotModule.ThermalInsulation;
-            sim.Tick(6.0);   // the battery follows the air with a time constant of an hour
-            Assert.AreEqual(0.65, r.Battery.ColdFactor, 0.01);
-            Assert.AreEqual(RobotBattery.ColdCapacityFactor(RobotTech.InsulatedBatteryC), insulated.Battery.ColdFactor, 0.01);
-            Assert.Greater(insulated.Battery.ColdFactor, r.Battery.ColdFactor);
+            sim.Tick(400.0);   // one lumped body: the body (and the battery) settle where its own heat balances the loss: air + P_internal / G
+            Assert.Less(r.Battery.ColdFactor, 1.0, "the cold still costs capacity");
+            Assert.Greater(r.Battery.ColdFactor, 0.65, "but the robot's own heat keeps its body above the air, so it loses less than at the air temperature");
+            Assert.Greater(insulated.Battery.ColdFactor, r.Battery.ColdFactor, "insulation keeps the body warmer");
         }
 
         [Test]

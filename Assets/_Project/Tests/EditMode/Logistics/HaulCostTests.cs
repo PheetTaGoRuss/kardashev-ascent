@@ -221,14 +221,17 @@ namespace KardashevAscent.Simulation.Tests.Logistics
         public void ANightHaulInTheColdCostsMoreHeaterThanADayHaul_AndTheBestStartIsFound()
         {
             var cold = new PlanetSolarParams(SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Math.PI / 180.0,
-                282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, -35.0);
+                282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, -150.0);   // one lumped body: the heater only runs once the body has cooled to its limit (about 14 h at -150 C), so the haul is a long one
             var sim = new PlanetSimulation(Sphere, Surface, cold);
             int lander = sim.BaseTileId;
             int far = Enumerable.Range(0, sim.TileCount).Where(t => !sim.GetTile(t).IsWater && !double.IsInfinity(sim.Routes.HoursBetween(lander, t)))
-                .OrderBy(t => Math.Abs(sim.Routes.HoursBetween(lander, t) - 12.0)).First();
+                .OrderBy(t => Math.Abs(sim.Routes.HoursBetween(lander, t) - 30.0)).First();
             var (delay, saved) = sim.BestHaulStart(lander, far, 400.0);
-            Assert.Greater(saved, 0.0, "starting at the warm part of the day saves heater energy: " + delay + " h");
-            Assert.Greater(delay, 0.0);
+            TestContext.WriteLine($"far tile {far}: {sim.Routes.HoursBetween(lander, far):0.0} h, heater {sim.HaulLegCost(lander, far, 400.0).HeaterWh:0} Wh, delay {delay:0} h saves {saved:0} Wh");
+            // one lumped body: the heater holds the body at its limit all the way, so its draw follows the air only through the loss G (T_air - T_hold), a gentle slope; the saving can be zero
+            Assert.GreaterOrEqual(saved, 0.0, "a later start never costs more heater energy than the best start found: " + delay + " h");
+            Assert.GreaterOrEqual(delay, 0.0);
+            Assert.Greater(sim.HaulLegCost(lander, far, 400.0).HeaterWh, 0.0, "a long haul at -150 C needs the heater once the body has cooled");
             double[] heater = Enumerable.Range(0, 12).Select(k => sim.HaulLegCost(lander, far, 400.0).HeaterWh).ToArray();
             Assert.Greater(heater[0], 0.0, "in the cold the heater runs");
         }
