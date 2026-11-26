@@ -329,3 +329,12 @@ Where the Mars crushing went (ledger, before the bot rule): lithium at tile 484,
 ## Haul payload and the Viridia plateau (2026-11-26, later)
 
 The haul report now shows the longest leg against the battery budget. Finding: the best payload per trip from the copper mine (tile 496) to the base is the full 490 kg, so the longest leg is not what keeps loads small (the bot's rule to split the longest leg when the payload is under 100 kg never fires). The 11-12 kg hauls are sized by demand: each waiting site asks for its own few kilograms and the planner makes one small haul per demand (at most 4 at a time). Viridia over five years: milestone 1 on day 82, then a plateau at 34.7 MW day-average power (milestone 2: 100 MW) with 19 sites waiting, copper stock 0 and 2 t of copper piled at the mine. Two bot findings: a copper target at the base reserves the stock the kits need (a target of 200 kg starved the first outpost, the colony never started), and with no target nothing brings the mined copper home except site hauls. A mine whose store is full now pauses (no robot hours; log "Store full at tile N: waiting for hauls."). Mars-like, two years: milestone 1 on day 63 as before; day-average power 16.0 MW against 43.1 MW for milestone 2, copper mining 0.5 kg a day (tile 496 is out of reach of the haul chain).
+
+## KI-46 at dispatch, and the reservation order (2026-11-26, later)
+
+Cause of the Mars R2 and R3 deaths (traced hour by hour): a haul was dispatched to a robot on whatever charge it had. The plan checked a round trip against the battery's per-leg budget, but the dispatch checked only the way to the pickup, not the whole first segment (empty leg to the pickup, loaded leg to the next charger, or to the drop and the way back when there is none). Robots left the base at about 40 % charge, reached the outpost at tile 473 with 460 Wh, and died on the empty leg to the charger 8 h away (cold-soaked at -69 C). The rule now: at dispatch a haul needs 1.1 times the energy of that segment above the 20 % reserve, at the robot's present charge and the body temperature on the way, and a robot that is short of it charges for the haul (even below the usual 80 % of capacity). With no charger anywhere the old rule stands. Together with the two-phase reservation (sites and plant inputs first, stock targets are buffers):
+
+| two game years | before | after |
+|---|---|---|
+| Viridia milestone 1 | day 82 | day 52 |
+| Mars-like milestone 1 | day 63 | day 98 (no robot lost; day-average power 12.9 MW against 43.1 MW for milestone 2) |

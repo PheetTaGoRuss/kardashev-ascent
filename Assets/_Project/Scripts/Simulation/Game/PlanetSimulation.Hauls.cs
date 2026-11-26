@@ -91,12 +91,12 @@ namespace KardashevAscent.Simulation.Game
             PlanWreckRecovery();
             ClearEmptyWrecks();
             // What each tile still needs: the sites on it plus its stock targets.
+            // Reservation order (decided 2026-11-26): sites under construction and plant inputs are planned first and keep stock back; stock targets are buffers, planned after and never keep stock back
+            // from a site (a copper target at the base starved the first outpost kit).
             var wanted = new Dictionary<(int Tile, Material Material), double>();
             foreach (var site in Build.Sites())
                 foreach (var (m, kg) in Build.RemainingAt(site.Tile, site.Slot).Items())
                     wanted[(site.Tile, m)] = (wanted.TryGetValue((site.Tile, m), out double w) ? w : 0.0) + kg;
-            foreach (StockTarget t in haulBook.Targets())
-                wanted[(t.Tile, t.Material)] = (wanted.TryGetValue((t.Tile, t.Material), out double w) ? w : 0.0) + t.Kg;
             // An idle plant with a batch waiting wants its input at its tile (what its input buffer already holds counts).
             foreach (RefineryKind kind in new[] { RefineryKind.AluminaPlant, RefineryKind.Electrolyser })
             {
@@ -112,26 +112,16 @@ namespace KardashevAscent.Simulation.Game
                 }
             }
 
-            var keys = new List<(int Tile, Material Material)>(wanted.Keys);
-            keys.Sort((a, b) => a.Tile != b.Tile ? a.Tile.CompareTo(b.Tile) : ((int)a.Material).CompareTo((int)b.Material));
-            var demands = new List<HaulDemand>();
-            foreach (var k in keys)
-            {
-                double lack = wanted[k] - StockAt(k.Tile)[k.Material] - haulBook.InFlightTo(k.Tile, k.Material);
-                // Only what the depot has room for: a haul into a full store would leave the robot with its cargo.
-                lack = Math.Min(lack, RoomAt(k.Tile, k.Material) - haulBook.InFlightTo(k.Tile, k.Material));
-                if (lack > 1e-6) demands.Add(new HaulDemand(k.Tile, k.Material, lack));
-            }
-            if (demands.Count == 0)
-                return;
+            var siteWanted = new Dictionary<(int Tile, Material Material), double>(wanted);
+            var targetWanted = new Dictionary<(int Tile, Material Material), double>();
+            foreach (StockTarget t in haulBook.Targets())
+                targetWanted[(t.Tile, t.Material)] = (targetWanted.TryGetValue((t.Tile, t.Material), out double tw) ? tw : 0.0) + t.Kg;
 
-            // Sources: tiles that hold a depot, nearest first by route hours. A tile keeps what it needs itself.
+            // Sources: tiles that hold a depot, nearest first by route hours. A tile keeps what its sites need itself (and, in the second phase, its own targets).
             var sources = new List<int> { BaseTileId };
             foreach (PlaceId p in inventories.Places)
                 if (p.Kind == PlaceKind.Depot && !sources.Contains(p.Id)) sources.Add(p.Id);
             sources.Sort();
-            double Available(int tile, Material m) =>
-                StockAt(tile)[m] - (wanted.TryGetValue((tile, m), out double keep) ? keep : 0.0) - haulBook.ReservedAt(tile, m);
             double capacity = 1.0;   // plan loads the biggest hauler can carry
             foreach (Robot r in Workforce.Robots)
                 if (RobotCatalog.CanDo(r.Kind, TaskKind.Haul, UnlockLevel))
@@ -140,11 +130,58 @@ namespace KardashevAscent.Simulation.Game
             // A load a robot's battery cannot carry through the stops is split into smaller loads (more trips), down to the largest load that fits, at least MinHaulLoadKg (L5 2026-11-24, floor lifted 2026-11-26).
             double PayloadBetween(int a, int b) => Routes == null ? 0.0 : FeasiblePayloadKg(a, b, BasePayloadKg * capacity);
             double Hours(int a, int b) => Routes == null ? double.PositiveInfinity : HaulCostHours(a, b, PayloadBetween(a, b));
-            foreach (PlannedHaul h in HaulPlanner.Plan(demands, sources, Available, Hours, BasePayloadKg * capacity, MaxHaulsPerDemand, PayloadBetween))
+
+            for (int phase = 0; phase < 2; phase++)
             {
-                HaulOrder made = haulBook.Add(h.From, h.To, h.Material, h.Kg);
-                if (made != null) made.Stops = PlanHaul(h.From, h.To, h.Kg).Stops;
+                var allWanted = new Dictionary<(int Tile, Material Material), double>(siteWanted);
+                if (phase == 1) foreach (var kv in targetWanted) allWanted[kv.Key] = (allWanted.TryGetValue(kv.Key, out double aw) ? aw : 0.0) + kv.Value;
+                var keys = new List<(int Tile, Material Material)>(allWanted.Keys);
+                keys.Sort((a, b) => a.Tile != b.Tile ? a.Tile.CompareTo(b.Tile) : ((int)a.Material).CompareTo((int)b.Material));
+                var demands = new List<HaulDemand>();
+                foreach (var k in keys)
+                {
+                    double need = phase == 0 ? siteWanted[k] : allWanted[k];
+                    double lack = need - StockAt(k.Tile)[k.Material] - haulBook.InFlightTo(k.Tile, k.Material);
+                    // Only what the depot has room for: a haul into a full store would leave the robot with its cargo.
+                    lack = Math.Min(lack, RoomAt(k.Tile, k.Material) - haulBook.InFlightTo(k.Tile, k.Material));
+                    if (lack > 1e-6) demands.Add(new HaulDemand(k.Tile, k.Material, lack));
+                }
+                if (demands.Count == 0) continue;
+                var keep = phase == 0 ? siteWanted : allWanted;
+                double Available(int tile, Material m) =>
+                    StockAt(tile)[m] - (keep.TryGetValue((tile, m), out double kept) ? kept : 0.0) - haulBook.ReservedAt(tile, m);
+                foreach (PlannedHaul h in HaulPlanner.Plan(demands, sources, Available, Hours, BasePayloadKg * capacity, MaxHaulsPerDemand, PayloadBetween))
+                {
+                    HaulOrder made = haulBook.Add(h.From, h.To, h.Material, h.Kg);
+                    if (made != null) made.Stops = PlanHaul(h.From, h.To, h.Kg).Stops;
+                }
             }
+        }
+
+        /// <summary>
+        /// The first segment of a haul for a robot at its current tile (KI-46 at dispatch): the empty leg to the pickup plus the loaded leg to the first stop (or to the drop and then back to a charger
+        /// when the haul is direct), with the lowest body temperature on it. Null for a haul already loaded (the robot is committed) or an unknown order.
+        /// </summary>
+        (double Wh, double MinC)? HaulSegmentNeedFor(Robot r, WorkTask t)
+        {
+            if (t.Slot % 2 != 0) return null;
+            HaulOrder o = haulBook.Find(t.Slot / 2);
+            if (o == null || o.Stage != 0 || Routes == null) return null;
+            var plan = PlanHaul(o.FromTile, o.ToTile, o.Kg);
+            if (!plan.Feasible) return null;
+            double wh = 0.0, minC = RobotThermal.ShelterBatteryC;
+            if (r.Tile != o.FromTile) { var empty = HaulLegCost(r.Tile, o.FromTile, 0.0); if (!empty.Reachable) return null; wh += empty.TotalWh; minC = Math.Min(minC, empty.MinBodyC); }
+            int next = plan.Stops.Count > 0 ? plan.Stops[0] : o.ToTile;
+            var loaded = HaulLegCost(o.FromTile, next, o.Kg);
+            if (!loaded.Reachable) return null;
+            wh += loaded.TotalWh; minC = Math.Min(minC, loaded.MinBodyC);
+            if (plan.Stops.Count == 0)
+            {
+                double back = double.MaxValue; var stops = StagingStops();
+                foreach (int st in stops) { if (st == o.ToTile) { back = 0.0; break; } var leg = HaulLegCost(o.ToTile, st, 0.0); if (leg.Reachable && leg.TotalWh < back) { back = leg.TotalWh; minC = Math.Min(minC, leg.MinBodyC); } }
+                if (back < double.MaxValue) wh += back;
+            }
+            return (wh, minC);
         }
 
         /// <summary>The open haul tasks: a load at each source, and an unload at the target of each loaded haul.</summary>

@@ -252,5 +252,38 @@ namespace KardashevAscent.Simulation.Tests.Game
             for (int h = 0; h < 24; h++) sim.Tick(1.0);
             Assert.AreEqual(mined, sim.Deposits.MinedKg(tile, li), 1e-6, "nothing is mined while it is paused");
         }
+
+        [Test]
+        public void ALoadedHaulOnAColdWorld_IsOnlyDispatchedWhenTheBatteryCoversTheWholeFirstSegment()
+        {
+            var cold = new PlanetSolarParams(SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit * 1.524, 0.0934, 25.19 * Math.PI / 180.0, 336.0 * Math.PI / 180.0, 24.66, 686.98 * 24.0, 0.25, 0.3, -60.0);
+            var sim = new PlanetSimulation(Sphere, Surface, cold) { LogisticsEnabled = true };
+            sim.Debug.FreeBuilding = true;
+            sim.PlaceChargingStation(sim.BaseTileId, 0); sim.PlacePanel(sim.BaseTileId, 1, 0.35, Math.PI); sim.PlaceBattery(sim.BaseTileId, 2); sim.WireAllBuildings();
+            sim.Debug.FreeBuilding = false;
+            sim.Tick(0.5);
+            var rock = KardashevAscent.Simulation.Resources.Material.Rock;
+            sim.Materials.Add(rock, 3000.0);
+            int far = Enumerable.Range(0, sim.TileCount).Where(q => !sim.GetTile(q).IsWater && q != sim.BaseTileId && sim.IsOpenGround(q) && sim.Routes.HoursBetween(sim.BaseTileId, q) > 6.0 && sim.Routes.HoursBetween(sim.BaseTileId, q) < 14.0).OrderBy(q => sim.Routes.HoursBetween(sim.BaseTileId, q)).First();
+            foreach (var r in sim.Workforce.Robots) r.Battery.Draw(r.Battery.UsableWh * 0.6, 1.0);   // low charge
+            sim.SetStockTarget(far, rock, 400.0);
+            int dispatched = 0;
+            for (int h = 0; h < 96; h++)
+            {
+                sim.Tick(0.5);
+                foreach (var r in sim.Workforce.Robots)
+                    if (r.Task.HasValue && r.Task.Value.Kind == KardashevAscent.Simulation.Robots.TaskKind.Haul && r.Task.Value.Slot % 2 == 0 && !r.IsTravelling)
+                    {
+                        var need = sim.Workforce.HaulSegmentNeed(r, r.Task.Value);
+                        if (!need.HasValue) continue;
+                        dispatched++;
+                        double lock_ = r.Battery.CapacityWh * Math.Max(0.0, r.Battery.ColdFactor - KardashevAscent.Simulation.Robots.RobotBattery.ColdCapacityFactor(need.Value.MinC));
+                        double reserve = KardashevAscent.Simulation.Robots.RobotSpecs.ReturnToChargeFraction * r.Battery.CapacityWh * KardashevAscent.Simulation.Robots.RobotBattery.ColdCapacityFactor(need.Value.MinC);
+                        Assert.GreaterOrEqual(r.Battery.UsableWh - lock_ - reserve, need.Value.Wh * 0.99, "a robot takes a loaded haul only with enough battery for the whole first segment");
+                    }
+            }
+            Assert.Greater(sim.Workforce.Robots.Count(r => r.Battery.StateOfCharge > 0.0), 0);
+            Assert.AreEqual(0, sim.RobotsDestroyed, "nobody is sent out to die");
+        }
     }
 }

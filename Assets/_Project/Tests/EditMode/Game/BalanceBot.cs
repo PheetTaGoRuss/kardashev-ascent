@@ -78,6 +78,13 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.Fail("\n" + Run("Viridia", new PlanetSolarParams(lum, au, 0.0167, 23.44 * Math.PI / 180.0, 282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0), 400, false));
         }
 
+        [Test, Explicit("Balance tool: trace of robots 2 and 3 on the Mars-like world for 12 days")]
+        public void MarsDeathTrace()
+        {
+            double au = SolarConstants.AstronomicalUnit, lum = SolarConstants.SolarLuminosity;
+            Assert.Fail("\n" + Run("Mars-trace", new PlanetSolarParams(lum, 1.524 * au, 0.0934, 25.19 * Math.PI / 180.0, 336.0 * Math.PI / 180.0, 24.66, 686.98 * 24.0, 0.25, 0.3, -60.0), 12, false));
+        }
+
         [Test, Explicit("Balance tool: the Mars-like colony's timeline")]
         public void MarsTimeline()
         {
@@ -135,6 +142,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             for (int hour = 0; hour < 24 * days; hour += 3)
             {
                 var snap = sim.Workforce.Robots.ToDictionary(q => q.Id, q => $"R{q.Id} task={(q.Task.HasValue ? q.Task.Value.Kind + "@" + q.Task.Value.Tile : "none")} tile={q.Tile} act={q.Activity} wh={q.Battery.UsableWh:0} soc={q.Battery.StateOfCharge:0.00} airC={sim.LiveAirTemperatureAt(q.Tile):0} sheltered={q.Sheltered} trav={q.IsTravelling} fac={(q.Facility.HasValue ? q.Facility.Value.Tile + "." + q.Facility.Value.Slot : "-")} stranded={q.IsStranded} heaterW={q.HeaterW:0} hrsTo471={(sim.Routes.HoursBetween(q.Tile, 471)):0.0} lastChg={q.LastChargeW:0} warm={q.WarmingUp} bt={q.BatteryTempC:0} hist={q.ExposedEmptyHours:0} t={sim.TimeHours:0}");
+                if (full || name.StartsWith("Mars-trace")) foreach (var dq in sim.Workforce.Robots.Where(q => (q.Id == 2 || q.Id == 3) && sim.TimeHours > 120.0 && sim.TimeHours < 270.0))
+                    stuckNotes.Add($"TR t={sim.TimeHours:0} R{dq.Id} tile={dq.Tile} task={(dq.Task.HasValue ? dq.Task.Value.Kind + "@" + dq.Task.Value.Tile : "none")} act={dq.Activity} route={dq.Route.Count} wh={dq.Battery.UsableWh:0} cap={dq.Battery.CapacityWh * dq.Battery.ColdFactor:0} body={dq.BodyTempC:0} heater={dq.HeaterW:0} air={sim.LiveAirTemperatureAt(dq.Tile):0} sheltered={dq.Sheltered} cargo={sim.Workforce.Tasks.Open.Count(o => o.Task.Kind == TaskKind.Haul && o.RobotId == dq.Id)}");
                 int robotsBefore = sim.Workforce.Robots.Count;
                 sim.Tick(3.0);
                 if (full && sim.TimeHours > 600.0 && sim.TimeHours < 720.0) foreach (var q in sim.Workforce.Robots.Where(q => q.Task.HasValue && q.Task.Value.Kind == TaskKind.Mine && q.Task.Value.Tile == 484)) log.AppendLine($"TRACE t={sim.TimeHours:0} R{q.Id} tile={q.Tile} trav={q.IsTravelling} act={q.Activity} soc={q.Battery.StateOfCharge:0.00} tripCharge={q.TripCharge:0.00} need={q.NeedsCharge} {sim.Workforce.RangeReport(q, 484)}");
@@ -151,7 +160,7 @@ namespace KardashevAscent.Simulation.Tests.Game
                 var inRange = land.Where(t => sim.WorkReachProblem(t) == null).ToList();
                 foreach (var ub in sim.UnwiredBuildings().ToList()) sim.PlaceBuildingWire(ub.Tile, ub.Slot);   // nothing is wired for the player (EN-22)
                 bool kitPending = sim.ConstructionQueueCount > 0 || chargerTiles.Any(ct => Enumerable.Range(0, sim.SlotCount(ct)).Any(sl => sim.GetBuilding(ct, sl) != BuildingType.None && sim.IsUnderConstruction(ct, sl)));
-                foreach (Material hm in new[] { Material.Iron, Material.Copper, Material.Lithium }) sim.SetStockTarget(home, hm, kitPending ? 0.0 : (hm == Material.Iron ? 20_000.0 : 1_500.0));   // the base keeps nothing back while sites wait: a stock target reserves stock, and the kits need it (a copper target of 200 starved the first outpost)   // the base keeps nothing back while an outpost kit is being hauled out   // the game's advice: keep a stock at the base; hauls bring the ore
+                foreach (Material hm in new[] { Material.Iron, Material.Copper, Material.Lithium }) sim.SetStockTarget(home, hm, (hm == Material.Iron ? 20_000.0 : 1_500.0));   // targets are buffers: they never keep stock back from a waiting site   // the base keeps nothing back while an outpost kit is being hauled out   // the game's advice: keep a stock at the base; hauls bring the ore
 
                 // mining: base tile for rock and iron; the nearest tile with the ore for copper and lithium
                 foreach (Material m in Mined)
@@ -304,7 +313,7 @@ namespace KardashevAscent.Simulation.Tests.Game
                 summary += " Build tasks: " + string.Join(" | ", sim.Workforce.Tasks.Open.Where(q => q.Task.Kind == TaskKind.Build).Take(4).Select(q => $"@{q.Task.Tile} {q.State} {q.Reason}")) + ". Hauls: " + string.Join(" | ", sim.HaulOrders().Take(4).Select(h => $"{h.Material} {h.Kg:0} {h.From}>{h.To} {(sim.HaulBlockedReason(h.Id) ?? "ok")}")) + ". Stock at 472: Cu " + sim.KgAt(472, Material.Copper).ToString("0") + " Fe " + sim.KgAt(472, Material.Iron).ToString("0") + ".";
                 summary += $" Panels built {panelCount}, powered tiles {powered}, sites waiting: {(stuck.Count == 0 ? "none" : string.Join(", ", stuck.Take(6)))}.";
             }
-            if (stuckNotes.Count > 0) summary += " " + string.Join(" || ", stuckNotes.Take(45));
+            if (stuckNotes.Count > 0) summary += " " + string.Join(" || ", stuckNotes.Take(200));
             summary += " Ore ledger (crushing kWh | mined kg | left at the mine tile | at base): " + string.Join("; ", sim.ComminutionWhByOre.OrderByDescending(kv => kv.Value).Take(5).Select(kv => $"{kv.Key.Material}@{kv.Key.Tile} {kv.Value / 1000.0:0} | {sim.MinedByOreTile.GetValueOrDefault(kv.Key):0} | {sim.KgAt(kv.Key.Tile, kv.Key.Material):0} | {sim.KgAt(home, kv.Key.Material):0}")) + ".";
             if (target.TryGetValue(Material.Copper, out int cuTile) && cuTile > 0) summary += $" Copper tile {cuTile}: payload per trip {sim.FeasiblePayloadKg(cuTile, home, PlanetSimulation.BasePayloadKg):0} kg, mined {sim.Deposits.MinedKg(cuTile, Material.Copper) / days:0.0} kg a day on average, {sim.HaulTotals.KgMoved / 1000.0:0} t hauled in all, {sim.HaulTotals.Wh / 1e6:0.0} MWh spent hauling.";
             if (outpostNotes.Count > 0) summary += " Outpost candidates tried: " + string.Join(" | ", outpostNotes.Take(4)) + ".";
