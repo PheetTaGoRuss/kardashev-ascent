@@ -262,6 +262,18 @@ namespace KardashevAscent.Simulation.Robots
         {
             if (Movement == null)
                 return true;
+            // KI-46 at dispatch (decided 2026-11-26): a haul not yet picked up needs the battery for the whole first segment from where the robot is now: the empty leg to the pickup, the loaded leg
+            // to the next charger or shelter (or the drop and the way back when there is none), at the robot's current charge and the body temperature on the way
+            if (t.Kind == TaskKind.Haul && HaulSegmentNeed != null && Movement.HasCharger)   // with no charger anywhere there is nothing to keep charge for (as for other tasks)
+            {
+                var need = HaulSegmentNeed(r, t);
+                if (need.HasValue)
+                {
+                    double coldLock = r.Battery.CapacityWh * Math.Max(0.0, r.Battery.ColdFactor - RobotBattery.ColdCapacityFactor(need.Value.MinC));
+                    double reserve = RobotSpecs.ReturnToChargeFraction * r.Battery.CapacityWh * RobotBattery.ColdCapacityFactor(need.Value.MinC);
+                    if (need.Value.Wh * HaulDispatchMargin > r.Battery.UsableWh - coldLock - reserve + 1e-9) return false;
+                }
+            }
             double speed = r.Attribute(RobotAttribute.Speed);
             double go = Movement.RoutesFor(r).HoursBetween(r.Tile, t.Tile) / speed;
             if (!Movement.HasCharger)
@@ -1118,6 +1130,10 @@ namespace KardashevAscent.Simulation.Robots
         /// </summary>
         /// <summary>Heater or cooler power a robot would run outdoors at a tile, W (set by the simulation from the weather; null: none counted).</summary>
         public System.Func<Robot, int, double> OutdoorHeaterWAt { get; set; }
+        /// <summary>The energy of the first segment of a haul for this robot now, Wh, and the lowest body temperature on it (null: not a pickup).</summary>
+        public System.Func<Robot, WorkTask, (double Wh, double MinC)?> HaulSegmentNeed { get; set; }
+        /// <summary>Margin on the planned energy at dispatch ([rule] TBD).</summary>
+        public const double HaulDispatchMargin = 1.1;
         /// <summary>One-way build trips to a leapfrog outpost: true when the robot may go to the tile and not come straight back (the simulation checks the survival window).</summary>
         public System.Func<Robot, int, bool> OneWayOutpostOk { get; set; }
         /// <summary>True when the air at a tile is below the operating minimum (the heater is then holding the battery cold).</summary>
@@ -1137,6 +1153,16 @@ namespace KardashevAscent.Simulation.Robots
         {
             if (Movement == null || !Movement.HasCharger)
                 return 0.0;
+            if (t.Kind == TaskKind.Haul && HaulSegmentNeed != null)
+            {
+                var need = HaulSegmentNeed(r, t);
+                if (need.HasValue)
+                {
+                    double cap = r.Battery.CapacityWh * RobotBattery.ColdCapacityFactor(need.Value.MinC);
+                    if (cap <= 0.0) return double.PositiveInfinity;
+                    return RobotSpecs.ReturnToChargeFraction + need.Value.Wh * HaulDispatchMargin / cap;   // charge for the whole first segment, not only the way to the pickup
+                }
+            }
             double speed = r.Attribute(RobotAttribute.Speed);
             double go = Movement.RoutesFor(r).HoursBetween(r.Tile, t.Tile) / speed;
             double back = Movement.HoursToChargerFor(r)[t.Tile] / speed;
@@ -1171,7 +1197,7 @@ namespace KardashevAscent.Simulation.Robots
                         if (staffed.Contains(t) || !Capable(r, t.Kind) || ProgramPriority(r, t.Kind) == TaskPriority.Disabled || InRange(r, t))
                             continue;
                         double c = TripChargeFor(r, t);
-                        if (c > RobotSpecs.ResumeWorkFraction && c <= 1.0 + 1e-9 && (need == 0.0 || c < need))
+                        if (c > Math.Min(RobotSpecs.ResumeWorkFraction, r.Battery.StateOfCharge + 1e-6) && c <= 1.0 + 1e-9 && (need == 0.0 || c < need))   // a task the robot cannot reach at its present charge makes it charge for it, even below the usual 80 %
                             need = Math.Min(1.0, c + 0.02);   // a little margin
                     }
                 r.TripCharge = need;
