@@ -132,5 +132,25 @@ namespace KardashevAscent.Simulation.Tests.Game
                 Assert.Less(load, 0.25 * full + 1e-6, "below the old quarter-load floor: loads that used to be refused now go in smaller pieces");
             }
         }
+
+        [Test]
+        public void AHaulPlannedForAWarmHour_IsCutToWhatFitsNow_NotLeftBlockedForever()
+        {
+            var cold = new PlanetSolarParams(SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit * 1.524, 0.0934, 25.19 * Math.PI / 180.0, 336.0 * Math.PI / 180.0, 24.66, 686.98 * 24.0, 0.25, 0.3, -60.0);
+            var sim = new PlanetSimulation(Sphere, Surface, cold) { LogisticsEnabled = true };
+            sim.Debug.FreeBuilding = true;
+            sim.PlaceChargingStation(sim.BaseTileId, 0); sim.PlacePanel(sim.BaseTileId, 1, 0.35, Math.PI); sim.PlaceBattery(sim.BaseTileId, 2); sim.WireAllBuildings();
+            sim.Materials.Add(KardashevAscent.Simulation.Resources.Material.Rock, 5000.0);
+            sim.Tick(0.5);
+            int far = Enumerable.Range(0, sim.TileCount).Where(q => !sim.GetTile(q).IsWater && q != sim.BaseTileId && sim.IsOpenGround(q) && sim.Routes != null && sim.Routes.HoursBetween(sim.BaseTileId, q) > 10.0 && sim.Routes.HoursBetween(sim.BaseTileId, q) < 40.0).OrderBy(q => sim.Routes.HoursBetween(sim.BaseTileId, q)).First();
+            sim.SetStockTarget(far, KardashevAscent.Simulation.Resources.Material.Rock, 600.0);
+            for (int h = 0; h < 24 * 6; h++) sim.Tick(1.0);
+            foreach (var o in sim.HaulOrders())
+            {
+                double fits = sim.FeasiblePayloadKg(o.From, o.To, 490.0);
+                string why = sim.HaulBlockedReason(o.Id);
+                if (why != null && why.Contains("chain of legs")) Assert.Less(fits, PlanetSimulation.MinHaulLoadKg + 1e-6, $"haul {o.Id} of {o.Kg:0} kg is blocked although {fits:0} kg fits now");
+            }
+        }
     }
 }

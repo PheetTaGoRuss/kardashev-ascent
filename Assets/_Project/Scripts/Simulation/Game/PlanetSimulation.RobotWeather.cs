@@ -50,7 +50,7 @@ namespace KardashevAscent.Simulation.Game
                 {
                     double mid = (RobotThermal.OperatingMinC + RobotThermal.OperatingMaxC) / 2.0;
                     double cautious = air + (air < mid ? -tempSpread : tempSpread);
-                    heater = RobotThermal.HeaterW(cautious, r.Has(RobotModule.ThermalInsulation));
+                    heater = RobotThermal.SteadyHeaterW(cautious, 1.0, r.Has(RobotModule.ThermalInsulation), 0.0);
                     hoursLeft = heater > 0.0 ? r.Battery.UsableWh / heater : double.PositiveInfinity;
                 }
                 if (heater > 0.0 && hoursLeft < RobotThermal.WarnWithinHours && !r.ThermalWarned)

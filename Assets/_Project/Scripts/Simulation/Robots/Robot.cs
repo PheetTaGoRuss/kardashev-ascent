@@ -171,6 +171,8 @@ namespace KardashevAscent.Simulation.Robots
 
         /// <summary>Heater or cooler power now, W (0 inside the operating range or in shelter).</summary>
         public double HeaterW { get; internal set; }
+        /// <summary>Electrical power the robot drew for driving or work in the last step, W (the body keeps a share of it as heat).</summary>
+        internal double ActiveW;
         /// <summary>The robot stands at the lander, a battery yard, a charging station or a Workshop.</summary>
         public bool Sheltered { get; internal set; }
         /// <summary>Hours the battery lasts at the heater draw (infinity when there is none).</summary>

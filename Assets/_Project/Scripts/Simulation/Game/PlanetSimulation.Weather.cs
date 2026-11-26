@@ -118,7 +118,13 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>The air temperature now at a tile: the climatology, the day-night swing and the day's weather. For robots, in play (not for plans, which cannot know the weather ahead).</summary>
         public double LiveAirTemperatureAt(int tileId)
         {
-            Workforce.OutdoorHeaterWAt ??= (r, tile) => Robots.RobotThermal.HeaterW(LiveAirTemperatureAt(tile), r.Has(Robots.RobotModule.ThermalInsulation));
+            Workforce.OutdoorHeaterWAt ??= (r, tile) => Robots.RobotThermal.SteadyHeaterW(LiveAirTemperatureAt(tile), HasWeather ? Robots.RobotThermal.WindFactor(AnomalyAt(tile).WindMs, planet.SurfacePressureEarth) : 1.0, r.Has(Robots.RobotModule.ThermalInsulation), Workforce.Movement != null ? Workforce.Movement.DrivePowerW : 150.0);
+            Workforce.OutdoorTripHeater ??= (r, tile, hours) =>
+            {
+                double wind = HasWeather ? Robots.RobotThermal.WindFactor(AnomalyAt(tile).WindMs, planet.SurfacePressureEarth) : 1.0;
+                var tr = Robots.RobotThermal.TripHeater(r.BodyTempC, LiveAirTemperatureAt(tile), hours, wind, r.Has(Robots.RobotModule.ThermalInsulation), Workforce.Movement != null ? Workforce.Movement.DrivePowerW : 150.0);
+                return (tr.Wh, tr.MinC);
+            };
             Workforce.OutdoorAirIsCold ??= tile => LiveAirTemperatureAt(tile) < Robots.RobotThermal.OperatingMinC;
             Workforce.OneWayOutpostOk ??= (r, tile) => OneWayVerdict(r, tile).Allowed;
             Upkeep.WindFactorAt ??= tile => HasWeather ? Robots.RobotThermal.WindFactor(AnomalyAt(tile).WindMs, planet.SurfacePressureEarth) : 1.0;

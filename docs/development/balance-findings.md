@@ -294,3 +294,20 @@ The staged panel-first one-way check (panel built from the battery, trickle-char
 The quarter-load floor on hauls is lifted: a load the battery cannot carry is split to the largest load that fits, down to 5 kg (more trips are the cost). Kit hauls to a nearer tile now work (tile 473: 155 kg trips, staged via 473 for 485). Result with the strict staged one-way check:
 - Viridia: milestone 1 on day 90. At two years: demand 12.6 MW, day-average power 20.9 MW (M2 needs 100 MW), battery 242 MWh, 16 robots, Fe 20 t, Cu 1 500 kg, Li 1 500 kg, no queue and no shortfall. The bot stops growing: it only builds panels on powered tiles, and a cable costs 112 kg of copper a tile.
 - Mars-like: no milestone. Every outpost candidate is out of reach even for an empty robot (a 5 kg load): round trips of 2.3 to 4.0 kWh against about 1.9 kWh of battery reach, of which 1.0 to 1.8 kWh is the heater. One robot was lost to cold at day 272.
+
+## One lumped body (2026-11-26)
+
+The three thermal models (heater by air temperature, the battery's own 1 h time constant, the 52 h hibernation body) are replaced by one lump: C dT/dt = -G (T - T_air) + P_internal + P_heater, the battery shares the body temperature, the heater runs only when the body would pass its hold limit and then draws exactly what holds it (G (limit - air) - internal heat), shelter is a heated bay, hibernation is the empty-battery case. Internal heat is 30 W of electronics plus 15 % of drive and work power (assumptions, TBD; motor and drive efficiency about 85 %). Trip planning (the leg budget per leg with the body temperature on it, KI-46 range checks, hauls, the staged outpost check) uses the same model; rescue and warnings use the steady-state heater.
+
+| | before | after |
+|---|---|---|
+| Viridia milestone 1 | day 90 | day 54 (60 after the bot fix below) |
+| Mars-like robots lost in two years | one (day 272) | none |
+| Mars-like rock moved / generation | 1 027 t / 5 667 MWh | 25 439 t / 22 177 MWh |
+| Mars-like milestone 1 | never | never (see below) |
+
+Fixed on the way (with tests): a haul planned in a warm hour that no longer fitted stayed blocked forever (it is now cut to what fits), and the bot's own home stock targets reserved all the copper, so cable sites at other tiles never got any.
+
+Viridia, five game years: milestone 1 on day 60, then 37 MW day-average power from about day 250 to day 1 826 (504 panels, 12 powered tiles, battery 402 MWh); milestone 2 needs 100 MW. The limit is copper: stock 0 kg, the copper mine (tile 496) is out of reach again, so 19 sites wait. The 112 kg per tile of cable is not the limit; copper income is.
+
+Mars-like, two years: no milestone 1 (0.59 MW day-average against 4.3 MW). Copper 135 kg at landing is gone by day 30 (home charger, first panels, outposts); the second outpost (tile 485) is 16 kg of copper short, the copper tile (496) stays out of reach, and 20 t of lithium was mined into the sealed store at tile 484 with no haul home (crushing took 32 % of generation for nothing).

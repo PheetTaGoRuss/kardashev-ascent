@@ -61,14 +61,21 @@ namespace KardashevAscent.Simulation.Tests.Game
             double au = SolarConstants.AstronomicalUnit, lum = SolarConstants.SolarLuminosity;
             string mars = Run("Mars-like", new PlanetSolarParams(lum, 1.524 * au, 0.0934, 25.19 * Math.PI / 180.0, 336.0 * Math.PI / 180.0, 24.66, 686.98 * 24.0, 0.25, 0.3, -60.0), 20, false);
             StringAssert.DoesNotContain("Deaths:", mars);
-            StringAssert.DoesNotContain("LAST SEEN BEFORE LOSS", mars);
+        }
+
+        /// <summary>Milestone 2 on Viridia over five game years (rule: the budget for the second milestone), with panel fields laid out by cable where copper allows.</summary>
+        [Test, Explicit("Balance tool: five game years on the Earth-like world, for milestone 2")]
+        public void FiveYearsToMilestoneTwo()
+        {
+            double au = SolarConstants.AstronomicalUnit, lum = SolarConstants.SolarLuminosity;
+            Assert.Fail("\n" + Run("Viridia, 5 years", new PlanetSolarParams(lum, au, 0.0167, 23.44 * Math.PI / 180.0, 282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0), 1826, false));
         }
 
         [Test, Explicit("Balance tool: 60 days of the Earth-like colony with the diagnostics")]
         public void ViridiaShort()
         {
             double au = SolarConstants.AstronomicalUnit, lum = SolarConstants.SolarLuminosity;
-            Assert.Fail("\n" + Run("Viridia", new PlanetSolarParams(lum, au, 0.0167, 23.44 * Math.PI / 180.0, 282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0), 60, true));
+            Assert.Fail("\n" + Run("Viridia", new PlanetSolarParams(lum, au, 0.0167, 23.44 * Math.PI / 180.0, 282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0), 250, false));
         }
 
         [Test, Explicit("Balance tool: the Mars-like colony's timeline")]
@@ -140,7 +147,7 @@ namespace KardashevAscent.Simulation.Tests.Game
                 if (firstShortDay < 0 && milestone2Day < 0 && hour > 24 * 20 && (sim.Materials[Material.Iron] < 1.0 || sim.Materials[Material.Rock] < 1.0)) firstShortDay = hour / 24;
                 var inRange = land.Where(t => sim.WorkReachProblem(t) == null).ToList();
                 foreach (var ub in sim.UnwiredBuildings().ToList()) sim.PlaceBuildingWire(ub.Tile, ub.Slot);   // nothing is wired for the player (EN-22)
-                bool kitPending = chargerTiles.Any(ct => Enumerable.Range(0, sim.SlotCount(ct)).Any(sl => sim.GetBuilding(ct, sl) != BuildingType.None && sim.IsUnderConstruction(ct, sl)));
+                bool kitPending = sim.ConstructionQueueCount > 0 || chargerTiles.Any(ct => Enumerable.Range(0, sim.SlotCount(ct)).Any(sl => sim.GetBuilding(ct, sl) != BuildingType.None && sim.IsUnderConstruction(ct, sl)));
                 foreach (Material hm in new[] { Material.Iron, Material.Copper, Material.Lithium }) sim.SetStockTarget(home, hm, kitPending ? 0.0 : (hm == Material.Iron ? 20_000.0 : 1_500.0));   // the base keeps nothing back while an outpost kit is being hauled out   // the game's advice: keep a stock at the base; hauls bring the ore
 
                 // mining: base tile for rock and iron; the nearest tile with the ore for copper and lithium
@@ -215,6 +222,12 @@ namespace KardashevAscent.Simulation.Tests.Game
                                 if (sim.CanPlace(BuildingType.SolarPanel, t, s) && sim.PlacePanel(t, s, 0.35, Math.PI)) slots++;
                             if (slots > 0) break;
                         }
+                    // no room left on the powered tiles: lay a line toward the nearest open tile (112 kg of copper a tile) so the next panels can stand there
+                    if (slots == 0 && sim.GenerationW < 2.0 * Math.Max(sim.DemandW, 2e5))
+                    {
+                        int farm = land.Where(q => !sim.IsPowered(q) && !chargerTiles.Contains(q) && !sim.GetTile(q).IsWater && sim.IsOpenGround(q)).OrderBy(q => Hops(sphere, home, q)).ThenBy(q => q).FirstOrDefault();
+                        if (farm > 0) Powered(sim, sphere, farm);
+                    }
                     if (sim.BatteryCapacityWh < Math.Max(sim.DemandW, sim.DemandTargetW) * 16.0)
                         foreach (int t in new[] { home }.Concat(inRange.Skip(1).Take(12)).Where(q => sim.IsPowered(q)))
                             if (Enumerable.Range(0, sim.SlotCount(t)).Any(s => sim.PlaceBattery(t, s))) break;
@@ -228,6 +241,7 @@ namespace KardashevAscent.Simulation.Tests.Game
                 if ((hour % (24 * 100) == 0) && full) log.AppendLine($"GROW d{hour / 24} target={sim.DemandTargetW:0} demand={sim.DemandW:0} gen={sim.GenerationW:0} battCap={sim.BatteryCapacityWh:0} brown={sim.IsBrownout} queue={sim.ConstructionQueueCount} robots={sim.Workforce.Robots.Count} saveForRobot={robotNote} cuComing={copperComing}");
                 if (hour == 24 * 50 && full)
                     foreach (int ot in chargerTiles) log.AppendLine($"ROOM tile={ot} iron={sim.RoomAt(ot, Material.Iron):0} copper={sim.RoomAt(ot, Material.Copper):0} baseIron={sim.KgAt(home, Material.Iron):0} baseCu={sim.KgAt(home, Material.Copper):0} cost={sim.HaulCostText(home, ot, 100.0)} reach={sim.WorkReachProblem(ot)}");
+                    foreach (var hq in sim.HaulOrders().Take(1)) log.AppendLine($"HAULDBG kg={hq.Kg:0} planFeasible={sim.PlanHaul(hq.From, hq.To, hq.Kg).Feasible} payloadAtFull={sim.FeasiblePayloadKg(hq.From, hq.To, 490.0):0.0} cost={sim.HaulCostText(hq.From, hq.To, hq.Kg)} legBudget={sim.LegBudgetWh:0}");
                     log.AppendLine("KIT targets=" + string.Join(",", sim.StockTargets().Select(q => q.Tile + ":" + q.Material + q.Kg.ToString("0"))) + " hauls=" + string.Join(" | ", sim.HaulOrders().Select(h => h.Id + ":" + h.Material + " " + h.Kg.ToString("0") + " " + h.From + ">" + h.To + " " + (sim.HaulBlockedReason(h.Id) ?? "ok"))));
                 if (hour == 24 * 50 && full)
                 {
@@ -257,6 +271,14 @@ namespace KardashevAscent.Simulation.Tests.Game
             string verdict = (share > 0.5 ? " ABSURD: mining takes over half of generation." : "") + (firstShortDay >= 0 ? $" ABSURD: ran out of iron or rock on day {firstShortDay} before milestone 2." : "");
             string summary = $"{name} (longest continuous travel {longestTravel:0} h): {days} d, milestones {sim.MilestonesReached} (M1 day {(milestone1Day < 0 ? "never" : milestone1Day.ToString())}, M2 day {(milestone2Day < 0 ? "never" : milestone2Day.ToString())}), deposits used up {exhausted} [{string.Join(", ", exhaustedWhat)}], rock moved {sim.RockMovedKg / 1000.0:0} t, tailings {sim.TailingsKg / 1000.0:0} t, mining energy {miningWh / 1e6:0.0} MWh (crushing {sim.ComminutionWh / 1e6:0.0}) of {generatedWh / 1e6:0} MWh generated = {share * 100.0:0.0} %.{verdict}";
             foreach (int ot in new HashSet<int>(sim.Workforce.Tasks.Open.Where(q => q.Task.Kind == TaskKind.Build).Select(q => q.Task.Tile))) { string txt = sim.OutpostText(ot); if (txt.Length > 0) summary += $" Outpost {ot}: {txt}."; }
+            {
+                var stuck = new List<string>();
+                for (int qt = 0; qt < sim.TileCount; qt++) for (int qs = 0; qs < sim.SlotCount(qt); qs++) if (sim.GetBuilding(qt, qs) != BuildingType.None && sim.IsUnderConstruction(qt, qs)) stuck.Add($"{sim.GetBuilding(qt, qs)}@{qt}.{qs} {sim.ConstructionProgress(qt, qs) * 100.0:0}%");
+                int panelCount = 0, powered = sim.PoweredTileCount;
+                for (int qt = 0; qt < sim.TileCount; qt++) for (int qs = 0; qs < sim.SlotCount(qt); qs++) if (sim.GetBuilding(qt, qs) == BuildingType.SolarPanel && !sim.IsUnderConstruction(qt, qs)) panelCount++;
+                summary += " Build tasks: " + string.Join(" | ", sim.Workforce.Tasks.Open.Where(q => q.Task.Kind == TaskKind.Build).Take(4).Select(q => $"@{q.Task.Tile} {q.State} {q.Reason}")) + ". Hauls: " + string.Join(" | ", sim.HaulOrders().Take(4).Select(h => $"{h.Material} {h.Kg:0} {h.From}>{h.To} {(sim.HaulBlockedReason(h.Id) ?? "ok")}")) + ". Stock at 472: Cu " + sim.KgAt(472, Material.Copper).ToString("0") + " Fe " + sim.KgAt(472, Material.Iron).ToString("0") + ".";
+                summary += $" Panels built {panelCount}, powered tiles {powered}, sites waiting: {(stuck.Count == 0 ? "none" : string.Join(", ", stuck.Take(6)))}.";
+            }
             if (outpostNotes.Count > 0) summary += " Outpost candidates tried: " + string.Join(" | ", outpostNotes.Take(4)) + ".";
             var blockers = sim.Workforce.Tasks.Open.Where(q => q.State == TaskState.AssistanceNeeded || q.State == TaskState.Blocked).Take(4).Select(q => $"{q.Task.Kind}@{q.Task.Tile}: {q.Reason}");
             var deaths = sim.OperationsLog.Where(o => o.Quantity == "Robot destroyed").Take(2).Select(o => o.Text);

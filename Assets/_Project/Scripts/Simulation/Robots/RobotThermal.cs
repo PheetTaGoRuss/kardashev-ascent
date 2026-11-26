@@ -150,5 +150,100 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>The battery temperature after a step: exponential approach to the target.</summary>
         public static double BatteryStep(double batteryC, double target, double hours) =>
             target + (batteryC - target) * Math.Exp(-hours / BatteryThermalTauHours);
+
+        // ---- one lumped body (decided 2026-11-26, director's delegate) ----
+        // The robot is one thermal lump: C dT/dt = -G (T - T_air) + P_internal + P_heater. The battery shares the body temperature. The heater (or cooler) runs only when the body would pass a hold limit,
+        // and then draws exactly what holds it there; a robot with an empty battery hibernates (no heater, no internal heat) and the body follows the air with tau = C / G. Shelter sets the air to the shelter's
+        // and gives a heated bay (free for the robot, power-limited). This replaces the old heater-by-air-temperature rule, the battery's own one-hour time constant and the hibernation-only body model.
+        // The idea (heaters plus thermal mass and insulation to hold the battery at or above its limit) follows the Mars Exploration Rover thermal design (JPL, TFAWS 2005).
+
+        /// <summary>Loss conductance of the body to the air, W/K, at the reference wind: the value the old heater rule implied (see <see cref="HeaterWPerK"/>); game rule, TBD.</summary>
+        public static double Conductance(double windFactor, bool insulated) => HeaterWPerK * Math.Max(0.1, windFactor) * (insulated ? InsulationConductanceFactor : 1.0);
+
+        /// <summary>The thermal insulation module cuts the loss conductance to this share (game rule, TBD).</summary>
+        public const double InsulationConductanceFactor = 0.5;
+
+        /// <summary>Heat the electronics always give off while the robot is awake, W (assumption, TBD: avionics of a rover are tens of watts).</summary>
+        public const double ElectronicsHeatW = 30.0;
+
+        /// <summary>Share of electrical drive and work power that ends as heat in the body (assumption: a brushless motor and drive are about 85 % efficient, so 15 % is lost as heat; the rest is mechanical work done on the ground).</summary>
+        public const double BodyHeatShareOfActivePower = 0.15;
+
+        /// <summary>Most a heater or cooler can deliver, W (game rule, TBD), and the heated bay's power in shelter, W (free for the robot).</summary>
+        public const double HeaterMaxW = 400.0, BayHeaterW = 500.0;
+
+        /// <summary>Heat the body makes itself, W: nothing while it hibernates.</summary>
+        public static double InternalHeatW(double activePowerW, bool awake) => awake ? ElectronicsHeatW + BodyHeatShareOfActivePower * Math.Max(0.0, activePowerW) : 0.0;
+
+        public readonly struct LumpResult
+        {
+            public readonly double BodyC, HeaterW, MinC;
+            public LumpResult(double bodyC, double heaterW, double minC) { BodyC = bodyC; HeaterW = heaterW; MinC = minC; }
+        }
+
+        /// <summary>
+        /// One step of the lumped body. <paramref name="airC"/> is the air (the shelter's temperature when <paramref name="sheltered"/>); <paramref name="awake"/> is false while it hibernates with an empty battery.
+        /// <c>HeaterW</c> is the average electrical power the heater or cooler drew from the battery over the step (0 in shelter: the bay's heat is free); <c>MinC</c> the lowest body temperature in the step.
+        /// </summary>
+        public static LumpResult Step(double bodyC, double airC, double hours, double windFactor, bool insulated, double activePowerW, bool awake, bool sheltered)
+        {
+            double g = Conductance(windFactor, insulated);
+            double tau = BodyHeatCapacityJPerK / g / 3600.0;
+            double pInt = InternalHeatW(activePowerW, awake);
+            double air = sheltered ? ShelterBatteryC : airC;
+            double tInf = air + pInt / g;
+            double free = tInf + (bodyC - tInf) * Math.Exp(-hours / tau);
+            double lo = sheltered ? ShelterBatteryC : OperatingMinC, hi = OperatingMaxC;
+            double pMax = sheltered ? BayHeaterW : HeaterMaxW;
+            bool needHeat = bodyC < lo - 1e-9 || free < lo - 1e-9, needCool = bodyC > hi + 1e-9 || free > hi + 1e-9;
+            if ((!needHeat && !needCool) || (!awake && !sheltered)) return new LumpResult(free, 0.0, Math.Min(bodyC, free));
+            double billed = sheltered ? 0.0 : 1.0;
+            if (needHeat)
+            {
+                double pHold = Math.Max(0.0, g * (lo - air) - pInt);
+                if (bodyC >= lo)
+                {
+                    double tH = tInf >= lo ? hours : Math.Min(hours, Math.Max(0.0, tau * Math.Log((bodyC - tInf) / (lo - tInf))));
+                    return new LumpResult(tH >= hours ? free : lo, billed * pHold * (hours - tH) / hours, Math.Min(bodyC, lo));
+                }
+                double tInf2 = air + (pInt + pMax) / g;
+                double tR = tInf2 <= lo ? double.PositiveInfinity : tau * Math.Log((tInf2 - bodyC) / (tInf2 - lo));
+                if (tR >= hours) return new LumpResult(tInf2 + (bodyC - tInf2) * Math.Exp(-hours / tau), billed * pMax, bodyC);
+                return new LumpResult(lo, billed * (pMax * tR + pHold * (hours - tR)) / hours, bodyC);
+            }
+            double pCool = Math.Max(0.0, pInt + g * (air - hi));
+            if (bodyC <= hi)
+            {
+                double tC = tInf <= hi ? hours : Math.Min(hours, Math.Max(0.0, tau * Math.Log((tInf - bodyC) / (tInf - hi))));
+                return new LumpResult(tC >= hours ? free : hi, billed * pCool * (hours - tC) / hours, Math.Min(bodyC, free));
+            }
+            double tInf3 = air + (pInt - pMax) / g;
+            double tR2 = tInf3 >= hi ? double.PositiveInfinity : tau * Math.Log((bodyC - tInf3) / (hi - tInf3));
+            if (tR2 >= hours) return new LumpResult(tInf3 + (bodyC - tInf3) * Math.Exp(-hours / tau), billed * pMax, Math.Min(bodyC, free));
+            return new LumpResult(hi, billed * (pMax * tR2 + pCool * (hours - tR2)) / hours, Math.Min(bodyC, hi));
+        }
+
+        /// <summary>Heater power needed to hold the lower limit in steady state at an air temperature, W (what a long stay outdoors costs; 0 when the robot's own heat or the air is enough).</summary>
+        public static double SteadyHeaterW(double airC, double windFactor, bool insulated, double activePowerW)
+        {
+            double g = Conductance(windFactor, insulated);
+            double pInt = InternalHeatW(activePowerW, true);
+            double heat = Math.Max(0.0, g * (OperatingMinC - airC) - pInt);
+            double cool = Math.Max(0.0, pInt + g * (airC - OperatingMaxC));
+            return Math.Max(heat, cool);
+        }
+
+        /// <summary>The energy the heater or cooler costs over a stay of <paramref name="hours"/> in air at <paramref name="airC"/> starting at <paramref name="startC"/>, Wh, with the lowest and last body temperature (planning).</summary>
+        public static (double Wh, double MinC, double EndC) TripHeater(double startC, double airC, double hours, double windFactor, bool insulated, double activePowerW)
+        {
+            double t = startC, wh = 0.0, min = startC;
+            for (double done = 0.0; done < hours - 1e-9; done += 1.0)
+            {
+                double dt = Math.Min(1.0, hours - done);
+                var r = Step(t, airC, dt, windFactor, insulated, activePowerW, true, false);
+                wh += r.HeaterW * dt; t = r.BodyC; min = Math.Min(min, r.MinC);
+            }
+            return (wh, min, t);
+        }
     }
 }

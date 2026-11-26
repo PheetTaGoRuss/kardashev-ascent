@@ -18,7 +18,9 @@ namespace KardashevAscent.Simulation.Game
         public readonly struct HaulLeg
         {
             public readonly double Hours, DriveWh, ClimbWh, HeaterWh;
-            public HaulLeg(double hours, double drive, double climb, double heater) { Hours = hours; DriveWh = drive; ClimbWh = climb; HeaterWh = heater; }
+            /// <summary>The lowest body (and battery) temperature on the leg, C: the battery keeps the capacity share of that temperature (one lumped body).</summary>
+            public readonly double MinBodyC;
+            public HaulLeg(double hours, double drive, double climb, double heater, double minBodyC = RobotThermal.ShelterBatteryC) { Hours = hours; DriveWh = drive; ClimbWh = climb; HeaterWh = heater; MinBodyC = minBodyC; }
             public double TotalWh => DriveWh + ClimbWh + HeaterWh;
             public bool Reachable => !double.IsInfinity(Hours);
         }
@@ -43,6 +45,7 @@ namespace KardashevAscent.Simulation.Game
             var high = HighestPointEstimate;
             double scale = high.Value > 0.0 ? Math.Max(1.0, high.High / high.Value) : 1.0;
             int at = from;
+            double bodyC = RobotThermal.ShelterBatteryC, minBodyC = bodyC;
             foreach (int t in route)
             {
                 double step = Routes.HopHoursAt(t);
@@ -50,13 +53,15 @@ namespace KardashevAscent.Simulation.Game
                 drive += power * step;
                 if (heights != null)
                     climb += HaulPhysics.ClimbEnergyWh(HaulPhysics.DefaultRobotMassKg, cargoKg, SurfaceGravityMs2, heights[t] - heights[at], 1.0) * HaulPhysics.ClimbEffortShare * scale;
-                heater += RobotThermal.HeaterW(DiurnalAirTemperatureAt(t, clock), false) * step;
+                // one lumped body: a leg starts at a charger or shelter (body at the shelter temperature) and the body cools along the way, so the heater only runs once it would pass its limit
+                var lump = RobotThermal.Step(bodyC, DiurnalAirTemperatureAt(t, clock), step, 1.0, false, power, true, false);
+                heater += lump.HeaterW * step; bodyC = lump.BodyC; minBodyC = Math.Min(minBodyC, lump.MinC);
                 clock += step;
                 at = t;
             }
             // the battery pays the drive and the climb over the robot's drive efficiency (the planner assumes the least efficient robot)
             double eff = PlanningEfficiency;
-            return new HaulLeg(hours, drive / eff, climb / eff, heater);
+            return new HaulLeg(hours, drive / eff, climb / eff, heater, minBodyC);
         }
 
         public string HaulCostText(int from, int to, double cargoKg)
@@ -163,7 +168,7 @@ namespace KardashevAscent.Simulation.Game
                 foreach (int s in plannedStops)
                     if (!stops.Contains(s)) return new HaulWhy(HaulWhyKind.StopLost, 0.0, budget, s);
             if (PlanHaul(from, to, cargoKg).Feasible) return new HaulWhy(HaulWhyKind.Ok, 0.0, budget);
-            bool Fits(int a, int b2, double kg) { if (a == b2) return true; var leg = HaulLegCost(a, b2, kg); return leg.Reachable && leg.TotalWh <= budget; }
+            bool Fits(int a, int b2, double kg) { if (a == b2) return true; var leg = HaulLegCost(a, b2, kg); return leg.Reachable && leg.TotalWh <= LegBudgetFor(leg); }
             bool startOk = false, endOk = false;
             foreach (int st in stops) { startOk |= Fits(st, from, 0.0); endOk |= Fits(to, st, 0.0); }
             // what one charge must cover with no stop at the pick-up or the drop: the run out empty, the loaded leg, the run home (cheapest stop each way)
@@ -203,6 +208,18 @@ namespace KardashevAscent.Simulation.Game
             return coldShare;
         }
 
+        /// <summary>
+        /// Usable charge for one leg given the temperature the body reaches on it (one lumped body, 2026-11-26): the battery has the body temperature, so a short leg out of shelter keeps
+        /// most of its capacity and only a leg long enough for the body to reach its cold limit gets the cold-limit share. Infinity when the colony has no robots.
+        /// </summary>
+        public double LegBudgetFor(HaulLeg leg)
+        {
+            double best = 0.0;
+            foreach (Robot r in Workforce.Robots) best = Math.Max(best, r.Battery.CapacityWh);
+            if (best <= 0.0) return double.PositiveInfinity;
+            return best * (RobotSpecs.ResumeWorkFraction - RobotSpecs.ReturnToChargeFraction) * Math.Min(RobotBattery.ColdCapacityFactor(leg.MinBodyC), adviceColdShareCap);
+        }
+
         /// <summary>Usable charge for one leg between stops, Wh (infinity when the colony has no robots: nothing to limit).</summary>
         public double LegBudgetWh
         {
@@ -233,7 +250,7 @@ namespace KardashevAscent.Simulation.Game
             double budget = LegBudgetWh;
             var stops = new List<int>(StagingStops());
             stops.Sort();
-            bool Fits(int a, int b2, double kg) { if (a == b2) return true; var leg = HaulLegCost(a, b2, kg); return leg.Reachable && leg.TotalWh <= budget; }
+            bool Fits(int a, int b2, double kg) { if (a == b2) return true; var leg = HaulLegCost(a, b2, kg); return leg.Reachable && leg.TotalWh <= LegBudgetFor(leg); }
             // the robot starts at a stop and must be able to reach the pick-up, and to get back to a stop after the drop
             bool startOk = false, endOk = false;
             foreach (int st in stops) { startOk |= Fits(st, from, 0.0); endOk |= Fits(to, st, 0.0); }
@@ -261,7 +278,7 @@ namespace KardashevAscent.Simulation.Game
                     if (done[v]) continue;
                     var leg = HaulLegCost(nodes[u], nodes[v], cargoKg);
                     double carried = leg.TotalWh + (u == 0 ? startWh : 0.0) + (v == n - 1 ? endWh : 0.0);
-                    if (!leg.Reachable || carried > budget) continue;
+                    if (!leg.Reachable || carried > LegBudgetFor(leg)) continue;
                     double nd = dist[u] + leg.Hours + (Routes.DrivePowerW > 0.0 ? (leg.ClimbWh + leg.HeaterWh) / Routes.DrivePowerW : 0.0);
                     if (nd < dist[v]) { dist[v] = nd; prev[v] = u; }
                 }

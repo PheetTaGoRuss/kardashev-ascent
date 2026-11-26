@@ -90,8 +90,8 @@ namespace KardashevAscent.Simulation.Tests.Robots
         {
             var sim = Colony(-150.0);
             var r = sim.Workforce.AddRobot(RobotKind.General, FarLandTile(sim));
-            sim.Tick(0.1);
-            Assert.Greater(r.HeaterW, 100.0, "far below -40 C: a large draw");
+            sim.Tick(20.0);   // one lumped body: it leaves shelter warm and cools with tau of about 52 h before the heater has to run
+            Assert.Greater(r.HeaterW, 100.0, "far below -40 C: a large draw once the body has cooled to its limit");
             Assert.IsFalse(r.Sheltered);
             Assert.Less(r.ThermalHoursLeft, 1e9);
         }
@@ -236,7 +236,7 @@ namespace KardashevAscent.Simulation.Tests.Robots
             var w = new Workforce();
             Robot r = w.AddRobot(RobotKind.General, 0);
             r.Battery.Restore(0.0, 0.0);   // flat: it wants a charge
-            r.BatteryTempC = -10.0;        // and it is cold
+            r.BatteryTempC = -10.0; r.BodyTempC = -10.0;   // and it is cold (one lumped body: the battery has the body temperature)
             var lander = new[] { new RobotFacility(0, -1, new ChargingCapability(2, 1000.0, true)) };
             var up = new RobotUpkeep();
             bool everWarming = false;
