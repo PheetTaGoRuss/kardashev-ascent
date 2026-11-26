@@ -352,5 +352,27 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.Greater(mild, 0.2, "a leg of several hours needs more than the reserve");
             Assert.GreaterOrEqual(cold, mild, "the same leg in colder air asks for at least as much (the heater and the cold battery)");
         }
+        [Test]
+        public void WhenTheWeatherTurnsColder_ALegCostsMore_AndTheForecastAnomalyFadesWithDays()
+        {
+            var planet = new PlanetSolarParams(SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Math.PI / 180.0, 282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, -40.0);
+            var sim = new PlanetSimulation(Sphere, Surface, planet) { LogisticsEnabled = true, WeatherEnabled = true, DiurnalTemperature = false };
+            sim.Tick(0.5);
+            var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+            int far = Enumerable.Range(0, sim.TileCount).Where(q => !sim.GetTile(q).IsWater && q != sim.BaseTileId && sim.IsOpenGround(q) && sim.Routes.HoursBetween(sim.BaseTileId, q) > 8.0).First();
+            var field = typeof(PlanetSimulation).GetField("legAnomalyK", flags);
+            double normal = sim.HaulLegCost(sim.BaseTileId, far, 300.0).TotalWh;
+            field.SetValue(sim, (Func<int, double, double>)((t, h) => -40.0));
+            double colder = sim.HaulLegCost(sim.BaseTileId, far, 300.0).TotalWh;
+            field.SetValue(sim, null);
+            TestContext.WriteLine($"leg energy: {normal:0} Wh normal, {colder:0} Wh with the air 40 K colder");
+            Assert.Greater(colder, normal, "colder air means more heater energy on the same leg");
+            var anomaly = typeof(PlanetSimulation).GetMethod("ForecastAnomalyK", flags);
+            double a0 = (double)anomaly.Invoke(sim, new object[] { sim.BaseTileId, 0.0 });
+            double a3 = (double)anomaly.Invoke(sim, new object[] { sim.BaseTileId, 72.0 });
+            double a9 = (double)anomaly.Invoke(sim, new object[] { sim.BaseTileId, 24.0 * 9 });
+            Assert.LessOrEqual(Math.Abs(a3), Math.Abs(a0) + 1e-9, "the anomaly fades day by day");
+            Assert.AreEqual(0.0, a9, 1e-12, "no forecast beyond its range");
+        }
     }
 }
