@@ -1132,8 +1132,8 @@ namespace KardashevAscent.Simulation.Robots
         public System.Func<Robot, int, double> OutdoorHeaterWAt { get; set; }
         /// <summary>The energy of the first segment of a haul for this robot now, Wh, and the lowest body temperature on it (null: not a pickup).</summary>
         public System.Func<Robot, WorkTask, (double Wh, double MinC)?> HaulSegmentNeed { get; set; }
-        /// <summary>Margin on the planned energy at dispatch ([rule] TBD).</summary>
-        public const double HaulDispatchMargin = 1.1;
+        /// <summary>Margin on the planned energy at dispatch ([rule] TBD): 1.0, because the plan's leg budget already keeps the 20 % reserve; 1.1 made robots charge to 88 % before every far haul and cut the five-year Viridia run from 38.6 MW to 14.3 MW (bisected).</summary>
+        public const double HaulDispatchMargin = 1.0;
         /// <summary>One-way build trips to a leapfrog outpost: true when the robot may go to the tile and not come straight back (the simulation checks the survival window).</summary>
         public System.Func<Robot, int, bool> OneWayOutpostOk { get; set; }
         /// <summary>True when the air at a tile is below the operating minimum (the heater is then holding the battery cold).</summary>

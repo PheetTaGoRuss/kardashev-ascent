@@ -194,7 +194,7 @@ namespace KardashevAscent.Simulation.Tests.Game
                     foreach (int step in busy || hour % 24 != 0 ? new List<int>() : candidates)
                     {
                         // order the outpost (sites, wiring, kit hauls); the game says whether the builder may go one way; if not, take the order back and try a nearer tile
-                        string err = sim.OrderOutpost(step);
+                        string err = sim.OrderOutpost(step, planet.AirTemperatureC < 0.0 ? 1 : 2);
                         if (err != null) { outpostNotes.Add($"tile {step}: {err}"); continue; }
                         string outpostVerdict = sim.OutpostTextAtFullCharge(step);
                         if (outpostVerdict.StartsWith("one-way")) { chargerTiles.Add(step); chargerHops++; break; }
@@ -225,7 +225,7 @@ namespace KardashevAscent.Simulation.Tests.Game
                         foreach (int mid in new[] { route[route.Count / 2 - 1 < 0 ? 0 : route.Count / 2 - 1], route[Math.Min(route.Count - 1, route.Count / 2)] })
                         {
                             if (mid == home || chargerTiles.Contains(mid) || sim.GetTile(mid).IsWater || sim.IsPowered(mid)) continue;
-                            if (sim.OrderOutpost(mid) == null) { chargerTiles.Add(mid); outpostNotes.Add($"payload {payload:0} kg for {pm}: outpost at tile {mid} splits the leg {la}-{lb}"); break; }
+                            if (sim.OrderOutpost(mid, planet.AirTemperatureC < 0.0 ? 1 : 2) == null) { chargerTiles.Add(mid); outpostNotes.Add($"payload {payload:0} kg for {pm}: outpost at tile {mid} splits the leg {la}-{lb}"); break; }
                         }
                     }
                 // an outpost gets its charger once its panels are wired (the island has a source then)
@@ -246,7 +246,11 @@ namespace KardashevAscent.Simulation.Tests.Game
                 bool saveForRobot = robotsOrdered < 6 && robotNote.StartsWith("Missing");
                 // the starting copper is kept for the chargers that make copper mining possible; growth waits until copper is coming in
                 bool copperComing = target.TryGetValue(Material.Copper, out int cuTileEnd) && sim.Deposits.MinedKg(cuTileEnd, Material.Copper) > 100.0;
-                if (!saveForRobot && (copperComing || sim.Materials[Material.Copper] > 150.0) && sim.ConstructionQueueCount < 3 + sim.Workforce.Robots.Count)
+                // copper bootstrap: while the copper deposit is not on the haul chain and what copper there is (the aluminium stand-in counts, 0.494 kg per kg) cannot cover the next outpost on the way, home panels wait:
+                // the outposts toward the deposit come first
+                bool copperHold = target.TryGetValue(Material.Copper, out int cuT0) && cuT0 > 0 && sim.MiningWarning(cuT0, Material.Copper) != null
+                                  && sim.Materials[Material.Copper] + sim.Materials[Material.Aluminium] / KardashevAscent.Simulation.Resources.StandIns.AluminiumPerCopperKg < 130.0;
+                if (!saveForRobot && !copperHold && (copperComing || sim.Materials[Material.Copper] > 150.0) && sim.ConstructionQueueCount < 3 + sim.Workforce.Robots.Count)
                 {
                     int slots = 0;
                     if (sim.GenerationW < 2.0 * Math.Max(sim.DemandW, 2e5))
