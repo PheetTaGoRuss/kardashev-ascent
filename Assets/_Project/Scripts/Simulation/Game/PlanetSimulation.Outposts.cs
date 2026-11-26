@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using KardashevAscent.Simulation.Resources;
 using KardashevAscent.Simulation.Robots;
 
 namespace KardashevAscent.Simulation.Game
@@ -39,13 +40,7 @@ namespace KardashevAscent.Simulation.Game
             return station && panelCount > 0 && buildHours > 0.0;
         }
 
-        /// <summary>
-        /// Where a site takes its materials from: its own tile's stock, except an outpost (off the grid, with a station and panels among its sites), whose kit the robot carries from
-        /// the base (the existing cargo rule: the drive energy of the outbound leg counts the kit's mass, see <see cref="OneWayVerdict"/>).
-        /// </summary>
-        Resources.MaterialStock BuildStockAt(int tile) => WiredGrid && !IsPowered(tile) && tile != BaseTileId && OutpostSites(tile, out _, out _) ? StockAt(BaseTileId) : StockAt(tile);
-
-        /// <summary>Mass of the materials still to be fitted on a tile, kg (the kit a robot carries to an outpost).</summary>
+        /// <summary>Mass of the materials still to be fitted on a tile, kg (the kit that must be hauled to the outpost's depot).</summary>
         double KitKg(int tile)
         {
             double kg = 0.0;
@@ -84,8 +79,8 @@ namespace KardashevAscent.Simulation.Game
             double coldFactor = cold ? RobotBattery.ColdCapacityFactor(RobotThermal.OperatingMinC) : 1.0;
             double cap = r.Battery.CapacityWh * Math.Min(r.Battery.ColdFactor, coldFactor);
             double have = Math.Max(0.0, (assumeFullBattery ? r.Battery.CapacityWh * r.Battery.ColdFactor : r.Battery.UsableWh) - r.Battery.CapacityWh * Math.Max(0.0, r.Battery.ColdFactor - coldFactor));
-            double kit = KitKg(tile);
-            double outbound = mv.EnergyWh(go) * Logistics.HaulPhysics.LoadFactor(Logistics.HaulPhysics.DefaultRobotMassKg, kit) / r.Attribute(RobotAttribute.EnergyEfficiency) + mv.TripClimbWh(r, r.Tile, tile) + heaterW * go;   // the kit rides as cargo
+            // the builder travels light: the kit is hauled to the outpost's depot beforehand (ordinary round-trip hauls, KI-46), so only its own mass is counted here
+            double outbound = mv.EnergyWh(go) / r.Attribute(RobotAttribute.EnergyEfficiency) + mv.TripClimbWh(r, r.Tile, tile) + heaterW * go;
             // Panel-first bootstrap (decided 2026-11-25, director's delegate): the outpost is built in stages, panels first, then the station, then the rest. A finished panel feeds a robot parked on
             // its tile directly (its DC output, at most its present output): first the robot's heater, then the battery with the surplus (a field technique; the surplus warming the battery
             // enough to charge is a game rule, TBD). Once the station stands the robot is sheltered: no heater, all the output charges it. The stages are simulated hour by hour from arrival.
@@ -166,6 +161,62 @@ namespace KardashevAscent.Simulation.Game
                 if (!first.IsOutpost) first = v;
             }
             return first.Text;
+        }
+
+        /// <summary>
+        /// Order a leapfrog outpost on a tile (2026-11-25): two panels (wired), a charging station (wired) and the hauls of their materials to the tile's depot. The builder departs by itself
+        /// once the kit is there and the one-way check passes. Returns null when ordered, else why not.
+        /// </summary>
+        public string OrderOutpost(int tile, int panels = 2)
+        {
+            if (!WiredGrid) return "This mission has no wired grid: build chargers as usual.";
+            if (tile == BaseTileId || IsPowered(tile)) return "That tile is on the lander grid: build there as usual.";
+            if (GetTile(tile).IsWater || !IsOpenGround(tile)) return "An outpost needs open land.";
+            var slots = new List<int>();
+            int placed = 0;
+            for (int sl = 0; sl < SlotCount(tile) && placed < panels; sl++)
+                if (PlacePanel(tile, sl, 0.35, Math.PI)) { placed++; slots.Add(sl); PlaceBuildingWire(tile, sl); }
+            if (placed == 0) return "No room for panels on that tile.";
+            bool station = false;
+            for (int sl = 0; sl < SlotCount(tile) && !station; sl++)
+                if (GetBuilding(tile, sl) == BuildingType.None && PlaceChargingStation(tile, sl)) { station = true; slots.Add(sl); PlaceBuildingWire(tile, sl); }
+            if (!station) { foreach (int sl in slots) OrderSalvage(tile, sl); return "No room for a charging station on that tile."; }
+            // the kit goes by ordinary hauls, which are round trips from a charger (KI-46): if one cannot be planned, the outpost is refused with the depot advice
+            double kit = KitKg(tile);
+            string haul = HaulCostText(BaseTileId, tile, Math.Min(kit, 500.0));
+            if (haul.Contains("REFUSED"))
+            {
+                foreach (int sl in slots) OrderSalvage(tile, sl);
+                var advice = DepotSites(1);
+                string tip = advice.Count > 0 ? $" Depot advice: build a depot with a charging bay at tile {advice[0].Tile}." : "";
+                return $"The kit cannot be hauled to tile {tile} ({haul}).{tip}";
+            }
+            SetKitTargets(tile);
+            return null;
+        }
+
+        /// <summary>Ask for the hauls that bring the outpost's remaining materials to its depot.</summary>
+        public void SetKitTargets(int tile)
+        {
+            if (!LogisticsEnabled) return;
+            MaterialBill left = new MaterialBill();
+            for (int s = 0; s < SlotCount(tile); s++)
+                if (GetBuilding(tile, s) != BuildingType.None && Build.QueueCount > 0 && Build.IsQueued(tile, s)) left = left.Plus(Build.RemainingAt(tile, s));
+            foreach (Resources.Material m in Resources.Materials.All)
+                if (left[m] > 1e-6) SetStockTarget(tile, m, left[m]);
+        }
+
+        /// <summary>The stages of an outpost for the Why? chain: kit delivered, then the builder; empty when the tile is not an outpost site.</summary>
+        public string OutpostStages(int tile)
+        {
+            if (!WiredGrid || IsPowered(tile) || !OutpostSites(tile, out _, out _)) return "";
+            MaterialBill left = new MaterialBill();
+            for (int s = 0; s < SlotCount(tile); s++)
+                if (GetBuilding(tile, s) != BuildingType.None && Build.QueueCount > 0 && Build.IsQueued(tile, s)) left = left.Plus(Build.RemainingAt(tile, s));
+            int kinds = 0, delivered = 0;
+            foreach (Resources.Material m in Resources.Materials.All)
+                if (left[m] > 1e-6) { kinds++; if (KgAt(tile, m) >= left[m] - 1e-6) delivered++; }
+            return delivered >= kinds ? "kit delivered: the builder departs when the one-way check passes" : $"kit {delivered} of {kinds} materials delivered: the builder departs when complete";
         }
     }
 }

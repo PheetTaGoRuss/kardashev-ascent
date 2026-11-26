@@ -100,4 +100,8 @@ On Earth-climatology planets `AirTemperatureAt` and `AnnualAirTemperature` used 
 
 ## KI-48: Island grids do not model line ratings or faults (OPEN, 2026-11-25)
 
-An island grid (a wired source network not joined to the lander) serves its chargers with the same 2 % line loss per tile as the lander grid, but its cables have no ampacity rating, no I2R heating and no faults (the lander grid has all three). Decided not to fix now (director's delegate). Also: mining with logistics on, an ore that needs a sealed store (lithium, sodium) is not mined until a sealed store stands on the mine tile; the robots still spend the work hours (the report says so, the task is not blocked).
+An island grid (a wired source network not joined to the lander) serves its chargers with the same 2 % line loss per tile as the lander grid, but its cables have no ampacity rating, no I2R heating and no faults (the lander grid has all three). Decided not to fix now (director's delegate).
+
+## KI-49: Mining an ore the tile cannot store wasted robot hours: CLOSED (2026-11-25)
+
+With logistics on, an ore that needs a sealed store (lithium, sodium) or a gas tank is not stored on a mine tile without one, but the robots kept mining and the work was wasted (only an industrial report said why). Fixed: the order is refused up front with the reason, and the Operations window shows a Why? chain with a Build sealed store action.
