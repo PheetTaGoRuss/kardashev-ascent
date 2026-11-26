@@ -205,11 +205,15 @@ namespace KardashevAscent.Presentation.UI
                         if ((pin - pos).sqrMagnitude < 81f)
                         {
                             pendingPin = (p.Tile, p.Slot); pendingHub = -1;
-                            hint.text = $"{p.Type} on tile {p.Tile}: now click tile {p.Tile} to wire it.";
+                            hint.text = $"{p.Type} on tile {p.Tile}: now click or drop it on tile {p.Tile} (anywhere on its box) to wire it.";
                             board.MarkDirtyRepaint();
                             return;
                         }
                 }
+            // a building picked up by its pin is wired by clicking anywhere on its own tile's box (not only the header): the rows are what people aim at
+            if (pendingPin.HasValue)
+                foreach (Hub h in hubs)
+                    if (h.Tile == pendingPin.Value.Tile && h.Rect.Contains(pos)) { ClickHub(h); return; }
             foreach (Hub h in hubs)
             {
                 if (!new Rect(h.Rect.x, h.Rect.y, h.Rect.width, HeadH).Contains(pos)) continue;
@@ -225,7 +229,7 @@ namespace KardashevAscent.Presentation.UI
         {
             if (sim == null || (pos - downPos).magnitude <= 8f) return;   // a click, already handled on the way down
             foreach (Hub h in hubs)
-                if (new Rect(h.Rect.x, h.Rect.y, h.Rect.width, HeadH).Contains(pos) && (pendingPin.HasValue || pendingHub >= 0))
+                if ((pendingPin.HasValue ? h.Rect.Contains(pos) && h.Tile == pendingPin.Value.Tile : new Rect(h.Rect.x, h.Rect.y, h.Rect.width, HeadH).Contains(pos)) && (pendingPin.HasValue || pendingHub >= 0))
                 {
                     ClickHub(h);
                     return;
