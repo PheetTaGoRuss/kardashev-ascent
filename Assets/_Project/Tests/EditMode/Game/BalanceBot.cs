@@ -151,7 +151,7 @@ namespace KardashevAscent.Simulation.Tests.Game
                 var inRange = land.Where(t => sim.WorkReachProblem(t) == null).ToList();
                 foreach (var ub in sim.UnwiredBuildings().ToList()) sim.PlaceBuildingWire(ub.Tile, ub.Slot);   // nothing is wired for the player (EN-22)
                 bool kitPending = sim.ConstructionQueueCount > 0 || chargerTiles.Any(ct => Enumerable.Range(0, sim.SlotCount(ct)).Any(sl => sim.GetBuilding(ct, sl) != BuildingType.None && sim.IsUnderConstruction(ct, sl)));
-                foreach (Material hm in new[] { Material.Iron, Material.Copper, Material.Lithium }) sim.SetStockTarget(home, hm, kitPending ? 0.0 : (hm == Material.Iron ? 20_000.0 : 1_500.0));   // the base keeps nothing back while an outpost kit is being hauled out   // the game's advice: keep a stock at the base; hauls bring the ore
+                foreach (Material hm in new[] { Material.Iron, Material.Copper, Material.Lithium }) sim.SetStockTarget(home, hm, kitPending ? 0.0 : (hm == Material.Iron ? 20_000.0 : 1_500.0));   // the base keeps nothing back while sites wait: a stock target reserves stock, and the kits need it (a copper target of 200 starved the first outpost)   // the base keeps nothing back while an outpost kit is being hauled out   // the game's advice: keep a stock at the base; hauls bring the ore
 
                 // mining: base tile for rock and iron; the nearest tile with the ore for copper and lithium
                 foreach (Material m in Mined)
@@ -199,6 +199,26 @@ namespace KardashevAscent.Simulation.Tests.Game
                 if (target.TryGetValue(Material.Lithium, out int liT) && liT > 0 && sim.MiningBlocker(liT, Material.Lithium) != null && hour > 24 * 5
                     && !Enumerable.Range(0, sim.SlotCount(liT)).Any(sl => sim.GetBuilding(liT, sl) == BuildingType.SealedStore))
                     for (int sl = 30; sl < 45; sl++) if (sim.PlaceStorage(BuildingType.SealedStore, liT, sl)) break;
+                // payload rule ([rule] TBD): while the best load per trip from an ore tile is under 100 kg, split the longest charger-to-charger leg of its haul route with an outpost
+                if (hour % 24 == 0 && sim.ConstructionQueueCount <= 6)
+                    foreach (Material pm in new[] { Material.Copper, Material.Lithium })
+                    {
+                        if (!target.TryGetValue(pm, out int pt) || pt <= 0 || pt == home) continue;
+                        double payload = sim.FeasiblePayloadKg(pt, home, PlanetSimulation.BasePayloadKg);
+                        if (payload <= 0.0 || payload >= 100.0) continue;
+                        var pplan = sim.PlanHaul(pt, home, payload);
+                        if (!pplan.Feasible) continue;
+                        var (la, lb, _) = sim.LongestLeg(pt, home, pplan.Stops, payload);
+                        var route = sim.Routes.Route(la, lb);
+                        if (route == null || route.Count < 2) continue;
+                        bool kitPendingNow = chargerTiles.Any(ct => Enumerable.Range(0, sim.SlotCount(ct)).Any(sl => sim.GetBuilding(ct, sl) != BuildingType.None && sim.IsUnderConstruction(ct, sl)));
+                        if (kitPendingNow) continue;
+                        foreach (int mid in new[] { route[route.Count / 2 - 1 < 0 ? 0 : route.Count / 2 - 1], route[Math.Min(route.Count - 1, route.Count / 2)] })
+                        {
+                            if (mid == home || chargerTiles.Contains(mid) || sim.GetTile(mid).IsWater || sim.IsPowered(mid)) continue;
+                            if (sim.OrderOutpost(mid) == null) { chargerTiles.Add(mid); outpostNotes.Add($"payload {payload:0} kg for {pm}: outpost at tile {mid} splits the leg {la}-{lb}"); break; }
+                        }
+                    }
                 // an outpost gets its charger once its panels are wired (the island has a source then)
                 foreach (int ot in chargerTiles.ToList())
                     if (!Enumerable.Range(0, sim.SlotCount(ot)).Any(sl => sim.GetBuilding(ot, sl) == BuildingType.ChargingStation) && sim.IslandHasSource(ot, true))
@@ -216,7 +236,7 @@ namespace KardashevAscent.Simulation.Tests.Game
                 // robots first: while the crew is short and the last robot order is waiting on materials, keep the stock for it
                 bool saveForRobot = robotsOrdered < 6 && robotNote.StartsWith("Missing");
                 // the starting copper is kept for the chargers that make copper mining possible; growth waits until copper is coming in
-                bool copperComing = target.TryGetValue(Material.Copper, out int cuTile) && sim.Deposits.MinedKg(cuTile, Material.Copper) > 100.0;
+                bool copperComing = target.TryGetValue(Material.Copper, out int cuTileEnd) && sim.Deposits.MinedKg(cuTileEnd, Material.Copper) > 100.0;
                 if (!saveForRobot && (copperComing || sim.Materials[Material.Copper] > 150.0) && sim.ConstructionQueueCount < 3 + sim.Workforce.Robots.Count)
                 {
                     int slots = 0;
@@ -286,6 +306,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             }
             if (stuckNotes.Count > 0) summary += " " + string.Join(" || ", stuckNotes.Take(45));
             summary += " Ore ledger (crushing kWh | mined kg | left at the mine tile | at base): " + string.Join("; ", sim.ComminutionWhByOre.OrderByDescending(kv => kv.Value).Take(5).Select(kv => $"{kv.Key.Material}@{kv.Key.Tile} {kv.Value / 1000.0:0} | {sim.MinedByOreTile.GetValueOrDefault(kv.Key):0} | {sim.KgAt(kv.Key.Tile, kv.Key.Material):0} | {sim.KgAt(home, kv.Key.Material):0}")) + ".";
+            if (target.TryGetValue(Material.Copper, out int cuTile) && cuTile > 0) summary += $" Copper tile {cuTile}: payload per trip {sim.FeasiblePayloadKg(cuTile, home, PlanetSimulation.BasePayloadKg):0} kg, mined {sim.Deposits.MinedKg(cuTile, Material.Copper) / days:0.0} kg a day on average, {sim.HaulTotals.KgMoved / 1000.0:0} t hauled in all, {sim.HaulTotals.Wh / 1e6:0.0} MWh spent hauling.";
             if (outpostNotes.Count > 0) summary += " Outpost candidates tried: " + string.Join(" | ", outpostNotes.Take(4)) + ".";
             var blockers = sim.Workforce.Tasks.Open.Where(q => q.State == TaskState.AssistanceNeeded || q.State == TaskState.Blocked).Take(4).Select(q => $"{q.Task.Kind}@{q.Task.Tile}: {q.Reason}");
             var deaths = sim.OperationsLog.Where(o => o.Quantity == "Robot destroyed").Take(2).Select(o => o.Text);

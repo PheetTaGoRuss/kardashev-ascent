@@ -72,9 +72,30 @@ namespace KardashevAscent.Simulation.Game
             string staging = !plan.Feasible ? " · REFUSED: no chain of legs between chargers or shelters fits the battery"
                            : plan.Stops.Count == 0 ? " · direct" : " · staged via tile " + string.Join(", ", plan.Stops);
             double drive = o.DriveWh + back.DriveWh, climb = o.ClimbWh + back.ClimbWh, heater = o.HeaterWh + back.HeaterWh;
+            string legInfo = "";
+            if (plan.Feasible)
+            {
+                var (a, b, wh) = LongestLeg(from, to, plan.Stops, cargoKg);
+                legInfo = $" · longest leg tile {a} to {b}: {wh:0} Wh of {LegBudgetFor(HaulLegCost(a, b, cargoKg)):0} Wh the battery gives per leg (a longer leg leaves less for the load)";
+            }
             var (delay, saved) = BestHaulStart(from, to, cargoKg);
             string start = delay > 0.0 && saved > 0.05 * Math.Max(1.0, heater) && saved > 20.0 ? $" · starting in {delay:0} h would save {saved:0} Wh of heater" : "";
-            return $"{o.Hours + back.Hours:0} h, {drive + climb + heater:0} Wh round trip (driving {drive:0}, climbing {climb:0}, heater {heater:0}){staging}{start}";
+            return $"{o.Hours + back.Hours:0} h, {drive + climb + heater:0} Wh round trip (driving {drive:0}, climbing {climb:0}, heater {heater:0}){staging}{start}{legInfo}";
+        }
+
+        /// <summary>The longest loaded leg of a planned haul, with its tiles and energy: drive energy scales with the carried mass, so the longest leg sets how much load a trip can take.</summary>
+        public (int From, int To, double Wh) LongestLeg(int from, int to, IReadOnlyList<int> stops, double cargoKg)
+        {
+            var nodes = new List<int> { from };
+            if (stops != null) nodes.AddRange(stops);
+            nodes.Add(to);
+            int bestA = from, bestB = to; double best = 0.0;
+            for (int i = 0; i + 1 < nodes.Count; i++)
+            {
+                double wh = HaulLegCost(nodes[i], nodes[i + 1], cargoKg).TotalWh;
+                if (wh > best) { best = wh; bestA = nodes[i]; bestB = nodes[i + 1]; }
+            }
+            return (bestA, bestB, best);
         }
 
         /// <summary>
