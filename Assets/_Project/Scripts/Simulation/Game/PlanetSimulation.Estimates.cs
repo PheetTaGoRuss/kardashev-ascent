@@ -204,6 +204,9 @@ namespace KardashevAscent.Simulation.Game
         public double MiningWorkHours { get; private set; }
         /// <summary>Crushing and grinding energy spent so far, Wh (Bond's law; reporting, B4).</summary>
         public double ComminutionWh { get; private set; }
+        /// <summary>Reporting (not saved): crushing energy, Wh, and product mined, kg, by ore and mine tile (the per-ore energy ledger).</summary>
+        public readonly Dictionary<(Material Material, int Tile), double> ComminutionWhByOre = new Dictionary<(Material, int), double>();
+        public readonly Dictionary<(Material Material, int Tile), double> MinedByOreTile = new Dictionary<(Material, int), double>();
 
         /// <summary>Crushing and grinding energy per tonne of product from this deposit now, kWh (zero when it needs none): a range until the ore assay.</summary>
         public KnowledgeEstimate ComminutionEstimate(int tileId, Material material)
