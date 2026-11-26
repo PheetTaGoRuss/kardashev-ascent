@@ -137,7 +137,7 @@ namespace KardashevAscent.Simulation.Game
                 if (RobotCatalog.CanDo(r.Kind, TaskKind.Haul, UnlockLevel))
                     capacity = Math.Max(capacity, r.Attribute(RobotAttribute.TransportCapacity));
             // Sources are ranked by what the haul really costs: driving hours plus the climb and the heater, as hours (logistics-routes.md).
-            // A load a robot's battery cannot carry through the stops is split into smaller loads (more trips), down to a quarter (L5, 2026-11-24).
+            // A load a robot's battery cannot carry through the stops is split into smaller loads (more trips), down to the largest load that fits, at least MinHaulLoadKg (L5 2026-11-24, floor lifted 2026-11-26).
             double PayloadBetween(int a, int b) => Routes == null ? 0.0 : FeasiblePayloadKg(a, b, BasePayloadKg * capacity);
             double Hours(int a, int b) => Routes == null ? double.PositiveInfinity : HaulCostHours(a, b, PayloadBetween(a, b));
             foreach (PlannedHaul h in HaulPlanner.Plan(demands, sources, Available, Hours, BasePayloadKg * capacity, MaxHaulsPerDemand, PayloadBetween))

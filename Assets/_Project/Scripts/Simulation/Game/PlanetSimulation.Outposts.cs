@@ -183,13 +183,14 @@ namespace KardashevAscent.Simulation.Game
             if (!station) { foreach (int sl in slots) OrderSalvage(tile, sl); return "No room for a charging station on that tile."; }
             // the kit goes by ordinary hauls, which are round trips from a charger (KI-46): if one cannot be planned, the outpost is refused with the depot advice
             double kit = KitKg(tile);
-            string haul = HaulCostText(BaseTileId, tile, Math.Min(kit, 500.0));
-            if (haul.Contains("REFUSED"))
+            double load = FeasiblePayloadKg(BaseTileId, tile, Math.Min(kit, BasePayloadKg));
+            if (load <= 0.0)
             {
+                string haul = HaulCostText(BaseTileId, tile, MinHaulLoadKg);
                 foreach (int sl in slots) OrderSalvage(tile, sl);
                 var advice = DepotSites(1);
                 string tip = advice.Count > 0 ? $" Depot advice: build a depot with a charging bay at tile {advice[0].Tile}." : "";
-                return $"The kit cannot be hauled to tile {tile} ({haul}).{tip}";
+                return $"Out of reach: even a {MinHaulLoadKg:0} kg load cannot be hauled to tile {tile} and back ({haul}): the empty round trip does not fit.{tip}";
             }
             SetKitTargets(tile);
             return null;
@@ -216,7 +217,10 @@ namespace KardashevAscent.Simulation.Game
             int kinds = 0, delivered = 0;
             foreach (Resources.Material m in Resources.Materials.All)
                 if (left[m] > 1e-6) { kinds++; if (KgAt(tile, m) >= left[m] - 1e-6) delivered++; }
-            return delivered >= kinds ? "kit delivered: the builder departs when the one-way check passes" : $"kit {delivered} of {kinds} materials delivered: the builder departs when complete";
+            double kitKg = KitKg(tile);
+            double load = FeasiblePayloadKg(BaseTileId, tile, Math.Min(kitKg, BasePayloadKg));
+            string trips = load > 0.0 && kitKg > load ? $" (kit: {Math.Ceiling(kitKg / load):0} trips of {load:0} kg, battery reach)" : "";
+            return delivered >= kinds ? "kit delivered: the builder departs when the one-way check passes" : $"kit {delivered} of {kinds} materials delivered: the builder departs when complete{trips}";
         }
     }
 }
