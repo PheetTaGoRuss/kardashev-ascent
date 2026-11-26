@@ -105,3 +105,5 @@ An island grid (a wired source network not joined to the lander) serves its char
 ## KI-49: Mining an ore the tile cannot store wasted robot hours: CLOSED (2026-11-25)
 
 With logistics on, an ore that needs a sealed store (lithium, sodium) or a gas tank is not stored on a mine tile without one, but the robots kept mining and the work was wasted (only an industrial report said why). Fixed: the order is refused up front with the reason, and the Operations window shows a Why? chain with a Build sealed store action.
+
+Update 2026-11-26 (KI-49): a mine order whose ore cannot be hauled home (not even a 5 kg load from that tile to the base and back) is still accepted, with a warning ("No haul route home: ore stays at tile N.") on the tile panel and an Operations log entry. The bot never issues such an order; it extends the charger chain toward the ore first.

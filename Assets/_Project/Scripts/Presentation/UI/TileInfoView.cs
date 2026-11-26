@@ -465,6 +465,8 @@ namespace KardashevAscent.Presentation.UI
                 string gradeText = oreG.Value < 0.999 ? (oreG.IsExact ? $" · {Marks.Glyph(Mark.Measured)} grade {oreG.Value * 100.0:0.##} %" : $" · {Marks.Glyph(Mark.Estimated)} grade about {oreG.Value * 100.0:0.##} %") : "";
                 var crush = sim.ComminutionEstimate(tile, m);
                 if (crush.Value > 0.0) gradeText += $" · crushing {crush.Value:0} kWh/t";
+                string haulWarn = sim.IsMiningOrdered(tile, m) ? null : sim.MiningWarning(tile, m);
+                if (haulWarn != null) gradeText += " · ⚠ " + haulWarn;
                 string leftText = left < 0.999 ? $" · {(rate.IsExact ? "" : "≈ ")}{left * 100.0:0} % left" : "";
                 string rateText = gradeText + leftText + (rate.IsExact ? $" · {Marks.Glyph(Mark.Measured)} {rate.Value:0.#} kg/h" : $" · {Marks.Glyph(Mark.Estimated)} about {rate.Value:0.#} kg/h ({rate.Low:0.#} to {rate.High:0.#})");
                 AddGroundButton(on ? $"Stop mining {Materials.Name(m).ToLowerInvariant()}" : $"Mine {Materials.Name(m).ToLowerInvariant()}{rateText}", on,

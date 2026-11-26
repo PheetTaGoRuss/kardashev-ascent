@@ -152,5 +152,38 @@ namespace KardashevAscent.Simulation.Tests.Game
                 if (why != null && why.Contains("chain of legs")) Assert.Less(fits, PlanetSimulation.MinHaulLoadKg + 1e-6, $"haul {o.Id} of {o.Kg:0} kg is blocked although {fits:0} kg fits now");
             }
         }
+
+        [Test]
+        public void AMineOrderWhoseOreCannotBeHauledHome_IsAcceptedWithAWarning_AndALogEntry()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { LogisticsEnabled = true, WeatherEnabled = false };
+            sim.Debug.FreeBuilding = true;
+            sim.PlaceChargingStation(sim.BaseTileId, 0); sim.PlacePanel(sim.BaseTileId, 1, 0.35, Math.PI); sim.PlaceBattery(sim.BaseTileId, 2); sim.WireAllBuildings();
+            sim.DebugSurveyAll();
+            sim.Tick(0.5);
+            var iron = KardashevAscent.Simulation.Resources.Material.Iron;
+            Assert.IsNull(sim.MiningWarning(sim.BaseTileId, iron), "the lander tile uses the colony stock");
+            int far = Enumerable.Range(0, sim.TileCount).Where(q => !sim.GetTile(q).IsWater && q != sim.BaseTileId && sim.IsOpenGround(q) && sim.Deposits.GradeOf(q, iron) > 0.0 && sim.Routes != null && sim.Routes.HoursBetween(sim.BaseTileId, q) > 40.0 && !double.IsInfinity(sim.Routes.HoursBetween(sim.BaseTileId, q))).OrderBy(q => sim.Routes.HoursBetween(sim.BaseTileId, q)).First();
+            double fits = sim.FeasiblePayloadKg(far, sim.BaseTileId, PlanetSimulation.BasePayloadKg);
+            string warning = sim.MiningWarning(far, iron);
+            Assert.AreEqual(fits <= 0.0, warning != null, "a warning exactly when not even a minimum load can be hauled home");
+            if (warning != null)
+            {
+                StringAssert.Contains("No haul route home", warning);
+                Assert.IsTrue(sim.OrderMining(far, iron), "the order is still accepted");
+                Assert.IsTrue(sim.OperationsLog.Any(o => o.Quantity == "Mining warning"));
+            }
+        }
+
+        [Test, Explicit("where is anorthosite on the Mars-like seed")]
+        public void PrintAnorthosite()
+        {
+            double au = SolarConstants.AstronomicalUnit, lum = SolarConstants.SolarLuminosity;
+            var cold = new PlanetSolarParams(lum, 1.524 * au, 0.0934, 25.19 * Math.PI / 180.0, 336.0 * Math.PI / 180.0, 24.66, 686.98 * 24.0, 0.25, 0.3, -60.0);
+            var sim = new PlanetSimulation(Sphere, Surface, cold) { LogisticsEnabled = true };
+            var an = KardashevAscent.Simulation.Resources.Material.Anorthosite;
+            var tiles = Enumerable.Range(0, sim.TileCount).Where(q => sim.Deposits.GradeOf(q, an) > 0.0).OrderBy(q => sim.Routes.HoursBetween(sim.BaseTileId, q)).Take(5).ToList();
+            Assert.Fail("\nnearest anorthosite: " + string.Join(" | ", tiles.Select(q => $"tile {q} {sim.Routes.HoursBetween(sim.BaseTileId, q):0.0} h grade {sim.Deposits.GradeOf(q, an):0.00} terrain {sim.GetTile(q).Terrain}")) + $" ; rock grade at base {sim.Deposits.GradeOf(sim.BaseTileId, KardashevAscent.Simulation.Resources.Material.Rock):0.00}");
+        }
     }
 }

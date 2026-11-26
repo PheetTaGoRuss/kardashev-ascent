@@ -117,6 +117,16 @@ namespace KardashevAscent.Simulation.Game
             return $"needs {what} on tile {tileId}";
         }
 
+        /// <summary>
+        /// A warning for a mine order whose ore cannot be hauled home (KI-49, decided 2026-11-26): with logistics on, ore lies in a pile on the mine tile, and if not even a minimum load can be hauled from there
+        /// to the base and back, it stays there. The order is still accepted (a player may be building at that outpost). Null when the ore can get home, or on the lander tile.
+        /// </summary>
+        public string MiningWarning(int tileId, Material material)
+        {
+            if (!LogisticsEnabled || tileId == BaseTileId || Routes == null) return null;
+            return FeasiblePayloadKg(tileId, BaseTileId, BasePayloadKg) > 0.0 ? null : $"No haul route home: ore stays at tile {tileId}.";
+        }
+
         /// <summary>Kg of a material a tile's depot has room for now.</summary>
         public double RoomAt(int tileId, Material material) =>
             !LogisticsEnabled ? double.PositiveInfinity : inventories.FreeFor(PlaceId.Depot(tileId), material);

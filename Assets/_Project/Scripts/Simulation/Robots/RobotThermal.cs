@@ -160,16 +160,16 @@ namespace KardashevAscent.Simulation.Robots
         /// <summary>Loss conductance of the body to the air, W/K, at the reference wind: the value the old heater rule implied (see <see cref="HeaterWPerK"/>); game rule, TBD.</summary>
         public static double Conductance(double windFactor, bool insulated) => HeaterWPerK * Math.Max(0.1, windFactor) * (insulated ? InsulationConductanceFactor : 1.0);
 
-        /// <summary>The thermal insulation module cuts the loss conductance to this share (game rule, TBD).</summary>
+        /// <summary>The thermal insulation module cuts the loss conductance to this share ([rule] TBD).</summary>
         public const double InsulationConductanceFactor = 0.5;
 
-        /// <summary>Heat the electronics always give off while the robot is awake, W (assumption, TBD: avionics of a rover are tens of watts).</summary>
+        /// <summary>Heat the electronics always give off while the robot is awake, W ([rule] TBD: avionics of a rover are tens of watts).</summary>
         public const double ElectronicsHeatW = 30.0;
 
-        /// <summary>Share of electrical drive and work power that ends as heat in the body (assumption: a brushless motor and drive are about 85 % efficient, so 15 % is lost as heat; the rest is mechanical work done on the ground).</summary>
+        /// <summary>Share of electrical drive and work power that ends as heat in the body ([rule] TBD: a brushless motor and drive are about 85 % efficient, recalled from typical datasheets and not looked up, so 15 % is lost as heat; the rest is mechanical work done on the ground).</summary>
         public const double BodyHeatShareOfActivePower = 0.15;
 
-        /// <summary>Most a heater or cooler can deliver, W (game rule, TBD), and the heated bay's power in shelter, W (free for the robot).</summary>
+        /// <summary>Most a heater or cooler can deliver, W ([rule] TBD), and the heated bay's power in shelter, W ([rule] TBD; free for the robot).</summary>
         public const double HeaterMaxW = 400.0, BayHeaterW = 500.0;
 
         /// <summary>Heat the body makes itself, W: nothing while it hibernates.</summary>
