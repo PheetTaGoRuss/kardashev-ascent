@@ -431,6 +431,7 @@ namespace KardashevAscent.Simulation.Robots
 
         static void Enter(Robot r, RobotActivity activity, RobotFacility f, Dictionary<(int, int), int> used, Movement movement)
         {
+            Workforce.Trace(r, $"Enter {activity} at {f.Tile}.{f.Slot}");
             r.Activity = activity;
             r.Facility = (f.Tile, f.Slot);
             r.Task = null;
@@ -448,6 +449,7 @@ namespace KardashevAscent.Simulation.Robots
 
         static void Leave(Robot r)
         {
+            Workforce.Trace(r, "Leave");
             r.Activity = RobotActivity.None;
             r.Facility = null;
             r.LastChargeW = 0.0;

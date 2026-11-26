@@ -185,5 +185,22 @@ namespace KardashevAscent.Simulation.Tests.Game
             var tiles = Enumerable.Range(0, sim.TileCount).Where(q => sim.Deposits.GradeOf(q, an) > 0.0).OrderBy(q => sim.Routes.HoursBetween(sim.BaseTileId, q)).Take(5).ToList();
             Assert.Fail("\nnearest anorthosite: " + string.Join(" | ", tiles.Select(q => $"tile {q} {sim.Routes.HoursBetween(sim.BaseTileId, q):0.0} h grade {sim.Deposits.GradeOf(q, an):0.00} terrain {sim.GetTile(q).Terrain}")) + $" ; rock grade at base {sim.Deposits.GradeOf(sim.BaseTileId, KardashevAscent.Simulation.Resources.Material.Rock):0.00}");
         }
+
+        [Test]
+        public void ARescueThatNeverFinishes_IsEndedAfterItsMaximum_AndTheHelperIsReleased()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { WeatherEnabled = false };
+            sim.Debug.FreeBuilding = true;
+            sim.PlaceChargingStation(sim.BaseTileId, 0); sim.PlacePanel(sim.BaseTileId, 1, 0.35, Math.PI); sim.WireAllBuildings();
+            sim.Tick(0.5);
+            var s = sim.Workforce.Robots[0]; var h = sim.Workforce.Robots[1];
+            int shelter = Enumerable.Range(0, sim.TileCount).First(q => !sim.GetTile(q).IsWater && q != sim.BaseTileId && System.Array.IndexOf(Sphere.Neighbors[sim.BaseTileId], q) < 0);
+            var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+            var list = (System.Collections.Generic.List<RescueOrder>)typeof(PlanetSimulation).GetField("rescues", flags).GetValue(sim);
+            list.Add(new RescueOrder { Id = 99, StrandedId = s.Id, RescuerId = h.Id, Stage = 2, Shelter = shelter, Method = RescueMethod.Tow, DeadlineHours = double.PositiveInfinity });
+            for (int i = 0; i < (int)PlanetSimulation.RescueMaxHours + 10; i++) sim.Tick(1.0);
+            Assert.AreEqual(0, list.Count, "the order ends after its maximum: no helper is re-sent for ever");
+            Assert.IsFalse(h.ManualTarget.HasValue && h.IsTravelling && sim.TimeHours > PlanetSimulation.RescueMaxHours + 20, "the helper is released");
+        }
     }
 }

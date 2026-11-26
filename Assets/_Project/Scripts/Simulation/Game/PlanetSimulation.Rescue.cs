@@ -161,12 +161,18 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>Rescue on or off (off only for balance comparisons).</summary>
         public bool RescueEnabled { get; set; } = true;
 
+        /// <summary>The longest a rescue may take from its order, hours ([rule] TBD): a helper that keeps being called off to charge would otherwise be re-sent for ever (found by the five-year bot: a tow stuck for 750 days).</summary>
+        public const double RescueMaxHours = 72.0;
+        readonly Dictionary<int, double> rescueAge = new Dictionary<int, double>();
+        readonly Dictionary<int, double> rescueBackoffUntil = new Dictionary<int, double>();
+
         void StepRescue(double dt)
         {
             if (!RescueEnabled || Workforce == null || Routes == null) return;
             // new requests
             foreach (Robot s in Workforce.Robots.ToList())
             {
+                if (rescueBackoffUntil.TryGetValue(s.Id, out double until) && TimeHours < until) continue;   // a rescue just failed to finish: wait before asking again
                 if (!NeedsRescue(s) || rescues.Any(o => o.StrandedId == s.Id)) { if (!NeedsRescue(s)) rescueRefusals.Remove(s.Id); continue; }
                 if (StormAt(s.Tile) && double.IsInfinity(DeadlineOf(s))) { rescueRefusals[s.Id] = "a storm is over it: the rescue waits until it passes"; continue; }
                 var plan = PlanRescue(s, out string why);
@@ -191,6 +197,13 @@ namespace KardashevAscent.Simulation.Game
             foreach (RescueOrder o in rescues.ToList())
             {
                 Robot s = Workforce.GetRobot(o.StrandedId), h = Workforce.GetRobot(o.RescuerId);
+                rescueAge[o.Id] = (rescueAge.TryGetValue(o.Id, out double age) ? age : 0.0) + dt;
+                if (rescueAge[o.Id] > RescueMaxHours && s != null)
+                {
+                    rescueBackoffUntil[s.Id] = TimeHours + RescueMaxHours / 2.0;
+                    Finish(o, false, $"it took more than {RescueMaxHours:0} hours: the helper is released");
+                    continue;
+                }
                 if (s == null) { Finish(o, false, "the robot was lost"); continue; }
                 if (h == null || h.IsShutDown) { Finish(o, false, "the helper was lost"); continue; }
                 if (!NeedsRescue(s) && o.Stage == 0) { Finish(o, true, "it no longer needs help"); continue; }
