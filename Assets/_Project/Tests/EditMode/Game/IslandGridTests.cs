@@ -374,5 +374,80 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.LessOrEqual(Math.Abs(a3), Math.Abs(a0) + 1e-9, "the anomaly fades day by day");
             Assert.AreEqual(0.0, a9, 1e-12, "no forecast beyond its range");
         }
+        [Test]
+        public void AHighVoltageLine_IsBilledInAluminium_WhenTheCopperIsOut()
+        {
+            var planet = new PlanetSolarParams(SolarConstants.SolarLuminosity, SolarConstants.AstronomicalUnit, 0.0167, 23.44 * Math.PI / 180.0, 282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 15.0);
+            var sim = new PlanetSimulation(Sphere, Surface, planet) { WeatherEnabled = false };
+            sim.Debug.UnlockAll = true;
+            sim.Materials.Set(KardashevAscent.Simulation.Resources.Material.Copper, 0.0);
+            sim.Materials.Set(KardashevAscent.Simulation.Resources.Material.Aluminium, 1000.0);
+            int next = Sphere.Neighbors[sim.BaseTileId].First(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
+            Assert.IsTrue(sim.PlaceWire(sim.BaseTileId, next, true), sim.WireProblem);
+            int slot = Enumerable.Range(0, sim.SlotCount(sim.BaseTileId)).First(sl => sim.GetBuilding(sim.BaseTileId, sl) == BuildingType.HighVoltageLine);
+            Assert.AreNotEqual(KardashevAscent.Simulation.Resources.StandIn.None, sim.StandInsAt(sim.BaseTileId, slot) & KardashevAscent.Simulation.Resources.StandIn.AluminiumForCopper, "the high-voltage line's copper is paid in aluminium");
+        }
+        [Test]
+        public void IslandCharging_IsCountedOnceInUsedPower_TheEnergyClosesWithTheIslandInside()
+        {
+            var (sim, far) = Wired();
+            for (int sl = 0; sl < 6; sl++) { sim.PlacePanel(far, sl, 0.35, Math.PI); sim.PlaceBuildingWire(far, sl); }
+            Assert.IsTrue(sim.PlaceChargingStation(far, 10));
+            sim.PlaceBuildingWire(far, 10);
+            var r = sim.Workforce.AddRobot(RobotKind.General, far);
+            r.Battery.Draw(r.Battery.UsableWh * 0.9, 1.0);
+            double worst = 0.0, islandUse = 0.0;
+            for (int h = 0; h < 12; h++)
+            {
+                sim.Tick(1.0);
+                worst = Math.Max(worst, Math.Abs(sim.GenerationW - (sim.KardashevPowerW + sim.CurtailedW + sim.BatteryStoredRateW)));
+                islandUse = Math.Max(islandUse, sim.RobotChargingW);
+            }
+            Assert.Greater(islandUse, 0.0, "the island charger charged the robot");
+            Assert.Less(worst, 1.0, "generation (island included) = used + curtailed + stored: the island's charging is counted once, W");
+        }
+        [Test]
+        public void ALineThatCannotCarryTheSolar_RaisesTheLinesTooThinWarning_AfterADay_AndItIsSaved()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { WiredGrid = true, WeatherEnabled = false };
+            sim.Debug.FreeBuilding = true;
+            int next = Sphere.Neighbors[sim.BaseTileId].First(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
+            Assert.IsTrue(sim.PlaceWire(sim.BaseTileId, next, false), sim.WireProblem);
+            for (int sl = 0, n = 0; sl < sim.SlotCount(next) && n < 40; sl++) if (sim.PlacePanel(next, sl, 0.35, Math.PI)) { sim.PlaceBuildingWire(next, sl); n++; }
+            Assert.IsNull(sim.LinesTooThinWarning(), "no day has passed yet");
+            sim.Tick(60.0);
+            TestContext.WriteLine($"thin share {sim.ThinLinesShare:0.00}, mean {sim.ThinLinesMeanW / 1e6:0.0} MW: {sim.LinesTooThinWarning()}");
+            Assert.Greater(sim.ThinLinesShare, PlanetSimulation.ThinLinesWarnShare);
+            string text = sim.LinesTooThinWarning();
+            StringAssert.Contains("Lines too thin", text);
+            StringAssert.Contains("high-voltage line", text);
+            var again = new PlanetSimulation(Sphere, Surface, Earthlike) { WiredGrid = true, WeatherEnabled = false };
+            again.RestoreState(sim.CaptureState());
+            Assert.AreEqual(sim.ThinLinesShare, again.ThinLinesShare, 1e-12);
+            Assert.AreEqual(sim.ThinLinesMeanW, again.ThinLinesMeanW, 1e-6); Assert.AreEqual(sim.ThinLinesTile, again.ThinLinesTile); Assert.AreEqual(next, sim.ThinLinesTile, "the line on that tile is the one that is too thin"); StringAssert.Contains($"tile {next}", text);
+        }
+        [Test]
+        public void TheBotsTrunkUpgrade_OrdersAHighVoltageLineNextToAThinLine_AndMoreSolarGetsThrough()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Earthlike) { WiredGrid = true, WeatherEnabled = false };
+            sim.Debug.FreeBuilding = true;
+            int next = Sphere.Neighbors[sim.BaseTileId].First(n => !sim.GetTile(n).IsWater && sim.IsOpenGround(n));
+            Assert.IsTrue(sim.PlaceWire(sim.BaseTileId, next, false), sim.WireProblem);
+            for (int sl = 0, n = 0; sl < sim.SlotCount(next) && n < 40; sl++) if (sim.PlacePanel(next, sl, 0.35, Math.PI)) { sim.PlaceBuildingWire(next, sl); n++; }
+            sim.Tick(60.0);
+            var st = sim.CaptureState(); st.MilestonesReached = 1;   // milestone 1 reached (a state saved just after it)
+            var after1 = new PlanetSimulation(Sphere, Surface, Earthlike) { WiredGrid = true, WeatherEnabled = false };
+            after1.RestoreState(st); after1.Debug.FreeBuilding = true; sim = after1;
+            var links = sim.WireLinks().ToList();
+            TestContext.WriteLine($"guards: milestone level ok, thin tile {sim.ThinLinesTile} (base {sim.BaseTileId}, panels on {next}), thin share {sim.ThinLinesShare:0.00}, plain links {links.Count(l => !l.HighVoltage && l.Built)}, HV links {links.Count(l => l.HighVoltage)}, unlocked {sim.MilestonesReached}");
+            double thinBefore = sim.ThinLinesMeanW;
+            int ordered = BalanceBot.UpgradeThinLines(sim, sim.BaseTileId, 2);
+            TestContext.WriteLine($"ordered {ordered}, wire problem '{sim.WireProblem}', HV links now {sim.WireLinks().Count(l => l.HighVoltage)}");
+            Assert.GreaterOrEqual(ordered, 1, "a thin line gets a high-voltage line beside it");
+            Assert.IsTrue(sim.WireLinks().Any(l => l.HighVoltage && l.Built), "built (free building: at once)");
+            sim.Tick(60.0);
+            TestContext.WriteLine($"thin before {thinBefore / 1e6:0.0} MW, after {sim.ThinLinesMeanW / 1e6:0.0} MW");
+            Assert.Less(sim.ThinLinesMeanW, thinBefore * 0.2, "the high-voltage line carries what the plain one could not");
+        }
     }
 }

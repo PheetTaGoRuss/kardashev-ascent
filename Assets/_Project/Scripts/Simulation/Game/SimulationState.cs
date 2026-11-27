@@ -9,7 +9,7 @@ namespace KardashevAscent.Simulation.Game
     public sealed class SimulationState
     {
         /// <summary>2 added build parts and construction sites; a version-1 save loads with the lander's parts and every building finished. 7 added robots; 8 their batteries and condition; 9 resources; 10 the Workshop; 11 programs (facility, ranking, queue); 12 movement; 13 critical damage (stage A); 14 reservations and tasks to go back to (stage B); 15 battery ageing by depth, maintenance rules (stage D); 16 building footprints. 23 industry reports. 29 experiments. 30 survey puzzles answered one material at a time. 31 stand-ins (aluminium, sodium) in building bills. 32 deposits run out (what was mined from each). 33 mountains and canyons opened (tunnel, blast, bridge). 34 refinery modules, batches, queue and auto targets.</summary>
-        public const int CurrentVersion = 68;   // 68: island batteries; 67: power load order (no state, behaviour change); 66: comminution energy counter; 65: mining counters (rock moved, tailings; deposits are bigger and the grade falls); 64: rebuild jobs and recovered wrecks; 63: robot body temperature (hibernation and cold soak); 62: robot rescue orders; 61: colony knowledge store; 60: storage chemistry (rust, hydroxides, melt, brine) on; 59: robot wrecks; 58: 58: wind turbine and wind mast (new building and experiment); 57: haul go-anyway after a storm forecast; 56: weather on; 55: log priorities; 54: day-night temperature; 51: experiment fit puzzles and range shares; 52: assay sampling in progress; 53: contour routing
+        public const int CurrentVersion = 69;   // 69: day totals of power the lines were too thin to carry (for the warning); 68: island batteries; 67: power load order (no state, behaviour change); 66: comminution energy counter; 65: mining counters (rock moved, tailings; deposits are bigger and the grade falls); 64: rebuild jobs and recovered wrecks; 63: robot body temperature (hibernation and cold soak); 62: robot rescue orders; 61: colony knowledge store; 60: storage chemistry (rust, hydroxides, melt, brine) on; 59: robot wrecks; 58: 58: wind turbine and wind mast (new building and experiment); 57: haul go-anyway after a storm forecast; 56: weather on; 55: log priorities; 54: day-night temperature; 51: experiment fit puzzles and range shares; 52: assay sampling in progress; 53: contour routing
 
         /// <summary>Wired grid (version 35): generators and stations need power lines to the lander tile. Older saves are not wired.</summary>
         public bool WiredGrid;
@@ -131,6 +131,11 @@ namespace KardashevAscent.Simulation.Game
         public int NextWreckId = 1;
         /// <summary>Version 65: rock moved and tailings left by mining so far, kg.</summary>
         public double RockMovedKg, TailingsKg, MiningWorkHours, ComminutionWh;
+        /// <summary>Version 69: the day so far, Wh the lines could not carry and Wh delivered, and the last whole day's share too thin.</summary>
+        public double DayThinWh, DayDeliveredWh, ThinLinesShare, ThinLinesMeanW, DayThinFlowW;
+        /// <summary>Version 69: the tile whose too-thin line carried most (plus one; 0 = none), today so far and over the last whole day.</summary>
+        public int DayThinTilePlusOne, ThinLinesTilePlusOne;
+
         /// <summary>Version 68: batteries on an island grid and what each holds.</summary>
         public List<IslandBatteryRecord> IslandBatteries = new List<IslandBatteryRecord>();
         public List<WreckRecord> Wrecks = new List<WreckRecord>();

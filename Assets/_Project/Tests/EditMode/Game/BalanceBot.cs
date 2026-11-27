@@ -71,6 +71,13 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.Fail("\n" + Run("Viridia, 5 years", new PlanetSolarParams(lum, au, 0.0167, 23.44 * Math.PI / 180.0, 282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0), 1826, false));
         }
 
+        [Test, Explicit("Balance tool: the Earth-like colony for 140 days, to see the high-voltage trunk order get built")]
+        public void ViridiaHvShort()
+        {
+            double au = SolarConstants.AstronomicalUnit, lum = SolarConstants.SolarLuminosity;
+            Assert.Fail("\n" + Run("Viridia", new PlanetSolarParams(lum, au, 0.0167, 23.44 * Math.PI / 180.0, 282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0), 140, false));
+        }
+
         [Test, Explicit("Balance tool: 60 days of the Earth-like colony with the diagnostics")]
         public void ViridiaShort()
         {
@@ -113,7 +120,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             sim.DepositExhausted += (tile, m) => { exhausted++; exhaustedWhat.Add($"{m}@d{(int)(sim.TimeHours / 24)}"); };
             var outpostNotes = new List<string>();
             var stuckNotes = new List<string>(); var travelHours = new Dictionary<int, double>(); double longestTravel = 0.0;
-            double peakSolar = 0.0; string peakNote = ""; int accN = 0; double accBase = 0, accTop = 0, accDock = 0, accPri = 0, accServed = 0, accChg = 0, accGen = 0, accCurt = 0, accDemand = 0, accKard = 0, accBattChg = 0, accRobot = 0, accShop = 0; var dawnSoc = new List<double>(); bool wasDay = false;
+            int hvPlaced = 0; double peakSolar = 0.0; string peakNote = ""; int accN = 0; double accBase = 0, accTop = 0, accDock = 0, accPri = 0, accServed = 0, accChg = 0, accGen = 0, accCurt = 0, accDemand = 0, accKard = 0, accBattChg = 0, accRobot = 0, accShop = 0; var dawnSoc = new List<double>(); bool wasDay = false;
             double generatedWh = 0.0; var lostNotes = new List<string>();
             int firstShortDay = -1; int milestone2Day = -1; int milestone1Day = -1;
             int home = sim.BaseTileId;
@@ -177,6 +184,8 @@ namespace KardashevAscent.Simulation.Tests.Game
                 bool kitPending = sim.ConstructionQueueCount > 0 || chargerTiles.Any(ct => Enumerable.Range(0, sim.SlotCount(ct)).Any(sl => sim.GetBuilding(ct, sl) != BuildingType.None && sim.IsUnderConstruction(ct, sl)));
                 foreach (Material hm in new[] { Material.Iron, Material.Copper, Material.Lithium }) sim.SetStockTarget(home, hm, (hm == Material.Iron ? 20_000.0 : 1_500.0));   // targets are buffers: they never keep stock back from a waiting site   // the base keeps nothing back while an outpost kit is being hauled out   // the game's advice: keep a stock at the base; hauls bring the ore
 
+                // from milestone 1 the trunk lines that are too thin become high-voltage lines, the most loaded first (the Guide's advice for the High-voltage line)
+                if (UpgradeTrunk && sim.MilestonesReached >= 1 && hour % 24 == 0 && sim.WireLinks().Count(q => q.HighVoltage && !q.Built) < 2) hvPlaced += UpgradeThinLines(sim, home, 2);
                 // mining: base tile for rock and iron; the nearest tile with the ore for copper and lithium
                 foreach (Material m in Mined)
                 {
@@ -330,11 +339,19 @@ namespace KardashevAscent.Simulation.Tests.Game
                 int panelCount = 0, powered = sim.PoweredTileCount;
                 for (int qt = 0; qt < sim.TileCount; qt++) for (int qs = 0; qs < sim.SlotCount(qt); qs++) if (sim.GetBuilding(qt, qs) == BuildingType.SolarPanel && !sim.IsUnderConstruction(qt, qs)) panelCount++;
                 summary += " Build tasks: " + string.Join(" | ", sim.Workforce.Tasks.Open.Where(q => q.Task.Kind == TaskKind.Build).Take(4).Select(q => $"@{q.Task.Tile} {q.State} {q.Reason}")) + ". Hauls: " + string.Join(" | ", sim.HaulOrders().Take(4).Select(h => $"{h.Material} {h.Kg:0} {h.From}>{h.To} {(sim.HaulBlockedReason(h.Id) ?? "ok")}")) + ". Stock at 472: Cu " + sim.KgAt(472, Material.Copper).ToString("0") + " Fe " + sim.KgAt(472, Material.Iron).ToString("0") + ".";
+                foreach (int ht in Enumerable.Range(0, sim.TileCount))
+                    for (int hs = 0; hs < sim.SlotCount(ht); hs++)
+                        if (sim.GetBuilding(ht, hs) == BuildingType.HighVoltageLine && sim.IsUnderConstruction(ht, hs))
+                        {
+                            var rec = sim.Workforce.Tasks.Open.FirstOrDefault(q => q.Task.Kind == TaskKind.Build && q.Task.Tile == ht);
+                            summary += $" HV SITE @{ht}.{hs} progress {sim.ConstructionProgress(ht, hs):0.00}, task {(rec == null ? "NONE open" : rec.State + " " + rec.Reason)}, reach problem '{sim.WorkReachProblem(ht)}', copper {sim.Materials[Material.Copper]:0} kg, aluminium {sim.Materials[Material.Aluminium]:0} kg, ALL HAULS: {string.Join(" | ", sim.HaulOrders().Select(o => $"#{o.Id} {o.Material} {o.Kg:0}kg {o.From}>{o.To} {(o.Loaded ? "loaded" : "waiting")} R{o.RobotId}"))}; ROBOTS: {string.Join(" | ", sim.Workforce.Robots.Select(q => $"R{q.Id} {q.Kind} tile {q.Tile} {(q.Task.HasValue ? q.Task.Value.Kind + "@" + q.Task.Value.Tile : "no task")} {q.Activity}"))}; payload base->site {sim.FeasiblePayloadKg(sim.BaseTileId, ht, 490.0):0} kg, mine 496->site {sim.FeasiblePayloadKg(496, ht, 490.0):0} kg; MINE->SITE: {sim.HaulCostText(496, ht, 44.0)}; copper at 496 {sim.KgAt(496, Material.Copper):0} kg, rock at 496 {sim.KgAt(496, Material.Rock):0} kg; BASE->SITE: {sim.HaulCostText(sim.BaseTileId, ht, 44.0)}; sites under construction at the base tile: {string.Join(" ", Enumerable.Range(0, sim.SlotCount(sim.BaseTileId)).Where(q => sim.GetBuilding(sim.BaseTileId, q) != BuildingType.None && sim.IsUnderConstruction(sim.BaseTileId, q)).Select(q => sim.GetBuilding(sim.BaseTileId, q) + "." + q))}; copper held for hauls out of the base {sim.HaulOrders().Where(o => o.From == sim.BaseTileId && !o.Loaded && o.Material == Material.Copper).Sum(o => o.Kg):0} kg; room for copper at the site tile {sim.RoomAt(ht, Material.Copper):0} kg, yards there {sim.StorageCount(ht, BuildingType.StorageYard)}; stock at the site tile: Cu {sim.KgAt(ht, Material.Copper):0} Fe {sim.KgAt(ht, Material.Iron):0} Rock {sim.KgAt(ht, Material.Rock):0}, at base {sim.BaseTileId}: Cu {sim.KgAt(sim.BaseTileId, Material.Copper):0} Fe {sim.KgAt(sim.BaseTileId, Material.Iron):0}; bill {sim.BillToBuild(BuildingType.HighVoltageLine)}; all open build tasks: {string.Join(" | ", sim.Workforce.Tasks.Open.Where(q => q.Task.Kind == TaskKind.Build).Take(8).Select(q => "@" + q.Task.Tile + "." + q.Task.Slot + " " + q.State + " " + q.Reason))}.";
+                        }
                 summary += $" Panels built {panelCount}, powered tiles {powered}, sites waiting: {(stuck.Count == 0 ? "none" : string.Join(", ", stuck.Take(6)))}.";
             }
             if (stuckNotes.Count > 0) summary += " " + string.Join(" || ", stuckNotes.Take(200));
             summary += " Ore ledger (crushing kWh | mined kg | left at the mine tile | at base): " + string.Join("; ", sim.ComminutionWhByOre.OrderByDescending(kv => kv.Value).Take(5).Select(kv => $"{kv.Key.Material}@{kv.Key.Tile} {kv.Value / 1000.0:0} | {sim.MinedByOreTile.GetValueOrDefault(kv.Key):0} | {sim.KgAt(kv.Key.Tile, kv.Key.Material):0} | {sim.KgAt(home, kv.Key.Material):0}")) + ".";
             if (target.TryGetValue(Material.Copper, out int cuTile) && cuTile > 0) summary += $" Copper tile {cuTile}: payload per trip {sim.FeasiblePayloadKg(cuTile, home, PlanetSimulation.BasePayloadKg):0} kg, mined {sim.Deposits.MinedKg(cuTile, Material.Copper) / days:0.0} kg a day on average, {sim.HaulTotals.KgMoved / 1000.0:0} t hauled in all, {sim.HaulTotals.Wh / 1e6:0.0} MWh spent hauling.";
+            { int hv = sim.WireLinks().Count(q => q.HighVoltage && q.Built); summary += $" HV TRUNK: {hvPlaced} ordered ({(hvProblem.Length > 0 ? "last refusal: " + hvProblem : "none refused")}; thin tile {sim.ThinLinesTile}, thin share {sim.ThinLinesShare:0.00}), {hv} built (each one tile of conductor: {KardashevAscent.Simulation.Resources.BuildCosts.CableCopperKg:0} kg copper or {KardashevAscent.Simulation.Resources.BuildCosts.CableCopperKg * KardashevAscent.Simulation.Resources.StandIns.AluminiumPerCopperKg:0} kg aluminium, plus iron and rock); copper in stock {sim.Materials[Material.Copper]:0} kg, aluminium {sim.Materials[Material.Aluminium]:0} kg."; }
             if (peakNote.Length > 0) summary += " GENERATION CHECK: " + peakNote + ".";
             if (accN > 0) summary += $" GRID SPLIT (MW): served colony {accServed / accN / 1e6:0.0} of which baseline {accBase / accN / 1e6:0.0}; dock/critical {accDock / accN / 1e6:0.00}; priority {accPri / accN / 1e6:0.00}; top-up {accTop / accN / 1e6:0.00}; battery charge {accChg / accN / 1e6:0.0}."
                 + $" DEMAND TABLE (last 30 days, means, MW): generation {accGen / accN / 1e6:0.0}, curtailed {accCurt / accN / 1e6:0.0}, colony demand {accDemand / accN / 1e6:0.0} (baseline {sim.BaseDemandW / 1e6:0.00} now; target {sim.DemandTargetW / 1e6:0.0}), battery charging {accBattChg / accN / 1e6:0.0}, robot charging {accRobot / accN / 1e6:0.00}, workshop+refinery+crushing {accShop / accN / 1e6:0.00}, counted as used by the milestone {accKard / accN / 1e6:0.0}; battery at dawn {(dawnSoc.Count > 0 ? dawnSoc.Average() * 100.0 : double.NaN):0} % of {sim.BatteryCapacityWh / 1e6:0} MWh.";
@@ -376,7 +393,42 @@ namespace KardashevAscent.Simulation.Tests.Game
             }
         }
 
-        static List<int> LandByDistance(PlanetSimulation sim, HexSphere sphere, int home)
+        /// <summary>Set false to run the bot without the trunk upgrade (the old behaviour).</summary>
+    public static bool UpgradeTrunk = true;
+    static string hvProblem = "";
+
+    /// <summary>Put a high-voltage line next to each overloaded plain line on the way to the lander, most loaded first. Returns how many were ordered.</summary>
+    internal static int UpgradeThinLines(PlanetSimulation sim, int home, int most)
+    {
+        var links = sim.WireLinks().ToList();
+        var dist = new Dictionary<int, int> { [home] = 0 };
+        var queue = new Queue<int>(); queue.Enqueue(home);
+        while (queue.Count > 0)
+        {
+            int a = queue.Dequeue();
+            foreach (var l in links)
+            {
+                int b = l.From == a ? l.To : l.To == a ? l.From : -1;
+                if (b >= 0 && !dist.ContainsKey(b)) { dist[b] = dist[a] + 1; queue.Enqueue(b); }
+            }
+        }
+        int ordered = 0;
+        foreach (int t in dist.Keys.Where(q => sim.IsLineOverloaded(q) || (q == sim.ThinLinesTile && sim.ThinLinesShare > 0.02)).OrderByDescending(q => q == sim.ThinLinesTile ? double.MaxValue : sim.LineFlowW(q)).ToList())
+        {
+            foreach (var l in links.Where(q => !q.HighVoltage && q.Built && (q.From == t || q.To == t)))
+            {
+                int u = l.From == t ? l.To : l.From;
+                if (!dist.ContainsKey(u)) continue;   // the flagged tile may be either end of the thin line (at the lander it is the child side)
+                if (links.Any(q => q.HighVoltage && ((q.From == t && q.To == u) || (q.From == u && q.To == t)))) continue;
+                if (sim.PlaceWire(t, u, true)) { ordered++; if (ordered >= most) break; continue; }
+                hvProblem = sim.WireProblem;
+            }
+            if (ordered >= most) break;
+        }
+        return ordered;
+    }
+
+    static List<int> LandByDistance(PlanetSimulation sim, HexSphere sphere, int home)
         {
             var order = new List<int>();
             var seen = new HashSet<int> { home };

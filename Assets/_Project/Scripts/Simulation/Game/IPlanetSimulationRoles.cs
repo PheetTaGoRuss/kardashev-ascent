@@ -584,6 +584,8 @@ namespace KardashevAscent.Simulation.Game
         bool CableOutsideModel { get; }
         /// <summary>The share of its rating a cable is given while the air pressure is unmeasured.</summary>
         double CableDesignShare { get; }
+        /// <summary>"Lines too thin" text when over the last whole day more than 5 % of what the generators make could not get through the lines, else null.</summary>
+        string LinesTooThinWarning();
         /// <summary>Share of their real output solar panels deliver while values are unknown (a safety margin).</summary>
         double SolarDesignShare { get; }
         /// <summary>Share of battery capacity in use until the surface temperature is known.</summary>

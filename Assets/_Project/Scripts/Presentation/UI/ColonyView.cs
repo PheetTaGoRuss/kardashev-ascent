@@ -27,7 +27,7 @@ namespace KardashevAscent.Presentation.UI
         Label subtitle, demand, demandCaption, growth, growthCaption, supply, supplyCaption, chartCaption, energy, buildings, tiles,
               kardashev, kardashevNotes;
         PowerHistoryChart chart;
-        Label robotsText, resourcesText;
+        Label robotsText, resourcesText, thinLinesText;
         // Short lines; the full numbers and notes behind "i" (director 2026-11-15, after Oxygen Not Included).
         InfoTip kardashevTip, energyTip, buildingsTip, robotsTip, resourcesTip;
         VisualElement stockChips;
@@ -108,6 +108,11 @@ namespace KardashevAscent.Presentation.UI
             }
             stockChips = new VisualElement();
             content.Insert(content.IndexOf(resourcesText), stockChips);
+            thinLinesText = new Label { name = "thin-lines-text" };
+            thinLinesText.AddToClassList("body");
+            thinLinesText.AddToClassList("warn");
+            thinLinesText.style.display = DisplayStyle.None;
+            content.Insert(0, thinLinesText);
 
             // "i" boxes hold what used to fill the window; the lines themselves stay short.
             if (kardashev != null) kardashevTip = InfoTip.After(kardashev, "");
@@ -190,6 +195,9 @@ namespace KardashevAscent.Presentation.UI
             double dayHours = sim.DayLengthHours > 0.0 ? sim.DayLengthHours : 24.0;
             int day = (int)(sim.TimeHours / dayHours) + 1;
             subtitle.text = $"Day {day} since landing · {toggleKey}: close";
+
+            string thin = sim.LinesTooThinWarning();
+            if (thinLinesText != null) { thinLinesText.text = thin ?? ""; thinLinesText.style.display = thin != null ? DisplayStyle.Flex : DisplayStyle.None; }
 
             demand.text = Format.Power(sim.DemandW);
             demandCaption.text = $"target {Format.Power(sim.DemandTargetW)}";
