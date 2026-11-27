@@ -112,6 +112,21 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.Fail("\n" + report);
         }
 
+        [Test, Explicit("Balance tool: why can a refinery not be placed next to the base workshop")]
+        public void RefineryPlacementProbe()
+        {
+            double au = SolarConstants.AstronomicalUnit, lum = SolarConstants.SolarLuminosity;
+            var planet = new PlanetSolarParams(lum, 1.524 * au, 0.0934, 25.19 * Math.PI / 180.0, 336.0 * Math.PI / 180.0, 24.66, 686.98 * 24.0, 0.25, 0.3, -60.0);
+            var sphere = HexSphere.Create(12); var surface = PlanetSurface.Generate(sphere, new SurfaceSettings(7));
+            var sim = new PlanetSimulation(sphere, surface, planet) { WiredGrid = true, LogisticsEnabled = true };
+            int home = sim.BaseTileId; sim.PlaceWorkshop(home, 8);
+            var lines = new List<string> { $"slots {sim.SlotCount(home)}" };
+            for (int sl = 0; sl < sim.SlotCount(home); sl++) lines.Add($"slot {sl}: building {sim.GetBuilding(home, sl)}, blocker '{sim.RefineryBlocker(BuildingType.AluminaPlant, home, sl)}'");
+            Assert.Fail(Environment.NewLine + string.Join(Environment.NewLine, lines));
+        }
+
+        static bool AluminiumRule = Environment.GetEnvironmentVariable("KA_ALU") != "0";
+        static double aluMadeKg;
         static bool DawnRule = Environment.GetEnvironmentVariable("KA_DAWN") != "0";
         const double DawnLowShare = 0.20;
         static bool YearlyTable = Environment.GetEnvironmentVariable("KA_YEARLY") == "1";
@@ -119,10 +134,10 @@ namespace KardashevAscent.Simulation.Tests.Game
         /// <summary>One year of bot-run numbers for the yearly table.</summary>
         sealed class YearAcc
         {
-            readonly Dictionary<string, int> copperTask = new Dictionary<string, int>(); int n; double gen, used, curt; readonly List<double> dawn = new List<double>(); readonly Dictionary<string, int> robotSteps = new Dictionary<string, int>(); int robotN;
+            readonly Dictionary<string, int> copperTask = new Dictionary<string, int>(); int n, refOn; double refW, gen, used, curt; readonly List<double> dawn = new List<double>(); readonly Dictionary<string, int> robotSteps = new Dictionary<string, int>(); int robotN;
             public void Step(PlanetSimulation sim, ref bool wasDay)
             {
-                n++; gen += sim.GenerationW; used += sim.DayAveragePowerW; curt += sim.CurtailedW;
+                n++; refW += sim.RefineryPowerW; if (sim.RefineryPowerW > 0.0) refOn++; gen += sim.GenerationW; used += sim.DayAveragePowerW; curt += sim.CurtailedW;
                 if (sim.IsDayAtBase && !wasDay) dawn.Add(sim.BatteryStoredWh / Math.Max(1.0, sim.BatteryCapacityWh));
                 wasDay = sim.IsDayAtBase;
                 foreach (var q in sim.Workforce.Tasks.Open.Where(q => q.Task.Kind == TaskKind.Mine && q.Task.Slot == (int)Material.Copper))
@@ -143,7 +158,7 @@ namespace KardashevAscent.Simulation.Tests.Game
                     if (b == BuildingType.HighVoltageLine && !uc) hv++;
                 }
                 string robots = string.Join(" ", robotSteps.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key} {100.0 * kv.Value / Math.Max(1, robotN):0}%"));
-                return $"day {day}: panels built {built}, ordered not built {ordered}, HV lines {hv}; gen {gen / n / 1e6:0.0} MW, used {used / n / 1e6:0.0} MW, curtailed {curt / n / 1e6:0.0} MW, battery at dawn {(dawn.Count > 0 ? dawn.Average() * 100.0 : double.NaN):0} % of {sim.BatteryCapacityWh / 1e6:0} MWh; stock Cu {sim.Materials[Material.Copper]:0} Al {sim.Materials[Material.Aluminium]:0} Rock {sim.Materials[Material.Rock]:0} Fe {sim.Materials[Material.Iron]:0} kg; robots ({sim.Workforce.Robots.Count}): {robots}; copper mining task (steps): {string.Join(" / ", copperTask.OrderByDescending(kv => kv.Value).Take(3).Select(kv => kv.Value + "x " + kv.Key))}";
+                return $"day {day}: panels built {built}, ordered not built {ordered}, HV lines {hv}; gen {gen / n / 1e6:0.0} MW, used {used / n / 1e6:0.0} MW, curtailed {curt / n / 1e6:0.0} MW, battery at dawn {(dawn.Count > 0 ? dawn.Average() * 100.0 : double.NaN):0} % of {sim.BatteryCapacityWh / 1e6:0} MWh; stock Cu {sim.Materials[Material.Copper]:0} Al {sim.Materials[Material.Aluminium]:0} Rock {sim.Materials[Material.Rock]:0} Fe {sim.Materials[Material.Iron]:0} kg; robots ({sim.Workforce.Robots.Count}): {robots}; refinery {refW / n / 1e3:0.0} kW mean, running {100.0 * refOn / n:0} % of the time, aluminium made so far {aluMadeKg:0} kg, plants {sim.RefineryCount(RefineryKind.AluminaPlant)}+{sim.RefineryCount(RefineryKind.Electrolyser)}; copper mining task (steps): {string.Join(" / ", copperTask.OrderByDescending(kv => kv.Value).Take(3).Select(kv => kv.Value + "x " + kv.Key))}";
             }
         }
 
@@ -196,6 +211,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             sim.PlaceBattery(home, 4);
             sim.PlaceWorkshop(home, 8);
             sim.PlaceResearchStation(home, 20);
+            // a cold world keeps the slots touching the workshop free for refinery modules (the aluminium rule below needs them: copper ore is out of reach there); a warm one does not
+            var refSlots = new HashSet<int>(Enumerable.Range(0, sim.SlotCount(home)).Where(q => sim.GetBuilding(home, q) == BuildingType.None && sim.RefineryBlocker(BuildingType.AluminaPlant, home, q) == null).Take(AluminiumRule && planet.AirTemperatureC < 0.0 ? 8 : 0));
             var preview = sim.PreviewPanel(home, 0.35, Math.PI);
             int first = Math.Max(1, (int)Math.Ceiling(1.3 * 100_000.0 / Math.Max(1.0, preview.EnergyPerYearWh / 8766.0)));
             for (int s = 30, placed = 0; s < sim.SlotCount(home) && placed < first; s++)
@@ -208,6 +225,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             int chargerHops = 0; var chargerTiles = new HashSet<int>();
             int last = -1;
             string robotNote = "";
+            int aluTooFarDays = 0, aluWant = 0, aluWantDay = 0, aluPlants = 0, aluElectro = 0, aluFirstDay = -1; aluMadeKg = 0.0;
+            sim.RefineDone += (proc, kg) => { if (proc == RefineProcess.Aluminium) aluMadeKg += kg; };
             bool dawnWasDay = false; int dawnLowDays = 0, pendingBatt = 0; double dawnCurt = 0.0, duskStored = 0.0;
             var yr = new YearAcc(); var yearRows = new List<string>(); bool yrDay = false;
             for (int hour = 0; hour < 24 * days; hour += 3)
@@ -270,6 +289,22 @@ namespace KardashevAscent.Simulation.Tests.Game
 
                 // from milestone 1 the trunk lines that are too thin become high-voltage lines, the most loaded first (the Guide's advice for the High-voltage line)
                 if (UpgradeTrunk && sim.MilestonesReached >= 1 && hour % 24 == 0 && sim.WireLinks().Count(q => q.HighVoltage && !q.Built) < 2) hvPlaced += UpgradeThinLines(sim, home, 2);
+                // aluminium chain (decided 2026-11-27, bot behaviour inside existing systems): when every copper mining task has said "too far" for 10 days, build an alumina plant and an electrolyser
+                // next to the workshop at the base (more, up to four pairs, every 20 days while aluminium is short) and keep aluminium in stock; the stand-in chooser then spends it instead of copper
+                if (AluminiumRule && hour % 24 == 0)
+                {
+                    var copperTasks = sim.Workforce.Tasks.Open.Where(q => q.Task.Kind == TaskKind.Mine && q.Task.Slot == (int)Material.Copper).ToList();
+                    aluTooFarDays = copperTasks.Count > 0 && copperTasks.All(q => q.Reason != null && q.Reason.StartsWith("too far")) ? aluTooFarDays + 1 : 0;
+                    if (aluTooFarDays >= 10)
+                    {
+                        if (aluWant == 0 || (hour / 24 - aluWantDay >= 20 && aluWant < 4 && sim.Materials[Material.Aluminium] < 200.0)) { aluWant++; aluWantDay = hour / 24; if (aluWant == 1) aluFirstDay = hour / 24; }
+                        for (int sl = 0; sl < sim.SlotCount(home) && aluPlants < aluWant; sl++)
+                            if (sim.RefineryBlocker(BuildingType.AluminaPlant, home, sl) == null && sim.PlaceRefinery(BuildingType.AluminaPlant, home, sl)) aluPlants++;
+                        for (int sl = 0; sl < sim.SlotCount(home) && aluElectro < aluWant; sl++)
+                            if (sim.RefineryBlocker(BuildingType.Electrolyser, home, sl) == null && sim.PlaceRefinery(BuildingType.Electrolyser, home, sl)) aluElectro++;
+                        if (aluWant > 0) { sim.SetAutoRefine(RefineProcess.AluminaFromRock, 80.0 * aluWant); sim.SetAutoRefine(RefineProcess.Aluminium, 400.0); }
+                    }
+                }
                 // mining: base tile for rock and iron; the nearest tile with the ore for copper and lithium
                 foreach (Material m in Mined)
                 {
@@ -365,7 +400,7 @@ namespace KardashevAscent.Simulation.Tests.Game
                         foreach (int t in new[] { home }.Concat(inRange.Take(12)).Where(q => sim.IsPowered(q)))
                         {
                             for (int s = 0; s < sim.SlotCount(t) && slots < 1; s++)
-                                if (sim.CanPlace(BuildingType.SolarPanel, t, s) && sim.PlacePanel(t, s, 0.35, Math.PI)) slots++;
+                                if (!(t == home && refSlots.Contains(s)) && sim.CanPlace(BuildingType.SolarPanel, t, s) && sim.PlacePanel(t, s, 0.35, Math.PI)) slots++;
                             if (slots > 0) break;
                         }
                     // no room left on the powered tiles: lay a line toward the nearest open tile (112 kg of copper a tile) so the next panels can stand there
@@ -376,7 +411,7 @@ namespace KardashevAscent.Simulation.Tests.Game
                     }
                     if (sim.BatteryCapacityWh < Math.Max(sim.DemandW, sim.DemandTargetW) * 16.0 || pendingBatt > 0)
                         foreach (int t in new[] { home }.Concat(inRange.Skip(1).Take(12)).Where(q => sim.IsPowered(q)))
-                            if (Enumerable.Range(0, sim.SlotCount(t)).Any(s => sim.PlaceBattery(t, s))) { if (pendingBatt > 0) pendingBatt--; break; }
+                            if (Enumerable.Range(0, sim.SlotCount(t)).Any(s => !(t == home && refSlots.Contains(s)) && sim.PlaceBattery(t, s))) { if (pendingBatt > 0) pendingBatt--; break; }
                 }
 
                 if ((hour == 24 * 100 || hour == 24 * 200) && full)
@@ -445,6 +480,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             var deaths = sim.OperationsLog.Where(o => o.Quantity == "Robot destroyed").Take(2).Select(o => o.Text);
             if (lostNotes.Count > 0) summary += " LAST SEEN BEFORE LOSS: " + string.Join(" || ", lostNotes.Take(3)) + ".";
             if (deaths.Any()) summary += " Deaths: " + string.Join(" | ", deaths) + ".";
+            summary += $" ALUMINIUM RULE: fired day {(aluFirstDay < 0 ? "never" : aluFirstDay.ToString())}, alumina plants {sim.RefineryCount(RefineryKind.AluminaPlant)}, electrolysers {sim.RefineryCount(RefineryKind.Electrolyser)}, aluminium made {aluMadeKg:0} kg, refinery power now {sim.RefineryPowerW / 1e3:0.0} kW, aluminium stock {sim.Materials[Material.Aluminium]:0} kg.";
             summary += " First blockers: " + (blockers.Any() ? string.Join(" | ", blockers) : "none") + $". Final state: demand {sim.DemandW / 1e6:0.0} MW (target {sim.DemandTargetW / 1e6:0.0}), generation now {sim.GenerationW / 1e6:0.0} MW, day-average power {sim.DayAveragePowerW / 1e6:0.00} MW (M1 needs {Kardashev.PowerForMilestone(1, sim.TypeITargetW) / 1e6:0.0} MW, M2 {Kardashev.PowerForMilestone(2, sim.TypeITargetW) / 1e6:0.0} MW), battery {sim.BatteryCapacityWh / 1e6:0} MWh, robots {sim.Workforce.Robots.Count}, stock Fe {sim.Materials[Material.Iron] / 1e3:0.0} t Cu {sim.Materials[Material.Copper]:0} kg Li {sim.Materials[Material.Lithium]:0} kg rock {sim.Materials[Material.Rock] / 1e3:0} t, construction queue {sim.ConstructionQueueCount}, shortfall {string.Join(", ", Materials.All.Where(m => sim.ConstructionShortfall[m] > 0.01).Select(m => m + " " + sim.ConstructionShortfall[m].ToString("0")))}.";
             return (full ? log + "\n" : "") + summary;
         }
