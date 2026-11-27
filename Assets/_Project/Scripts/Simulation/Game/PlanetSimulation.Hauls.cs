@@ -213,6 +213,28 @@ namespace KardashevAscent.Simulation.Game
             return (wh, minC);
         }
 
+        /// <summary>True when some hauler, with a full battery, could make the first segment of a waiting haul now (the dispatch check of KI-46 with the forecast air). An order that fails keeps waiting but is not counted as supply on its way.</summary>
+        /// <summary>An order that no hauler could start for this long stops counting as supply on its way ([rule] TBD).</summary>
+        const double HaulStaleHours = 24.0;
+
+        bool HaulPickupReachable(HaulOrder o)
+        {
+            if (Routes == null || o.RobotId >= 0) return true;
+            WorkTask t = HaulTaskOf(o);
+            {
+                foreach (Robot r in Workforce.Robots)
+                {
+                    if (!RobotCatalog.CanDo(r.Kind, TaskKind.Haul, UnlockLevel)) continue;
+                    var need = HaulSegmentNeedFor(r, t);
+                    if (!need.HasValue) continue;
+                    double cap = r.Battery.CapacityWh * RobotBattery.ColdCapacityFactor(need.Value.MinC);
+                    double reserve = RobotSpecs.ReturnToChargeFraction * cap;
+                    if (need.Value.Wh * Workforce.HaulDispatchMargin <= cap - reserve + 1e-9) return true;
+                }
+                return false;
+            }
+        }
+
         /// <summary>
         /// KI-46 before each later leg (2026-11-26): a robot carrying a haul that has just reached one of the haul's stops (a charger or shelter) before the drop needs the battery for the next leg
         /// (to the next stop, or the drop and the way back to a charger) at its charge and body temperature now, 1.1 times the energy above the reserve. Returns the state of charge to charge to,
@@ -293,6 +315,9 @@ namespace KardashevAscent.Simulation.Game
                             }
                         }
                     }
+                    bool startable = (o.Blocked == null || o.WeatherWait) && HaulPickupReachable(o);
+                    if (startable || o.RobotId >= 0) { o.UnstartableSince = double.NaN; o.Stale = false; }
+                    else { if (double.IsNaN(o.UnstartableSince)) o.UnstartableSince = TimeHours; o.Stale = TimeHours - o.UnstartableSince >= HaulStaleHours - 1e-9; }
                     if (o.Blocked != null && was == null)
                         Log($"Haul {o.Id}", "Haul waiting", 0.0, "", $"H{o.Id}", $"Haul {o.Id} ({Resources.Materials.Name(o.Material)} {o.FromTile} to {o.ToTile}) is waiting: {o.Blocked}.", -1);
                     if (o.Blocked != null) { i++; continue; }
@@ -336,6 +361,7 @@ namespace KardashevAscent.Simulation.Game
                     {
                         haulLedger.RecordMove(o.Material, moved, DistanceKm(o.FromTile, o.ToTile));
                         flows.Add(TimeHours, FlowStage.Hauled, -1, o.Material, moved);
+                        haulBook.CancelUncounted(o.ToTile, o.Material, moved);
                     }
                     o.Kg -= moved;
                     Workforce.Release(t);

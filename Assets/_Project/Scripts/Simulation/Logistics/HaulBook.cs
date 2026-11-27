@@ -27,6 +27,13 @@ namespace KardashevAscent.Simulation.Logistics
         public bool WeatherWait;
         /// <summary>The player said go anyway: a forecast storm no longer holds this haul (saved; never overrides the energy check).</summary>
         public bool GoAnyway;
+        /// <summary>The hour the order last stopped being startable (blocked, or no hauler's full battery could make the first segment); NaN while it is startable. Not saved.</summary>
+        public double UnstartableSince = double.NaN;
+        /// <summary>Unstartable for a whole day ([rule] TBD 24 h): the order is kept but no longer counts as supply on its way.</summary>
+        public bool Stale;
+
+        /// <summary>True when the order counts as supply on its way: a robot has it, or it has been startable within the last day (decided 2026-11-27).</summary>
+        public bool CountsAsOnTheWay => Stage == 1 || RobotId >= 0 || !Stale;
     }
 
     /// <summary>A wish to hold at least some kg of a material at a depot: hauls are generated until it is met.</summary>
@@ -84,8 +91,22 @@ namespace KardashevAscent.Simulation.Logistics
         {
             double t = 0.0;
             foreach (HaulOrder o in orders)
-                if (o.ToTile == tile && o.Material == m) t += o.Kg;
+                if (o.ToTile == tile && o.Material == m && o.CountsAsOnTheWay) t += o.Kg;
             return t;
+        }
+
+        /// <summary>A delivery arrived: orders to the same tile and material that no robot has and that do not count as on the way give up the delivered kg (kept, never dropped and re-made unless emptied).</summary>
+        public void CancelUncounted(int tile, Material m, double deliveredKg)
+        {
+            double left = deliveredKg;
+            for (int i = orders.Count - 1; i >= 0 && left > 1e-9; i--)
+            {
+                HaulOrder o = orders[i];
+                if (o.ToTile != tile || o.Material != m || o.Stage != 0 || o.RobotId >= 0 || o.WreckId != 0 || o.CountsAsOnTheWay) continue;
+                double cut = Math.Min(left, o.Kg);
+                o.Kg -= cut; left -= cut;
+                if (o.Kg <= 1e-6) orders.RemoveAt(i);
+            }
         }
 
         /// <summary>Kg of a material still to be loaded at a tile (promised, not yet taken from the depot).</summary>

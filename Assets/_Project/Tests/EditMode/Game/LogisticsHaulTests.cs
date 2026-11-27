@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using KardashevAscent.Simulation.Game;
+using KardashevAscent.Simulation.Logistics;
 using KardashevAscent.Simulation.Planet;
 using KardashevAscent.Simulation.Resources;
 using KardashevAscent.Simulation.Robots;
@@ -106,6 +107,23 @@ namespace KardashevAscent.Simulation.Tests.Game
             other.Tick(0.25);
             Assert.AreEqual(iron, Everything(other), 1e-6, "nothing was lost with the robot");
             Assert.IsFalse(other.HaulOrders().Any(o => o.Id == order.Id && o.Loaded), "the haul was dropped");
+        }
+
+        /// <summary>A far order that no robot can start does not count as on the way (decided 2026-11-27): the planner supplies the site from a nearer depot, and the stale order is kept, then cut when the delivery arrives.</summary>
+        [Test]
+        public void AStaleFarOrderNoRobotCanStart_DoesNotStarveASiteThatANearDepotCanSupply()
+        {
+            var sim = Make();
+            int near = LandNeighbour(sim);
+            int far = Enumerable.Range(0, Sphere.TileCount).Where(t => !sim.GetTile(t).IsWater && t != sim.BaseTileId).OrderByDescending(t => Sphere.Centers[t].X * Sphere.Centers[sim.BaseTileId].X * -1.0 + Sphere.Centers[t].Y * Sphere.Centers[sim.BaseTileId].Y * -1.0 + Sphere.Centers[t].Z * Sphere.Centers[sim.BaseTileId].Z * -1.0).First();
+            sim.PutMaterials(far, Material.Iron, 300.0);
+            sim.SetStockTarget(near, Material.Iron, 300.0);
+            var state = sim.CaptureState();
+            state.HaulOrders.Add(new HaulOrderRecord { Id = 900, FromTile = far, ToTile = near, Material = Material.Iron, Kg = 300.0, Stage = 0, RobotId = -1 });
+            var other = new PlanetSimulation(Sphere, Surface, Earthlike) { LogisticsEnabled = true, ChemistryEnabled = false };
+            Assert.IsTrue(other.RestoreState(state));
+            for (int i = 0; i < 400 && other.KgAt(near, Material.Iron) < 300.0 - 1e-6; i++) other.Tick(1.0);
+            Assert.AreEqual(300.0, other.KgAt(near, Material.Iron), 1e-6, "the nearer depot supplied it within 400 hours");
         }
 
         [Test]
