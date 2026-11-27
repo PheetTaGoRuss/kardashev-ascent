@@ -75,7 +75,8 @@ namespace KardashevAscent.Simulation.Tests.Game
         public void ViridiaHvShort()
         {
             double au = SolarConstants.AstronomicalUnit, lum = SolarConstants.SolarLuminosity;
-            Assert.Fail("\n" + Run("Viridia", new PlanetSolarParams(lum, au, 0.0167, 23.44 * Math.PI / 180.0, 282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0), 140, false));
+            string vr = Run("Viridia", new PlanetSolarParams(lum, au, 0.0167, 23.44 * Math.PI / 180.0, 282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0), 140, false);
+            Assert.Fail(Environment.NewLine + vr + Environment.NewLine + string.Join(Environment.NewLine, haulTrace.Select(x => x.Length > 160 ? x.Substring(0, 160) : x)));
         }
 
         [Test, Explicit("Balance tool: 60 days of the Earth-like colony with the diagnostics")]
@@ -109,6 +110,19 @@ namespace KardashevAscent.Simulation.Tests.Game
             report.AppendLine(Run("Mars-like (cold, far)", new PlanetSolarParams(lum, 1.524 * au, 0.0934, 25.19 * Math.PI / 180.0, 336.0 * Math.PI / 180.0, 24.66, 686.98 * 24.0, 0.25, 0.3, -60.0), 730, false));
             report.AppendLine(Run("Hot (close)", new PlanetSolarParams(lum, 0.8 * au, 0.0167, 10.0 * Math.PI / 180.0, 282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0 * 0.51, 0.3, 0.3, 45.0), 730, false));
             Assert.Fail("\n" + report);
+        }
+
+        static bool TraceHauls = Environment.GetEnvironmentVariable("KA_TRACE") == "1";
+        static readonly List<string> haulTrace = new List<string>();
+
+        [Test, Explicit("Balance tool: Mars-like for 60 days with a daily haul-order trace")]
+        public void MarsHaulTrace()
+        {
+            double au = SolarConstants.AstronomicalUnit, lum = SolarConstants.SolarLuminosity;
+            TraceHauls = true; haulTrace.Clear();
+            string r = Run("Mars-like", new PlanetSolarParams(lum, 1.524 * au, 0.0934, 25.19 * Math.PI / 180.0, 336.0 * Math.PI / 180.0, 24.66, 686.98 * 24.0, 0.25, 0.3, -60.0), 60, false);
+            TraceHauls = false;
+            Assert.Fail(Environment.NewLine + r.Substring(0, Math.Min(r.Length, 600)) + Environment.NewLine + "HAUL TRACE" + Environment.NewLine + string.Join(Environment.NewLine, haulTrace));
         }
 
         static string Run(string name, PlanetSolarParams planet, int days, bool full)
@@ -176,6 +190,7 @@ namespace KardashevAscent.Simulation.Tests.Game
                     if (travelHours[tq.Id] == 201.0) stuckNotes.Add($"STUCK R{tq.Id} task={(tq.Task.HasValue ? tq.Task.Value.Kind + "@" + tq.Task.Value.Tile : "none")} tile={tq.Tile} act={tq.Activity} soc={tq.Battery.StateOfCharge:0.00} wh={tq.Battery.UsableWh:0} shut={tq.IsShutDown} stranded={tq.IsStranded} routeLeft={tq.Route.Count} hop={tq.HopProgress:0.00} manual={tq.ManualTarget} fac={(tq.Facility.HasValue ? tq.Facility.Value.Tile : -1)} reserve={tq.ReserveFraction:0.00} trip={tq.TripCharge:0.00} t={sim.TimeHours:0}");
                     if (travelHours[tq.Id] >= 204.0 && travelHours[tq.Id] <= 222.0 && stuckNotes.Count < 12) stuckNotes.Add($"TRACE R{tq.Id} t={sim.TimeHours:0} tile={tq.Tile} next={tq.NextTile} hop={tq.HopProgress:0.000} hopHours={(tq.NextTile.HasValue ? sim.Routes.HopHoursAt(tq.NextTile.Value) : 0.0):0.0} wh={tq.Battery.UsableWh:0} act={tq.Activity} task={(tq.Task.HasValue ? tq.Task.Value.Kind.ToString() : "none")} manual={tq.ManualTarget} paused={tq.StormHold} sheltered={tq.Sheltered} body={tq.BodyTempC:0} lastW={tq.LastChargeW:0}");
                     if (travelHours[tq.Id] == 33.0) lostNotes.Add($"LONGTRAVEL R{tq.Id} task={(tq.Task.HasValue ? tq.Task.Value.Kind + "@" + tq.Task.Value.Tile : "none")} tile={tq.Tile} act={tq.Activity} soc={tq.Battery.StateOfCharge:0.00} manual={tq.ManualTarget} fac={(tq.Facility.HasValue ? tq.Facility.Value.Tile : -1)} t={sim.TimeHours:0}"); }
+                if (TraceHauls && hour % 24 == 0) haulTrace.Add($"d{hour / 24}: dayAvgUsed {sim.DayAveragePowerW / 1e6:0.00} gen {sim.GenerationW / 1e6:0.0} demand {sim.DemandW / 1e6:0.00} target {sim.DemandTargetW / 1e6:0.00} panels {Enumerable.Range(0, sim.TileCount).Sum(q => sim.PanelCount(q))}; base Cu {sim.KgAt(sim.BaseTileId, Material.Copper):0} Fe {sim.KgAt(sim.BaseTileId, Material.Iron):0} | " + string.Join(" ", sim.HaulOrders().Select(o => $"#{o.Id} {o.Material} {o.Kg:0}kg {o.From}>{o.To} {(o.Loaded ? "L" : "w")}R{o.RobotId}")));
                 if (milestone1Day < 0 && sim.MilestonesReached >= 1) milestone1Day = hour / 24;
                 if (milestone2Day < 0 && sim.MilestonesReached >= 2) milestone2Day = hour / 24;
                 if (firstShortDay < 0 && milestone2Day < 0 && hour > 24 * 20 && (sim.Materials[Material.Iron] < 1.0 || sim.Materials[Material.Rock] < 1.0)) firstShortDay = hour / 24;
