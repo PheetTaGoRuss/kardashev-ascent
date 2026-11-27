@@ -112,6 +112,53 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.Fail("\n" + report);
         }
 
+        static bool DawnRule = Environment.GetEnvironmentVariable("KA_DAWN") != "0";
+        const double DawnLowShare = 0.20;
+        static bool YearlyTable = Environment.GetEnvironmentVariable("KA_YEARLY") == "1";
+
+        /// <summary>One year of bot-run numbers for the yearly table.</summary>
+        sealed class YearAcc
+        {
+            readonly Dictionary<string, int> copperTask = new Dictionary<string, int>(); int n; double gen, used, curt; readonly List<double> dawn = new List<double>(); readonly Dictionary<string, int> robotSteps = new Dictionary<string, int>(); int robotN;
+            public void Step(PlanetSimulation sim, ref bool wasDay)
+            {
+                n++; gen += sim.GenerationW; used += sim.DayAveragePowerW; curt += sim.CurtailedW;
+                if (sim.IsDayAtBase && !wasDay) dawn.Add(sim.BatteryStoredWh / Math.Max(1.0, sim.BatteryCapacityWh));
+                wasDay = sim.IsDayAtBase;
+                foreach (var q in sim.Workforce.Tasks.Open.Where(q => q.Task.Kind == TaskKind.Mine && q.Task.Slot == (int)Material.Copper))
+                { string rs = q.State + " " + (q.Reason ?? ""); if (rs.Length > 90) rs = rs.Substring(0, 90); copperTask[rs] = (copperTask.TryGetValue(rs, out int cc) ? cc : 0) + 1; }
+                foreach (var r in sim.Workforce.Robots)
+                {
+                    string k = r.Activity == RobotActivity.Charging ? "charging" : r.Task.HasValue ? (r.Task.Value.Kind == TaskKind.Mine ? "mine-" + (Material)r.Task.Value.Slot : r.Task.Value.Kind.ToString().ToLower()) : "idle";
+                    robotSteps[k] = (robotSteps.TryGetValue(k, out int c) ? c : 0) + 1; robotN++;
+                }
+            }
+            public string Row(PlanetSimulation sim, int day)
+            {
+                int built = 0, ordered = 0, hv = 0;
+                for (int qt = 0; qt < sim.TileCount; qt++) for (int qs = 0; qs < sim.SlotCount(qt); qs++)
+                {
+                    var b = sim.GetBuilding(qt, qs); if (b == BuildingType.None) continue; bool uc = sim.IsUnderConstruction(qt, qs);
+                    if (b == BuildingType.SolarPanel) { if (uc) ordered++; else built++; }
+                    if (b == BuildingType.HighVoltageLine && !uc) hv++;
+                }
+                string robots = string.Join(" ", robotSteps.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key} {100.0 * kv.Value / Math.Max(1, robotN):0}%"));
+                return $"day {day}: panels built {built}, ordered not built {ordered}, HV lines {hv}; gen {gen / n / 1e6:0.0} MW, used {used / n / 1e6:0.0} MW, curtailed {curt / n / 1e6:0.0} MW, battery at dawn {(dawn.Count > 0 ? dawn.Average() * 100.0 : double.NaN):0} % of {sim.BatteryCapacityWh / 1e6:0} MWh; stock Cu {sim.Materials[Material.Copper]:0} Al {sim.Materials[Material.Aluminium]:0} Rock {sim.Materials[Material.Rock]:0} Fe {sim.Materials[Material.Iron]:0} kg; robots ({sim.Workforce.Robots.Count}): {robots}; copper mining task (steps): {string.Join(" / ", copperTask.OrderByDescending(kv => kv.Value).Take(3).Select(kv => kv.Value + "x " + kv.Key))}";
+            }
+        }
+
+        [Test, Explicit("Balance tool: Mars-like for five game years with a yearly table")]
+        public void MarsFiveYears()
+        {
+            double au = SolarConstants.AstronomicalUnit, lum = SolarConstants.SolarLuminosity;
+            YearlyTable = true; yearlyOut.Clear();
+            string r = Run("Mars-like 5y", new PlanetSolarParams(lum, 1.524 * au, 0.0934, 25.19 * Math.PI / 180.0, 336.0 * Math.PI / 180.0, 24.66, 686.98 * 24.0, 0.25, 0.3, -60.0), 1826, false);
+            YearlyTable = false;
+            Assert.Fail(Environment.NewLine + r + Environment.NewLine + "YEARLY" + Environment.NewLine + string.Join(Environment.NewLine, yearlyOut));
+        }
+
+        static readonly List<string> yearlyOut = new List<string>();
+
         static bool TraceHauls = Environment.GetEnvironmentVariable("KA_TRACE") == "1";
         static readonly List<string> haulTrace = new List<string>();
 
@@ -161,8 +208,30 @@ namespace KardashevAscent.Simulation.Tests.Game
             int chargerHops = 0; var chargerTiles = new HashSet<int>();
             int last = -1;
             string robotNote = "";
+            bool dawnWasDay = false; int dawnLowDays = 0, pendingBatt = 0; double dawnCurt = 0.0, duskStored = 0.0;
+            var yr = new YearAcc(); var yearRows = new List<string>(); bool yrDay = false;
             for (int hour = 0; hour < 24 * days; hour += 3)
             {
+                if (YearlyTable) yr.Step(sim, ref yrDay);
+                if (DawnRule)
+                {
+                    dawnCurt += sim.CurtailedW;
+                    if (sim.IsDayAtBase && !dawnWasDay)
+                    {
+                        double dawnSoc2 = sim.BatteryStoredWh / Math.Max(1.0, sim.BatteryCapacityWh);
+                        if (dawnSoc2 < DawnLowShare && dawnCurt > 0.0) dawnLowDays++; else dawnLowDays = 0;
+                        dawnCurt = 0.0;
+                        if (dawnLowDays >= 3)
+                        {
+                            // a night of shortfall: what the colony draws through the night less what the battery held at dusk (game-side rule [rule] TBD: dawn below 20 % for 3 days while power is curtailed)
+                            double shortfall = Math.Max(0.0, sim.DemandW * sim.DayLengthHours / 2.0 - duskStored);
+                            pendingBatt += (int)Math.Min(10.0, Math.Ceiling(shortfall / sim.BatteryUnitWh)); dawnLowDays = 0;
+                        }
+                    }
+                    if (!sim.IsDayAtBase && dawnWasDay) duskStored = sim.BatteryStoredWh;
+                    dawnWasDay = sim.IsDayAtBase;
+                }
+                if (YearlyTable && hour > 0 && (hour % (24 * 365) == 0 || hour + 3 >= 24 * days)) { yearRows.Add(yr.Row(sim, hour / 24)); yr = new YearAcc(); }
                 var snap = sim.Workforce.Robots.ToDictionary(q => q.Id, q => $"R{q.Id} task={(q.Task.HasValue ? q.Task.Value.Kind + "@" + q.Task.Value.Tile : "none")} tile={q.Tile} act={q.Activity} wh={q.Battery.UsableWh:0} soc={q.Battery.StateOfCharge:0.00} airC={sim.LiveAirTemperatureAt(q.Tile):0} sheltered={q.Sheltered} trav={q.IsTravelling} fac={(q.Facility.HasValue ? q.Facility.Value.Tile + "." + q.Facility.Value.Slot : "-")} stranded={q.IsStranded} heaterW={q.HeaterW:0} hrsTo471={(sim.Routes.HoursBetween(q.Tile, 471)):0.0} lastChg={q.LastChargeW:0} warm={q.WarmingUp} bt={q.BatteryTempC:0} hist={q.ExposedEmptyHours:0} t={sim.TimeHours:0}");
                 if (full || name.StartsWith("Mars-trace")) foreach (var dq in sim.Workforce.Robots.Where(q => (q.Id == 2 || q.Id == 3) && sim.TimeHours > 120.0 && sim.TimeHours < 270.0))
                     stuckNotes.Add($"TR t={sim.TimeHours:0} R{dq.Id} tile={dq.Tile} task={(dq.Task.HasValue ? dq.Task.Value.Kind + "@" + dq.Task.Value.Tile : "none")} act={dq.Activity} route={dq.Route.Count} wh={dq.Battery.UsableWh:0} cap={dq.Battery.CapacityWh * dq.Battery.ColdFactor:0} body={dq.BodyTempC:0} heater={dq.HeaterW:0} air={sim.LiveAirTemperatureAt(dq.Tile):0} sheltered={dq.Sheltered} cargo={sim.Workforce.Tasks.Open.Count(o => o.Task.Kind == TaskKind.Haul && o.RobotId == dq.Id)}");
@@ -305,9 +374,9 @@ namespace KardashevAscent.Simulation.Tests.Game
                         int farm = land.Where(q => !sim.IsPowered(q) && !chargerTiles.Contains(q) && !sim.GetTile(q).IsWater && sim.IsOpenGround(q)).OrderBy(q => Hops(sphere, home, q)).ThenBy(q => q).FirstOrDefault();
                         if (farm > 0) Powered(sim, sphere, farm);
                     }
-                    if (sim.BatteryCapacityWh < Math.Max(sim.DemandW, sim.DemandTargetW) * 16.0)
+                    if (sim.BatteryCapacityWh < Math.Max(sim.DemandW, sim.DemandTargetW) * 16.0 || pendingBatt > 0)
                         foreach (int t in new[] { home }.Concat(inRange.Skip(1).Take(12)).Where(q => sim.IsPowered(q)))
-                            if (Enumerable.Range(0, sim.SlotCount(t)).Any(s => sim.PlaceBattery(t, s))) break;
+                            if (Enumerable.Range(0, sim.SlotCount(t)).Any(s => sim.PlaceBattery(t, s))) { if (pendingBatt > 0) pendingBatt--; break; }
                 }
 
                 if ((hour == 24 * 100 || hour == 24 * 200) && full)
@@ -346,6 +415,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             double miningWh = sim.MiningWorkHours * RobotSpecs.MinePowerW + sim.ComminutionWh;
             double share = generatedWh > 0.0 ? miningWh / generatedWh : 0.0;
             string verdict = (share > 0.5 ? " ABSURD: mining takes over half of generation." : "") + (firstShortDay >= 0 ? $" ABSURD: ran out of iron or rock on day {firstShortDay} before milestone 2." : "");
+            yearlyOut.AddRange(yearRows);
             string summary = $"{name} (longest continuous travel {longestTravel:0} h): {days} d, milestones {sim.MilestonesReached} (M1 day {(milestone1Day < 0 ? "never" : milestone1Day.ToString())}, M2 day {(milestone2Day < 0 ? "never" : milestone2Day.ToString())}), deposits used up {exhausted} [{string.Join(", ", exhaustedWhat)}], rock moved {sim.RockMovedKg / 1000.0:0} t, tailings {sim.TailingsKg / 1000.0:0} t, mining energy {miningWh / 1e6:0.0} MWh (crushing {sim.ComminutionWh / 1e6:0.0}) of {generatedWh / 1e6:0} MWh generated = {share * 100.0:0.0} %.{verdict}";
             foreach (int ot in new HashSet<int>(sim.Workforce.Tasks.Open.Where(q => q.Task.Kind == TaskKind.Build).Select(q => q.Task.Tile))) { string txt = sim.OutpostText(ot); if (txt.Length > 0) summary += $" Outpost {ot}: {txt}."; }
             {
