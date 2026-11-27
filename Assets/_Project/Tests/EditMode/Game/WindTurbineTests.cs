@@ -118,8 +118,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             for (int h = 0; h < 24 * 30; h++)
             {
                 sim.Tick(1.0);
-                double discharge = Math.Max(0.0, -sim.BatteryPowerW);
-                worst = Math.Max(worst, Math.Abs(sim.GenerationW + discharge - (sim.KardashevPowerW + sim.CurtailedW)));
+                double stored = sim.BatteryStoredRateW;
+                worst = Math.Max(worst, Math.Abs(sim.GenerationW - (sim.KardashevPowerW + sim.CurtailedW + stored)));
                 turbine = Math.Max(turbine, sim.WindPowerW());
             }
             Assert.Greater(turbine, 1000.0, "the turbines fed the grid");

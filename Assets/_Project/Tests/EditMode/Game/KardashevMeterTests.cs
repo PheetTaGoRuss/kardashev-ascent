@@ -18,6 +18,21 @@ namespace KardashevAscent.Simulation.Tests.Game
             282.94 * Math.PI / 180.0, 24.0, 365.256 * 24.0, 0.32, 0.3, 25.0);
 
         [Test]
+        public void UsedPower_NeverCountsStorage_SoItStaysBelowTheGeneration()
+        {
+            var sim = new PlanetSimulation(Sphere, Surface, Star(1.0));
+            double worst = double.MinValue; double loss = 0.0;
+            for (int h = 0; h < 72; h++)
+            {
+                sim.Tick(1.0);
+                worst = Math.Max(worst, sim.KardashevPowerW - sim.GenerationW - sim.Grid.Last.DischargeW - sim.BatteryLossW);
+                loss = Math.Max(loss, sim.BatteryLossW);
+            }
+            Assert.LessOrEqual(worst, 1e-6, "used power cannot exceed generation plus what the battery gave and lost");
+            Assert.Greater(loss, 0.0, "the battery's round-trip loss is dissipated and counted as used");
+        }
+
+        [Test]
         public void KAndPlanetK_FollowTheUsedPower()
         {
             var sim = new PlanetSimulation(Sphere, Surface, Star(1.0));

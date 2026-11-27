@@ -91,7 +91,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             {
                 sim.Tick(1.0);
                 double discharge = Math.Max(0.0, -sim.BatteryPowerW);
-                double err = Math.Abs(sim.GenerationW + discharge - (sim.KardashevPowerW + sim.CurtailedW));
+                double stored = sim.BatteryStoredRateW;
+                double err = Math.Abs(sim.GenerationW - (sim.KardashevPowerW + sim.CurtailedW + stored));
                 if (err > worst) { worst = err; WorstAt = $"t={sim.TimeHours:0}h gen {sim.GenerationW:0} discharge {discharge:0} kard {sim.KardashevPowerW:0} curt {sim.CurtailedW:0} brown {sim.IsBrownout} charging {sim.RobotChargingW:0} workshop {sim.WorkshopPowerW:0} demand {sim.DemandW:0} batt {sim.BatteryPowerW:0}"; }
             }
             return worst;

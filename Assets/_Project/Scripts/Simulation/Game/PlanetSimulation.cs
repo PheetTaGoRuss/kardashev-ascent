@@ -116,6 +116,10 @@ namespace KardashevAscent.Simulation.Game
         public double BatteryPowerW { get; private set; }
         public double CurtailedW { get; private set; }
         public double KardashevPowerW { get; private set; }
+        /// <summary>The main battery's round-trip loss this step, W (dissipated heat; counted as used power).</summary>
+        public double BatteryLossW { get; private set; }
+        /// <summary>The rate the main battery's stored energy changes this step, W.</summary>
+        public double BatteryStoredRateW { get; private set; }
         public double KardashevK => Kardashev.K(KardashevPowerW);
         public double PlanetK => Kardashev.PlanetK(KardashevPowerW, TypeITargetW);
         public double TypeITargetW { get; }
@@ -199,7 +203,13 @@ namespace KardashevAscent.Simulation.Game
             // What the priority loads took beyond the network and the robots' critical charging is the Workshop's, the refineries'
             // and the colony computing's: power used all the same (found by the 60-day energy-closure runs, mission operations P5).
             double industrialServedW = Math.Max(0.0, grid.PriorityServedW - networkServedW - Upkeep.CriticalRequestW);
-            KardashevPowerW = grid.ServedW + grid.ChargeW + RobotChargingW + networkServedW + industrialServedW;
+            // Storage is not consumption (Sagan: K is the power a civilisation uses): what went into the battery is not counted, what the battery gave back is
+            // already in ServedW, and the round-trip loss (dissipated as heat) is real use (decided 2026-11-27; before, charging was counted and the same energy
+            // was counted again on discharge, so K read above the generation).
+            double eta = Grid.Battery.OneWayEfficiency;
+            BatteryLossW = grid.ChargeW * (1.0 - eta) + grid.DischargeW * (1.0 / eta - 1.0);
+            BatteryStoredRateW = grid.ChargeW * eta - grid.DischargeW / eta;
+            KardashevPowerW = grid.ServedW + BatteryLossW + RobotChargingW + networkServedW + industrialServedW;
             // Milestones are judged on a whole day's average, so a sunny noon doesn't count.
             dayEnergyWh += KardashevPowerW * dt;
             dayHours += dt;

@@ -47,11 +47,8 @@ namespace KardashevAscent.Simulation.Tests.Game
             double worstW = 0.0;
             RunScript((sim, dt) =>
             {
-                // Generation plus what the battery gave = what reached loads, the battery, parts and robots, plus curtailed.
-                double discharge = Math.Max(0.0, -sim.BatteryPowerW);
-                double supplied = sim.GenerationW + discharge;
-                double used = sim.KardashevPowerW + sim.CurtailedW;
-                worstW = Math.Max(worstW, Math.Abs(supplied - used));
+                // Generation = used power (loads, robots, battery loss) + curtailed + the rate the battery's stored energy grows.
+                worstW = Math.Max(worstW, Math.Abs(sim.GenerationW - (sim.KardashevPowerW + sim.CurtailedW + sim.BatteryStoredRateW)));
             });
             Assert.Less(worstW, 1.0, "the largest mismatch on any step, W (a milliwatt of rounding is allowed)");
         }
