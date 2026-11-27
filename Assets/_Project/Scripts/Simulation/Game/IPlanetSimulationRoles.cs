@@ -79,7 +79,7 @@ namespace KardashevAscent.Simulation.Game
         /// <summary>True while demand is not being met (generation + battery fall short).</summary>
         bool IsBrownout { get; }
 
-        /// <summary>Power actually used (loads, battery charging, build parts; not curtailed), W. K is computed from it.</summary>
+        /// <summary>Power actually used (loads, robot charging, build parts and the battery's round-trip loss; not curtailed, and not what is stored: storage is not use), W. K is computed from it.</summary>
         double KardashevPowerW { get; }
 
         /// <summary>Absolute Kardashev K = (log₁₀ P − 6) / 10 of <see cref="KardashevPowerW"/>.</summary>
