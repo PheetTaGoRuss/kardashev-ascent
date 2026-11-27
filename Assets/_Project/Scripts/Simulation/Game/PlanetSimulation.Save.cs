@@ -25,6 +25,7 @@ namespace KardashevAscent.Simulation.Game
                 DayAveragePowerW = DayAveragePowerW,
                 DayEnergyWh = dayEnergyWh,
                 DayHours = dayHours,
+                DayThinWh = dayThinWh, DayDeliveredWh = dayDeliveredWh, ThinLinesShare = ThinLinesShare, ThinLinesMeanW = ThinLinesMeanW, DayThinFlowW = dayThinFlowW, DayThinTilePlusOne = dayThinTile + 1, ThinLinesTilePlusOne = ThinLinesTile + 1,
                 TileCount = TileCount,
                 BaseTileId = BaseTileId,
                 TimeHours = TimeHours,
@@ -222,6 +223,7 @@ namespace KardashevAscent.Simulation.Game
             DayAveragePowerW = Math.Max(0.0, state.DayAveragePowerW);
             dayEnergyWh = Math.Max(0.0, state.DayEnergyWh);
             dayHours = Math.Max(0.0, state.DayHours);
+            dayThinWh = Math.Max(0.0, state.DayThinWh); dayDeliveredWh = Math.Max(0.0, state.DayDeliveredWh); ThinLinesShare = Math.Max(0.0, Math.Min(1.0, state.ThinLinesShare)); ThinLinesMeanW = Math.Max(0.0, state.ThinLinesMeanW); dayThinFlowW = Math.Max(0.0, state.DayThinFlowW); dayThinTile = state.DayThinTilePlusOne - 1; ThinLinesTile = state.ThinLinesTilePlusOne - 1;   // an older save has none: the first whole day sets them
             targetReached = MilestonesReached >= 10;
             Notebook.Restore(state.Notebook);
             UpdateStar();

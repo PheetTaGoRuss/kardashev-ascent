@@ -45,7 +45,7 @@ namespace KardashevAscent.Presentation.UI
 
         IPlanetSimulation sim;
         BoardElement board;
-        Label hint;
+        Label hint, thinWarning;
         Toggle fSources, fLoads, fStorage, fUnwired, fIslands, fHigh;
         TextField search;
         readonly List<Hub> hubs = new List<Hub>();
@@ -63,6 +63,9 @@ namespace KardashevAscent.Presentation.UI
             hint = Text("caption");
             hint.style.minHeight = 34f;   // two lines kept free: a longer hint must not push the board down while a drag is in progress
             hint.text = "Click a building's pin, then its tile, to wire it. Click a tile, then a neighbouring tile, to run a line between them.";
+            thinWarning = Text("caption");
+            thinWarning.AddToClassList("warn");
+            thinWarning.style.display = DisplayStyle.None;
             var chips = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap } };
             Toggle Chip(string text, bool on)
             {
@@ -96,6 +99,9 @@ namespace KardashevAscent.Presentation.UI
                 hint.text = "This colony does not use the wired grid, so there is nothing to wire.";
                 return;
             }
+            string thin = s.LinesTooThinWarning();
+            thinWarning.text = thin ?? "";
+            thinWarning.style.display = thin != null ? DisplayStyle.Flex : DisplayStyle.None;
             Layout();
             board.MarkDirtyRepaint();
         }

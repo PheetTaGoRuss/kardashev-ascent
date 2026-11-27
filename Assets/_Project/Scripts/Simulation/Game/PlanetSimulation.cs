@@ -213,9 +213,15 @@ namespace KardashevAscent.Simulation.Game
             // Milestones are judged on a whole day's average, so a sunny noon doesn't count.
             dayEnergyWh += KardashevPowerW * dt;
             dayHours += dt;
+            dayThinWh += OverloadLossW * dt; dayDeliveredWh += GenerationW * dt;
+            if (OverloadLossW > 1.0) foreach (int ot in overloadedTiles) { double of = LineFlowW(ot); if (of > dayThinFlowW) { dayThinFlowW = of; dayThinTile = ot; } }
             if (dayHours >= MilestoneDayHours - 1e-9)
             {
                 DayAveragePowerW = dayEnergyWh / dayHours;
+                ThinLinesShare = dayThinWh + dayDeliveredWh > 0.0 ? dayThinWh / (dayThinWh + dayDeliveredWh) : 0.0;
+                ThinLinesMeanW = dayThinWh / dayHours;
+                ThinLinesTile = dayThinTile; dayThinTile = -1; dayThinFlowW = 0.0;
+                dayThinWh = 0.0; dayDeliveredWh = 0.0;
                 dayEnergyWh = 0.0;
                 dayHours = 0.0;
                 CheckMilestones();
@@ -235,6 +241,29 @@ namespace KardashevAscent.Simulation.Game
 
         /// <summary>Used power averaged over the last full day (see <see cref="MilestoneDayHours"/>), W.</summary>
         public double DayAveragePowerW { get; private set; }
+
+        double dayThinWh, dayDeliveredWh, dayThinFlowW; int dayThinTile = -1;
+        /// <summary>The tile whose too-thin line carried most over the last whole day, or -1.</summary>
+        public int ThinLinesTile { get; private set; } = -1;
+        /// <summary>The share of the power the generators make that the lines were too thin to carry, over the last whole day ([rule] TBD).</summary>
+        public double ThinLinesShare { get; private set; }
+        /// <summary>The mean power the lines could not carry over the last whole day, W.</summary>
+        public double ThinLinesMeanW { get; private set; }
+        /// <summary>The warning shows above this share of the generators' power ([rule] TBD).</summary>
+        public const double ThinLinesWarnShare = 0.05;
+
+        /// <summary>
+        /// "Lines too thin" text when over a day more than <see cref="ThinLinesWarnShare"/> of what the generators make could not get through the lines, with the
+        /// tile whose line carries most now; null otherwise. The advice is the Guide's: a high-voltage line there.
+        /// </summary>
+        public string LinesTooThinWarning()
+        {
+            if (!WiredGrid || ThinLinesShare <= ThinLinesWarnShare) return null;
+            double mw = ThinLinesMeanW / 1e6;
+            int worst = ThinLinesTile;
+            return $"Lines too thin: about {mw:0.#} MW of power can't reach the colony." + (worst >= 0 ? $" Build a high-voltage line on tile {worst}." : " Build high-voltage lines on the trunk.");
+        }
+
 
         /// <summary>Highest milestone reached so far (0–10; 10 is this planet's Type I target).</summary>
         public int MilestonesReached { get; private set; }
