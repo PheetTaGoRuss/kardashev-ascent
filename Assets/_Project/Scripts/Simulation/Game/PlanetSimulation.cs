@@ -256,12 +256,18 @@ namespace KardashevAscent.Simulation.Game
         /// "Lines too thin" text when over a day more than <see cref="ThinLinesWarnShare"/> of what the generators make could not get through the lines, with the
         /// tile whose line carries most now; null otherwise. The advice is the Guide's: a high-voltage line there.
         /// </summary>
+        bool HasFreeSlotFor(BuildingType type, int tile)
+        {
+            for (int s = 0; s < SlotCount(tile); s++) if (CanPlace(type, tile, s)) return true;
+            return false;
+        }
+
         public string LinesTooThinWarning()
         {
             if (!WiredGrid || ThinLinesShare <= ThinLinesWarnShare) return null;
             double mw = ThinLinesMeanW / 1e6;
             int worst = ThinLinesTile;
-            return $"Lines too thin: about {mw:0.#} MW of power can't reach the colony." + (worst >= 0 ? $" Build a high-voltage line on tile {worst}." : " Build high-voltage lines on the trunk.");
+            return $"Lines too thin: about {mw:0.#} MW of power can't reach the colony." + (worst >= 0 ? $" Build a high-voltage line on tile {worst}" + (HasFreeSlotFor(BuildingType.HighVoltageLine, worst) ? "." : " (free one slot there first).") : " Build high-voltage lines on the trunk.");
         }
 
 

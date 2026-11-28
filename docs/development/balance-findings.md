@@ -374,3 +374,27 @@ The 12 kg copper loads: not a planner bug. Demand at the base for copper (about 
 - **Rule (bot, [rule] TBD 10 days).** When every copper mining task has said "too far" for 10 days, the bot builds an alumina plant and an electrolyser next to the base workshop (up to four pairs, one more every 20 days while aluminium stock is under 200 kg) and sets auto-refining (alumina from rock, aluminium 400 kg). The existing stand-in chooser then spends aluminium for copper (0.494 kg per kg, StandIns.cs). Every bill with copper takes the stand-in, panels included (it is applied in StartSite for any bill). On a cold world (the bot's own test, air below 0 C) it keeps 8 slots touching the workshop free for the modules; on a warm one it does not (reserving them on Viridia moved milestone 1 from day 53 to day 71, so the rule is cold-world only; Viridia is unchanged: milestone 1 day 53, milestone 2 day 261, used power 138.6 MW, rule never fired).
 - **Mars 5 y before (dawn rule only)** panels 68, used power 16-17 MW; **after** panels 252, generation 30 MW, used power 28.8 MW (year 5), battery at dawn 20-28 %, 3 HV lines, milestone 1 day 38, milestone 2 never (needs 43.1 MW). Rule fired day 46: 4 alumina plants, 3 electrolysers, 2000 kg aluminium made, plant power 5 kW mean while running (59 % of the time in year 1, 2 % after: the 400 kg stock target was met).
 - **Next caps on Mars.** (1) Lines too thin: peak 283 MW expected, 88 MW delivered, 161 MW lost, 3 HV lines built, a fourth refused ("Neither tile has a free slot for the wire's post": the tiles are full of panels). (2) Robots charge 65-76 % of their hours (10 robots) and copper mining stays "too far". (3) Aluminium stock is capped by the 400 kg target, not by the plants.
+
+## 2026-11-28: milestone 2 on both worlds (bot, five game years)
+
+- **High-voltage post room.** The refusal now reads "No room for the high-voltage wire's post: free one slot on tile H (or tile O)." and the lines-too-thin warning adds "(free one slot there first)" when the named tile has no free slot. The bot, when refused for room, takes down exactly one panel on the more loaded tile (all its panels share one orientation, so the last placed is as good as any) and places the post the next day. A second bot rule, "keep one free slot on each trunk tile after milestone 1", was tried and left off: on Viridia it cut year-5 used power from 138.6 to 112.9 MW (layout chaos; milestone 2 day 255).
+- **Mars, 5 years (bot):** milestone 1 day 38, **milestone 2 day 507**; panels 288, 7 high-voltage lines, generation 85-98 MW, used power 81-87 MW (year 3-5), battery at dawn 11-15 % of 1682 MWh. 2 panels taken down for posts.
+- **Viridia, 5 years (bot):** unchanged: milestone 1 day 53, **milestone 2 day 261**, used power 138.6 MW.
+- **Charging split (Mars, year 1, 5 robots):** taking power 35 %, waiting without power 10 % (8 % outdoors), warming the battery about 0 %, hauling 34 %. So the 62-76 % "charging" seen before was mostly real charging, queueing is about a tenth of robot time, and the heater-while-parked share is not measurable (warming 0 %). From year 2 on (8 robots) hauling is 74-78 % and charging 5-10 %: the charging cap is gone once the colony has more robots and chargers (4 stations, 4 tiles with bays).
+- **Next cap on both worlds** is hauling time (Mars 74-78 % of robot hours) and used power against the 43.1 MW target is no longer the limit.
+
+### [rule] TBD added in PRs 224-now (for the user to review)
+
+| Value | Where | Why |
+| --- | --- | --- |
+| Thermal constants: body loss conductance, insulation share, avionics heat, drive heat share, heater limits | `Simulation/Robots/RobotThermal.cs` lines 160-175 | One lumped thermal body (PR 224); every figure marked [rule] TBD |
+| Stranded below 0.2 % of capacity (about 5 Wh) | `Simulation/Robots/RobotUpkeep.cs:42` | A robot with nearly no charge cannot drive |
+| Rescue ends after 72 h | `Game/PlanetSimulation.Rescue.cs:165` | A helper called off to charge was re-sent for ever (a tow stuck 750 days in the five-year bot) |
+| Lander brings 100 kg aluminium | `Resources/BuildCosts.cs:179` | The aluminium stand-in works from day 0 on every planet; the plants cost more copper than they save at first |
+| Haul dispatch margin 1.0 | `Robots/Workforce.cs:1136` | The leg budget already keeps the 20 % reserve; 1.1 cut Viridia year-5 power from 38.6 to 14.3 MW |
+| Smallest haul load 5 kg | `Game/PlanetSimulation.HaulCosts.cs:128` | Largest load that fits, down to 5 kg (PR 224 floor lifted) |
+| Lines too thin warning above 5 % of generation, day window | `Game/PlanetSimulation.cs:253` | Names a thin trunk only when it really loses power |
+| Stale haul order after 24 h with no hauler able to start it | `Game/PlanetSimulation.Hauls.cs:218` | A far order nobody could take starved a site; Mars needs night-blocked orders to keep counting |
+| Bot: dawn battery under 20 % for 3 days with curtailment orders batteries (at most 10, one night of shortfall) | `Tests/EditMode/Game/BalanceBot.cs:132, :244` | The colony browned out each night on an empty battery and demand never grew |
+| Bot: payload under 100 kg splits the haul route with an outpost | `Tests/EditMode/Game/BalanceBot.cs:357` | Mines must send useful loads home |
+| Bot: aluminium chain after 10 days of "too far" copper tasks, 8 cold-world slots kept, up to 4 pairs, 400 kg target | `Tests/EditMode/Game/BalanceBot.cs:218, :301-308` | Copper ore unreachable on cold worlds; aluminium stand-in covers copper |

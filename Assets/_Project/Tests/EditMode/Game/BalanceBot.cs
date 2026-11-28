@@ -125,6 +125,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             Assert.Fail(Environment.NewLine + string.Join(Environment.NewLine, lines));
         }
 
+        static bool FreeSlotRule = Environment.GetEnvironmentVariable("KA_FREE") == "1";   // off: on Viridia it cut used power 18 % (layout chaos); one-panel salvage for the post is enough
         static bool AluminiumRule = Environment.GetEnvironmentVariable("KA_ALU") != "0";
         static double aluMadeKg;
         static bool DawnRule = Environment.GetEnvironmentVariable("KA_DAWN") != "0";
@@ -144,21 +145,23 @@ namespace KardashevAscent.Simulation.Tests.Game
                 { string rs = q.State + " " + (q.Reason ?? ""); if (rs.Length > 90) rs = rs.Substring(0, 90); copperTask[rs] = (copperTask.TryGetValue(rs, out int cc) ? cc : 0) + 1; }
                 foreach (var r in sim.Workforce.Robots)
                 {
-                    string k = r.Activity == RobotActivity.Charging ? "charging" : r.Task.HasValue ? (r.Task.Value.Kind == TaskKind.Mine ? "mine-" + (Material)r.Task.Value.Slot : r.Task.Value.Kind.ToString().ToLower()) : "idle";
+                    string k = r.Activity == RobotActivity.Charging ? (r.WarmingUp ? "charging:warming-battery" : r.LastChargeW > 1.0 ? "charging:taking-power" : "charging:no-power(queue/full)") + (r.Sheltered ? "" : "/outdoors") : r.Task.HasValue ? (r.Task.Value.Kind == TaskKind.Mine ? "mine-" + (Material)r.Task.Value.Slot : r.Task.Value.Kind.ToString().ToLower()) : "idle";
                     robotSteps[k] = (robotSteps.TryGetValue(k, out int c) ? c : 0) + 1; robotN++;
                 }
             }
             public string Row(PlanetSimulation sim, int day)
             {
-                int built = 0, ordered = 0, hv = 0;
+                int built = 0, ordered = 0, hv = 0, stations = 0, bays = 0;
                 for (int qt = 0; qt < sim.TileCount; qt++) for (int qs = 0; qs < sim.SlotCount(qt); qs++)
                 {
                     var b = sim.GetBuilding(qt, qs); if (b == BuildingType.None) continue; bool uc = sim.IsUnderConstruction(qt, qs);
                     if (b == BuildingType.SolarPanel) { if (uc) ordered++; else built++; }
                     if (b == BuildingType.HighVoltageLine && !uc) hv++;
+                    if (b == BuildingType.ChargingStation && !uc) stations++;
                 }
+                for (int qt = 0; qt < sim.TileCount; qt++) if (sim.HasChargingBay(qt)) bays++;
                 string robots = string.Join(" ", robotSteps.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key} {100.0 * kv.Value / Math.Max(1, robotN):0}%"));
-                return $"day {day}: panels built {built}, ordered not built {ordered}, HV lines {hv}; gen {gen / n / 1e6:0.0} MW, used {used / n / 1e6:0.0} MW, curtailed {curt / n / 1e6:0.0} MW, battery at dawn {(dawn.Count > 0 ? dawn.Average() * 100.0 : double.NaN):0} % of {sim.BatteryCapacityWh / 1e6:0} MWh; stock Cu {sim.Materials[Material.Copper]:0} Al {sim.Materials[Material.Aluminium]:0} Rock {sim.Materials[Material.Rock]:0} Fe {sim.Materials[Material.Iron]:0} kg; robots ({sim.Workforce.Robots.Count}): {robots}; refinery {refW / n / 1e3:0.0} kW mean, running {100.0 * refOn / n:0} % of the time, aluminium made so far {aluMadeKg:0} kg, plants {sim.RefineryCount(RefineryKind.AluminaPlant)}+{sim.RefineryCount(RefineryKind.Electrolyser)}; copper mining task (steps): {string.Join(" / ", copperTask.OrderByDescending(kv => kv.Value).Take(3).Select(kv => kv.Value + "x " + kv.Key))}";
+                return $"day {day}: panels built {built}, ordered not built {ordered}, HV lines {hv}, charging stations {stations}, tiles with bays {bays}; gen {gen / n / 1e6:0.0} MW, used {used / n / 1e6:0.0} MW, curtailed {curt / n / 1e6:0.0} MW, battery at dawn {(dawn.Count > 0 ? dawn.Average() * 100.0 : double.NaN):0} % of {sim.BatteryCapacityWh / 1e6:0} MWh; stock Cu {sim.Materials[Material.Copper]:0} Al {sim.Materials[Material.Aluminium]:0} Rock {sim.Materials[Material.Rock]:0} Fe {sim.Materials[Material.Iron]:0} kg; robots ({sim.Workforce.Robots.Count}): {robots}; refinery {refW / n / 1e3:0.0} kW mean, running {100.0 * refOn / n:0} % of the time, aluminium made so far {aluMadeKg:0} kg, plants {sim.RefineryCount(RefineryKind.AluminaPlant)}+{sim.RefineryCount(RefineryKind.Electrolyser)}; copper mining task (steps): {string.Join(" / ", copperTask.OrderByDescending(kv => kv.Value).Take(3).Select(kv => kv.Value + "x " + kv.Key))}";
             }
         }
 
@@ -400,7 +403,7 @@ namespace KardashevAscent.Simulation.Tests.Game
                         foreach (int t in new[] { home }.Concat(inRange.Take(12)).Where(q => sim.IsPowered(q)))
                         {
                             for (int s = 0; s < sim.SlotCount(t) && slots < 1; s++)
-                                if (!(t == home && refSlots.Contains(s)) && sim.CanPlace(BuildingType.SolarPanel, t, s) && sim.PlacePanel(t, s, 0.35, Math.PI)) slots++;
+                                if (!(t == home && refSlots.Contains(s)) && !(FreeSlotRule && sim.MilestonesReached >= 1 && FreeSlots(sim, t) <= 1 && sim.WireLinks().Any(w => w.From == t || w.To == t)) && sim.CanPlace(BuildingType.SolarPanel, t, s) && sim.PlacePanel(t, s, 0.35, Math.PI)) slots++;
                             if (slots > 0) break;
                         }
                     // no room left on the powered tiles: lay a line toward the nearest open tile (112 kg of copper a tile) so the next panels can stand there
@@ -471,7 +474,7 @@ namespace KardashevAscent.Simulation.Tests.Game
             if (stuckNotes.Count > 0) summary += " " + string.Join(" || ", stuckNotes.Take(200));
             summary += " Ore ledger (crushing kWh | mined kg | left at the mine tile | at base): " + string.Join("; ", sim.ComminutionWhByOre.OrderByDescending(kv => kv.Value).Take(5).Select(kv => $"{kv.Key.Material}@{kv.Key.Tile} {kv.Value / 1000.0:0} | {sim.MinedByOreTile.GetValueOrDefault(kv.Key):0} | {sim.KgAt(kv.Key.Tile, kv.Key.Material):0} | {sim.KgAt(home, kv.Key.Material):0}")) + ".";
             if (target.TryGetValue(Material.Copper, out int cuTile) && cuTile > 0) summary += $" Copper tile {cuTile}: payload per trip {sim.FeasiblePayloadKg(cuTile, home, PlanetSimulation.BasePayloadKg):0} kg, mined {sim.Deposits.MinedKg(cuTile, Material.Copper) / days:0.0} kg a day on average, {sim.HaulTotals.KgMoved / 1000.0:0} t hauled in all, {sim.HaulTotals.Wh / 1e6:0.0} MWh spent hauling.";
-            { int hv = sim.WireLinks().Count(q => q.HighVoltage && q.Built); summary += $" HV TRUNK: {hvPlaced} ordered ({(hvProblem.Length > 0 ? "last refusal: " + hvProblem : "none refused")}; thin tile {sim.ThinLinesTile}, thin share {sim.ThinLinesShare:0.00}), {hv} built (each one tile of conductor: {KardashevAscent.Simulation.Resources.BuildCosts.CableCopperKg:0} kg copper or {KardashevAscent.Simulation.Resources.BuildCosts.CableCopperKg * KardashevAscent.Simulation.Resources.StandIns.AluminiumPerCopperKg:0} kg aluminium, plus iron and rock); copper in stock {sim.Materials[Material.Copper]:0} kg, aluminium {sim.Materials[Material.Aluminium]:0} kg."; }
+            { int hv = sim.WireLinks().Count(q => q.HighVoltage && q.Built); summary += $" HV TRUNK: {hvPlaced} ordered, {hvSalvaged} panels taken down for posts ({(hvProblem.Length > 0 ? "last refusal: " + hvProblem : "none refused")}; thin tile {sim.ThinLinesTile}, thin share {sim.ThinLinesShare:0.00}), {hv} built (each one tile of conductor: {KardashevAscent.Simulation.Resources.BuildCosts.CableCopperKg:0} kg copper or {KardashevAscent.Simulation.Resources.BuildCosts.CableCopperKg * KardashevAscent.Simulation.Resources.StandIns.AluminiumPerCopperKg:0} kg aluminium, plus iron and rock); copper in stock {sim.Materials[Material.Copper]:0} kg, aluminium {sim.Materials[Material.Aluminium]:0} kg."; }
             if (peakNote.Length > 0) summary += " GENERATION CHECK: " + peakNote + ".";
             if (accN > 0) summary += $" GRID SPLIT (MW): served colony {accServed / accN / 1e6:0.0} of which baseline {accBase / accN / 1e6:0.0}; dock/critical {accDock / accN / 1e6:0.00}; priority {accPri / accN / 1e6:0.00}; top-up {accTop / accN / 1e6:0.00}; battery charge {accChg / accN / 1e6:0.0}."
                 + $" DEMAND TABLE (last 30 days, means, MW): generation {accGen / accN / 1e6:0.0}, curtailed {accCurt / accN / 1e6:0.0}, colony demand {accDemand / accN / 1e6:0.0} (baseline {sim.BaseDemandW / 1e6:0.00} now; target {sim.DemandTargetW / 1e6:0.0}), battery charging {accBattChg / accN / 1e6:0.0}, robot charging {accRobot / accN / 1e6:0.00}, workshop+refinery+crushing {accShop / accN / 1e6:0.00}, counted as used by the milestone {accKard / accN / 1e6:0.0}; battery at dawn {(dawnSoc.Count > 0 ? dawnSoc.Average() * 100.0 : double.NaN):0} % of {sim.BatteryCapacityWh / 1e6:0} MWh.";
@@ -517,6 +520,8 @@ namespace KardashevAscent.Simulation.Tests.Game
         /// <summary>Set false to run the bot without the trunk upgrade (the old behaviour).</summary>
     public static bool UpgradeTrunk = true;
     static string hvProblem = "";
+    static int hvSalvaged;
+    static int FreeSlots(PlanetSimulation sim, int tile) { int n = 0; for (int q = 0; q < sim.SlotCount(tile); q++) if (sim.CanPlace(BuildingType.SolarPanel, tile, q)) n++; return n; }
 
     /// <summary>Put a high-voltage line next to each overloaded plain line on the way to the lander, most loaded first. Returns how many were ordered.</summary>
     internal static int UpgradeThinLines(PlanetSimulation sim, int home, int most)
@@ -543,6 +548,12 @@ namespace KardashevAscent.Simulation.Tests.Game
                 if (links.Any(q => q.HighVoltage && ((q.From == t && q.To == u) || (q.From == u && q.To == t)))) continue;
                 if (sim.PlaceWire(t, u, true)) { ordered++; if (ordered >= most) break; continue; }
                 hvProblem = sim.WireProblem;
+                // no room for the post: take down exactly one panel on the more loaded tile (all bot panels share one orientation, so the last-placed one is as good as any) and the next day's order places the post
+                if (hvProblem.StartsWith("No room") && !Enumerable.Range(0, sim.SlotCount(t)).Any(q => sim.IsSalvageOrdered(t, q) && sim.GetBuilding(t, q) == BuildingType.SolarPanel))
+                {
+                    int victim = Enumerable.Range(0, sim.SlotCount(t)).Where(q => sim.GetBuilding(t, q) == BuildingType.SolarPanel && !sim.IsUnderConstruction(t, q)).DefaultIfEmpty(-1).Max();
+                    if (victim >= 0 && sim.OrderSalvage(t, victim)) hvSalvaged++;
+                }
             }
             if (ordered >= most) break;
         }
