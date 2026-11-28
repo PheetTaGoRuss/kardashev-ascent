@@ -487,7 +487,7 @@ namespace KardashevAscent.Simulation.Game
                     if (CanPlace(type, h, s))
                         return highVoltage ? PlaceHighVoltageLine(h, s, o) : PlacePowerLine(h, s, o);
             }
-            WireProblem = "Neither tile has a free slot for the wire's post.";
+            WireProblem = $"No room for the {(highVoltage ? "high-voltage " : "")}wire's post: free one slot on tile {host} (or tile {other}).";
             return false;
         }
 
